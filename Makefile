@@ -1,0 +1,69 @@
+SHELL := /bin/bash
+
+BINARY_NAME := fleetctl
+BINARY_PATH := ./cmd/fleetctl
+BIN_DIR := bin
+GO_FILES := $(shell git ls-files '*.go')
+VERSION ?= dev
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+LDFLAGS := -s -w \
+	-X 'main.version=$(VERSION)' \
+	-X 'main.commit=$(COMMIT)' \
+	-X 'main.buildDate=$(BUILD_DATE)'
+
+.PHONY: build
+build: ## Build fleetctl
+	@mkdir -p $(BIN_DIR)
+	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
+
+.PHONY: test
+test: ## Run unit tests
+	go test ./...
+
+.PHONY: lint
+lint: ## Run formatting check and go vet
+	@unformatted="$$(gofmt -l $(GO_FILES))"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi
+	go vet ./...
+
+.PHONY: check
+check: lint test build ## Run all validation
+
+.PHONY: setup-git-hooks
+setup-git-hooks: ## Configure local git hooks
+	@if [ ! -d ".git" ]; then \
+		echo "This is not a git repository. Run from the project root."; \
+		exit 1; \
+	fi
+	git config core.hooksPath .git-hooks
+	chmod +x .git-hooks/pre-commit .git-hooks/commit-msg
+	@echo "Git hooks configured."
+
+.PHONY: test-git-hooks
+test-git-hooks: ## Run git hooks manually
+	./.git-hooks/pre-commit
+	@tmpfile=$$(mktemp); \
+	printf '%s\n' 'chore: validate commit message hook' > "$$tmpfile"; \
+	./.git-hooks/commit-msg "$$tmpfile"; \
+	rm -f "$$tmpfile"
+
+.PHONY: fmt
+fmt: ## Format Go files
+	gofmt -w $(GO_FILES)
+
+.PHONY: generate
+generate: ## Generate OpenAPI client code
+	@echo "OpenAPI generation is not configured yet. See api/openapi/README.md."
+
+.PHONY: clean
+clean: ## Remove local build artifacts
+	rm -rf $(BIN_DIR) dist coverage.out
+
+.PHONY: help
+help: ## Show available targets
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)

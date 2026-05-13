@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -eu
+
+if ! command -v trufflehog >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+trufflehog is required for the pre-commit secret scan.
+
+Install it with:
+  brew install trufflehog
+
+Or see:
+  https://github.com/trufflesecurity/trufflehog
+EOF
+  exit 1
+fi
+
+# Scan staged files for secrets. This works for normal repos and worktrees.
+if ! git diff --cached --quiet --diff-filter=ACM; then
+  git diff --cached --name-only -z --diff-filter=ACM \
+    | xargs -0 -I {} trufflehog --no-update filesystem "{}" --results=verified,unknown --fail
+fi
+
+# Scan new git history since HEAD. In a git worktree, --git-common-dir resolves
+# to the main repo's .git directory, so derive the repo root from that path.
+GITDIR=$(git rev-parse --git-common-dir)
+case "$GITDIR" in
+  /*) REPO_ROOT=$(dirname "$GITDIR") ;;
+  *)  REPO_ROOT=$(git rev-parse --show-toplevel) ;;
+esac
+
+trufflehog --no-update git "file://${REPO_ROOT}" --since-commit HEAD --results=verified,unknown --fail

@@ -1,0 +1,46 @@
+stages:
+  - test
+
+variables:
+  GO_VERSION: "1.23.12"
+  GIT_CLEAN_FLAGS: "-ffdx -e .cache/"
+
+test:
+  tags:
+    - client-go
+  image: golang:1.23
+  stage: test
+  before_script:
+    - |
+      if [ -d .cache ]; then
+        chmod -R u+w .cache || true
+        rm -rf .cache || true
+      fi
+
+      CI_GO_TMP="${TMPDIR:-/tmp}/fleet-intelligence-client-go-${CI_JOB_ID}"
+      export GOCACHE="${CI_GO_TMP}/go-build"
+      export GOPATH="${CI_GO_TMP}/go-path"
+      export GO_ROOT_DIR="${CI_GO_TMP}/go"
+      mkdir -p "$GOCACHE" "$GOPATH"
+
+      if ! command -v go >/dev/null 2>&1; then
+        case "$(uname -m)" in
+          x86_64) GO_ARCH=amd64; GO_SHA256=d3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90 ;;
+          aarch64|arm64) GO_ARCH=arm64; GO_SHA256=52ce172f96e21da53b1ae9079808560d49b02ac86cecfa457217597f9bc28ab3 ;;
+          *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+        esac
+        curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tgz
+        echo "${GO_SHA256}  /tmp/go.tgz" | sha256sum -c -
+        rm -rf "$GO_ROOT_DIR"
+        mkdir -p "$GO_ROOT_DIR"
+        tar -C "$GO_ROOT_DIR" --strip-components=1 -xzf /tmp/go.tgz
+        export PATH="$GO_ROOT_DIR/bin:$PATH"
+      fi
+    - go version
+  script:
+    - make check
+  after_script:
+    - |
+      CI_GO_TMP="${TMPDIR:-/tmp}/fleet-intelligence-client-go-${CI_JOB_ID}"
+      chmod -R u+w "$CI_GO_TMP" 2>/dev/null || true
+      rm -rf "$CI_GO_TMP" 2>/dev/null || true

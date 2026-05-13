@@ -1,0 +1,6 @@
+/bin/
+/dist/
+/coverage.out
+/.cache/
+/.goreleaser-*.yml
+.DS_Store
