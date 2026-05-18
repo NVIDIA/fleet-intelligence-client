@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
-BINARY_NAME := fleetctl
-BINARY_PATH := ./cmd/fleetctl
+BINARY_NAME := nvfleetctl
+BINARY_PATH := ./cmd/nvfleetctl
 BIN_DIR := bin
 GO_FILES := $(shell git ls-files '*.go')
 VERSION ?= dev
@@ -14,7 +14,7 @@ LDFLAGS := -s -w \
 	-X 'main.buildDate=$(BUILD_DATE)'
 
 .PHONY: build
-build: ## Build fleetctl
+build: ## Build nvfleetctl
 	@mkdir -p $(BIN_DIR)
 	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
 

@@ -1,6 +1,6 @@
 # fleet-intelligence-client-go
 
-Go SDK and `fleetctl` CLI for the Fleet Intelligence customer API.
+Go SDK and `nvfleetctl` CLI for the Fleet Intelligence customer API.
 
 This repository is intended to become the customer-facing, open-source-ready
 client boundary for Fleet Intelligence. The backend repository remains the
@@ -10,7 +10,7 @@ on the public customer API contract.
 ## Repository Layout
 
 ```text
-cmd/fleetctl/          CLI entrypoint
+cmd/nvfleetctl/        CLI entrypoint
 pkg/fleetintelligence/ Public Go SDK package
 internal/generated/    Generated OpenAPI client code
 internal/config/       CLI configuration helpers
@@ -38,8 +38,8 @@ make setup-git-hooks
 Run the scaffolded CLI:
 
 ```bash
-go run ./cmd/fleetctl --help
-go run ./cmd/fleetctl version
+go run ./cmd/nvfleetctl --help
+go run ./cmd/nvfleetctl version
 ```
 
 ## Git Hooks

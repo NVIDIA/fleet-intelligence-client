@@ -2,13 +2,13 @@
 
 This repository owns two customer-facing clients for Fleet Intelligence:
 
-- `fleetctl`, a terminal-native CLI.
+- `nvfleetctl`, a terminal-native CLI.
 - `pkg/fleetintelligence`, a public Go SDK.
 
 ## Dependency Direction
 
 ```text
-cmd/fleetctl -> pkg/fleetintelligence -> internal/generated
+cmd/nvfleetctl -> pkg/fleetintelligence -> internal/generated
 ```
 
 The CLI should call the SDK. Command handlers should not make direct HTTP calls
@@ -27,7 +27,7 @@ Do not import packages from `gpu-health-backend`.
 
 ## CLI Conventions
 
-- Use resource-first commands: `fleetctl <resource> <verb> [args] [flags]`.
+- Use resource-first commands: `nvfleetctl <resource> <verb> [args] [flags]`.
 - Prefer table output for homogeneous lists.
 - Support JSON output for automation and AI agent workflows.
 - Keep destructive operations behind confirmation prompts and `--dry-run`.
