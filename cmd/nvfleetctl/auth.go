@@ -1,0 +1,124 @@
+package main
+
+// This file defines the auth command group: login, logout, and status.
+
+import (
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
+
+	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/config"
+
+	"github.com/spf13/cobra"
+)
+
+func newAuthCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "auth",
+		Short: "Manage authentication",
+	}
+
+	cmd.AddCommand(newAuthLoginCmd())
+	cmd.AddCommand(newAuthLogoutCmd())
+	cmd.AddCommand(newAuthStatusCmd())
+
+	return cmd
+}
+
+func newAuthLoginCmd() *cobra.Command {
+	var serviceKey string
+	var apiURL string
+
+	cmd := &cobra.Command{
+		Use:   "login",
+		Short: "Store a Fleet Intelligence service key",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			serviceKey = strings.TrimSpace(serviceKey)
+			if serviceKey == "" {
+				return errors.New("service key is required")
+			}
+
+			apiURL = strings.TrimSpace(apiURL)
+			if apiURL == "" {
+				apiURL = config.DefaultAPIURL
+			} else if err := validateAPIURL(apiURL); err != nil {
+				return err
+			}
+
+			if err := config.Save(config.Config{APIURL: apiURL, ServiceKey: serviceKey}); err != nil {
+				return err
+			}
+
+			fmt.Fprintln(cmd.OutOrStdout(), "Authentication configuration saved.")
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&serviceKey, "key", "", "NGC service key")
+	cmd.Flags().StringVar(&apiURL, "api-url", "", "Fleet Intelligence API URL")
+
+	return cmd
+}
+
+func newAuthLogoutCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "logout",
+		Short: "Remove the stored Fleet Intelligence service key",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+
+			cfg.ServiceKey = ""
+			if err := config.Save(cfg); err != nil {
+				return err
+			}
+
+			fmt.Fprintln(cmd.OutOrStdout(), "Authentication service key removed.")
+			return nil
+		},
+	}
+}
+
+func newAuthStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Show authentication status",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+
+			serviceKeyStatus := "not configured"
+			if strings.TrimSpace(cfg.ServiceKey) != "" {
+				serviceKeyStatus = "configured"
+			}
+
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "API URL: %s\n", cfg.APIURL)
+			fmt.Fprintf(out, "Service key: %s\n", serviceKeyStatus)
+			fmt.Fprintln(out, "Connection: not checked")
+
+			return nil
+		},
+	}
+}
+
+func validateAPIURL(rawURL string) error {
+	// Explicit URLs must be concrete HTTP(S) API roots, not relative paths.
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid API URL: %w", err)
+	}
+	if !parsedURL.IsAbs() || parsedURL.Host == "" {
+		return fmt.Errorf("invalid API URL %q: absolute http or https URL is required", rawURL)
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("invalid API URL %q: absolute http or https URL is required", rawURL)
+	}
+
+	return nil
+}
