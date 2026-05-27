@@ -10,8 +10,8 @@
 
 ## Milestone 2: Auth and Core CLI UX
 
-- Implement `fleetctl auth login/logout/status`.
-- Store config at `~/.config/fleetctl/config.yaml` with mode `0600`.
+- Implement `nvfleetctl auth login/logout/status`.
+- Store config at `~/.config/nvfleetctl/config.yaml` with mode `0600`.
 - Add common flags for output and pagination.
 - Add consistent table and JSON output helpers.
 

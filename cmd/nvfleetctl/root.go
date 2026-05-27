@@ -24,13 +24,14 @@ func execute(ctx context.Context, args []string) error {
 
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:           "fleetctl",
+		Use:           "nvfleetctl",
 		Short:         "Fleet Intelligence CLI",
 		Long:          "Fleet Intelligence CLI for the Fleet Intelligence customer API.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 
+	cmd.AddCommand(newAuthCmd())
 	cmd.AddCommand(newVersionCmd())
 
 	return cmd
@@ -48,5 +49,5 @@ func newVersionCmd() *cobra.Command {
 }
 
 func writeVersion(w io.Writer) {
-	fmt.Fprintf(w, "fleetctl %s\ncommit: %s\nbuilt: %s\n", version, commit, buildDate)
+	fmt.Fprintf(w, "nvfleetctl %s\ncommit: %s\nbuilt: %s\n", version, commit, buildDate)
 }

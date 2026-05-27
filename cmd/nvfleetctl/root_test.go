@@ -17,7 +17,7 @@ func TestVersionCommand(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(got, "fleetctl ") {
+	if !strings.Contains(got, "nvfleetctl ") {
 		t.Fatalf("version output missing binary name: %q", got)
 	}
 }
