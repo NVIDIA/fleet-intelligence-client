@@ -1,0 +1,3070 @@
+info:
+  title: Fleet Intelligence API (external)
+  version: ''
+externalDocs:
+  description: ''
+  url: ''
+openapi: 3.1.0
+paths:
+  /v1/alert_timeline/nodes:
+    get:
+      description: Get list of nodes with alert summary for progressive disclosure.
+        Returns hostname, host status (unhealthy if any active alerts, fixed otherwise),
+        and last alert time. This is the first level of the progressive disclosure
+        API for alert timelines. Currently returns all historical alert data (time
+        filtering will be added in future).
+      operationId: getV1AlertTimelineNodes
+      parameters:
+        - description: 'Filter only nodes with active alerts (default: false)'
+          in: query
+          name: active
+          schema:
+            default: false
+            type: boolean
+        - description: 'Page number (0-indexed, default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Number of nodes per page (default: 50, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 50
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.AlertTimelineNodesResponse'
+          description: List of nodes with alert summary
+        '400':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Bad Request - Invalid parameters
+        '401':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Unauthorized
+        '500':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Internal Server Error
+      summary: GET nodes in alert audit table - all the nodes ever had alerts (level
+        1)
+      tags:
+        - alerts
+  /v1/alert_timeline/nodes/{nodeUUID}/alerts:
+    get:
+      description: Get list of alerts for a specific node. Returns alert UUID, component,
+        alert status (active/resolved), and last event time. Use the 'active' parameter
+        to filter between all alerts or only currently active alerts. This is the
+        second level of the progressive disclosure API for alert timelines. Currently
+        returns all historical alert data (time filtering will be added in future).
+      operationId: getV1AlertTimelineNodesNodeUuidAlerts
+      parameters:
+        - description: Node UUID
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+        - description: 'Filter only currently active alerts (default: false)'
+          in: query
+          name: active
+          schema:
+            default: false
+            type: boolean
+        - description: 'Page number (0-indexed, default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Number of alerts per page (default: 50, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 50
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.AlertTimelineNodeAlertsResponse'
+          description: List of alerts for the node
+        '400':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Bad Request - Invalid UUID
+        '401':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Unauthorized
+        '404':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Node Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Internal Server Error
+      summary: Get alerts for a specific node (level 2)
+      tags:
+        - alerts
+  /v1/alert_timeline/nodes/{nodeUUID}/alerts/{alertUUID}:
+    get:
+      description: Get complete timeline for a specific alert. Returns alert UUID,
+        component, and complete event timeline. This is the third level of the progressive
+        disclosure API for alert timelines.
+      operationId: getV1AlertTimelineNodesNodeUuidAlertsAlertUuid
+      parameters:
+        - description: Node UUID
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+        - description: Alert UUID
+          in: path
+          name: alertUUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.AlertTimelineDetailResponse'
+          description: Complete timeline for the alert
+        '400':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Bad Request - Invalid UUID format
+        '401':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Unauthorized
+        '404':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Alert Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Internal Server Error
+      summary: Get complete timeline for a specific alert (level 3)
+      tags:
+        - alerts
+  /v1/alerts:
+    get:
+      description: Get list of alerts with optional filtering by node, component,
+        state, and severity
+      operationId: getV1Alerts
+      parameters:
+        - description: Filter by node UUID
+          in: query
+          name: nodeUUID
+          schema:
+            type: string
+        - description: Filter by component name
+          in: query
+          name: component
+          schema:
+            type: string
+        - description: Filter by alert state (Detected, Triggered, Resolved)
+          in: query
+          name: state
+          schema:
+            type: string
+        - description: Filter by alert severity (Critical, Warning)
+          in: query
+          name: severity
+          schema:
+            type: string
+        - description: 'Page number (default: 1)'
+          in: query
+          name: page
+          schema:
+            default: 1
+            type: integer
+        - description: 'Page size (default: 50, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 50
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.AlertResponse'
+          description: Array of alerts with pagination info
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get alerts
+      tags:
+        - alerts
+  /v1/alerts/{nodeUUID}:
+    get:
+      description: Get list of alerts for a specific node (machine) identified by
+        nodeUUID, grouped by component
+      operationId: getV1AlertsNodeUuid
+      parameters:
+        - description: Node UUID (machine ID)
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+        - description: Filter by component name
+          in: query
+          name: component
+          schema:
+            type: string
+        - description: Filter by alert state (Detected, Triggered, Resolved)
+          in: query
+          name: state
+          schema:
+            type: string
+        - description: Filter by alert severity (Critical, Warning)
+          in: query
+          name: severity
+          schema:
+            type: string
+        - description: 'Page number (default: 1)'
+          in: query
+          name: page
+          schema:
+            default: 1
+            type: integer
+        - description: 'Page size (default: 50, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 50
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NodeAlertResponse'
+          description: Alerts grouped by component with pagination info
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Node Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get alerts for a specific node
+      tags:
+        - alerts
+  /v1/computezones:
+    get:
+      description: Get list of compute zones with optional filtering and different
+        view modes. Use view=detail for comprehensive metrics and view=basic for essential
+        fields (ID, Name, Type, GeoLocation, Contact, timestamps)
+      operationId: getV1Computezones
+      parameters:
+        - description: 'View mode: ''detail'' for comprehensive metrics (default)
+            or ''basic'' for essential fields'
+          in: query
+          name: view
+          schema:
+            default: detail
+            enum:
+              - detail
+              - basic
+            type: string
+        - description: '[DETAIL VIEW ONLY] Include metrics in response (default: true).
+            Set to false for better performance when metrics are not needed.'
+          in: query
+          name: includeMetrics
+          schema:
+            default: true
+            type: boolean
+        - description: List of compute zone IDs to filter (comma-separated)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Page number (default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Page size (default: 20, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.ComputeZonesResponse'
+                  - $ref: '#/components/schemas/models.ListComputeZonesResponse'
+          description: Basic view response (view=basic)
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get compute zones
+      tags:
+        - computezones
+    put:
+      description: Admin updates compute zone type and metadata. Compute zone names
+        are agent-managed and cannot be changed from customer-api.
+      operationId: putV1Computezones
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.UpdateComputeZoneRequest'
+              summary: request
+              description: Update compute zone request
+        description: Update compute zone request
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.UpdateComputeZoneResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Update compute zone
+      tags:
+        - computezones
+  /v1/nodegroups:
+    get:
+      description: 'Get list of node groups with optional filtering and different
+        view modes. Use view=detail for comprehensive metrics and view=basic for minimal
+        ID/Name list. Detail view supports additional filters: computeZoneNames (partial
+        match), healthStatuses, and gpuTypes'
+      operationId: getV1Nodegroups
+      parameters:
+        - description: 'View mode: ''detail'' for comprehensive metrics (default)
+            or ''basic'' for minimal list'
+          in: query
+          name: view
+          schema:
+            default: detail
+            enum:
+              - detail
+              - basic
+            type: string
+        - description: '[DETAIL VIEW ONLY] Include metrics in response (default: true).
+            Set to false for better performance when metrics are not needed.'
+          in: query
+          name: includeMetrics
+          schema:
+            default: true
+            type: boolean
+        - description: Filter by compute zone IDs (e.g., ?computeZoneIds=id1&computeZoneIds=id2)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: '[DETAIL VIEW ONLY] Filter by compute zone names with partial
+            match (e.g., ?computeZoneNames=east&computeZoneNames=west)'
+          in: query
+          name: computeZoneNames
+          schema:
+            items:
+              type: string
+            type: array
+        - description: '[LEGACY] Single compute zone ID to filter node groups - use
+            computeZoneIds instead'
+          in: query
+          name: computeZoneId
+          schema:
+            type: string
+        - description: List of node group IDs to filter (e.g., ?nodeGroupIds=id1&nodeGroupIds=id2)
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: '[DETAIL VIEW ONLY] Filter by node health status values (e.g.,
+            ?healthStatuses=Healthy&healthStatuses=Degraded)'
+          in: query
+          name: healthStatuses
+          schema:
+            items:
+              enum:
+                - Healthy
+                - Degraded
+                - Unhealthy
+                - Unknown
+              type: string
+            type: array
+        - description: '[DETAIL VIEW ONLY] Filter by GPU type values (e.g., ?gpuTypes=NVIDIA-H100-80GB-HBM3)'
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Field to sort by (health, gpuUtil, nodes)
+          in: query
+          name: sortBy
+          schema:
+            default: health
+            enum:
+              - health
+              - gpuUtil
+              - nodes
+            type: string
+        - description: Sort order (asc, desc)
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: 'Page number (default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Page size (default: 20, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.NodeGroupsResponse'
+                  - $ref: '#/components/schemas/models.ListNodeGroupsResponse'
+          description: Basic view response (view=basic)
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get node groups
+      tags:
+        - nodegroups
+  /v1/nodegroups/options:
+    get:
+      description: 'Returns available filters and sorting options for querying node
+        groups.
+
+        Filter options may be simple strings (e.g., health statuses, GPU types) or
+        hierarchical objects (e.g., compute zones with nested nodegroups).
+
+
+        Filter options examples:
+
+        - Simple strings: `{"name": "healthStatuses", "options": ["Healthy", "Degraded",
+        "Unhealthy"]}`
+
+        - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1",
+        "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`'
+      operationId: getV1NodegroupsOptions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.Options'
+          description: Available query options including filters and sorting configuration
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get available query options for node groups
+      tags:
+        - nodegroups
+  /v1/nodes:
+    delete:
+      description: Soft delete multiple nodes by setting the deleted flag to true
+      operationId: deleteV1Nodes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.DeleteNodesRequest'
+              summary: request
+              description: List of node UUIDs to delete
+        description: List of node UUIDs to delete
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Delete multiple nodes (soft delete)
+      tags:
+        - nodes
+    get:
+      description: Get list of nodes with current state and overview. Use view=detail
+        (default) for full response or view=basic for a lightweight nodeUUID + hostname
+        list (see models.BasicNodesResponse). All filter parameters are optional arrays
+        - empty means no filter applied.
+      operationId: getV1Nodes
+      parameters:
+        - description: 'View mode: ''detail'' for full response (default) or ''basic''
+            for nodeUUID + hostname only (lightweight query, does not support filtering
+            or sorting by healthStatuses, integrityChecks, firmwareChecks, or agentStatuses).'
+          in: query
+          name: view
+          schema:
+            default: detail
+            enum:
+              - detail
+              - basic
+            type: string
+        - description: Page number
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: Page size
+          in: query
+          name: pageSize
+          schema:
+            default: 10
+            type: integer
+        - description: Filter by specific node UUIDs. Empty means all nodes
+          in: query
+          name: nodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by health status values
+          in: query
+          name: healthStatuses
+          schema:
+            items:
+              enum:
+                - Healthy
+                - Degraded
+                - Unhealthy
+                - Unknown
+              type: string
+            type: array
+        - description: Filter by computezone IDs. Empty means all computezones
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by computezone names (partial match). Empty means all
+            computezones
+          in: query
+          name: computeZoneNames
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by nodegroup IDs. Empty means all nodegroups
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by nodegroup names (partial match). Empty means all
+            nodegroups
+          in: query
+          name: nodeGroupNames
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by GPU type values. Empty means all GPU types
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by GPU count values. Empty means all GPU counts
+          in: query
+          name: gpuCounts
+          schema:
+            items:
+              type: integer
+            type: array
+        - description: Filter by public IP addresses. Empty means all public IPs
+          in: query
+          name: publicIPs
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by private IP addresses. Empty means all private IPs
+          in: query
+          name: privateIPs
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by integrity check status
+          in: query
+          name: integrityChecks
+          schema:
+            items:
+              enum:
+                - Verified
+                - Unverified
+                - Degraded
+                - Pending
+                - Unsupported
+                - Unknown
+              type: string
+            type: array
+        - description: Filter by firmware check status
+          in: query
+          name: firmwareChecks
+          schema:
+            items:
+              enum:
+                - Passed
+                - Failed
+                - Unknown
+              type: string
+            type: array
+        - description: Filter by agent status values
+          in: query
+          name: agentStatuses
+          schema:
+            items:
+              enum:
+                - Online
+                - Offline
+                - Unknown
+              type: string
+            type: array
+        - description: Filter by hostname (case-insensitive partial match)
+          in: query
+          name: hostname
+          schema:
+            type: string
+        - description: Field to sort by
+          in: query
+          name: sortBy
+          schema:
+            default: hostname
+            enum:
+              - hostname
+              - nodeUUID
+              - healthStatus
+              - nodegroup
+              - computezone
+              - gpuType
+              - gpuCount
+              - integrityCheck
+              - agentStatus
+            type: string
+        - description: Sort order (asc, desc)
+          in: query
+          name: order
+          schema:
+            default: asc
+            enum:
+              - asc
+              - desc
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.NodesResponse'
+                  - $ref: '#/components/schemas/models.BasicNodesResponse'
+          description: Basic view response (view=basic)
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get nodes overview and states
+      tags:
+        - nodes
+  /v1/nodes/options:
+    get:
+      description: 'Returns available filters and sorting options for querying nodes.
+
+        Filter options may be simple strings (e.g., health statuses) or hierarchical
+        objects (e.g., compute zones with nested nodegroups).
+
+
+        Filter options examples:
+
+        - Simple strings: `{"name": "healthStatuses", "options": ["Healthy", "Degraded",
+        "Unhealthy"]}`
+
+        - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1",
+        "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`'
+      operationId: getV1NodesOptions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.Options'
+          description: Available query options including filters and sorting configuration
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get available query options for nodes
+      tags:
+        - nodes
+  /v1/nodes/{nodeUUID}:
+    delete:
+      description: Soft delete a node by setting the deleted flag to true
+      operationId: deleteV1NodesNodeUuid
+      parameters:
+        - description: Node UUID
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Delete a node (soft delete)
+      tags:
+        - nodes
+    get:
+      description: Get detailed information about a specific node including resources,
+        system info, and health status
+      operationId: getV1NodesNodeUuid
+      parameters:
+        - description: Node UUID
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NodeDetailsResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get detailed node information
+      tags:
+        - nodes
+  /v1/nodes/{nodeUUID}/health_history:
+    get:
+      description: Returns the health status timeline and summary for a node over
+        a time window.
+      operationId: getV1NodesNodeUuidHealthHistory
+      parameters:
+        - description: Node UUID
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+        - description: Start time in RFC3339 format (e.g., 2026-04-07T00:00:00Z)
+          in: query
+          name: startTime
+          required: true
+          schema:
+            type: string
+        - description: End time in RFC3339 format (e.g., 2026-04-14T00:00:00Z)
+          in: query
+          name: endTime
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NodeHealthHistoryResponse'
+          description: Health timeline and summary with enrolledAt
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Node not found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get node health history
+      tags:
+        - nodes
+  /v1/nodes/{nodeUUID}/tags:
+    put:
+      description: 'Set all tags for a node to exactly the provided list (PUT semantics
+        - full replacement)
+
+
+        Tag Validation Rules:
+
+        - Format: lowercase letters (a-z), numbers (0-9), hyphens (-), and underscores
+        (_)
+
+        - Must start and end with alphanumeric characters
+
+        - Separators (hyphen, underscore) cannot be consecutive
+
+        - Maximum length: 50 characters
+
+        - Reserved names: null, none, undefined, true, false
+
+        - Examples: "gpu-health", "test_tag", "node123"'
+      operationId: putV1NodesNodeUuidTags
+      parameters:
+        - description: Node UUID
+          in: path
+          name: nodeUUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.SetNodeTagsRequest'
+              summary: request
+              description: Set node tags request
+        description: Set node tags request
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.SetNodeTagsResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Set all tags for a node
+      tags:
+        - tags
+  /v1/reports/error:
+    get:
+      description: 'Get error report grouped by error type or node in JSON or CSV
+        format. Default response is JSON. For CSV download (list view only), set format=csv
+        query parameter. Response structure varies based on view and groupBy parameters:
+
+        - When view=list and groupBy=error: The ''errors'' field is populated with
+        paginated list
+
+        - When view=list and groupBy=node: The ''nodes'' field is populated with paginated
+        list
+
+        - When view=graph and groupBy=error: Returns time-series data with optional
+        step parameter (page and pageSize not used)
+
+        - When view=overview: Returns aggregate statistics (groupBy parameter not
+        required, page and pageSize not used)'
+      operationId: getV1ReportsError
+      parameters:
+        - description: Group by error or node (not required for overview view)
+          in: query
+          name: groupBy
+          schema:
+            enum:
+              - error
+              - node
+            type: string
+        - description: 'View type: list, graph, or overview'
+          in: query
+          name: view
+          required: true
+          schema:
+            enum:
+              - list
+              - graph
+              - overview
+            type: string
+        - description: Response format (json or csv, only for list view)
+          in: query
+          name: format
+          schema:
+            default: json
+            enum:
+              - json
+              - csv
+            type: string
+        - description: Page number (Not used for CSV format, graph view, or overview
+            view)
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: Page size (Not used for CSV format, graph view, or overview
+            view)
+          in: query
+          name: pageSize
+          schema:
+            default: 10
+            type: integer
+        - description: Query resolution step width in duration format (e.g. 1h, 1m).
+            Only used for graph view. If not provided, backend will choose a suitable
+            step width. Minimum step width is 1 minute.
+          in: query
+          name: step
+          schema:
+            type: string
+        - description: Filter by computezone IDs. Empty means all computezones
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by nodegroup IDs. Empty means all nodegroups
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by tags (AND logic - matches nodes with ANY of the specified
+            tags). Empty means all nodes
+          in: query
+          name: tags
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Filter nodes by specific error types (only for list view,
+            groupBy=node). Returns ALL errors for nodes that have any of the specified
+            errors. Examples: ''NVSwitch Fatal Error'', ''xid_154'''
+          in: query
+          name: errors
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Time mode: ''absolute'' (default) or ''relative''. Absolute
+            requires start/end; relative requires window'
+          in: query
+          name: timeMode
+          schema:
+            type: string
+        - description: Relative time window (e.g., 1h, 1m, 30s). Only used when timeMode=relative
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Start time for filtering errors (RFC3339 format). Required
+            when timeMode=absolute
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: End time for filtering errors (RFC3339 format). Required when
+            timeMode=absolute
+          in: query
+          name: endTime
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.ByErrorResponse'
+                  - $ref: '#/components/schemas/models.ByNodeResponse'
+                  - $ref: '#/components/schemas/models.ErrorOverviewResponse'
+                  - $ref: '#/components/schemas/models.ErrorReportGraphByErrorResponse'
+                  - type: string
+            text/csv:
+              schema:
+                type: string
+          description: Graph response grouped by error (view=graph, groupBy=error)
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get error report
+      tags:
+        - reports
+  /v1/reports/inventory:
+    get:
+      description: Get inventory report in JSON or CSV format. Default response is
+        JSON. For CSV download, set format=csv query parameter
+      operationId: getV1ReportsInventory
+      parameters:
+        - description: Page number (Not used for CSV format)
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: Page size (Not used for CSV format)
+          in: query
+          name: pageSize
+          schema:
+            default: 10
+            type: integer
+        - description: Response format (json or csv)
+          in: query
+          name: format
+          schema:
+            default: json
+            enum:
+              - json
+              - csv
+            type: string
+        - description: Filter by computezone IDs. Empty means all computezones
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by nodegroup IDs. Empty means all nodegroups
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by tags. Empty means all tags
+          in: query
+          name: tags
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Start time for filtering nodes active during period (RFC3339
+            format, e.g., 2024-01-01T00:00:00Z)
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: End time for filtering nodes active during period (RFC3339
+            format, e.g., 2024-12-31T23:59:59Z)
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: Field to sort by
+          in: query
+          name: sortBy
+          schema:
+            default: hostname
+            enum:
+              - hostname
+              - nodeUUID
+              - nodegroup
+              - computezone
+              - gpuType
+              - gpuCount
+              - publicIP
+              - privateIP
+              - integrityCheck
+              - geoLocation
+            type: string
+        - description: Sort order (asc, desc)
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.InventoryReportResponse'
+                  - type: string
+            text/csv:
+              schema:
+                type: string
+          description: JSON response (default). For CSV download, use format=csv query
+            parameter
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get inventory report
+      tags:
+        - reports
+components:
+  schemas:
+    models.ActionPersona:
+      description: Target persona (stored in DB, stripped before API response)
+      enum:
+        - tenant
+        - dc_admin
+      type: string
+      x-enum-varnames:
+        - ActionPersonaTenant
+        - ActionPersonaDCAdmin
+    models.ActionType:
+      description: 'Action type: "immediate" or "investigatory"'
+      enum:
+        - immediate
+        - investigatory
+      example: immediate
+      type: string
+      x-enum-varnames:
+        - ActionTypeImmediate
+        - ActionTypeInvestigatory
+    models.AgentStatus:
+      enum:
+        - Online
+        - Offline
+        - Unknown
+      example: Online
+      type: string
+      x-enum-varnames:
+        - AgentStatusOnline
+        - AgentStatusOffline
+        - AgentStatusUnknown
+    models.Aggregation:
+      enum:
+        - average
+        - sum
+        - min
+        - max
+        - none
+      example: average
+      type: string
+      x-enum-varnames:
+        - AggregationAverage
+        - AggregationSum
+        - AggregationMin
+        - AggregationMax
+        - AggregationNone
+    models.Alert:
+      properties:
+        alertUUID:
+          type: string
+        component:
+          type: string
+        componentDisplayName:
+          type: string
+        customerId:
+          type: string
+        detectedAt:
+          type: string
+        error:
+          type: string
+        eventTimestamp:
+          type: string
+        extraInfo:
+          type: string
+        incidents:
+          type: string
+        isMuted:
+          type: boolean
+        lastUpdated:
+          type: string
+        message:
+          type: string
+        mutedAt:
+          type: string
+        mutedBy:
+          type: string
+        nodeUUID:
+          type: string
+        severity:
+          $ref: '#/components/schemas/models.AlertSeverity'
+        state:
+          $ref: '#/components/schemas/models.AlertState'
+        suggestedActions:
+          type: string
+        triggeredAt:
+          type: string
+      type: object
+    models.AlertEventType:
+      enum:
+        - detected
+        - triggered
+        - resolved
+        - retriggered
+        - severity_changed
+        - metadata_updated
+        - notify_sent
+        - notify_failed
+        - muted
+        - unmuted
+        - burst_analyzed
+      type: string
+      x-enum-comments:
+        AlertEventBurstAnalyzed: XID burst analysis result attached to alert
+        AlertEventDetected: First detection (no severity yet)
+        AlertEventMetadataUpdated: Message, error, extra_info changed
+        AlertEventMuted: Alert was muted
+        AlertEventNotifyFailed: Notification failed
+        AlertEventNotifySent: Notification sent successfully
+        AlertEventResolved: Issue fixed, alert closed
+        AlertEventRetriggered: 6+ hours later, still active
+        AlertEventSeverityChanged: Warning ↔ Critical
+        AlertEventTriggered: Alert activated with severity
+        AlertEventUnmuted: Alert was unmuted
+      x-enum-varnames:
+        - AlertEventDetected
+        - AlertEventTriggered
+        - AlertEventResolved
+        - AlertEventRetriggered
+        - AlertEventSeverityChanged
+        - AlertEventMetadataUpdated
+        - AlertEventNotifySent
+        - AlertEventNotifyFailed
+        - AlertEventMuted
+        - AlertEventUnmuted
+        - AlertEventBurstAnalyzed
+    models.AlertOverview:
+      properties:
+        criticalCount:
+          example: 2
+          type: integer
+        infoCount:
+          example: 15
+          type: integer
+        lastCriticalAlert:
+          example: '2024-01-15T14:15:00Z'
+          type: string
+          x-nullable: true
+        lastWarningAlert:
+          example: '2024-01-15T14:28:00Z'
+          type: string
+          x-nullable: true
+        totalCount:
+          example: 24
+          type: integer
+        unknownCount:
+          example: 15
+          type: integer
+        warningCount:
+          example: 7
+          type: integer
+      type: object
+    models.AlertResponse:
+      properties:
+        alerts:
+          items:
+            $ref: '#/components/schemas/models.Alert'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageCursorNext:
+          type: string
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      type: object
+    models.AlertSeverity:
+      enum:
+        - Critical
+        - Warning
+      type: string
+      x-enum-varnames:
+        - AlertSeverityCritical
+        - AlertSeverityWarning
+    models.AlertState:
+      enum:
+        - Detected
+        - Triggered
+        - Resolved
+      type: string
+      x-enum-varnames:
+        - AlertStateDetected
+        - AlertStateTriggered
+        - AlertStateResolved
+    models.AlertTimelineDetailResponse:
+      properties:
+        alertUuid:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        component:
+          example: GPU
+          type: string
+        componentDisplayName:
+          example: GPU
+          type: string
+        customerID:
+          example: customer-123
+          type: string
+        isBackendComponent:
+          type: boolean
+        nodeUuid:
+          example: node-uuid-456
+          type: string
+        timeline:
+          description: Sorted by eventTimestamp ASC (oldest to newest)
+          items:
+            $ref: '#/components/schemas/models.AlertTimelineEvent'
+          type: array
+          uniqueItems: false
+      type: object
+    models.AlertTimelineEvent:
+      properties:
+        alertStatus:
+          description: '"Critical"/"Warning" if Triggered, "Detected"/"Resolved" otherwise'
+          example: Critical
+          type: string
+        error:
+          example: Temperature critically high
+          type: string
+        eventTimestamp:
+          example: '2024-12-01T10:00:00Z'
+          type: string
+        eventType:
+          $ref: '#/components/schemas/models.AlertEventType'
+        extraInfo:
+          additionalProperties: {}
+          type: object
+        incidents:
+          items: {}
+          type: array
+          uniqueItems: false
+        message:
+          example: GPU critical temperature alert
+          type: string
+        suggestedActions:
+          items:
+            $ref: '#/components/schemas/models.SuggestedAction'
+          type: array
+          uniqueItems: false
+      type: object
+    models.AlertTimelineNode:
+      properties:
+        hostStatus:
+          description: '"Active" if any active alerts, "Resolved" otherwise'
+          example: Active
+          type: string
+        hostname:
+          example: gpu-node-01
+          type: string
+        lastAlertTime:
+          example: '2024-12-01T10:00:00Z'
+          type: string
+        nodeUuid:
+          example: node-uuid-456
+          type: string
+      type: object
+    models.AlertTimelineNodeAlert:
+      properties:
+        alertStatus:
+          description: '"Critical"/"Warning" if active (in alerts table), "Detected"/"Resolved"
+            if inactive (from alert_audit)'
+          example: Critical
+          type: string
+        alertUuid:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        component:
+          example: GPU
+          type: string
+        componentDisplayName:
+          example: GPU
+          type: string
+        lastEventTime:
+          example: '2024-12-01T10:00:00Z'
+          type: string
+      type: object
+    models.AlertTimelineNodeAlertsResponse:
+      properties:
+        alerts:
+          items:
+            $ref: '#/components/schemas/models.AlertTimelineNodeAlert'
+          type: array
+          uniqueItems: false
+        hasMore:
+          example: false
+          type: boolean
+        hostname:
+          example: gpu-node-01
+          type: string
+        nodeUuid:
+          example: node-uuid-456
+          type: string
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 50
+          type: integer
+        total:
+          description: Total number of alerts for this node
+          example: 10
+          type: integer
+      type: object
+    models.AlertTimelineNodesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.AlertTimelineNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 50
+          type: integer
+        total:
+          description: Total number of nodes
+          example: 25
+          type: integer
+      type: object
+    models.BasicNodesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.SimpleNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
+    models.BlockDevice:
+      properties:
+        fsType:
+          example: ext4
+          type: string
+        mountPoint:
+          description: 'Vendor     string   `json:"vendor" example:"Samsung"`
+
+            Model      string   `json:"model" example:"SSD 870 EVO"`
+
+            Rev        string   `json:"rev" example:"1B6Q"`'
+          example: /
+          type: string
+        name:
+          example: sda
+          type: string
+        parents:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        partUUID:
+          example: 12345678-1234-1234-1234-123456789012
+          type: string
+        size:
+          example: 1000204886016
+          type: integer
+        type:
+          example: disk
+          type: string
+        used:
+          example: 500102443008
+          type: integer
+        wwn:
+          description: 'Rota       bool     `json:"rota" example:"true"`
+
+            Serial     string   `json:"serial" example:"ABC123"`'
+          example: '0x50014ee2'
+          type: string
+      type: object
+    models.ByError:
+      properties:
+        count:
+          example: 10
+          type: integer
+        name:
+          example: NVSwitch Fatal Error
+          type: string
+        nodeCount:
+          example: 5
+          type: integer
+        suggestedAction:
+          $ref: '#/components/schemas/models.SuggestedAction'
+      type: object
+    models.ByErrorResponse:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/models.ByError'
+          type: array
+          uniqueItems: false
+        hasMore:
+          type: boolean
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      type: object
+    models.ByNode:
+      properties:
+        errors:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        hostname:
+          example: node-001
+          type: string
+        nodeUUID:
+          example: 00000000-0000-0000-0000-000000000000
+          type: string
+      type: object
+    models.ByNodeResponse:
+      properties:
+        hasMore:
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.ByNode'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      type: object
+    models.CPUInfo:
+      properties:
+        architecture:
+          example: x86_64
+          type: string
+        logicalCores:
+          example: '16'
+          type: string
+        manufacturer:
+          example: Intel
+          type: string
+        type:
+          example: x86_64
+          type: string
+      type: object
+    models.CertChainStatus:
+      properties:
+        x-nvidia-cert-expiration-date:
+          type: string
+        x-nvidia-cert-ocsp-nonce-matches:
+          type: boolean
+        x-nvidia-cert-ocsp-response-valid:
+          type: boolean
+        x-nvidia-cert-ocsp-status:
+          type: string
+        x-nvidia-cert-revocation-reason:
+          type: string
+        x-nvidia-cert-status:
+          type: string
+      type: object
+    models.ComputeZoneOverview:
+      properties:
+        alertOverview:
+          $ref: '#/components/schemas/models.AlertOverview'
+        contact:
+          $ref: '#/components/schemas/models.Contact'
+        cpuCoresCount:
+          example: 160
+          type: integer
+        createdAt:
+          example: '2024-01-10T08:45:00Z'
+          type: string
+        degradedNodesCount:
+          example: 2
+          type: integer
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        gpusCount:
+          example: 80
+          type: integer
+        healthPercentage:
+          example: 95
+          type: number
+        healthState:
+          $ref: '#/components/schemas/models.HealthState'
+        healthyNodesCount:
+          example: 38
+          type: integer
+        id:
+          example: cz-us-east-1
+          type: string
+        metrics:
+          items:
+            $ref: '#/components/schemas/models.Metric'
+          type: array
+          uniqueItems: false
+        name:
+          example: US East 1 ComputeZone
+          type: string
+        nodeGroupsCount:
+          example: 20
+          type: integer
+        nodesCount:
+          example: 40
+          type: integer
+        tags:
+          example:
+            - ml-training
+            - gpu-intensive
+            - high-memory
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        type:
+          $ref: '#/components/schemas/models.ComputeZoneType'
+        unhealthyNodesCount:
+          example: 0
+          type: integer
+        unknownNodesCount:
+          example: 0
+          type: integer
+        updatedAt:
+          example: '2024-01-15T14:30:00Z'
+          type: string
+      type: object
+    models.ComputeZoneType:
+      enum:
+        - datacenter
+        - cloud provider
+      example: datacenter
+      type: string
+      x-enum-varnames:
+        - ComputeZoneTypeDatacenter
+        - ComputeZoneTypeCloudProvider
+    models.ComputeZonesResponse:
+      properties:
+        computezones:
+          items:
+            $ref: '#/components/schemas/models.ComputeZoneOverview'
+          type: array
+          uniqueItems: false
+        hasMore:
+          example: false
+          type: boolean
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 0
+          type: integer
+      type: object
+    models.Contact:
+      properties:
+        email:
+          example: admin@us-east-1.compute.nvidia.com
+          type: string
+        pic:
+          example: John Doe
+          type: string
+      type: object
+    models.DeleteNodesRequest:
+      properties:
+        nodeUUIDs:
+          example:
+            - node-123
+            - node-456
+          items:
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+        - nodeUUIDs
+      type: object
+    models.DiskInfo:
+      properties:
+        blockDevices:
+          items:
+            $ref: '#/components/schemas/models.BlockDevice'
+          type: array
+          uniqueItems: false
+        containerRootDisk:
+          example: /dev/sda1
+          type: string
+      type: object
+    models.ErrorLabelByError:
+      properties:
+        error:
+          example: NVSwitch Fatal Error
+          type: string
+      type: object
+    models.ErrorOverviewResponse:
+      properties:
+        totalErrorNodes:
+          example: 42
+          type: integer
+        totalErrorTypes:
+          example: 15
+          type: integer
+        totalErrors:
+          example: 1250
+          type: integer
+      type: object
+    models.ErrorReportGraphByErrorResponse:
+      properties:
+        result:
+          items:
+            $ref: '#/components/schemas/models.ErrorTimeSeriesByError'
+          type: array
+          uniqueItems: false
+        timeRange:
+          $ref: '#/components/schemas/models.TimeRange'
+      type: object
+    models.ErrorResponse:
+      description: Standard error response returned by all API endpoints. For KAS
+        API errors, requestStatus fields are populated.
+      properties:
+        details:
+          description: Detailed error information
+          example: Field 'nodeUUID' must be a valid UUID
+          type: string
+        error:
+          description: Error message or type
+          example: Invalid filter parameters
+          type: string
+        requestStatus:
+          $ref: '#/components/schemas/models.KASRequestStatus'
+      type: object
+    models.ErrorTimeSeriesByError:
+      properties:
+        label:
+          $ref: '#/components/schemas/models.ErrorLabelByError'
+        values:
+          example: '[[1716153600, 5], [1716157200, 8], [1716160800, 3]]'
+          type: string
+      type: object
+    models.FilterField:
+      properties:
+        name:
+          example: healthStatuses
+          type: string
+        options:
+          items:
+            $ref: '#/components/schemas/models.FilterOption'
+          type: array
+          uniqueItems: false
+      type: object
+    models.FilterOption:
+      type: object
+    models.FilterOptions:
+      properties:
+        fields:
+          items:
+            $ref: '#/components/schemas/models.FilterField'
+          type: array
+          uniqueItems: false
+      type: object
+    models.FirmwareCheck:
+      enum:
+        - Passed
+        - Failed
+        - Unknown
+      example: Passed
+      type: string
+      x-enum-varnames:
+        - FirmwareCheckPassed
+        - FirmwareCheckFailed
+        - FirmwareCheckUnknown
+    models.GPUDevice:
+      properties:
+        boardID:
+          example: 0
+          type: integer
+        busID:
+          example: '00000000:01:00.0'
+          type: string
+        chassisSN:
+          example: '1583425610002'
+          type: string
+        gpuIndex:
+          example: '0'
+          type: string
+        minorID:
+          example: '0'
+          type: string
+        sn:
+          example: SN123456789
+          type: string
+        uuid:
+          example: GPU-12345678-1234-1234-1234-123456789012
+          type: string
+        vbiosVersion:
+          example: 90.17.A9.00.0B
+          type: string
+      type: object
+    models.GPUInfo:
+      properties:
+        architecture:
+          example: Ada Lovelace
+          type: string
+        gpus:
+          items:
+            $ref: '#/components/schemas/models.GPUDevice'
+          type: array
+          uniqueItems: false
+        manufacturer:
+          example: NVIDIA
+          type: string
+        memory:
+          example: 24GB
+          type: string
+        product:
+          example: NVIDIA GeForce RTX 4090
+          type: string
+      type: object
+    models.GeoLocation:
+      properties:
+        city:
+          example: Baltimore
+          type: string
+        country:
+          example: United States
+          type: string
+        latitude:
+          example: 39.0458
+          type: number
+        longitude:
+          example: -76.6413
+          type: number
+        region:
+          example: us-east-1
+          type: string
+      type: object
+    models.HealthSegment:
+      properties:
+        endTime:
+          type: string
+        startTime:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.HealthState'
+      type: object
+    models.HealthState:
+      enum:
+        - Healthy
+        - Degraded
+        - Unhealthy
+        - Unknown
+        - Unsupported
+        - Pending
+      example: Healthy
+      type: string
+      x-enum-varnames:
+        - HealthStateHealthy
+        - HealthStateDegraded
+        - HealthStateUnhealthy
+        - HealthStateUnknown
+        - HealthStateUnsupported
+        - HealthStatePending
+    models.HealthSummary:
+      properties:
+        degradedDurationSeconds:
+          type: number
+        degradedPercentage:
+          type: number
+        healthyDurationSeconds:
+          type: number
+        healthyPercentage:
+          type: number
+        unhealthyDurationSeconds:
+          type: number
+        unhealthyPercentage:
+          type: number
+      type: object
+    models.IntegrityCheck:
+      enum:
+        - Verified
+        - Unverified
+        - Degraded
+        - Pending
+        - Unsupported
+        - Unknown
+      type: string
+      x-enum-comments:
+        IntegrityCheckDegraded: Catch-all for attestation errors/unavailable verification
+      x-enum-varnames:
+        - IntegrityCheckPassed
+        - IntegrityCheckFailed
+        - IntegrityCheckDegraded
+        - IntegrityCheckPending
+        - IntegrityCheckUnsupported
+        - IntegrityCheckUnknown
+    models.IntegrityCheckExtraInfo:
+      properties:
+        errorDetails:
+          example: 'SDK error: code=13, message=nonce refresh failed'
+          type: string
+        gpuEvidencePresent:
+          example: true
+          type: boolean
+        gpuResults:
+          additionalProperties:
+            $ref: '#/components/schemas/models.JWTClaims'
+          type: object
+        nrasCallResult:
+          example: 'NRAS attestation failed: GPU-0: NONCE_NOT_MATCHING'
+          type: string
+        overallAttestationResult:
+          example: false
+          type: boolean
+      type: object
+    models.InventoryNode:
+      properties:
+        computeZone:
+          example: compute-zone-1
+          type: string
+        firmwareCheck:
+          $ref: '#/components/schemas/models.FirmwareCheck'
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
+        hostname:
+          example: node-001
+          type: string
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        privateIP:
+          example: 10.0.0.100
+          type: string
+        publicIP:
+          example: 203.0.113.100
+          type: string
+        serialNumbers:
+          example:
+            - SN123456789
+            - SN123456790
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    models.InventoryReportResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.InventoryNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
+    models.JWTClaims:
+      properties:
+        eat_nonce:
+          type: string
+        exp:
+          type: integer
+        hwmodel:
+          description: Hardware info
+          type: string
+        iat:
+          type: integer
+        iss:
+          description: Standard JWT claims
+          type: string
+        jti:
+          type: string
+        measres:
+          type: string
+        nbf:
+          type: integer
+        sub:
+          type: string
+        ueid:
+          type: string
+        x-nvidia-attestation-warning:
+          type: string
+        x-nvidia-error-details:
+          items:
+            $ref: '#/components/schemas/models.NRASErrorDetail'
+          type: array
+          uniqueItems: false
+        x-nvidia-gpu-arch-check:
+          description: NVIDIA attestation claims - GPU specific
+          type: boolean
+        x-nvidia-gpu-attestation-report-cert-chain:
+          $ref: '#/components/schemas/models.CertChainStatus'
+        x-nvidia-gpu-attestation-report-nonce-match:
+          type: boolean
+        x-nvidia-gpu-attestation-report-parsed:
+          type: boolean
+        x-nvidia-gpu-attestation-report-signature-verified:
+          type: boolean
+        x-nvidia-gpu-vbios-rim-fetched:
+          type: boolean
+        x-nvidia-gpu-vbios-rim-measurements-available:
+          type: boolean
+        x-nvidia-gpu-vbios-version:
+          type: string
+        x-nvidia-mismatch-measurement-records:
+          items: {}
+          type: array
+          uniqueItems: false
+        x-nvidia-overall-att-result:
+          description: NVIDIA attestation claims - overall result (for overall JWT)
+          type: boolean
+      type: object
+    models.KASRequestStatus:
+      description: 'RequestStatus contains KAS-specific error details
+
+        This is added to reflect the field in OpenAPI docs for UI reference and not
+        populated by our code
+
+        If KAS returns an error, the request will not be forwarded to the backend'
+      properties:
+        requestId:
+          description: Request ID for tracing
+          example: req-123e4567-e89b-12d3-a456-426614174000
+          type: string
+        statusCode:
+          description: Status code from KAS
+          example: FORBIDDEN
+          type: string
+        statusDescription:
+          description: Status description from KAS
+          example: Validation failed - [insufficient permissions, resource access
+            denied]
+          type: string
+      type: object
+    models.ListComputeZonesResponse:
+      properties:
+        computezones:
+          items:
+            $ref: '#/components/schemas/models.SimpleComputeZone'
+          type: array
+          uniqueItems: false
+        hasMore:
+          example: false
+          type: boolean
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          example: 0
+          type: integer
+      type: object
+    models.ListNodeGroupsResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodeGroups:
+          items:
+            $ref: '#/components/schemas/models.SimpleNodeGroup'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          example: 0
+          type: integer
+      type: object
+    models.MemoryInfo:
+      properties:
+        totalBytes:
+          example: '34359738368'
+          type: string
+      type: object
+    models.Metric:
+      properties:
+        aggregation:
+          $ref: '#/components/schemas/models.Aggregation'
+        description:
+          example: System memory metrics
+          type: string
+        lastUpdated:
+          example: '2024-01-15T14:30:00Z'
+          type: string
+        name:
+          example: memory
+          type: string
+        unit:
+          example: percent
+          type: string
+        value:
+          example: 72.3
+          type: number
+      type: object
+    models.NRASErrorDetail:
+      properties:
+        code:
+          type: integer
+        description:
+          type: string
+        fieldName:
+          type: string
+        httpStatus:
+          type: string
+        message:
+          type: string
+      type: object
+    models.NicInfo:
+      properties:
+        privateIPInterfaces:
+          items:
+            $ref: '#/components/schemas/models.NicInterface'
+          type: array
+          uniqueItems: false
+      type: object
+    models.NicInterface:
+      properties:
+        interface:
+          example: eth0
+          type: string
+        ip:
+          example: 192.168.1.100
+          type: string
+        mac:
+          example: 00:11:22:33:44:55
+          type: string
+      type: object
+    models.Node:
+      properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AgentStatus'
+        computeZone:
+          example: compute-zone-1
+          type: string
+        firmwareCheck:
+          $ref: '#/components/schemas/models.FirmwareCheck'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
+        healthStatus:
+          $ref: '#/components/schemas/models.HealthState'
+        hostname:
+          example: node-001
+          type: string
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        privateIP:
+          example: 10.0.0.100
+          type: string
+        publicIP:
+          example: 203.0.113.100
+          type: string
+      type: object
+    models.NodeAlertComponent:
+      properties:
+        component:
+          type: string
+        componentDisplayName:
+          type: string
+        data:
+          items:
+            $ref: '#/components/schemas/models.Alert'
+          type: array
+          uniqueItems: false
+      type: object
+    models.NodeAlertResponse:
+      properties:
+        alert:
+          items:
+            $ref: '#/components/schemas/models.NodeAlertComponent'
+          type: array
+          uniqueItems: false
+        customerId:
+          type: string
+        nodeUUID:
+          type: string
+        page:
+          type: integer
+        pageCursorNext:
+          type: string
+        pageSize:
+          type: integer
+      type: object
+    models.NodeDetailsResponse:
+      properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AgentStatus'
+        computeZone:
+          example: compute-zone-1
+          type: string
+        computeZoneId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        degradedComponentCount:
+          example: 1
+          type: integer
+        enrolledAt:
+          example: '2025-08-11T17:23:02Z'
+          type: string
+        firmwareCheck:
+          $ref: '#/components/schemas/models.FirmwareCheck'
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
+        healthStatus:
+          $ref: '#/components/schemas/models.HealthState'
+        healthyComponentCount:
+          example: 3
+          type: integer
+        hostname:
+          example: node-001
+          type: string
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeGroupId:
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        privateIP:
+          example: 10.0.0.100
+          type: string
+        publicIP:
+          example: 203.0.113.100
+          type: string
+        resources:
+          $ref: '#/components/schemas/models.NodeResources'
+        systemInfo:
+          $ref: '#/components/schemas/models.SystemInfo'
+        tags:
+          example:
+            - gpu
+            - high-memory
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        unhealthyComponentCount:
+          example: 1
+          type: integer
+      type: object
+    models.NodeGroupOverview:
+      properties:
+        alertOverview:
+          $ref: '#/components/schemas/models.AlertOverview'
+        computeZoneContact:
+          $ref: '#/components/schemas/models.Contact'
+        computeZoneGeoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        computeZoneId:
+          example: cz-us-east-1
+          type: string
+        computeZoneName:
+          example: US East 1 ComputeZone
+          type: string
+        cpuCoresCount:
+          example: 40
+          type: integer
+        createdAt:
+          example: '2024-01-10T09:00:00Z'
+          type: string
+        degradedNodesCount:
+          example: 2
+          type: integer
+        description:
+          example: High-performance GPU nodes for ML workloads
+          type: string
+        gpusCount:
+          example: 80
+          type: integer
+        healthPercentage:
+          example: 95
+          type: number
+        healthState:
+          $ref: '#/components/schemas/models.HealthState'
+        healthyNodesCount:
+          example: 38
+          type: integer
+        id:
+          example: ng-gpu-cluster-1
+          type: string
+        metrics:
+          items:
+            $ref: '#/components/schemas/models.Metric'
+          type: array
+          uniqueItems: false
+        name:
+          example: GPU Compute Cluster 1
+          type: string
+        nodesCount:
+          example: 40
+          type: integer
+        tags:
+          example:
+            - ml-training
+            - gpu-intensive
+            - high-memory
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        unhealthyNodesCount:
+          example: 0
+          type: integer
+        unknownNodesCount:
+          example: 0
+          type: integer
+        updatedAt:
+          example: '2024-01-15T14:28:00Z'
+          type: string
+      type: object
+    models.NodeGroupsResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodeGroups:
+          items:
+            $ref: '#/components/schemas/models.NodeGroupOverview'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          example: 0
+          type: integer
+      type: object
+    models.NodeHealthHistoryResponse:
+      properties:
+        enrolledAt:
+          type: string
+        healthSummary:
+          $ref: '#/components/schemas/models.HealthSummary'
+        machineStatus:
+          items:
+            $ref: '#/components/schemas/models.HealthSegment'
+          type: array
+          uniqueItems: false
+      type: object
+    models.NodeResources:
+      properties:
+        cpuInfo:
+          $ref: '#/components/schemas/models.CPUInfo'
+        diskInfo:
+          $ref: '#/components/schemas/models.DiskInfo'
+        gpuInfo:
+          $ref: '#/components/schemas/models.GPUInfo'
+        memoryInfo:
+          $ref: '#/components/schemas/models.MemoryInfo'
+        nicInfo:
+          $ref: '#/components/schemas/models.NicInfo'
+      type: object
+    models.NodesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.Node'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
+    models.Options:
+      properties:
+        filters:
+          $ref: '#/components/schemas/models.FilterOptions'
+        sorting:
+          $ref: '#/components/schemas/models.SortingOptions'
+      type: object
+    models.SetNodeTagsRequest:
+      properties:
+        tags:
+          example:
+            - production
+            - ml-training
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+        - tags
+      type: object
+    models.SetNodeTagsResponse:
+      properties:
+        nodeUUID:
+          example: 84ad8912-1821-4597-bf4f-56a1234abcd7
+          type: string
+        tags:
+          example:
+            - production
+            - ml-training
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    models.SimpleComputeZone:
+      properties:
+        contact:
+          $ref: '#/components/schemas/models.Contact'
+        createdAt:
+          example: '2024-01-10T08:45:00Z'
+          type: string
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        name:
+          example: US East 1 ComputeZone
+          type: string
+        type:
+          $ref: '#/components/schemas/models.ComputeZoneType'
+        updatedAt:
+          example: '2024-01-15T14:30:00Z'
+          type: string
+      type: object
+    models.SimpleNode:
+      properties:
+        hostname:
+          example: node-001
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+      type: object
+    models.SimpleNodeGroup:
+      properties:
+        computeZoneId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        computeZoneName:
+          example: US East 1 ComputeZone
+          type: string
+        id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        name:
+          example: GPU Cluster 1
+          type: string
+      type: object
+    models.SortingDefaults:
+      properties:
+        field:
+          example: createdAt
+          type: string
+        order:
+          example: desc
+          type: string
+      type: object
+    models.SortingOptions:
+      properties:
+        defaults:
+          $ref: '#/components/schemas/models.SortingDefaults'
+        fields:
+          example:
+            - createdAt
+            - nodeUUID
+            - healthStatus
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        orders:
+          example:
+            - asc
+            - desc
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    models.SuggestedAction:
+      properties:
+        action:
+          description: Resolution action from Guidance Classes sheet
+          example: Restart the application
+          type: string
+        code:
+          description: Action code from NVIDIA XID catalog
+          example: RESTART_APP
+          type: string
+        persona:
+          $ref: '#/components/schemas/models.ActionPersona'
+        type:
+          $ref: '#/components/schemas/models.ActionType'
+      type: object
+    models.SystemInfo:
+      properties:
+        agentVersion:
+          example: 1.2.3
+          type: string
+        bootID:
+          example: 01532617-6071-404f-9bd7-6e5871a00aa9
+          type: string
+        containerRuntimeVersion:
+          example: containerd://1.7.25
+          type: string
+        cudaVersion:
+          example: '12.4'
+          type: string
+        dcgmVersion:
+          example: 4.5.2
+          type: string
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        hostname:
+          example: node-001
+          type: string
+        kernelVersion:
+          example: 6.8.0-49-generic
+          type: string
+        operatingSystem:
+          example: linux
+          type: string
+        osImage:
+          example: Ubuntu 22.04.5 LTS
+          type: string
+        startedAt:
+          example: '2025-08-11T17:23:02Z'
+          type: string
+        systemUUID:
+          example: 4c4c4544-004a-3410-804c-c7c04f313434
+          type: string
+      type: object
+    models.TimeRange:
+      properties:
+        end:
+          example: '2024-01-01T01:00:00Z'
+          format: date-time
+          type: string
+        start:
+          example: '2024-01-01T00:00:00Z'
+          format: date-time
+          type: string
+      type: object
+    models.UpdateComputeZoneRequest:
+      properties:
+        contact:
+          $ref: '#/components/schemas/models.Contact'
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          maxLength: 255
+          minLength: 1
+          type: string
+        type:
+          example: datacenter
+          maxLength: 16
+          minLength: 1
+          type: string
+      required:
+        - id
+      type: object
+    models.UpdateComputeZoneResponse:
+      properties:
+        id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+      type: object

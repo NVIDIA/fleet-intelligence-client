@@ -37,6 +37,7 @@ test:
         export PATH="$GO_ROOT_DIR/bin:$PATH"
       fi
     - go version
+  coverage: '/Total coverage: (\d+\.\d+)%/'
   script:
     - make check
   after_script:

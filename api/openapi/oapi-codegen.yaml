@@ -1,0 +1,5 @@
+package: fleetapi
+generate:
+  client: true
+  models: true
+output: internal/generated/fleetapi/client.gen.go

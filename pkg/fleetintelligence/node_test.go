@@ -1,0 +1,301 @@
+package fleetintelligence
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"slices"
+	"strings"
+	"testing"
+)
+
+// Verifies detail list request construction and decoding
+func TestListNodesDetailSendsAuthAndParams(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/nodes" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+			t.Fatalf("unexpected auth header: %q", got)
+		}
+
+		query := r.URL.Query()
+		if got := query.Get("view"); got != "detail" {
+			t.Fatalf("unexpected view: %q", got)
+		}
+		if got := query["nodeUUIDs"]; !slices.Equal(got, []string{"node-1", "node-2"}) {
+			t.Fatalf("unexpected nodeUUIDs: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["healthStatuses"]; !slices.Equal(got, []string{"Healthy", "Degraded"}) {
+			t.Fatalf("unexpected healthStatuses: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["agentStatuses"]; !slices.Equal(got, []string{"Online"}) {
+			t.Fatalf("unexpected agentStatuses: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["integrityChecks"]; !slices.Equal(got, []string{"Verified"}) {
+			t.Fatalf("unexpected integrityChecks: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["firmwareChecks"]; !slices.Equal(got, []string{"Unknown"}) {
+			t.Fatalf("unexpected firmwareChecks: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query.Get("hostname"); got != "gpu" {
+			t.Fatalf("unexpected hostname: %q", got)
+		}
+		if got := query.Get("sortBy"); got != "healthStatus" {
+			t.Fatalf("unexpected sortBy: %q", got)
+		}
+		if got := query.Get("order"); got != "desc" {
+			t.Fatalf("unexpected order: %q", got)
+		}
+		if got := query.Get("page"); got != "2" {
+			t.Fatalf("unexpected page: %q", got)
+		}
+		if got := query.Get("pageSize"); got != "50" {
+			t.Fatalf("unexpected pageSize: %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","healthStatus":"Healthy","gpuType":"NVIDIA-H100","gpuCount":8,"agentStatus":"Online","integrityCheck":"Verified","firmwareCheck":"Unknown","lastUpdatedTS":"2026-05-01T00:00:00Z"}],"hasMore":true,"page":2,"pageSize":50,"total":99}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	page := 2
+	pageSize := 50
+	got, err := client.ListNodes(context.Background(), ListNodesOptions{
+		View:            NodeViewDetail,
+		NodeUUIDs:       []string{"node-1", "node-2"},
+		HealthStatuses:  []NodeHealthStatus{NodeHealthHealthy, NodeHealthDegraded},
+		Hostname:        "gpu",
+		AgentStatuses:   []NodeAgentStatus{NodeAgentOnline},
+		IntegrityChecks: []NodeIntegrityCheck{NodeIntegrityVerified},
+		FirmwareChecks:  []NodeFirmwareCheck{NodeFirmwareUnknown},
+		SortBy:          NodeSortByHealthStatus,
+		Order:           NodeOrderDesc,
+		Page:            &page,
+		PageSize:        &pageSize,
+	})
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if !got.HasMore || got.Page != 2 || got.PageSize != 50 || got.Total != 99 {
+		t.Fatalf("unexpected page metadata: %#v", got)
+	}
+	if len(got.Nodes) != 1 {
+		t.Fatalf("unexpected node count: %d", len(got.Nodes))
+	}
+	node := got.Nodes[0]
+	if node.UUID != "node-1" || node.Hostname != "gpu-001" || node.Health != "Healthy" || node.AgentStatus != "Online" {
+		t.Fatalf("unexpected node: %#v", node)
+	}
+	if node.GPUCount == nil || *node.GPUCount != 8 {
+		t.Fatalf("unexpected GPU count: %#v", node.GPUCount)
+	}
+	if !strings.Contains(string(got.RawJSON), `"nodes"`) {
+		t.Fatalf("raw JSON not preserved: %q", string(got.RawJSON))
+	}
+}
+
+// Verifies basic view decoding and filter omission
+func TestListNodesBasic(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		if got := query.Get("view"); got != "basic" {
+			t.Fatalf("unexpected view: %q", got)
+		}
+		if got := query["healthStatuses"]; len(got) != 0 {
+			t.Fatalf("basic view sent healthStatuses: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query.Get("sortBy"); got != "hostname" {
+			t.Fatalf("unexpected sortBy: %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	got, err := client.ListNodes(context.Background(), ListNodesOptions{
+		View:   NodeViewBasic,
+		SortBy: NodeSortByHostname,
+	})
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if len(got.Nodes) != 1 || got.Nodes[0].UUID != "node-1" || got.Nodes[0].Hostname != "gpu-001" {
+		t.Fatalf("unexpected nodes: %#v", got.Nodes)
+	}
+	if got.Nodes[0].GPUCount != nil || got.Nodes[0].Health != "" {
+		t.Fatalf("basic view should not set detail fields: %#v", got.Nodes[0])
+	}
+}
+
+// Verifies detail request construction and nested decoding
+func TestDescribeNodeSendsAuthAndDecodesDetails(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/nodes/node-1" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+			t.Fatalf("unexpected auth header: %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","computeZoneId":"cz-1","nodeGroup":"Training","nodeGroupId":"ng-1","healthStatus":"Degraded","gpuType":"NVIDIA-H100","gpuCount":8,"agentStatus":"Online","integrityCheck":"Unverified","integrityCheckReason":"nonce mismatch","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","healthyComponentCount":3,"degradedComponentCount":1,"unhealthyComponentCount":0,"resources":{"cpuInfo":{"manufacturer":"Intel","type":"Xeon","logicalCores":"96"},"diskInfo":{"containerRootDisk":"/dev/sda1","blockDevices":[{"name":"sda1","mountPoint":"/","fsType":"ext4","parents":["sda"],"size":1024,"used":512,"type":"disk","wwn":"wwn-1"}]},"gpuInfo":{"product":"NVIDIA H100","memory":"80GB","gpus":[{"uuid":"GPU-1"}]},"memoryInfo":{"totalBytes":"1099511627776"},"nicInfo":{"privateIPInterfaces":[{"interface":"eth0","ip":"10.0.0.10","mac":"00:11:22:33:44:55"}]}},"systemInfo":{"agentVersion":"1.2.3","gpuDriverVersion":"550.54.14","cudaVersion":"12.4"},"tags":["prod","h100"]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	got, err := client.DescribeNode(context.Background(), "node-1")
+	if err != nil {
+		t.Fatalf("describe failed: %v", err)
+	}
+	if got.UUID != "node-1" || got.ComputeZoneID != "cz-1" || got.NodeGroupID != "ng-1" || got.Health != "Degraded" || got.IntegrityCheckReason != "nonce mismatch" {
+		t.Fatalf("unexpected node details: %#v", got)
+	}
+	if got.Resources == nil || got.Resources.GPUInfo == nil || len(got.Resources.GPUInfo.GPUs) != 1 || got.Resources.GPUInfo.GPUs[0].UUID != "GPU-1" {
+		t.Fatalf("unexpected resources: %#v", got.Resources)
+	}
+	if got.Resources.DiskInfo == nil || len(got.Resources.DiskInfo.BlockDevices) != 1 || got.Resources.DiskInfo.BlockDevices[0].Name != "sda1" {
+		t.Fatalf("unexpected disk info: %#v", got.Resources.DiskInfo)
+	}
+	if got.Resources.NICInfo == nil || len(got.Resources.NICInfo.PrivateIPInterfaces) != 1 || got.Resources.NICInfo.PrivateIPInterfaces[0].Interface != "eth0" {
+		t.Fatalf("unexpected NIC info: %#v", got.Resources.NICInfo)
+	}
+	if got.SystemInfo == nil || got.SystemInfo.AgentVersion != "1.2.3" || got.SystemInfo.CUDAVersion != "12.4" {
+		t.Fatalf("unexpected system info: %#v", got.SystemInfo)
+	}
+	if !slices.Equal(got.Tags, []string{"prod", "h100"}) {
+		t.Fatalf("unexpected tags: %#v", got.Tags)
+	}
+	if !strings.Contains(string(got.RawJSON), `"nodeUUID"`) {
+		t.Fatalf("raw JSON not preserved: %q", string(got.RawJSON))
+	}
+}
+
+// Verifies API errors are structured
+func TestListNodesReturnsAPIError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"Invalid filter parameters","details":"bad node uuid"}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	_, err = client.ListNodes(context.Background(), ListNodesOptions{})
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+	if !strings.Contains(err.Error(), "400 Bad Request") || !strings.Contains(err.Error(), "bad node uuid") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies describe API errors are structured
+func TestDescribeNodeReturnsAPIError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"Not found","details":"node does not exist"}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	_, err = client.DescribeNode(context.Background(), "node-1")
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+	if !strings.Contains(err.Error(), "404 Not Found") || !strings.Contains(err.Error(), "node does not exist") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies local option validation
+func TestListNodesRejectsInvalidOptions(t *testing.T) {
+	client, err := NewClient("https://fleet.example.com", "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		opts ListNodesOptions
+		want string
+	}{
+		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
+		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
+		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
+		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node integrity check"},
+		{name: "firmware", opts: ListNodesOptions{FirmwareChecks: []NodeFirmwareCheck{"Missing"}}, want: "invalid node firmware check"},
+		{name: "sort", opts: ListNodesOptions{SortBy: "bad"}, want: "invalid node sort"},
+		{name: "order", opts: ListNodesOptions{Order: "up"}, want: "invalid node order"},
+		{name: "basic health", opts: ListNodesOptions{View: NodeViewBasic, HealthStatuses: []NodeHealthStatus{NodeHealthHealthy}}, want: "basic node view is incompatible"},
+		{name: "basic sort", opts: ListNodesOptions{View: NodeViewBasic, SortBy: NodeSortByHealthStatus}, want: "basic node view is incompatible"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := client.ListNodes(context.Background(), tt.opts)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+// Verifies supported integrity filters match the API vocabulary
+func TestNodeIntegrityCheckValid(t *testing.T) {
+	tests := []NodeIntegrityCheck{
+		NodeIntegrityVerified,
+		NodeIntegrityUnverified,
+		NodeIntegrityDegraded,
+		NodeIntegrityPending,
+		NodeIntegrityUnsupported,
+		NodeIntegrityUnknown,
+		NodeIntegrityPassed,
+		NodeIntegrityFailed,
+	}
+
+	for _, check := range tests {
+		if !check.Valid() {
+			t.Fatalf("expected %q to be valid", check)
+		}
+	}
+}
+
+// Verifies describe validation
+func TestDescribeNodeRejectsMissingUUID(t *testing.T) {
+	client, err := NewClient("https://fleet.example.com", "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	_, err = client.DescribeNode(context.Background(), "")
+	if err == nil || !strings.Contains(err.Error(), "node UUID is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

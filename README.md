@@ -19,6 +19,93 @@ api/openapi/           Public customer API contract
 docs/                  Architecture and roadmap notes
 ```
 
+## Usage
+
+### Install
+
+Requires Go 1.23+.
+
+Build the `nvfleetctl` binary into `bin/`:
+
+```bash
+make build
+```
+
+Then run it from there, or put it on your `PATH`:
+
+```bash
+./bin/nvfleetctl --help
+```
+
+To install it directly into your Go bin directory (`$(go env GOPATH)/bin`):
+
+```bash
+go install gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/cmd/nvfleetctl@latest
+```
+
+Or run it without installing:
+
+```bash
+go run ./cmd/nvfleetctl --help
+go run ./cmd/nvfleetctl version
+```
+
+### Authenticate
+
+`nvfleetctl` talks to the Fleet Intelligence customer API using an NGC service
+key. Service keys can be generated at
+https://org.dev.ngc.nvidia.com/identity-access/service-keys. Store your
+credentials once with `auth login`:
+
+```bash
+nvfleetctl auth login --key <your-ngc-service-key>
+```
+
+By default the CLI targets `https://api.fleet-intelligence.nvidia.com`. To point
+at a different API endpoint, pass `--api-url`:
+
+```bash
+nvfleetctl auth login --key <your-ngc-service-key> --api-url https://api.example.nvidia.com
+```
+
+Credentials are written to `~/.config/nvfleetctl/config.yaml` (file mode `0600`).
+Check or clear them with:
+
+```bash
+nvfleetctl auth status   # show configured API URL and key status
+nvfleetctl auth logout   # remove the stored service key
+```
+
+### Run commands
+
+Once authenticated, inspect your fleet. Common command groups:
+
+```bash
+nvfleetctl computezone list          # list compute zones
+nvfleetctl nodegroup list            # list node groups
+nvfleetctl node list                 # list nodes
+nvfleetctl node describe <uuid>      # describe a single node
+nvfleetctl alert list                # list alerts
+nvfleetctl alert timeline            # list alert timelines
+nvfleetctl report inventory          # generate an inventory report
+nvfleetctl report error              # generate an error report
+```
+
+Most list and read commands accept shared flags:
+
+- `-o, --output` — output format: `table` (default) or `json`
+- `--all` — fetch all pages
+- `--page`, `--page-size` — paginate results
+- `--timeout` — request timeout (e.g. `30s`, `2m`)
+
+For example, fetch every node as JSON and filter by health state:
+
+```bash
+nvfleetctl node list --all --health Degraded,Unhealthy --output json
+```
+
+Use `nvfleetctl <command> --help` to see all available flags for any command.
+
 ## Development
 
 Requirements:

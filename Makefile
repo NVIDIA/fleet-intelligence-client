@@ -7,6 +7,13 @@ GO_FILES := $(shell git ls-files '*.go')
 VERSION ?= dev
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+OPENAPI_SPEC := api/openapi/openapi.yaml
+OPENAPI_CODEGEN_CONFIG := api/openapi/oapi-codegen.yaml
+OPENAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.0
+COVERAGE_FILE := coverage.out
+COVERAGE_THRESHOLD := 80
+# Packages excluded from coverage (generated code is not hand-tested).
+COVERAGE_EXCLUDE_PATTERN := internal/generated
 
 LDFLAGS := -s -w \
 	-X 'main.version=$(VERSION)' \
@@ -22,6 +29,18 @@ build: ## Build nvfleetctl
 test: ## Run unit tests
 	go test ./...
 
+.PHONY: test-coverage
+test-coverage: ## Run tests and fail if total coverage is below $(COVERAGE_THRESHOLD)%
+	@packages=$$(go list ./... | grep -v -E "$(COVERAGE_EXCLUDE_PATTERN)"); \
+	go test $$packages -coverprofile=$(COVERAGE_FILE) -covermode=atomic
+	@go tool cover -func=$(COVERAGE_FILE) | tail -1
+	@total=$$(go tool cover -func=$(COVERAGE_FILE) | grep '^total:' | grep -Eo '[0-9]+\.[0-9]+'); \
+	echo "Total coverage: $$total% (threshold: $(COVERAGE_THRESHOLD)%)"; \
+	if awk "BEGIN {exit !($$total < $(COVERAGE_THRESHOLD))}"; then \
+		echo "FAIL: coverage $$total% is below the $(COVERAGE_THRESHOLD)% threshold"; \
+		exit 1; \
+	fi
+
 .PHONY: lint
 lint: ## Run formatting check and go vet
 	@unformatted="$$(gofmt -l $(GO_FILES))"; \
@@ -32,7 +51,7 @@ lint: ## Run formatting check and go vet
 	go vet ./...
 
 .PHONY: check
-check: lint test build ## Run all validation
+check: lint test-coverage build ## Run all validation (enforces the coverage threshold)
 
 .PHONY: setup-git-hooks
 setup-git-hooks: ## Configure local git hooks
@@ -58,7 +77,7 @@ fmt: ## Format Go files
 
 .PHONY: generate
 generate: ## Generate OpenAPI client code
-	@echo "OpenAPI generation is not configured yet. See api/openapi/README.md."
+	$(OPENAPI_CODEGEN) -config $(OPENAPI_CODEGEN_CONFIG) $(OPENAPI_SPEC)
 
 .PHONY: clean
 clean: ## Remove local build artifacts
