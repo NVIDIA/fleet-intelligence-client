@@ -1370,7 +1370,8 @@ paths:
   /v1/reports/inventory:
     get:
       description: Get inventory report in JSON or CSV format. Default response is
-        JSON. For CSV download, set format=csv query parameter
+        JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus
+        a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
       operationId: getV1ReportsInventory
       parameters:
         - description: Page number (Not used for CSV format)
@@ -1394,6 +1395,14 @@ paths:
               - json
               - csv
             type: string
+        - description: Sign the CSV with NVIDIA's signing key and return a zip containing
+            the CSV plus a .sig.bundle (cosign-verifiable Sigstore bundle). Only valid
+            with format=csv.
+          in: query
+          name: signed
+          schema:
+            default: false
+            type: boolean
         - description: Filter by computezone IDs. Empty means all computezones
           in: query
           name: computeZoneIds
@@ -1461,11 +1470,152 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/models.InventoryReportResponse'
                   - type: string
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.InventoryReportResponse'
             text/csv:
               schema:
                 type: string
           description: JSON response (default). For CSV download, use format=csv query
-            parameter
+            parameter. For signed CSV, use format=csv&signed=true (returns application/zip).
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get inventory report
+      tags:
+        - reports
+  /v1/reports/mtbi:
+    get:
+      description: 'Returns fleet-level MTBI (Mean Time Between Interruptions) metrics
+        and a per-burst timeline of all job-disrupting XID bursts in the requested
+        time window. Only finalized bursts (finalized_at IS NOT NULL) with job_disruption=true
+        are counted. GPU hours are enrollment-aware: each node contributes hours only
+        from its created_at date. Use format=csv to download a combined CSV containing
+        the overview summary rows followed by the full timeline.'
+      operationId: getV1ReportsMTBI
+      parameters:
+        - description: Window start (RFC3339). Required for absolute mode.
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: Window end (RFC3339). Required for absolute mode.
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: 'Time mode: absolute (default) or relative'
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: Relative duration (e.g. 168h for 7 days). Required for relative
+            mode.
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Filter by compute zone IDs (multi-value)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by node group IDs (multi-value)
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by tags — ANY-of semantics (multi-value)
+          in: query
+          name: tags
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by specific node UUIDs (multi-value)
+          in: query
+          name: nodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by GPU product name (multi-value)
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Response format: json (default) or csv'
+          in: query
+          name: format
+          schema:
+            default: json
+            enum:
+              - json
+              - csv
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.MTBIReportResponse'
+                  - type: string
+            text/csv:
+              schema:
+                type: string
+          description: OK
         '400':
           content:
             application/json:
@@ -1483,7 +1633,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Forbidden - UAM authorization denied
+          description: Forbidden
         '500':
           content:
             application/json:
@@ -1496,7 +1646,295 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Service Unavailable
-      summary: Get inventory report
+      summary: Get MTBI report (overview + timeline)
+      tags:
+        - reports
+  /v1/reports/mtbi/interruptions:
+    get:
+      description: Returns a paginated breakdown of interruptions grouped by category.
+        Each item contains the category-level aggregate (occurrences and machines
+        affected across all subcategories) plus a subcategories array with the per-subcategory
+        breakdown. Pagination is by category; total reflects the number of distinct
+        categories. Use format=csv to download all rows as a CSV file with Category
+        and Subcategory columns (pagination is ignored for CSV). Shares all filter
+        parameters with GET /v1/reports/mtbi.
+      operationId: getV1ReportsMTBIInterruptions
+      parameters:
+        - description: Window start (RFC3339). Required for absolute mode.
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: Window end (RFC3339). Required for absolute mode.
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: 'Time mode: absolute (default) or relative'
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: Relative duration (e.g. 168h for 7 days). Required for relative
+            mode.
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Filter by compute zone IDs (multi-value)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by node group IDs (multi-value)
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by tags — ANY-of semantics (multi-value)
+          in: query
+          name: tags
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by specific node UUIDs (multi-value)
+          in: query
+          name: nodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by GPU product name (multi-value)
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Page number, 0-indexed (default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Rows per page (default: 20, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            type: integer
+        - description: 'Response format: json (default) or csv'
+          in: query
+          name: format
+          schema:
+            default: json
+            enum:
+              - json
+              - csv
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.MTBIInterruptionsResponse'
+                  - type: string
+            text/csv:
+              schema:
+                type: string
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get MTBI interruptions table (paginated or CSV)
+      tags:
+        - reports
+  /v1/reports/mtbi/machines:
+    get:
+      description: Returns a paginated list of machines that had at least one job-disrupting
+        XID burst in the requested window, ordered by interruption count descending.
+        Each row shows the node's hostname, UUID, total interruption count, and all
+        interruption types experienced (ordered by frequency). Use format=csv to download
+        all rows as a CSV file.
+      operationId: getV1ReportsMTBIMachines
+      parameters:
+        - description: Window start (RFC3339). Required for absolute mode.
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: Window end (RFC3339). Required for absolute mode.
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: 'Time mode: absolute (default) or relative'
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: Relative duration (e.g. 168h for 7 days). Required for relative
+            mode.
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Filter by compute zone IDs (multi-value)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by node group IDs (multi-value)
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by tags — ANY-of semantics (multi-value)
+          in: query
+          name: tags
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by specific node UUIDs (multi-value)
+          in: query
+          name: nodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by GPU product name (multi-value)
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter machines to those that had a burst in any of these categories
+            (multi-value, e.g. 'Off the Bus'). Returns all categories for matching
+            machines.
+          in: query
+          name: interruptionCategories
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Further narrow by subcategory within the selected categories
+            (multi-value, e.g. 'SBE'). Only applied when interruptionCategories is
+            also set.
+          in: query
+          name: interruptionSubcategories
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Page number, 0-indexed (default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Rows per page (default: 20, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            type: integer
+        - description: 'Response format: json (default) or csv'
+          in: query
+          name: format
+          schema:
+            default: json
+            enum:
+              - json
+              - csv
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.MTBIMachinesResponse'
+                  - type: string
+            text/csv:
+              schema:
+                type: string
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get machines with interruptions table (paginated or CSV)
       tags:
         - reports
 components:
@@ -2345,6 +2783,14 @@ components:
         gpuType:
           example: NVIDIA-T400-4GB
           type: string
+        gpuUUIDs:
+          example:
+            - GPU-abc-123
+            - GPU-def-456
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         hostname:
           example: node-001
           type: string
@@ -2381,6 +2827,9 @@ components:
             type: string
           type: array
           uniqueItems: false
+        systemUUID:
+          example: 4c4c4544-004a-3410-804c-c7c04f313434
+          type: string
       type: object
     models.InventoryReportResponse:
       properties:
@@ -2519,6 +2968,168 @@ components:
         total:
           example: 0
           type: integer
+      type: object
+    models.MTBIInterruptionRow:
+      properties:
+        category:
+          example: NVLink
+          type: string
+        machinesAffected:
+          example: 6
+          type: integer
+        occurrences:
+          example: 22
+          type: integer
+        subcategories:
+          items:
+            $ref: '#/components/schemas/models.MTBISubcategoryRow'
+          type: array
+          uniqueItems: false
+      type: object
+    models.MTBIInterruptionsResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        items:
+          items:
+            $ref: '#/components/schemas/models.MTBIInterruptionRow'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          example: 10
+          type: integer
+      type: object
+    models.MTBIMachineRow:
+      properties:
+        hostname:
+          example: gpu-node-01
+          type: string
+        interruptionCount:
+          example: 7
+          type: integer
+        interruptionTypes:
+          example:
+            - Off the Bus
+            - User-App
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        nodeUUID:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+      type: object
+    models.MTBIMachinesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        items:
+          items:
+            $ref: '#/components/schemas/models.MTBIMachineRow'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          example: 18
+          type: integer
+      type: object
+    models.MTBIOverview:
+      properties:
+        fleetSize:
+          example: 101
+          type: integer
+        mtbiDays:
+          example: 16.67
+          type: number
+        mtbiGPUHours:
+          example: 400
+          type: number
+        totalAffectedGPUHours:
+          example: 144
+          type: number
+        totalGPUHours:
+          example: 16800
+          type: number
+        totalGPUs:
+          example: 808
+          type: integer
+        totalInterruptionTypes:
+          example: 3
+          type: integer
+        totalInterruptions:
+          example: 42
+          type: integer
+        totalMachinesAffected:
+          example: 18
+          type: integer
+      type: object
+    models.MTBIReportResponse:
+      properties:
+        overview:
+          $ref: '#/components/schemas/models.MTBIOverview'
+        timeRange:
+          $ref: '#/components/schemas/models.TimeRange'
+        timeline:
+          items:
+            $ref: '#/components/schemas/models.MTBITimelineEntry'
+          type: array
+          uniqueItems: false
+      type: object
+    models.MTBISubcategoryRow:
+      properties:
+        machinesAffected:
+          example: 3
+          type: integer
+        occurrences:
+          example: 10
+          type: integer
+        subcategory:
+          example: MFDE
+          type: string
+      type: object
+    models.MTBITimelineEntry:
+      properties:
+        burstId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        durationSeconds:
+          example: 780
+          type: integer
+        endTime:
+          example: '2024-01-15T14:43:00Z'
+          type: string
+        hostname:
+          example: gpu-node-01
+          type: string
+        interruptionType:
+          example: Off the Bus:SBE
+          type: string
+        nodeUUID:
+          example: node-abc123
+          type: string
+        startTime:
+          example: '2024-01-15T14:30:00Z'
+          type: string
+        xidNumbers:
+          example:
+            - 79
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
       type: object
     models.MemoryInfo:
       properties:

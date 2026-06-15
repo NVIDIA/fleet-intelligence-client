@@ -689,6 +689,114 @@ func (e GetV1ReportsInventoryParamsOrder) Valid() bool {
 	}
 }
 
+// Defines values for GetV1ReportsMTBIParamsTimeMode.
+const (
+	GetV1ReportsMTBIParamsTimeModeAbsolute GetV1ReportsMTBIParamsTimeMode = "absolute"
+	GetV1ReportsMTBIParamsTimeModeRelative GetV1ReportsMTBIParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsMTBIParamsTimeMode enum.
+func (e GetV1ReportsMTBIParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1ReportsMTBIParamsTimeModeAbsolute:
+		return true
+	case GetV1ReportsMTBIParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1ReportsMTBIParamsFormat.
+const (
+	GetV1ReportsMTBIParamsFormatCsv  GetV1ReportsMTBIParamsFormat = "csv"
+	GetV1ReportsMTBIParamsFormatJson GetV1ReportsMTBIParamsFormat = "json"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsMTBIParamsFormat enum.
+func (e GetV1ReportsMTBIParamsFormat) Valid() bool {
+	switch e {
+	case GetV1ReportsMTBIParamsFormatCsv:
+		return true
+	case GetV1ReportsMTBIParamsFormatJson:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1ReportsMTBIInterruptionsParamsTimeMode.
+const (
+	GetV1ReportsMTBIInterruptionsParamsTimeModeAbsolute GetV1ReportsMTBIInterruptionsParamsTimeMode = "absolute"
+	GetV1ReportsMTBIInterruptionsParamsTimeModeRelative GetV1ReportsMTBIInterruptionsParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsMTBIInterruptionsParamsTimeMode enum.
+func (e GetV1ReportsMTBIInterruptionsParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1ReportsMTBIInterruptionsParamsTimeModeAbsolute:
+		return true
+	case GetV1ReportsMTBIInterruptionsParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1ReportsMTBIInterruptionsParamsFormat.
+const (
+	GetV1ReportsMTBIInterruptionsParamsFormatCsv  GetV1ReportsMTBIInterruptionsParamsFormat = "csv"
+	GetV1ReportsMTBIInterruptionsParamsFormatJson GetV1ReportsMTBIInterruptionsParamsFormat = "json"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsMTBIInterruptionsParamsFormat enum.
+func (e GetV1ReportsMTBIInterruptionsParamsFormat) Valid() bool {
+	switch e {
+	case GetV1ReportsMTBIInterruptionsParamsFormatCsv:
+		return true
+	case GetV1ReportsMTBIInterruptionsParamsFormatJson:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1ReportsMTBIMachinesParamsTimeMode.
+const (
+	Absolute GetV1ReportsMTBIMachinesParamsTimeMode = "absolute"
+	Relative GetV1ReportsMTBIMachinesParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsMTBIMachinesParamsTimeMode enum.
+func (e GetV1ReportsMTBIMachinesParamsTimeMode) Valid() bool {
+	switch e {
+	case Absolute:
+		return true
+	case Relative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1ReportsMTBIMachinesParamsFormat.
+const (
+	Csv  GetV1ReportsMTBIMachinesParamsFormat = "csv"
+	Json GetV1ReportsMTBIMachinesParamsFormat = "json"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsMTBIMachinesParamsFormat enum.
+func (e GetV1ReportsMTBIMachinesParamsFormat) Valid() bool {
+	switch e {
+	case Csv:
+		return true
+	case Json:
+		return true
+	default:
+		return false
+	}
+}
+
 // ModelsActionPersona Target persona (stored in DB, stripped before API response)
 type ModelsActionPersona string
 
@@ -1079,6 +1187,7 @@ type ModelsInventoryNode struct {
 	GeoLocation             *ModelsGeoLocation             `json:"geoLocation,omitempty"`
 	GpuCount                *int                           `json:"gpuCount,omitempty"`
 	GpuType                 *string                        `json:"gpuType,omitempty"`
+	GpuUUIDs                *[]string                      `json:"gpuUUIDs,omitempty"`
 	Hostname                *string                        `json:"hostname,omitempty"`
 	IntegrityCheck          *ModelsIntegrityCheck          `json:"integrityCheck,omitempty"`
 	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
@@ -1090,6 +1199,7 @@ type ModelsInventoryNode struct {
 	PrivateIP               *string                        `json:"privateIP,omitempty"`
 	PublicIP                *string                        `json:"publicIP,omitempty"`
 	SerialNumbers           *[]string                      `json:"serialNumbers,omitempty"`
+	SystemUUID              *string                        `json:"systemUUID,omitempty"`
 }
 
 // ModelsInventoryReportResponse defines model for models.InventoryReportResponse.
@@ -1165,6 +1275,79 @@ type ModelsListNodeGroupsResponse struct {
 	Page       *int                     `json:"page,omitempty"`
 	PageSize   *int                     `json:"pageSize,omitempty"`
 	Total      *int                     `json:"total,omitempty"`
+}
+
+// ModelsMTBIInterruptionRow defines model for models.MTBIInterruptionRow.
+type ModelsMTBIInterruptionRow struct {
+	Category         *string                     `json:"category,omitempty"`
+	MachinesAffected *int                        `json:"machinesAffected,omitempty"`
+	Occurrences      *int                        `json:"occurrences,omitempty"`
+	Subcategories    *[]ModelsMTBISubcategoryRow `json:"subcategories,omitempty"`
+}
+
+// ModelsMTBIInterruptionsResponse defines model for models.MTBIInterruptionsResponse.
+type ModelsMTBIInterruptionsResponse struct {
+	HasMore  *bool                        `json:"hasMore,omitempty"`
+	Items    *[]ModelsMTBIInterruptionRow `json:"items,omitempty"`
+	Page     *int                         `json:"page,omitempty"`
+	PageSize *int                         `json:"pageSize,omitempty"`
+	Total    *int                         `json:"total,omitempty"`
+}
+
+// ModelsMTBIMachineRow defines model for models.MTBIMachineRow.
+type ModelsMTBIMachineRow struct {
+	Hostname          *string   `json:"hostname,omitempty"`
+	InterruptionCount *int      `json:"interruptionCount,omitempty"`
+	InterruptionTypes *[]string `json:"interruptionTypes,omitempty"`
+	NodeUUID          *string   `json:"nodeUUID,omitempty"`
+}
+
+// ModelsMTBIMachinesResponse defines model for models.MTBIMachinesResponse.
+type ModelsMTBIMachinesResponse struct {
+	HasMore  *bool                   `json:"hasMore,omitempty"`
+	Items    *[]ModelsMTBIMachineRow `json:"items,omitempty"`
+	Page     *int                    `json:"page,omitempty"`
+	PageSize *int                    `json:"pageSize,omitempty"`
+	Total    *int                    `json:"total,omitempty"`
+}
+
+// ModelsMTBIOverview defines model for models.MTBIOverview.
+type ModelsMTBIOverview struct {
+	FleetSize              *int     `json:"fleetSize,omitempty"`
+	MtbiDays               *float32 `json:"mtbiDays,omitempty"`
+	MtbiGPUHours           *float32 `json:"mtbiGPUHours,omitempty"`
+	TotalAffectedGPUHours  *float32 `json:"totalAffectedGPUHours,omitempty"`
+	TotalGPUHours          *float32 `json:"totalGPUHours,omitempty"`
+	TotalGPUs              *int     `json:"totalGPUs,omitempty"`
+	TotalInterruptionTypes *int     `json:"totalInterruptionTypes,omitempty"`
+	TotalInterruptions     *int     `json:"totalInterruptions,omitempty"`
+	TotalMachinesAffected  *int     `json:"totalMachinesAffected,omitempty"`
+}
+
+// ModelsMTBIReportResponse defines model for models.MTBIReportResponse.
+type ModelsMTBIReportResponse struct {
+	Overview  *ModelsMTBIOverview        `json:"overview,omitempty"`
+	TimeRange *ModelsTimeRange           `json:"timeRange,omitempty"`
+	Timeline  *[]ModelsMTBITimelineEntry `json:"timeline,omitempty"`
+}
+
+// ModelsMTBISubcategoryRow defines model for models.MTBISubcategoryRow.
+type ModelsMTBISubcategoryRow struct {
+	MachinesAffected *int    `json:"machinesAffected,omitempty"`
+	Occurrences      *int    `json:"occurrences,omitempty"`
+	Subcategory      *string `json:"subcategory,omitempty"`
+}
+
+// ModelsMTBITimelineEntry defines model for models.MTBITimelineEntry.
+type ModelsMTBITimelineEntry struct {
+	BurstId          *string `json:"burstId,omitempty"`
+	DurationSeconds  *int    `json:"durationSeconds,omitempty"`
+	EndTime          *string `json:"endTime,omitempty"`
+	Hostname         *string `json:"hostname,omitempty"`
+	InterruptionType *string `json:"interruptionType,omitempty"`
+	NodeUUID         *string `json:"nodeUUID,omitempty"`
+	StartTime        *string `json:"startTime,omitempty"`
+	XidNumbers       *[]int  `json:"xidNumbers,omitempty"`
 }
 
 // ModelsMemoryInfo defines model for models.MemoryInfo.
@@ -1747,6 +1930,9 @@ type GetV1ReportsInventoryParams struct {
 	// Format Response format (json or csv)
 	Format *GetV1ReportsInventoryParamsFormat `form:"format,omitempty" json:"format,omitempty"`
 
+	// Signed Sign the CSV with NVIDIA's signing key and return a zip containing the CSV plus a .sig.bundle (cosign-verifiable Sigstore bundle). Only valid with format=csv.
+	Signed *bool `form:"signed,omitempty" json:"signed,omitempty"`
+
 	// ComputeZoneIds Filter by computezone IDs. Empty means all computezones
 	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
 
@@ -1783,6 +1969,165 @@ type GetV1ReportsInventory200JSONResponseBody1 = string
 
 // GetV1ReportsInventory200JSONResponseBody defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventory200JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// GetV1ReportsMTBIParams defines parameters for GetV1ReportsMTBI.
+type GetV1ReportsMTBIParams struct {
+	// StartTime Window start (RFC3339). Required for absolute mode.
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime Window end (RFC3339). Required for absolute mode.
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode: absolute (default) or relative
+	TimeMode *GetV1ReportsMTBIParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration (e.g. 168h for 7 days). Required for relative mode.
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// ComputeZoneIds Filter by compute zone IDs (multi-value)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// NodeGroupIds Filter by node group IDs (multi-value)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// Tags Filter by tags — ANY-of semantics (multi-value)
+	Tags *[]string `form:"tags,omitempty" json:"tags,omitempty"`
+
+	// NodeUUIDs Filter by specific node UUIDs (multi-value)
+	NodeUUIDs *[]string `form:"nodeUUIDs,omitempty" json:"nodeUUIDs,omitempty"`
+
+	// GpuTypes Filter by GPU product name (multi-value)
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// Format Response format: json (default) or csv
+	Format *GetV1ReportsMTBIParamsFormat `form:"format,omitempty" json:"format,omitempty"`
+}
+
+// GetV1ReportsMTBIParamsTimeMode defines parameters for GetV1ReportsMTBI.
+type GetV1ReportsMTBIParamsTimeMode string
+
+// GetV1ReportsMTBIParamsFormat defines parameters for GetV1ReportsMTBI.
+type GetV1ReportsMTBIParamsFormat string
+
+// GetV1ReportsMTBI200JSONResponseBody1 defines parameters for GetV1ReportsMTBI.
+type GetV1ReportsMTBI200JSONResponseBody1 = string
+
+// GetV1ReportsMTBI200JSONResponseBody defines parameters for GetV1ReportsMTBI.
+type GetV1ReportsMTBI200JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// GetV1ReportsMTBIInterruptionsParams defines parameters for GetV1ReportsMTBIInterruptions.
+type GetV1ReportsMTBIInterruptionsParams struct {
+	// StartTime Window start (RFC3339). Required for absolute mode.
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime Window end (RFC3339). Required for absolute mode.
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode: absolute (default) or relative
+	TimeMode *GetV1ReportsMTBIInterruptionsParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration (e.g. 168h for 7 days). Required for relative mode.
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// ComputeZoneIds Filter by compute zone IDs (multi-value)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// NodeGroupIds Filter by node group IDs (multi-value)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// Tags Filter by tags — ANY-of semantics (multi-value)
+	Tags *[]string `form:"tags,omitempty" json:"tags,omitempty"`
+
+	// NodeUUIDs Filter by specific node UUIDs (multi-value)
+	NodeUUIDs *[]string `form:"nodeUUIDs,omitempty" json:"nodeUUIDs,omitempty"`
+
+	// GpuTypes Filter by GPU product name (multi-value)
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// Page Page number, 0-indexed (default: 0)
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Rows per page (default: 20, max: 100)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+
+	// Format Response format: json (default) or csv
+	Format *GetV1ReportsMTBIInterruptionsParamsFormat `form:"format,omitempty" json:"format,omitempty"`
+}
+
+// GetV1ReportsMTBIInterruptionsParamsTimeMode defines parameters for GetV1ReportsMTBIInterruptions.
+type GetV1ReportsMTBIInterruptionsParamsTimeMode string
+
+// GetV1ReportsMTBIInterruptionsParamsFormat defines parameters for GetV1ReportsMTBIInterruptions.
+type GetV1ReportsMTBIInterruptionsParamsFormat string
+
+// GetV1ReportsMTBIInterruptions200JSONResponseBody1 defines parameters for GetV1ReportsMTBIInterruptions.
+type GetV1ReportsMTBIInterruptions200JSONResponseBody1 = string
+
+// GetV1ReportsMTBIInterruptions200JSONResponseBody defines parameters for GetV1ReportsMTBIInterruptions.
+type GetV1ReportsMTBIInterruptions200JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// GetV1ReportsMTBIMachinesParams defines parameters for GetV1ReportsMTBIMachines.
+type GetV1ReportsMTBIMachinesParams struct {
+	// StartTime Window start (RFC3339). Required for absolute mode.
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime Window end (RFC3339). Required for absolute mode.
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode: absolute (default) or relative
+	TimeMode *GetV1ReportsMTBIMachinesParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration (e.g. 168h for 7 days). Required for relative mode.
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// ComputeZoneIds Filter by compute zone IDs (multi-value)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// NodeGroupIds Filter by node group IDs (multi-value)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// Tags Filter by tags — ANY-of semantics (multi-value)
+	Tags *[]string `form:"tags,omitempty" json:"tags,omitempty"`
+
+	// NodeUUIDs Filter by specific node UUIDs (multi-value)
+	NodeUUIDs *[]string `form:"nodeUUIDs,omitempty" json:"nodeUUIDs,omitempty"`
+
+	// GpuTypes Filter by GPU product name (multi-value)
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// InterruptionCategories Filter machines to those that had a burst in any of these categories (multi-value, e.g. 'Off the Bus'). Returns all categories for matching machines.
+	InterruptionCategories *[]string `form:"interruptionCategories,omitempty" json:"interruptionCategories,omitempty"`
+
+	// InterruptionSubcategories Further narrow by subcategory within the selected categories (multi-value, e.g. 'SBE'). Only applied when interruptionCategories is also set.
+	InterruptionSubcategories *[]string `form:"interruptionSubcategories,omitempty" json:"interruptionSubcategories,omitempty"`
+
+	// Page Page number, 0-indexed (default: 0)
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Rows per page (default: 20, max: 100)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+
+	// Format Response format: json (default) or csv
+	Format *GetV1ReportsMTBIMachinesParamsFormat `form:"format,omitempty" json:"format,omitempty"`
+}
+
+// GetV1ReportsMTBIMachinesParamsTimeMode defines parameters for GetV1ReportsMTBIMachines.
+type GetV1ReportsMTBIMachinesParamsTimeMode string
+
+// GetV1ReportsMTBIMachinesParamsFormat defines parameters for GetV1ReportsMTBIMachines.
+type GetV1ReportsMTBIMachinesParamsFormat string
+
+// GetV1ReportsMTBIMachines200JSONResponseBody1 defines parameters for GetV1ReportsMTBIMachines.
+type GetV1ReportsMTBIMachines200JSONResponseBody1 = string
+
+// GetV1ReportsMTBIMachines200JSONResponseBody defines parameters for GetV1ReportsMTBIMachines.
+type GetV1ReportsMTBIMachines200JSONResponseBody struct {
 	union json.RawMessage
 }
 
@@ -2183,6 +2528,192 @@ func (t *GetV1ReportsInventory200JSONResponseBody) UnmarshalJSON(b []byte) error
 	return err
 }
 
+// AsModelsMTBIReportResponse returns the union data inside the GetV1ReportsMTBI200JSONResponseBody as a ModelsMTBIReportResponse
+func (t GetV1ReportsMTBI200JSONResponseBody) AsModelsMTBIReportResponse() (ModelsMTBIReportResponse, error) {
+	var body ModelsMTBIReportResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromModelsMTBIReportResponse overwrites any union data inside the GetV1ReportsMTBI200JSONResponseBody as the provided ModelsMTBIReportResponse
+func (t *GetV1ReportsMTBI200JSONResponseBody) FromModelsMTBIReportResponse(v ModelsMTBIReportResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeModelsMTBIReportResponse performs a merge with any union data inside the GetV1ReportsMTBI200JSONResponseBody, using the provided ModelsMTBIReportResponse
+func (t *GetV1ReportsMTBI200JSONResponseBody) MergeModelsMTBIReportResponse(v ModelsMTBIReportResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetV1ReportsMTBI200JSONResponseBody1 returns the union data inside the GetV1ReportsMTBI200JSONResponseBody as a GetV1ReportsMTBI200JSONResponseBody1
+func (t GetV1ReportsMTBI200JSONResponseBody) AsGetV1ReportsMTBI200JSONResponseBody1() (GetV1ReportsMTBI200JSONResponseBody1, error) {
+	var body GetV1ReportsMTBI200JSONResponseBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetV1ReportsMTBI200JSONResponseBody1 overwrites any union data inside the GetV1ReportsMTBI200JSONResponseBody as the provided GetV1ReportsMTBI200JSONResponseBody1
+func (t *GetV1ReportsMTBI200JSONResponseBody) FromGetV1ReportsMTBI200JSONResponseBody1(v GetV1ReportsMTBI200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetV1ReportsMTBI200JSONResponseBody1 performs a merge with any union data inside the GetV1ReportsMTBI200JSONResponseBody, using the provided GetV1ReportsMTBI200JSONResponseBody1
+func (t *GetV1ReportsMTBI200JSONResponseBody) MergeGetV1ReportsMTBI200JSONResponseBody1(v GetV1ReportsMTBI200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetV1ReportsMTBI200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetV1ReportsMTBI200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsModelsMTBIInterruptionsResponse returns the union data inside the GetV1ReportsMTBIInterruptions200JSONResponseBody as a ModelsMTBIInterruptionsResponse
+func (t GetV1ReportsMTBIInterruptions200JSONResponseBody) AsModelsMTBIInterruptionsResponse() (ModelsMTBIInterruptionsResponse, error) {
+	var body ModelsMTBIInterruptionsResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromModelsMTBIInterruptionsResponse overwrites any union data inside the GetV1ReportsMTBIInterruptions200JSONResponseBody as the provided ModelsMTBIInterruptionsResponse
+func (t *GetV1ReportsMTBIInterruptions200JSONResponseBody) FromModelsMTBIInterruptionsResponse(v ModelsMTBIInterruptionsResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeModelsMTBIInterruptionsResponse performs a merge with any union data inside the GetV1ReportsMTBIInterruptions200JSONResponseBody, using the provided ModelsMTBIInterruptionsResponse
+func (t *GetV1ReportsMTBIInterruptions200JSONResponseBody) MergeModelsMTBIInterruptionsResponse(v ModelsMTBIInterruptionsResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetV1ReportsMTBIInterruptions200JSONResponseBody1 returns the union data inside the GetV1ReportsMTBIInterruptions200JSONResponseBody as a GetV1ReportsMTBIInterruptions200JSONResponseBody1
+func (t GetV1ReportsMTBIInterruptions200JSONResponseBody) AsGetV1ReportsMTBIInterruptions200JSONResponseBody1() (GetV1ReportsMTBIInterruptions200JSONResponseBody1, error) {
+	var body GetV1ReportsMTBIInterruptions200JSONResponseBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetV1ReportsMTBIInterruptions200JSONResponseBody1 overwrites any union data inside the GetV1ReportsMTBIInterruptions200JSONResponseBody as the provided GetV1ReportsMTBIInterruptions200JSONResponseBody1
+func (t *GetV1ReportsMTBIInterruptions200JSONResponseBody) FromGetV1ReportsMTBIInterruptions200JSONResponseBody1(v GetV1ReportsMTBIInterruptions200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetV1ReportsMTBIInterruptions200JSONResponseBody1 performs a merge with any union data inside the GetV1ReportsMTBIInterruptions200JSONResponseBody, using the provided GetV1ReportsMTBIInterruptions200JSONResponseBody1
+func (t *GetV1ReportsMTBIInterruptions200JSONResponseBody) MergeGetV1ReportsMTBIInterruptions200JSONResponseBody1(v GetV1ReportsMTBIInterruptions200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetV1ReportsMTBIInterruptions200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetV1ReportsMTBIInterruptions200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsModelsMTBIMachinesResponse returns the union data inside the GetV1ReportsMTBIMachines200JSONResponseBody as a ModelsMTBIMachinesResponse
+func (t GetV1ReportsMTBIMachines200JSONResponseBody) AsModelsMTBIMachinesResponse() (ModelsMTBIMachinesResponse, error) {
+	var body ModelsMTBIMachinesResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromModelsMTBIMachinesResponse overwrites any union data inside the GetV1ReportsMTBIMachines200JSONResponseBody as the provided ModelsMTBIMachinesResponse
+func (t *GetV1ReportsMTBIMachines200JSONResponseBody) FromModelsMTBIMachinesResponse(v ModelsMTBIMachinesResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeModelsMTBIMachinesResponse performs a merge with any union data inside the GetV1ReportsMTBIMachines200JSONResponseBody, using the provided ModelsMTBIMachinesResponse
+func (t *GetV1ReportsMTBIMachines200JSONResponseBody) MergeModelsMTBIMachinesResponse(v ModelsMTBIMachinesResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetV1ReportsMTBIMachines200JSONResponseBody1 returns the union data inside the GetV1ReportsMTBIMachines200JSONResponseBody as a GetV1ReportsMTBIMachines200JSONResponseBody1
+func (t GetV1ReportsMTBIMachines200JSONResponseBody) AsGetV1ReportsMTBIMachines200JSONResponseBody1() (GetV1ReportsMTBIMachines200JSONResponseBody1, error) {
+	var body GetV1ReportsMTBIMachines200JSONResponseBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetV1ReportsMTBIMachines200JSONResponseBody1 overwrites any union data inside the GetV1ReportsMTBIMachines200JSONResponseBody as the provided GetV1ReportsMTBIMachines200JSONResponseBody1
+func (t *GetV1ReportsMTBIMachines200JSONResponseBody) FromGetV1ReportsMTBIMachines200JSONResponseBody1(v GetV1ReportsMTBIMachines200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetV1ReportsMTBIMachines200JSONResponseBody1 performs a merge with any union data inside the GetV1ReportsMTBIMachines200JSONResponseBody, using the provided GetV1ReportsMTBIMachines200JSONResponseBody1
+func (t *GetV1ReportsMTBIMachines200JSONResponseBody) MergeGetV1ReportsMTBIMachines200JSONResponseBody1(v GetV1ReportsMTBIMachines200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetV1ReportsMTBIMachines200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetV1ReportsMTBIMachines200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
 
@@ -2315,6 +2846,15 @@ type ClientInterface interface {
 
 	// GetV1ReportsInventory request
 	GetV1ReportsInventory(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1ReportsMTBI request
+	GetV1ReportsMTBI(ctx context.Context, params *GetV1ReportsMTBIParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1ReportsMTBIInterruptions request
+	GetV1ReportsMTBIInterruptions(ctx context.Context, params *GetV1ReportsMTBIInterruptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1ReportsMTBIMachines request
+	GetV1ReportsMTBIMachines(ctx context.Context, params *GetV1ReportsMTBIMachinesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) GetV1AlertTimelineNodes(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -2559,6 +3099,42 @@ func (c *Client) GetV1ReportsError(ctx context.Context, params *GetV1ReportsErro
 
 func (c *Client) GetV1ReportsInventory(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1ReportsInventoryRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV1ReportsMTBI(ctx context.Context, params *GetV1ReportsMTBIParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1ReportsMTBIRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV1ReportsMTBIInterruptions(ctx context.Context, params *GetV1ReportsMTBIInterruptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1ReportsMTBIInterruptionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV1ReportsMTBIMachines(ctx context.Context, params *GetV1ReportsMTBIMachinesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1ReportsMTBIMachinesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -4138,6 +4714,18 @@ func NewGetV1ReportsInventoryRequest(server string, params *GetV1ReportsInventor
 
 		}
 
+		if params.Signed != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "signed", *params.Signed, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ComputeZoneIds != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
@@ -4213,6 +4801,564 @@ func NewGetV1ReportsInventoryRequest(server string, params *GetV1ReportsInventor
 		if params.Order != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "order", *params.Order, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1ReportsMTBIRequest generates requests for GetV1ReportsMTBI
+func NewGetV1ReportsMTBIRequest(server string, params *GetV1ReportsMTBIParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/reports/mtbi")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Tags != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tags", *params.Tags, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUIDs != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUIDs", *params.NodeUUIDs, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Format != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "format", *params.Format, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1ReportsMTBIInterruptionsRequest generates requests for GetV1ReportsMTBIInterruptions
+func NewGetV1ReportsMTBIInterruptionsRequest(server string, params *GetV1ReportsMTBIInterruptionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/reports/mtbi/interruptions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Tags != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tags", *params.Tags, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUIDs != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUIDs", *params.NodeUUIDs, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Format != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "format", *params.Format, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1ReportsMTBIMachinesRequest generates requests for GetV1ReportsMTBIMachines
+func NewGetV1ReportsMTBIMachinesRequest(server string, params *GetV1ReportsMTBIMachinesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/reports/mtbi/machines")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Tags != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tags", *params.Tags, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUIDs != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUIDs", *params.NodeUUIDs, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.InterruptionCategories != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "interruptionCategories", *params.InterruptionCategories, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.InterruptionSubcategories != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "interruptionSubcategories", *params.InterruptionSubcategories, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Format != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "format", *params.Format, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -4338,6 +5484,15 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1ReportsInventoryWithResponse request
 	GetV1ReportsInventoryWithResponse(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*GetV1ReportsInventoryResponse, error)
+
+	// GetV1ReportsMTBIWithResponse request
+	GetV1ReportsMTBIWithResponse(ctx context.Context, params *GetV1ReportsMTBIParams, reqEditors ...RequestEditorFn) (*GetV1ReportsMTBIResponse, error)
+
+	// GetV1ReportsMTBIInterruptionsWithResponse request
+	GetV1ReportsMTBIInterruptionsWithResponse(ctx context.Context, params *GetV1ReportsMTBIInterruptionsParams, reqEditors ...RequestEditorFn) (*GetV1ReportsMTBIInterruptionsResponse, error)
+
+	// GetV1ReportsMTBIMachinesWithResponse request
+	GetV1ReportsMTBIMachinesWithResponse(ctx context.Context, params *GetV1ReportsMTBIMachinesParams, reqEditors ...RequestEditorFn) (*GetV1ReportsMTBIMachinesResponse, error)
 }
 
 type GetV1AlertTimelineNodesResponse struct {
@@ -4956,6 +6111,111 @@ func (r GetV1ReportsInventoryResponse) ContentType() string {
 	return ""
 }
 
+type GetV1ReportsMTBIResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetV1ReportsMTBI200JSONResponseBody
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1ReportsMTBIResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1ReportsMTBIResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1ReportsMTBIResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1ReportsMTBIInterruptionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetV1ReportsMTBIInterruptions200JSONResponseBody
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1ReportsMTBIInterruptionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1ReportsMTBIInterruptionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1ReportsMTBIInterruptionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1ReportsMTBIMachinesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetV1ReportsMTBIMachines200JSONResponseBody
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1ReportsMTBIMachinesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1ReportsMTBIMachinesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1ReportsMTBIMachinesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetV1AlertTimelineNodesWithResponse request returning *GetV1AlertTimelineNodesResponse
 func (c *ClientWithResponses) GetV1AlertTimelineNodesWithResponse(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesResponse, error) {
 	rsp, err := c.GetV1AlertTimelineNodes(ctx, params, reqEditors...)
@@ -5140,6 +6400,33 @@ func (c *ClientWithResponses) GetV1ReportsInventoryWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseGetV1ReportsInventoryResponse(rsp)
+}
+
+// GetV1ReportsMTBIWithResponse request returning *GetV1ReportsMTBIResponse
+func (c *ClientWithResponses) GetV1ReportsMTBIWithResponse(ctx context.Context, params *GetV1ReportsMTBIParams, reqEditors ...RequestEditorFn) (*GetV1ReportsMTBIResponse, error) {
+	rsp, err := c.GetV1ReportsMTBI(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1ReportsMTBIResponse(rsp)
+}
+
+// GetV1ReportsMTBIInterruptionsWithResponse request returning *GetV1ReportsMTBIInterruptionsResponse
+func (c *ClientWithResponses) GetV1ReportsMTBIInterruptionsWithResponse(ctx context.Context, params *GetV1ReportsMTBIInterruptionsParams, reqEditors ...RequestEditorFn) (*GetV1ReportsMTBIInterruptionsResponse, error) {
+	rsp, err := c.GetV1ReportsMTBIInterruptions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1ReportsMTBIInterruptionsResponse(rsp)
+}
+
+// GetV1ReportsMTBIMachinesWithResponse request returning *GetV1ReportsMTBIMachinesResponse
+func (c *ClientWithResponses) GetV1ReportsMTBIMachinesWithResponse(ctx context.Context, params *GetV1ReportsMTBIMachinesParams, reqEditors ...RequestEditorFn) (*GetV1ReportsMTBIMachinesResponse, error) {
+	rsp, err := c.GetV1ReportsMTBIMachines(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1ReportsMTBIMachinesResponse(rsp)
 }
 
 // ParseGetV1AlertTimelineNodesResponse parses an HTTP response from a GetV1AlertTimelineNodesWithResponse call
@@ -6100,6 +7387,213 @@ func ParseGetV1ReportsInventoryResponse(rsp *http.Response) (*GetV1ReportsInvent
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GetV1ReportsInventory200JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	case rsp.StatusCode == 200:
+	// Content-type (text/csv) unsupported
+
+	case rsp.StatusCode == 400:
+	// Content-type (application/zip) unsupported
+
+	case rsp.StatusCode == 401:
+	// Content-type (application/zip) unsupported
+
+	case rsp.StatusCode == 403:
+	// Content-type (application/zip) unsupported
+
+	case rsp.StatusCode == 500:
+	// Content-type (application/zip) unsupported
+
+	case rsp.StatusCode == 503:
+		// Content-type (application/zip) unsupported
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1ReportsMTBIResponse parses an HTTP response from a GetV1ReportsMTBIWithResponse call
+func ParseGetV1ReportsMTBIResponse(rsp *http.Response) (*GetV1ReportsMTBIResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1ReportsMTBIResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetV1ReportsMTBI200JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	case rsp.StatusCode == 200:
+		// Content-type (text/csv) unsupported
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1ReportsMTBIInterruptionsResponse parses an HTTP response from a GetV1ReportsMTBIInterruptionsWithResponse call
+func ParseGetV1ReportsMTBIInterruptionsResponse(rsp *http.Response) (*GetV1ReportsMTBIInterruptionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1ReportsMTBIInterruptionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetV1ReportsMTBIInterruptions200JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	case rsp.StatusCode == 200:
+		// Content-type (text/csv) unsupported
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1ReportsMTBIMachinesResponse parses an HTTP response from a GetV1ReportsMTBIMachinesWithResponse call
+func ParseGetV1ReportsMTBIMachinesResponse(rsp *http.Response) (*GetV1ReportsMTBIMachinesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1ReportsMTBIMachinesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetV1ReportsMTBIMachines200JSONResponseBody
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

@@ -89,6 +89,41 @@ nvfleetctl alert list                # list alerts
 nvfleetctl alert timeline            # list alert timelines
 nvfleetctl report inventory          # generate an inventory report
 nvfleetctl report error              # generate an error report
+nvfleetctl report verify             # verify a signed inventory report
+```
+
+Verify a signed inventory report downloaded with
+`report inventory --format csv --signed`. No external tools are required —
+verification is built in.
+
+That command downloads a zip (`inventory-report.zip` by default). Unzip it
+first; it expands to a folder named `inventory_report_<timestamp>/` containing
+two files that share the same stem:
+
+| File | Contents |
+| --- | --- |
+| `inventory_report_<timestamp>.csv` | the report |
+| `inventory_report_<timestamp>.sig.bundle` | its Sigstore signature |
+
+Pass the `.csv` to `--csv` and the `.sig.bundle` to `--bundle`. By default the
+signing key is fetched from the configured API; pass `--key` to verify fully
+offline:
+
+```bash
+# Unzip the downloaded bundle
+unzip inventory-report.zip
+cd inventory_report_2026-06-15_00-00-00
+
+# Verify using the automatically fetched signing key
+nvfleetctl report verify \
+  --csv inventory_report_2026-06-15_00-00-00.csv \
+  --bundle inventory_report_2026-06-15_00-00-00.sig.bundle
+
+# Verify offline with a previously downloaded public key
+nvfleetctl report verify \
+  --csv inventory_report_2026-06-15_00-00-00.csv \
+  --bundle inventory_report_2026-06-15_00-00-00.sig.bundle \
+  --key signing-key.pub
 ```
 
 Most list and read commands accept shared flags:

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -24,7 +26,9 @@ var (
 
 // Stores local flag values for inventory reports
 type reportInventoryFlags struct {
-	format string
+	format     string
+	signed     bool
+	outputPath string
 }
 
 // Stores local flag values for error reports
@@ -35,6 +39,13 @@ type reportErrorFlags struct {
 	window  string
 	start   string
 	end     string
+}
+
+// Stores local flag values for report verification
+type reportVerifyFlags struct {
+	csv    string
+	bundle string
+	key    string
 }
 
 // Stores data ready for inventory report rendering
@@ -62,6 +73,7 @@ func newReportCmd() *cobra.Command {
 
 	cmd.AddCommand(newReportInventoryCmd())
 	cmd.AddCommand(newReportErrorCmd())
+	cmd.AddCommand(newReportVerifyCmd())
 
 	return cmd
 }
@@ -76,12 +88,27 @@ func newReportInventoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inventory",
 		Short: "Generate an inventory report",
+		Long: `Generate an inventory report for the fleet.
+
+Use --signed with --format csv to download a signed CSV bundle (a zip
+containing the CSV plus a cosign-verifiable signature). The bundle is
+written to the current directory unless --output-path is provided.`,
+		Example: `  # Inventory report as a table (default)
+  nvfleetctl report inventory
+
+  # Download a signed CSV bundle into the current directory
+  nvfleetctl report inventory --format csv --signed
+
+  # Download a signed CSV bundle to a specific path
+  nvfleetctl report inventory --format csv --signed --output-path ./reports/inventory.zip`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runReportInventory(cmd, flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
 	cmd.Flags().StringVar(&flags.format, "format", flags.format, "Report format: json or csv")
+	cmd.Flags().BoolVar(&flags.signed, "signed", false, "Download a signed CSV bundle (zip of CSV plus signature); requires --format csv")
+	cmd.Flags().StringVar(&flags.outputPath, "output-path", "", "Destination file or directory for the signed bundle; defaults to the current directory")
 	registerListCommonFlags(cmd, common)
 
 	return cmd
@@ -134,6 +161,140 @@ A time range is always required: use --window for a relative range, or
 	return cmd
 }
 
+// Creates the report verify command
+func newReportVerifyCmd() *cobra.Command {
+	flags := reportVerifyFlags{}
+	common := newCommonFlags()
+
+	cmd := &cobra.Command{
+		Use:   "verify",
+		Short: "Verify a signed inventory report",
+		Long: `Verify a signed inventory report downloaded with
+"report inventory --format csv --signed".
+
+That command downloads a zip (inventory-report.zip by default). Unzip it
+first; it expands to a folder named inventory_report_<timestamp>/ containing
+two files that share the same stem:
+
+  inventory_report_<timestamp>.csv         the report
+  inventory_report_<timestamp>.sig.bundle  its Sigstore signature
+
+Pass the .csv to --csv and the .sig.bundle to --bundle.
+
+Verification is built in; no external tools are required. By default the
+signing key is fetched from the configured API. Pass --key to verify fully
+offline with a previously downloaded public key.`,
+		Example: `  # Unzip the downloaded bundle, then verify (key fetched from the API)
+  unzip inventory-report.zip
+  nvfleetctl report verify \
+    --csv <report>.csv \
+    --bundle <report>.sig.bundle
+
+  # Verify offline with a previously downloaded public key
+  nvfleetctl report verify \
+    --csv <report>.csv \
+    --bundle <report>.sig.bundle \
+    --key signing-key.pub`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runReportVerify(cmd, flags, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.csv, "csv", "", "Path to the report CSV file to verify")
+	cmd.Flags().StringVar(&flags.bundle, "bundle", "", "Path to the .sig.bundle signature file")
+	cmd.Flags().StringVar(&flags.key, "key", "", "Path to a PEM public key for offline verification; defaults to the key fetched from the API")
+	registerTimeoutFlag(cmd, common)
+
+	return cmd
+}
+
+// Validates flags, loads the artifacts and key, and verifies the signature
+func runReportVerify(cmd *cobra.Command, flags reportVerifyFlags, common resolvedCommonFlags) error {
+	if err := validateReportVerifyFlags(flags, common); err != nil {
+		return err
+	}
+
+	csv, err := readVerifyFile("--csv", flags.csv)
+	if err != nil {
+		return err
+	}
+	bundle, err := readVerifyFile("--bundle", flags.bundle)
+	if err != nil {
+		return err
+	}
+
+	key, err := reportVerifyKey(cmd, flags, common)
+	if err != nil {
+		return err
+	}
+
+	if err := fleetintelligence.VerifySignedReport(csv, bundle, key); err != nil {
+		return reportVerifyError(flags, err)
+	}
+
+	fmt.Fprintln(cmd.OutOrStdout(), "Verified OK")
+	return nil
+}
+
+// Reads a file named by a verify flag, reporting which flag and path failed and
+// making clear that the flag expects a file path.
+func readVerifyFile(flag, path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("%s file %q does not exist (%s expects a path to a file)", flag, path, flag)
+		}
+		return nil, fmt.Errorf("cannot read %s file %q: %w", flag, path, err)
+	}
+	return data, nil
+}
+
+// Translates verification errors into clear, actionable messages that name the
+// offending file instead of leaking the underlying sigstore/proto details.
+func reportVerifyError(flags reportVerifyFlags, err error) error {
+	switch {
+	case errors.Is(err, fleetintelligence.ErrInvalidBundle):
+		return fmt.Errorf("%q is not a valid signature bundle; pass the report's .sig.bundle file to --bundle", flags.bundle)
+	case errors.Is(err, fleetintelligence.ErrInvalidKey):
+		if flags.key == "" {
+			return errors.New("the signing key fetched from the API is not a valid PEM public key")
+		}
+		return fmt.Errorf("%q is not a valid PEM public key; pass the signing key (e.g. signing-key.pub) to --key", flags.key)
+	case errors.Is(err, fleetintelligence.ErrVerificationFailed):
+		return fmt.Errorf("verification failed: %q does not match the signature in %q.\n"+
+			"The report may have been modified, or --csv and --bundle may point to the wrong files.", flags.csv, flags.bundle)
+	default:
+		return err
+	}
+}
+
+// Loads the verification key from --key or fetches it from the configured API
+func reportVerifyKey(cmd *cobra.Command, flags reportVerifyFlags, common resolvedCommonFlags) ([]byte, error) {
+	if flags.key != "" {
+		return readVerifyFile("--key", flags.key)
+	}
+
+	client, err := newConfiguredClient(commonClientOptions(common)...)
+	if err != nil {
+		return nil, err
+	}
+	return client.FetchSigningKey(cmd.Context())
+}
+
+// Checks report verify flags
+func validateReportVerifyFlags(flags reportVerifyFlags, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+	if strings.TrimSpace(flags.csv) == "" {
+		return errors.New("--csv is required")
+	}
+	if strings.TrimSpace(flags.bundle) == "" {
+		return errors.New("--bundle is required")
+	}
+	return nil
+}
+
 // Validates flags, calls the SDK, and writes inventory report output
 func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common resolvedCommonFlags) error {
 	if err := validateReportInventoryFlags(flags, common); err != nil {
@@ -147,8 +308,22 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 
 	opts := fleetintelligence.InventoryReportOptions{
 		Format: fleetintelligence.ReportFormat(flags.format),
+		Signed: flags.signed,
 	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
+
+	if flags.signed {
+		report, err := client.GetInventoryReport(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		path, err := writeSignedReport(flags.outputPath, report.Filename, report.RawSigned)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "Signed report written to %s\n", path)
+		return nil
+	}
 
 	if fleetintelligence.ReportFormat(flags.format) == fleetintelligence.ReportFormatCSV {
 		report, err := client.GetInventoryReport(cmd.Context(), opts)
@@ -287,6 +462,12 @@ func validateReportInventoryFlags(flags reportInventoryFlags, common resolvedCom
 	}
 	if !fleetintelligence.ReportFormat(flags.format).Valid() {
 		return fmt.Errorf("invalid format %q: expected json or csv", flags.format)
+	}
+	if flags.signed && fleetintelligence.ReportFormat(flags.format) != fleetintelligence.ReportFormatCSV {
+		return errors.New("--signed requires --format csv")
+	}
+	if flags.outputPath != "" && !flags.signed {
+		return errors.New("--output-path can only be used with --signed")
 	}
 	if fleetintelligence.ReportFormat(flags.format) == fleetintelligence.ReportFormatCSV {
 		if common.outputSet {
@@ -633,4 +814,27 @@ func reportGraphTimeRange(timeRange *fleetintelligence.TimeRange) (string, strin
 func writeRawReportBytes(w io.Writer, data []byte) error {
 	_, err := w.Write(data)
 	return err
+}
+
+// Writes a signed report bundle to disk and returns the path it was written to.
+// The bundle lands in the current directory unless outputPath is supplied; an
+// outputPath pointing at an existing directory keeps the suggested filename,
+// otherwise it is treated as the destination file path.
+func writeSignedReport(outputPath, filename string, data []byte) (string, error) {
+	if filename == "" {
+		filename = "inventory-report.zip"
+	}
+
+	target := filename
+	if outputPath != "" {
+		target = outputPath
+		if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
+			target = filepath.Join(outputPath, filename)
+		}
+	}
+
+	if err := os.WriteFile(target, data, 0o644); err != nil {
+		return "", fmt.Errorf("write signed report: %w", err)
+	}
+	return target, nil
 }

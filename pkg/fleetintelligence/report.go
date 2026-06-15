@@ -5,13 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/generated/fleetapi"
 )
+
+// Default filename for signed inventory report downloads
+const defaultSignedInventoryFilename = "inventory-report.zip"
 
 const reportDurationUnitsMessage = "expected a positive duration using units ns, us, µs, ms, s, m, or h"
 
@@ -110,6 +115,7 @@ func (order InventoryReportSortOrder) Valid() bool {
 // Represents request options for inventory reports
 type InventoryReportOptions struct {
 	Format         ReportFormat
+	Signed         bool
 	ComputeZoneIDs []string
 	NodeGroupIDs   []string
 	Tags           []string
@@ -130,6 +136,11 @@ type InventoryReport struct {
 	Total    int             `json:"total"`
 	RawJSON  []byte          `json:"-"`
 	RawCSV   []byte          `json:"-"`
+
+	// RawSigned holds the signed CSV bundle (a zip) when Signed is requested.
+	RawSigned []byte `json:"-"`
+	// Filename is the server-suggested filename for a signed bundle download.
+	Filename string `json:"-"`
 }
 
 // Represents one inventory row in an inventory report
@@ -254,14 +265,26 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 	if err := validateInventoryReportOptions(opts); err != nil {
 		return InventoryReport{}, err
 	}
+	if opts.Signed && format != ReportFormatCSV {
+		return InventoryReport{}, fmt.Errorf("signed inventory reports require csv format")
+	}
 
 	params := inventoryReportParams(opts, format)
-	resp, err := c.api.GetV1ReportsInventoryWithResponse(ctx, &params, acceptReportFormat(format))
+	resp, err := c.api.GetV1ReportsInventoryWithResponse(ctx, &params, acceptReportFormat(format, opts.Signed))
 	if err != nil {
 		return InventoryReport{}, err
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return InventoryReport{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
+	}
+	if opts.Signed {
+		if err := validateSignedReportContentType(resp.HTTPResponse); err != nil {
+			return InventoryReport{}, err
+		}
+		return InventoryReport{
+			RawSigned: append([]byte(nil), resp.Body...),
+			Filename:  signedReportFilename(resp.HTTPResponse),
+		}, nil
 	}
 	if format == ReportFormatCSV {
 		return InventoryReport{RawCSV: append([]byte(nil), resp.Body...)}, nil
@@ -281,7 +304,7 @@ func (c *Client) GetErrorReport(ctx context.Context, opts ErrorReportOptions) (E
 	}
 
 	params := errorReportParams(normalized)
-	resp, err := c.api.GetV1ReportsErrorWithResponse(ctx, &params, acceptReportFormat(normalized.Format))
+	resp, err := c.api.GetV1ReportsErrorWithResponse(ctx, &params, acceptReportFormat(normalized.Format, false))
 	if err != nil {
 		return ErrorReport{}, err
 	}
@@ -435,6 +458,10 @@ func inventoryReportParams(opts InventoryReportOptions, format ReportFormat) fle
 		param := fleetapi.GetV1ReportsInventoryParamsFormat(format)
 		params.Format = &param
 	}
+	if opts.Signed {
+		signed := true
+		params.Signed = &signed
+	}
 	if opts.Page != nil {
 		params.Page = cloneInt(opts.Page)
 	}
@@ -530,14 +557,53 @@ func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams
 	return params
 }
 
-// Overrides the request Accept header for CSV report downloads
-func acceptReportFormat(format ReportFormat) fleetapi.RequestEditorFn {
+// Overrides the request Accept header for CSV and signed report downloads
+func acceptReportFormat(format ReportFormat, signed bool) fleetapi.RequestEditorFn {
 	return func(_ context.Context, req *http.Request) error {
-		if format == ReportFormatCSV {
+		switch {
+		case signed:
+			req.Header.Set("Accept", "application/zip")
+		case format == ReportFormatCSV:
 			req.Header.Set("Accept", "text/csv")
 		}
 		return nil
 	}
+}
+
+// Validates that a signed report response contains a zip bundle
+func validateSignedReportContentType(resp *http.Response) error {
+	if resp == nil {
+		return fmt.Errorf("signed inventory report response missing content type")
+	}
+	contentType := resp.Header.Get("Content-Type")
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil || !strings.EqualFold(mediaType, "application/zip") {
+		if strings.TrimSpace(contentType) == "" {
+			return fmt.Errorf("signed inventory report response missing content type")
+		}
+		return fmt.Errorf("signed inventory report response has content type %q, expected application/zip", contentType)
+	}
+	return nil
+}
+
+// Derives the filename for a signed report download from the response headers
+func signedReportFilename(resp *http.Response) string {
+	if resp == nil {
+		return defaultSignedInventoryFilename
+	}
+	disposition := resp.Header.Get("Content-Disposition")
+	if disposition == "" {
+		return defaultSignedInventoryFilename
+	}
+	_, params, err := mime.ParseMediaType(disposition)
+	if err != nil {
+		return defaultSignedInventoryFilename
+	}
+	// Strip any path components a server might include to avoid traversal.
+	if name := filepath.Base(strings.TrimSpace(params["filename"])); name != "" && name != "." && name != string(filepath.Separator) {
+		return name
+	}
+	return defaultSignedInventoryFilename
 }
 
 // Decodes inventory report responses and preserves the original payload

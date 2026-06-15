@@ -5,11 +5,32 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/sign"
 	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/config"
 )
+
+// Changes the working directory for the duration of a test
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	original, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd failed: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(original); err != nil {
+			t.Fatalf("restore chdir failed: %v", err)
+		}
+	})
+}
 
 // Verifies inventory report table output
 func TestReportInventoryTable(t *testing.T) {
@@ -109,6 +130,164 @@ func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 				t.Fatal("expected error")
 			}
 			if !strings.Contains(err.Error(), "--output cannot be used with --format csv") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies a signed inventory report is written to the current directory
+func TestReportInventorySignedWritesToCWD(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	payload := []byte("PK\x03\x04 signed-zip-bytes")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Accept"); got != "application/zip" {
+			t.Fatalf("unexpected accept header: %q", got)
+		}
+		query := r.URL.Query()
+		if got := query.Get("format"); got != "csv" {
+			t.Fatalf("unexpected format: %q", got)
+		}
+		if got := query.Get("signed"); got != "true" {
+			t.Fatalf("unexpected signed: %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", `attachment; filename="fleet-inventory.zip"`)
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	dir := t.TempDir()
+	chdir(t, dir)
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	written, err := os.ReadFile(filepath.Join(dir, "fleet-inventory.zip"))
+	if err != nil {
+		t.Fatalf("read written file failed: %v", err)
+	}
+	if !bytes.Equal(written, payload) {
+		t.Fatalf("unexpected file contents: %q", string(written))
+	}
+	if !strings.Contains(out.String(), "fleet-inventory.zip") {
+		t.Fatalf("output missing written path: %q", out.String())
+	}
+}
+
+// Verifies --output-path directs the signed bundle to an explicit file
+func TestReportInventorySignedOutputPath(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	payload := []byte("PK\x03\x04 signed-zip-bytes")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", `attachment; filename="fleet-inventory.zip"`)
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	dir := t.TempDir()
+	target := filepath.Join(dir, "custom-name.zip")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output-path", target})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	written, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read written file failed: %v", err)
+	}
+	if !bytes.Equal(written, payload) {
+		t.Fatalf("unexpected file contents: %q", string(written))
+	}
+}
+
+// Verifies --output-path pointing at a directory keeps the suggested filename
+func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	payload := []byte("PK\x03\x04 signed-zip-bytes")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", `attachment; filename="fleet-inventory.zip"`)
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	dir := t.TempDir()
+
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output-path", dir})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	written, err := os.ReadFile(filepath.Join(dir, "fleet-inventory.zip"))
+	if err != nil {
+		t.Fatalf("read written file failed: %v", err)
+	}
+	if !bytes.Equal(written, payload) {
+		t.Fatalf("unexpected file contents: %q", string(written))
+	}
+}
+
+// Verifies signed inventory flag combinations are rejected before any request
+func TestReportInventorySignedValidation(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	if err := config.Save(config.Config{APIURL: "http://example.invalid", ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "signed without csv", args: []string{"report", "inventory", "--signed"}, want: "--signed requires --format csv"},
+		{name: "signed with json", args: []string{"report", "inventory", "--format", "json", "--signed"}, want: "--signed requires --format csv"},
+		{name: "output-path without signed", args: []string{"report", "inventory", "--format", "csv", "--output-path", "out.zip"}, want: "--output-path can only be used with --signed"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetArgs(tc.args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
@@ -398,6 +577,216 @@ func TestReportErrorRejectsInvalidFlags(t *testing.T) {
 		{name: "start alone", args: []string{"report", "error", "--view", "overview", "--start", "2026-05-01T00:00:00Z"}, want: "--start and --end"},
 		{name: "bad start", args: []string{"report", "error", "--view", "overview", "--start", "yesterday", "--end", "2026-05-01T00:00:00Z"}, want: "--start must be RFC3339"},
 		{name: "graph page", args: []string{"report", "error", "--view", "graph", "--page", "1"}, want: "pagination flags"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// writeSignedFixture signs csv and writes the CSV, bundle, and public key into
+// dir, returning their paths.
+func writeSignedFixture(t *testing.T, dir string, csv []byte) (csvPath, bundlePath, keyPath string) {
+	t.Helper()
+
+	keypair, err := sign.NewEphemeralKeypair(nil)
+	if err != nil {
+		t.Fatalf("new keypair failed: %v", err)
+	}
+	pem, err := keypair.GetPublicKeyPem()
+	if err != nil {
+		t.Fatalf("get public key failed: %v", err)
+	}
+	pb, err := sign.Bundle(&sign.PlainData{Data: csv}, keypair, sign.BundleOptions{})
+	if err != nil {
+		t.Fatalf("sign bundle failed: %v", err)
+	}
+	signed, err := bundle.NewBundle(pb)
+	if err != nil {
+		t.Fatalf("wrap bundle failed: %v", err)
+	}
+	bundleJSON, err := signed.MarshalJSON()
+	if err != nil {
+		t.Fatalf("marshal bundle failed: %v", err)
+	}
+
+	csvPath = filepath.Join(dir, "inventory.csv")
+	bundlePath = filepath.Join(dir, "inventory.sig.bundle")
+	keyPath = filepath.Join(dir, "signing-key.pub")
+	for path, data := range map[string][]byte{csvPath: csv, bundlePath: bundleJSON, keyPath: []byte(pem)} {
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatalf("write fixture %s failed: %v", path, err)
+		}
+	}
+	return csvPath, bundlePath, keyPath
+}
+
+// Verifies a signed report passes verification with an offline --key
+func TestReportVerifySucceedsWithKey(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath, "--key", keyPath})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Verified OK") {
+		t.Fatalf("output missing success message: %q", out.String())
+	}
+}
+
+// Verifies a tampered CSV fails the verify command
+func TestReportVerifyTamperedFails(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
+	if err := os.WriteFile(csvPath, []byte("customer,issued_at\nevil,2026-06-15T00:00:00Z\n"), 0o644); err != nil {
+		t.Fatalf("tamper csv failed: %v", err)
+	}
+
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath, "--key", keyPath})
+
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("expected verification to fail for tampered csv")
+	}
+}
+
+// Verifies the signing key is fetched from the API when --key is omitted
+func TestReportVerifyFetchesKey(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
+	keyPEM, err := os.ReadFile(keyPath)
+	if err != nil {
+		t.Fatalf("read key fixture failed: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/signing-key.pub" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		_, _ = w.Write(keyPEM)
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Verified OK") {
+		t.Fatalf("output missing success message: %q", out.String())
+	}
+}
+
+// Verifies a clear message when a non-bundle file is passed to --bundle
+func TestReportVerifyRejectsNonBundle(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, _, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
+
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	// Point --bundle at the CSV instead of the .sig.bundle file.
+	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", csvPath, "--key", keyPath})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "not a valid signature bundle") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(err.Error(), "proto:") {
+		t.Fatalf("error leaks internal details: %v", err)
+	}
+}
+
+// Verifies a clear message when the report does not match the signature
+func TestReportVerifyMismatchMessage(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
+	// Point --csv at the bundle file: a valid bundle, but not the signed artifact.
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"report", "verify", "--csv", bundlePath, "--bundle", bundlePath, "--key", keyPath})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "verification failed") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(err.Error(), "ASN.1") {
+		t.Fatalf("error leaks internal details: %v", err)
+	}
+	_ = csvPath
+}
+
+// Verifies a clear message when a flag points at a missing file
+func TestReportVerifyMissingFile(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, bundlePath, _ := writeSignedFixture(t, dir, []byte("data\n"))
+
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath, "--key", "test-key"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), `--key file "test-key" does not exist`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies required flags are enforced
+func TestReportVerifyRequiresFlags(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"missing csv", []string{"report", "verify", "--bundle", "b.sig.bundle"}, "--csv is required"},
+		{"missing bundle", []string{"report", "verify", "--csv", "report.csv"}, "--bundle is required"},
 	}
 
 	for _, tt := range tests {

@@ -1,6 +1,7 @@
 package fleetintelligence
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -120,6 +121,95 @@ func TestGetInventoryReportCSV(t *testing.T) {
 	}
 	if string(got.RawCSV) != "nodeUUID,hostname\nnode-1,gpu-001\n" {
 		t.Fatalf("unexpected csv: %q", string(got.RawCSV))
+	}
+}
+
+// Verifies signed inventory report downloads request a zip bundle
+func TestGetInventoryReportSigned(t *testing.T) {
+	payload := []byte("PK\x03\x04 signed-zip-bytes")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/reports/inventory" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Accept"); got != "application/zip" {
+			t.Fatalf("unexpected accept header: %q", got)
+		}
+		query := r.URL.Query()
+		if got := query.Get("format"); got != "csv" {
+			t.Fatalf("unexpected format: %q", got)
+		}
+		if got := query.Get("signed"); got != "true" {
+			t.Fatalf("unexpected signed: %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", `attachment; filename="fleet-inventory-2026.zip"`)
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	got, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{Format: ReportFormatCSV, Signed: true})
+	if err != nil {
+		t.Fatalf("inventory signed failed: %v", err)
+	}
+	if !bytes.Equal(got.RawSigned, payload) {
+		t.Fatalf("unexpected signed bytes: %q", string(got.RawSigned))
+	}
+	if got.Filename != "fleet-inventory-2026.zip" {
+		t.Fatalf("unexpected filename: %q", got.Filename)
+	}
+}
+
+// Verifies signed inventory report downloads reject non-zip responses
+func TestGetInventoryReportSignedRejectsNonZipContentType(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/reports/inventory" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Accept"); got != "application/zip" {
+			t.Fatalf("unexpected accept header: %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	_, err = client.GetInventoryReport(context.Background(), InventoryReportOptions{Format: ReportFormatCSV, Signed: true})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), `content type "application/json"`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "expected application/zip") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies signed inventory reports are rejected without csv format
+func TestGetInventoryReportSignedRequiresCSV(t *testing.T) {
+	client, err := NewClient("http://example.invalid", "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	_, err = client.GetInventoryReport(context.Background(), InventoryReportOptions{Signed: true})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "signed inventory reports require csv format") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

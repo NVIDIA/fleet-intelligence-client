@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,6 +15,13 @@ import (
 
 // DefaultTimeout is the per-request timeout applied when none is configured.
 const DefaultTimeout = 2 * time.Minute
+
+// signingKeyPath is the well-known location of the report signing public key.
+const signingKeyPath = "/.well-known/signing-key.pub"
+
+// signingKeyAcceptHeader requests the PEM key while still allowing raw file
+// responses from deployments that use a generic content type.
+const signingKeyAcceptHeader = "application/x-pem-file, text/plain, */*"
 
 var (
 	ErrMissingBaseURL    = errors.New("base URL is required")
@@ -128,6 +136,44 @@ func (c *Client) authorizeRequest(_ context.Context, req *http.Request) error {
 	req.Header.Set("Authorization", "Bearer "+c.serviceKey)
 	req.Header.Set("Accept", "application/json")
 	return nil
+}
+
+// FetchSigningKey downloads the PEM-encoded public key used to sign inventory
+// reports from the configured API's well-known endpoint. It is used by
+// `report verify` when no local key is supplied.
+func (c *Client) FetchSigningKey(ctx context.Context) ([]byte, error) {
+	ref := c.baseURL.ResolveReference(&url.URL{Path: signingKeyPath})
+
+	ctx, cancel := c.requestContext(ctx)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ref.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.authorizeRequest(ctx, req); err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", signingKeyAcceptHeader)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("request timed out after %s", c.timeout)
+		}
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch signing key: unexpected status %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read signing key: %w", err)
+	}
+	return body, nil
 }
 
 // Returns the configured API base URL
