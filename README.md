@@ -1,4 +1,4 @@
-# fleet-intelligence-client-go
+# Fleet Intelligence Client
 
 Go SDK and `nvfleetctl` CLI for the Fleet Intelligence customer API.
 
@@ -92,6 +92,25 @@ nvfleetctl report error              # generate an error report
 nvfleetctl report verify             # verify a signed inventory report
 ```
 
+#### Global Flags
+
+Most list and read commands accept shared flags:
+
+- `-o, --output` — output format: `table` (default) or `json`
+- `--all` — fetch all pages
+- `--page`, `--page-size` — paginate results
+- `--timeout` — request timeout (e.g. `30s`, `2m`)
+
+For example, fetch every node as JSON and filter by health state:
+
+```bash
+nvfleetctl node list --all --health Degraded,Unhealthy --output json
+```
+
+Use `nvfleetctl <command> --help` to see all available flags for any command.
+
+#### How to Download and Verify Signed Reports
+
 Verify a signed inventory report downloaded with
 `report inventory --format csv --signed`. No external tools are required —
 verification is built in.
@@ -125,21 +144,6 @@ nvfleetctl report verify \
   --bundle inventory_report_2026-06-15_00-00-00.sig.bundle \
   --key signing-key.pub
 ```
-
-Most list and read commands accept shared flags:
-
-- `-o, --output` — output format: `table` (default) or `json`
-- `--all` — fetch all pages
-- `--page`, `--page-size` — paginate results
-- `--timeout` — request timeout (e.g. `30s`, `2m`)
-
-For example, fetch every node as JSON and filter by health state:
-
-```bash
-nvfleetctl node list --all --health Degraded,Unhealthy --output json
-```
-
-Use `nvfleetctl <command> --help` to see all available flags for any command.
 
 ## Development
 
