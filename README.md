@@ -1,192 +1,123 @@
 # Fleet Intelligence Client
 
-Go SDK and `nvfleetctl` CLI for the Fleet Intelligence customer API.
+Go SDK and `nvfleetctl` CLI for the NVIDIA Fleet Intelligence customer API — for operators and developers who need to inspect and manage GPU fleet health, alerts, and inventory from the terminal or from Go code.
 
-This repository is intended to become the customer-facing, open-source-ready
-client boundary for Fleet Intelligence. The backend repository remains the
-source of truth for the API implementation; this repository should depend only
-on the public customer API contract.
+# Overview
 
-## Repository Layout
+Fleet Intelligence Client is the customer-facing, open-source client boundary for NVIDIA Fleet Intelligence. It ships two ways to talk to the Fleet Intelligence customer API:
 
-```text
-cmd/nvfleetctl/        CLI entrypoint
-pkg/fleetintelligence/ Public Go SDK package
-internal/generated/    Generated OpenAPI client code
-internal/config/       CLI configuration helpers
-internal/output/       CLI output helpers
-api/openapi/           Public customer API contract
-docs/                  Architecture and roadmap notes
-```
+- **`nvfleetctl`** — a terminal-native CLI for inspecting and managing your GPU fleet.
+- **`pkg/fleetintelligence`** — a public Go SDK that exposes a small, stable, handwritten API over the generated OpenAPI client, for embedding fleet operations in your own Go programs.
 
-## Usage
+The client depends only on the public customer API contract (`api/openapi/`); the backend service remains the source of truth for the API implementation.
 
-### Install
+Key features:
 
-Requires Go 1.23+.
+- **Authenticate once** with an NGC service key (`auth login`); credentials are stored locally at `~/.config/nvfleetctl/config.yaml` (mode `0600`).
+- **Inspect your fleet** — list and describe compute zones, node groups, and nodes, including filtering by health state.
+- **Track alerts** — list alerts and alert timelines.
+- **Generate reports** — inventory and error reports, with built-in verification of Sigstore-signed inventory reports (no external tooling required).
+- **Automation-friendly** — `table` output for humans, `json` output for scripts and AI-agent workflows.
 
-Build the `nvfleetctl` binary into `bin/`:
+# Getting Started
+
+Install `nvfleetctl` with the Go toolchain, or build it from source.
 
 ```bash
-make build
-```
-
-Then run it from there, or put it on your `PATH`:
-
-```bash
-./bin/nvfleetctl --help
-```
-
-To install it directly into your Go bin directory (`$(go env GOPATH)/bin`):
-
-```bash
+# Option A: Install with the Go toolchain (requires Go 1.23+)
+# For an internal GitLab module, set: export GOPRIVATE=gitlab-master.nvidia.com
 go install gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/cmd/nvfleetctl@latest
-```
 
-Or run it without installing:
+# Option B: Build from source into ./bin (clone the repo first)
+git clone ssh://git@gitlab-master.nvidia.com:12051/gpu-health/fleet-intelligence-client-go.git
+cd fleet-intelligence-client-go
+make build
+# then run ./bin/nvfleetctl, or add it to your PATH
 
-```bash
+# Option C: Run without installing (from a cloned repo)
 go run ./cmd/nvfleetctl --help
-go run ./cmd/nvfleetctl version
+
+# Verify
+nvfleetctl version
 ```
 
-### Authenticate
-
-`nvfleetctl` talks to the Fleet Intelligence customer API using an NGC service
-key. Service keys can be generated at
-https://org.dev.ngc.nvidia.com/identity-access/service-keys. Store your
-credentials once with `auth login`:
+Then authenticate with an NGC service key and make your first call:
 
 ```bash
+# Service keys: https://org.dev.ngc.nvidia.com/identity-access/service-keys
 nvfleetctl auth login --key <your-ngc-service-key>
+nvfleetctl node list
 ```
+# Requirements
 
-By default the CLI targets `https://api.fleet-intelligence.nvidia.com`. To point
-at a different API endpoint, pass `--api-url`:
+- **OS/Arch:** Any platform supported by the Go toolchain (Linux, macOS, and Windows on amd64/arm64). No GPU is required on the machine running the client.
+- **Runtime/Compiler:** Go 1.23+ (needed for `go install`, `make build`, and `go run`). A prebuilt binary has no runtime dependency on Go.
+- **Credentials:** An NGC service key, generated at <https://org.dev.ngc.nvidia.com/identity-access/service-keys>.
+
+# Usage
 
 ```bash
-nvfleetctl auth login --key <your-ngc-service-key> --api-url https://api.example.nvidia.com
-```
+# Authenticate once with your NGC service key
+nvfleetctl auth login --key <your-ngc-service-key>
 
-Credentials are written to `~/.config/nvfleetctl/config.yaml` (file mode `0600`).
-Check or clear them with:
+# Inspect your fleet
+nvfleetctl computezone list             # list compute zones
+nvfleetctl nodegroup list               # list node groups
+nvfleetctl node list                    # list nodes
+nvfleetctl node describe <uuid>         # describe a single node
 
-```bash
-nvfleetctl auth status   # show configured API URL and key status
-nvfleetctl auth logout   # remove the stored service key
-```
+# Track alerts and generate reports
+nvfleetctl alert list                   # list alerts
+nvfleetctl report inventory             # generate an inventory report
 
-### Run commands
-
-Once authenticated, inspect your fleet. Common command groups:
-
-```bash
-nvfleetctl computezone list          # list compute zones
-nvfleetctl nodegroup list            # list node groups
-nvfleetctl node list                 # list nodes
-nvfleetctl node describe <uuid>      # describe a single node
-nvfleetctl alert list                # list alerts
-nvfleetctl alert timeline            # list alert timelines
-nvfleetctl report inventory          # generate an inventory report
-nvfleetctl report error              # generate an error report
-nvfleetctl report verify             # verify a signed inventory report
-```
-
-#### Global Flags
-
-Most list and read commands accept shared flags:
-
-- `-o, --output` — output format: `table` (default) or `json`
-- `--all` — fetch all pages
-- `--page`, `--page-size` — paginate results
-- `--timeout` — request timeout (e.g. `30s`, `2m`)
-
-For example, fetch every node as JSON and filter by health state:
-
-```bash
+# Combine global flags: fetch all pages as JSON, filtered by health state
 nvfleetctl node list --all --health Degraded,Unhealthy --output json
 ```
 
-Use `nvfleetctl <command> --help` to see all available flags for any command.
+Most list and read commands accept shared flags: `-o, --output` (`table` or `json`), `--all`, `--page`/`--page-size`, and `--timeout`. Run `nvfleetctl <command> --help` to see all flags for any command.
 
-#### How to Download and Verify Signed Reports
+- More examples & usage (auth, fleet inspection, alerts, reports, signed-report verification): see [`docs/EXAMPLES.md`](docs/EXAMPLES.md)
+- Go SDK reference: the [`pkg/fleetintelligence`](pkg/fleetintelligence) package
+- API contract: [`api/openapi/openapi.yaml`](api/openapi/openapi.yaml)
 
-Verify a signed inventory report downloaded with
-`report inventory --format csv --signed`. No external tools are required —
-verification is built in.
+## Releases
 
-That command downloads a zip (`inventory-report.zip` by default). Unzip it
-first; it expands to a folder named `inventory_report_<timestamp>/` containing
-two files that share the same stem:
+- Changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- Releases & tags: [GitLab releases](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/releases)
 
-| File | Contents |
-| --- | --- |
-| `inventory_report_<timestamp>.csv` | the report |
-| `inventory_report_<timestamp>.sig.bundle` | its Sigstore signature |
-
-Pass the `.csv` to `--csv` and the `.sig.bundle` to `--bundle`. By default the
-signing key is fetched from the configured API; pass `--key` to verify fully
-offline:
-
+# Contribution Guidelines
+- Start here: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Code of Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- Development quickstart (build/test):
 ```bash
-# Unzip the downloaded bundle
-unzip inventory-report.zip
-cd inventory_report_2026-06-15_00-00-00
+# Clone and build
+git clone ssh://git@gitlab-master.nvidia.com:12051/gpu-health/fleet-intelligence-client-go.git
+cd fleet-intelligence-client-go
 
-# Verify using the automatically fetched signing key
-nvfleetctl report verify \
-  --csv inventory_report_2026-06-15_00-00-00.csv \
-  --bundle inventory_report_2026-06-15_00-00-00.sig.bundle
-
-# Verify offline with a previously downloaded public key
-nvfleetctl report verify \
-  --csv inventory_report_2026-06-15_00-00-00.csv \
-  --bundle inventory_report_2026-06-15_00-00-00.sig.bundle \
-  --key signing-key.pub
+make build      # build the nvfleetctl binary into ./bin
+make test       # run the test suite
+make lint       # run the linters
+make check      # run all pre-merge checks
 ```
 
-## Development
+Commit subjects follow conventional commits: `<type>(<scope>): <subject> [(GPUHEALTH-####)]`.
+## Security
+- Vulnerability disclosure: see [`SECURITY.md`](SECURITY.md).
+- Do not file public issues for security reports — follow the private disclosure process in `SECURITY.md`.
 
-Requirements:
+## Support
+- Level: **Experimental** — this client is under active development and APIs may change.
+- How to get help: open a [GitLab issue](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/issues).
 
-- Go 1.23+
+# Community
+- Questions, ideas, and general discussion: open a [GitLab issue](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/issues).
+- Bugs and feature requests: [GitLab Issues](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/issues).
 
-Common commands:
+# References
+- [Architecture notes](docs/ARCHITECTURE.md) — CLI/SDK design and repository boundary
+- [Roadmap](docs/ROADMAP.md) — planned milestones
+- [OpenAPI contract](api/openapi/openapi.yaml) — the public customer API
+- [NGC service keys](https://org.dev.ngc.nvidia.com/identity-access/service-keys) — generate credentials for the CLI
 
-```bash
-make build
-make test
-make lint
-make check
-make setup-git-hooks
-```
-
-Run the scaffolded CLI:
-
-```bash
-go run ./cmd/nvfleetctl --help
-go run ./cmd/nvfleetctl version
-```
-
-## Git Hooks
-
-This repository includes git hooks for secret scanning and commit message
-validation. Install `trufflehog`, then enable the hooks once per checkout:
-
-```bash
-brew install trufflehog
-make setup-git-hooks
-```
-
-You can also run the hook manually:
-
-```bash
-make test-git-hooks
-```
-
-Commit subjects must use the same conventional-commit shape as
-`gpu-health-backend`:
-
-```text
-<type>(<scope>): <subject> [(GPUHEALTH-####)]
-```
+# License
+This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
