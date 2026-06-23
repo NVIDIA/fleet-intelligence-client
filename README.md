@@ -99,7 +99,7 @@ make lint       # run the linters
 make check      # run all pre-merge checks
 ```
 
-Commit subjects follow conventional commits: `<type>(<scope>): <subject> [(GPUHEALTH-####)]`.
+Commit subjects follow conventional commits: `<type>(<scope>): <subject>`.
 Contributions also require a DCO sign-off; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Security
