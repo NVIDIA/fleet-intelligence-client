@@ -39,10 +39,10 @@ Tests use Go’s built-in `testing` package and live next to implementation file
 Commit subjects follow the enforced conventional-commit format:
 
 ```text
-<type>(<scope>): <subject> [(GPUHEALTH-####)]
+<type>(<scope>): <subject>
 ```
 
-Allowed types are `feat`, `fix`, `perf`, `refactor`, `docs`, `chore`, `test`, and `revert`. Example: `feat(auth): add status command (GPUHEALTH-2284)`. Pull requests should describe the change, link Jira, call out API or CLI behavior changes, and include the `make check` result.
+Allowed types are `feat`, `fix`, `perf`, `refactor`, `docs`, `chore`, `test`, and `revert`. Example: `feat(auth): add status command`. Pull requests should describe the change, call out API or CLI behavior changes, and include the `make check` result.
 
 ## Security & Configuration Tips
 

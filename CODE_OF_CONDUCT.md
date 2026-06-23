@@ -1,13 +1,5 @@
 # Contributor Covenant Code of Conduct
 
-## Overview
-
-Define the code of conduct followed and enforced for nvfleetctl.
-
-### Intended audience
-
-Community | Developers | Project Leads
-
 ## Our Pledge
 
 In the interest of fostering an open and welcoming environment, we as

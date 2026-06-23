@@ -12,9 +12,9 @@ case "$SUBJECT" in
   "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
 esac
 
-# Conventional-commit format, matching gpu-health-backend:
-#   <type>(<scope>): <subject> [(GPUHEALTH-####)]
-PATTERN='^(feat|fix|perf|refactor|docs|chore|test|revert)(\([a-z0-9._/-]+\))?!?: .+( \(GPUHEALTH-[0-9]+(, GPUHEALTH-[0-9]+)*\))?$'
+# Conventional-commit format:
+#   <type>(<scope>): <subject>
+PATTERN='^(feat|fix|perf|refactor|docs|chore|test|revert)(\([a-z0-9._/-]+\))?!?: .+$'
 
 if ! printf '%s' "$SUBJECT" | grep -qE "$PATTERN"; then
   cat >&2 <<EOF
@@ -24,11 +24,11 @@ Got:
   $SUBJECT
 
 Expected:
-  <type>(<scope>): <subject> [(GPUHEALTH-####)]
+  <type>(<scope>): <subject>
 
 Examples:
-  feat(cli): add node list command (GPUHEALTH-1701)
-  fix(sdk): handle empty service key (GPUHEALTH-2001)
+  feat(cli): add node list command
+  fix(sdk): handle empty service key
   chore: update dependencies
 
 Allowed types:

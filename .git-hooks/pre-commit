@@ -2,6 +2,10 @@
 
 set -eu
 
+if git diff --cached --quiet --diff-filter=ACM; then
+  exit 0
+fi
+
 if ! command -v trufflehog >/dev/null 2>&1; then
   cat >&2 <<'EOF'
 trufflehog is required for the pre-commit secret scan.
@@ -15,18 +19,19 @@ EOF
   exit 1
 fi
 
-# Scan staged files for secrets. This works for normal repos and worktrees.
-if ! git diff --cached --quiet --diff-filter=ACM; then
-  git diff --cached --name-only -z --diff-filter=ACM \
-    | xargs -0 -I {} trufflehog --no-update filesystem "{}" --results=verified,unknown --fail
-fi
+TMPDIR=$(mktemp -d)
+export TMPDIR
+trap 'rm -rf "$TMPDIR"' EXIT HUP INT TERM
 
-# Scan new git history since HEAD. In a git worktree, --git-common-dir resolves
-# to the main repo's .git directory, so derive the repo root from that path.
-GITDIR=$(git rev-parse --git-common-dir)
-case "$GITDIR" in
-  /*) REPO_ROOT=$(dirname "$GITDIR") ;;
-  *)  REPO_ROOT=$(git rev-parse --show-toplevel) ;;
-esac
+# Scan the exact staged file contents, not the working tree. This avoids both
+# missing staged secrets after later edits and blocking on unrelated unstaged
+# changes.
+git diff --cached --name-only -z --diff-filter=ACM |
+  xargs -0 -I {} sh -c '
+    path=$1
+    staged_path="$TMPDIR/$path"
+    mkdir -p "$(dirname "$staged_path")"
+    git show ":$path" >"$staged_path"
+  ' sh {}
 
-trufflehog --no-update git "file://${REPO_ROOT}" --since-commit HEAD --results=verified,unknown --fail
+trufflehog --no-update filesystem "$TMPDIR" --results=verified,unknown --fail

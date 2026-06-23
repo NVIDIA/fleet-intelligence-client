@@ -50,23 +50,19 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Please provide a clear description of problem this feature solves
-      description: Real usage examples are especially helpful, non-code.
+      label: Problem
+      description: Describe the problem this feature would solve. Real usage examples are especially helpful.
     validations:
       required: true
 
   - type: textarea
-    id: Feature_Description
+    id: feature_description
     attributes:
       label: Feature Description
-      description: Please provide clear description of the feature you request (refer to [User Story format](https://www.atlassian.com/agile/project-management/user-stories#:~:text=User%20story%20template%20and%20examples) and [EARS format](https://ieeexplore.ieee.org/document/5328509))
+      description: Describe the behavior you want to add or change.
       placeholder: >
-        For new feature request, please use one of the following format to describe the feature
-          1. From End-user perspective, use the following user story format 
-              As a <persona>, I <want to>, <so that>.
-          2. From System perspective, use the following EARS format
-              <Pre-Condition> <System> shall  <process> <object to be process> <condition>
-        For changing or improving existing feature, it's recommended to provide the previoius Feature Request ID.
+        As an operator, I want to filter nodes by tag so that I can inspect one
+        workload or tenant at a time.
     validations:
       required: true
 
@@ -76,11 +72,7 @@ body:
       label: Describe your ideal solution
       description: Please describe the functionality you would like added.
       placeholder: >
-        A new function that takes in the information in this form, and triages the issue
-
-        def feature_request(form_info):
-            parse(form_info)
-            return triage_outcome
+        Add `nvfleetctl node list --tag key=value` and the matching SDK option.
     validations:
       required: true
 
@@ -89,7 +81,7 @@ body:
     attributes:
       label: Describe any alternatives you have considered
       description: List any other libraries, or approaches you have looked at or tried.
-      placeholder: I have looked at tool xyz and approach qrs, but they do not cover this use case
+      placeholder: I currently export JSON and filter it locally with jq.
 
   - type: textarea
     id: misc

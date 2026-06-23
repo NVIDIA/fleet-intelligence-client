@@ -19,15 +19,13 @@ handwritten, stable Go API.
 
 ## Repository Boundary
 
-The backend repository remains the source of truth for API implementation and
+The backend service remains the source of truth for API implementation and
 service behavior. This repository should depend only on the public customer API
-contract copied into `api/openapi/`.
-
-Do not import packages from `gpu-health-backend`.
+contract copied into `api/openapi/`. Do not import private backend packages.
 
 ## CLI Conventions
 
 - Use resource-first commands: `nvfleetctl <resource> <verb> [args] [flags]`.
 - Prefer table output for homogeneous lists.
-- Support JSON output for automation and AI agent workflows.
+- Support JSON output for scripts and automation workflows.
 - Keep destructive operations behind confirmation prompts and `--dry-run`.

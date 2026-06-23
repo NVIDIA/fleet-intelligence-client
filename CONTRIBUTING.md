@@ -1,7 +1,7 @@
 # Contributing to Fleet Intelligence Client
 
-If you are interested in contributing to Fleet Intelligence Client, your contributions will fall
-into three categories:
+If you are interested in contributing to Fleet Intelligence Client, your
+contributions will usually fall into three categories:
 1. You want to report a bug, feature request, or documentation issue
     - File an [issue](https://github.com/NVIDIA/fleet-intelligence-client/issues/new/choose)
     describing what you encountered or what you want to see changed.
@@ -10,15 +10,14 @@ into three categories:
     - The maintainers will evaluate the issues and triage them, scheduling
     them for a release. If you believe the issue needs priority attention
     comment on the issue to notify the team.
-2. You want to propose a new Feature and implement it
-    - Post about your intended feature, and we shall discuss the design and
+2. You want to propose a new feature and implement it
+    - Post about your intended feature, and maintainers will discuss the design and
     implementation.
-    - Once we agree that the plan looks good, go ahead and implement it, using
-    the [code contributions](#code-contributions) guide below.
+    - Once the plan is agreed, implement it using the
+    [code contributions](#code-contributions) guide below.
 3. You want to implement a feature or bug-fix for an outstanding issue
     - Follow the [code contributions](#code-contributions) guide below.
-    - If you need more context on a particular issue, please ask and we shall
-    provide.
+    - If you need more context on a particular issue, ask in the issue.
 
 ## Code contributions
 
@@ -50,6 +49,86 @@ labeled.
 
 Additional labels must be applied to indicate whether the change is a feature, improvement, bugfix, or documentation change.
 
+### Developer Certificate of Origin (DCO)
+
+```text
+Developer Certificate of Origin
+Version 1.1
+
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+
+Everyone is permitted to copy and distribute verbatim copies of this license
+document, but changing it is not allowed.
+
+Developer's Certificate of Origin 1.1
+
+By making a contribution to this project, I certify that:
+(a) The contribution was created in whole or in part by me and I
+    have the right to submit it under the open source license
+    indicated in the file; or
+(b) The contribution is based upon previous work that, to the best
+    of my knowledge, is covered under an appropriate open source
+    license and I have the right under that license to submit that
+    work with modifications, whether created in whole or in part
+    by me, under the same open source license (unless I am
+    permitted to submit under a different license), as indicated
+    in the file; or
+(c) The contribution was provided directly to me by some other
+    person who certified (a), (b) or (c) and I have not modified
+    it.
+
+(d) I understand and agree that this project and the contribution
+    are public and that a record of the contribution (including all
+    personal information I submit with it, including my sign-off) is
+    maintained indefinitely and may be redistributed consistent with
+    this project or the open source license(s) involved.
+```
+
+### How to sign your work
+
+To sign your work and agree to the DCO, you must add a sign-off to every git
+commit. This is done by using the `-s` flag when committing:
+
+```text
+git commit -s -m "Your commit message"
+```
+
+This will append a line that looks like:
+
+```text
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+You must use your real name and a valid email address. Anonymous contributions
+or contributions under pseudonyms are not accepted.
+
+If you forget to add the sign-off to a commit, you can amend it:
+
+```text
+git commit --amend --signoff
+```
+
+For more information about the DCO, see
+<https://developercertificate.org/>.
+
+### Local Git hooks
+
+Local hooks are optional but recommended. They check commit subject formatting
+and scan staged files for secrets before commit.
+
+Install `trufflehog` before enabling the hooks:
+
+```bash
+brew install trufflehog
+make setup-git-hooks
+```
+
+You can run the hooks manually with:
+
+```bash
+make test-git-hooks
+```
+
 ### Seasoned developers
 
 Once you have gotten your feet wet and are more comfortable with the code, you
@@ -61,32 +140,34 @@ contributing to. Start with _Step 3_ from above, commenting on the issue to let
 others know you are working on it. If you have any questions related to the
 implementation of the issue, ask them in the issue instead of the PR.
 
-### Branches and Versions
+### Branches and versions
 
-The nvfleetctl repository has two main branches:
+The `main` branch is the active development branch and the target for pull
+requests unless maintainers say otherwise. CI runs against pull requests to
+`main` and must pass before merge.
 
-1. `main` branch: it contains the last released version. Only hotfixes are targeted and merged into it.
-2. `branch-x.y`: it is the development branch which contains the upcoming release. All the new features should be based on this branch and pull requests should target this branch (with the exception of hotfixes).
-
-### Additional details
-
-For every new version `x.y` of nvfleetctl there is a corresponding branch called `branch-x.y`, from where new feature development starts and PRs will be targeted and merged before its release. The exceptions to this are the 'hotfixes' that target the `main` branch, which target critical issues raised by users and are directly merged to `main` branch, and create a new subversion of the project. While trying to patch an issue which requires a 'hotfix', please state the intent in the PR.
-
-For all development, your changes should be pushed into a branch (created using the naming instructions below) in your own fork of nvfleetctl and then create a pull request when the code is ready.
-
-A few days before releasing version `x.y` the code of the current development branch (`branch-x.y`) will be frozen and a new branch, 'branch-x+1.y' will be created to continue development.
+Release branches may be created for stabilization or hotfix work when needed.
+If a release branch exists, maintainers will document the target branch in the
+issue or release notes.
 
 ### Branch naming
 
-Branches used to create PRs should have a name of the form `<type>-<name>`
-which conforms to the following conventions:
-- Type:
-    - fea - For if the branch is for a new feature(s)
-    - enh - For if the branch is an enhancement of an existing feature(s)
-    - bug - For if the branch is for fixing a bug(s) or regression(s)
-- Name:
-    - A name to convey what is being worked on
-    - Please use dashes or underscores between words as opposed to spaces.
+Branches used to create PRs should have a name of the form `<type>/<name>`,
+where `<type>` is one of:
+
+- `feat` for new features.
+- `fix` for bugs or regressions.
+- `docs` for documentation changes.
+- `test` for test-only changes.
+- `chore` for maintenance.
+
+Use a short dash-separated name after the slash, for example `feat/node-tags`
+or `docs/report-examples`.
+
+### Release notes
+
+User-visible changes should update [`CHANGELOG.md`](CHANGELOG.md). The pull
+request title may also be used by maintainers when preparing release notes.
 
 ## Attribution
 Portions adopted from https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md
