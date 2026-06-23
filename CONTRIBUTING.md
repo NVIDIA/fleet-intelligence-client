@@ -111,6 +111,24 @@ git commit --amend --signoff
 For more information about the DCO, see
 <https://developercertificate.org/>.
 
+### Local Git hooks
+
+Local hooks are optional but recommended. They check commit subject formatting
+and scan staged files for secrets before commit.
+
+Install `trufflehog` before enabling the hooks:
+
+```bash
+brew install trufflehog
+make setup-git-hooks
+```
+
+You can run the hooks manually with:
+
+```bash
+make test-git-hooks
+```
+
 ### Seasoned developers
 
 Once you have gotten your feet wet and are more comfortable with the code, you
