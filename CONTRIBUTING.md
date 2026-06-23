@@ -134,7 +134,7 @@ issue or release notes.
 
 ### Branch naming
 
-Branches used to create PRs should have a name of the form `<type>-<name>`,
+Branches used to create PRs should have a name of the form `<type>/<name>`,
 where `<type>` is one of:
 
 - `feat` for new features.
@@ -143,8 +143,8 @@ where `<type>` is one of:
 - `test` for test-only changes.
 - `chore` for maintenance.
 
-Use a short dash-separated name, for example `feat-node-tags` or
-`docs-report-examples`.
+Use a short dash-separated name after the slash, for example `feat/node-tags`
+or `docs/report-examples`.
 
 ### Release notes
 
