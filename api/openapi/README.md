@@ -1,13 +1,13 @@
 # OpenAPI Contract
 
-Place the curated public Fleet Intelligence customer API contract in this
-directory.
+This directory contains the curated public Fleet Intelligence customer API
+contract used by the Go SDK and `nvfleetctl` CLI.
 
-The backend repository currently publishes generated Swagger docs. Before using
-that spec here, curate it so this repository contains only customer-facing API
+The backend service remains the source of truth for API implementation and
+service behavior. This repository should only contain customer-facing API
 surfaces needed by the SDK and CLI.
 
-Initial target surfaces:
+Current customer-facing surfaces include:
 
 - `/v1/computezones`
 - `/v1/nodegroups`
@@ -17,5 +17,12 @@ Initial target surfaces:
 - `/v1/reports/inventory`
 - `/v1/reports/error`
 
-The first implementation task should choose the generator and wire it into
-`make generate`.
+Generated Go client code is checked in under `internal/generated/fleetapi/`.
+After changing `openapi.yaml` or `oapi-codegen.yaml`, regenerate it with:
+
+```bash
+make generate
+```
+
+Keep the generated client private to this repository. Public SDK types and
+methods should be exposed through `pkg/fleetintelligence`.

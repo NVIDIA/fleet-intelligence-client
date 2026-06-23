@@ -5,6 +5,6 @@
 
 ## Checklist
 - [ ] I am familiar with the [Contributing Guidelines](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/CONTRIBUTING.md).
-- [ ] My commits are signed off (`git commit -s`) per the DCO.
+- [ ] My commits are signed off (`git commit -s`) per the [DCO](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/DCO).
 - [ ] New or existing tests cover these changes.
 - [ ] The documentation is up to date with these changes.

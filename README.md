@@ -2,7 +2,7 @@
 
 Go SDK and `nvfleetctl` CLI for the NVIDIA Fleet Intelligence customer API — for operators and developers who need to inspect and manage GPU fleet health, alerts, and inventory from the terminal or from Go code.
 
-# Overview
+## Overview
 
 Fleet Intelligence Client is the customer-facing, open-source client boundary for NVIDIA Fleet Intelligence. It ships two ways to talk to the Fleet Intelligence customer API:
 
@@ -17,9 +17,9 @@ Key features:
 - **Inspect your fleet** — list and describe compute zones, node groups, and nodes, including filtering by health state.
 - **Track alerts** — list alerts and alert timelines.
 - **Generate reports** — inventory and error reports, with built-in verification of Sigstore-signed inventory reports (no external tooling required).
-- **Automation-friendly** — `table` output for humans, `json` output for scripts and AI-agent workflows.
+- **Automation-friendly** — `table` output for humans and `json` output for scripts and automation workflows.
 
-# Getting Started
+## Getting Started
 
 Install `nvfleetctl` with the Go toolchain, or build it from source.
 
@@ -47,13 +47,13 @@ Then authenticate with an NGC service key and make your first call:
 nvfleetctl auth login --key <your-ngc-service-key>
 nvfleetctl node list
 ```
-# Requirements
+## Requirements
 
 - **OS/Arch:** Any platform supported by the Go toolchain (Linux, macOS, and Windows on amd64/arm64). No GPU is required on the machine running the client.
 - **Runtime/Compiler:** Go 1.23+ (needed for `go install`, `make build`, and `go run`). A prebuilt binary has no runtime dependency on Go.
 - **Credentials:** An NGC service key, generated at <https://org.dev.ngc.nvidia.com/identity-access/service-keys>.
 
-# Usage
+## Usage
 
 ```bash
 # Authenticate once with your NGC service key
@@ -84,7 +84,7 @@ Most list and read commands accept shared flags: `-o, --output` (`table` or `jso
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - Releases & tags: [GitHub releases](https://github.com/NVIDIA/fleet-intelligence-client/releases)
 
-# Contribution Guidelines
+## Contribution Guidelines
 - Start here: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Code of Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 - Development quickstart (build/test):
@@ -100,6 +100,8 @@ make check      # run all pre-merge checks
 ```
 
 Commit subjects follow conventional commits: `<type>(<scope>): <subject> [(GPUHEALTH-####)]`.
+Contributions also require a DCO sign-off; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Security
 - Vulnerability disclosure: see [`SECURITY.md`](SECURITY.md).
 - Do not file public issues for security reports — follow the private disclosure process in `SECURITY.md`.
@@ -108,15 +110,14 @@ Commit subjects follow conventional commits: `<type>(<scope>): <subject> [(GPUHE
 - Level: **Experimental** — this client is under active development and APIs may change.
 - How to get help: open a [GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues).
 
-# Community
+## Community
 - Questions, ideas, and general discussion: open a [GitHub Discussion](https://github.com/NVIDIA/fleet-intelligence-client/discussions) or [issue](https://github.com/NVIDIA/fleet-intelligence-client/issues).
 - Bugs and feature requests: [GitHub Issues](https://github.com/NVIDIA/fleet-intelligence-client/issues).
 
-# References
+## References
 - [Architecture notes](docs/ARCHITECTURE.md) — CLI/SDK design and repository boundary
-- [Roadmap](docs/ROADMAP.md) — planned milestones
 - [OpenAPI contract](api/openapi/openapi.yaml) — the public customer API
 - [NGC service keys](https://org.dev.ngc.nvidia.com/identity-access/service-keys) — generate credentials for the CLI
 
-# License
+## License
 This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
