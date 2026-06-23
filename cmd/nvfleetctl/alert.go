@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	clihelpers "gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/cmd/nvfleetctl/helpers"
-	clioutput "gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/output"
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/pkg/fleetintelligence"
+	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl/helpers"
+	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
+	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 
 	"github.com/spf13/cobra"
 )

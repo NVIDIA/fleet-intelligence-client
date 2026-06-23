@@ -25,12 +25,11 @@ Install `nvfleetctl` with the Go toolchain, or build it from source.
 
 ```bash
 # Option A: Install with the Go toolchain (requires Go 1.23+)
-# For an internal GitLab module, set: export GOPRIVATE=gitlab-master.nvidia.com
-go install gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/cmd/nvfleetctl@latest
+go install github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl@latest
 
 # Option B: Build from source into ./bin (clone the repo first)
-git clone ssh://git@gitlab-master.nvidia.com:12051/gpu-health/fleet-intelligence-client-go.git
-cd fleet-intelligence-client-go
+git clone https://github.com/NVIDIA/fleet-intelligence-client.git
+cd fleet-intelligence-client
 make build
 # then run ./bin/nvfleetctl, or add it to your PATH
 
@@ -83,7 +82,7 @@ Most list and read commands accept shared flags: `-o, --output` (`table` or `jso
 ## Releases
 
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
-- Releases & tags: [GitLab releases](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/releases)
+- Releases & tags: [GitHub releases](https://github.com/NVIDIA/fleet-intelligence-client/releases)
 
 # Contribution Guidelines
 - Start here: [`CONTRIBUTING.md`](CONTRIBUTING.md)
@@ -91,8 +90,8 @@ Most list and read commands accept shared flags: `-o, --output` (`table` or `jso
 - Development quickstart (build/test):
 ```bash
 # Clone and build
-git clone ssh://git@gitlab-master.nvidia.com:12051/gpu-health/fleet-intelligence-client-go.git
-cd fleet-intelligence-client-go
+git clone https://github.com/NVIDIA/fleet-intelligence-client.git
+cd fleet-intelligence-client
 
 make build      # build the nvfleetctl binary into ./bin
 make test       # run the test suite
@@ -107,11 +106,11 @@ Commit subjects follow conventional commits: `<type>(<scope>): <subject> [(GPUHE
 
 ## Support
 - Level: **Experimental** — this client is under active development and APIs may change.
-- How to get help: open a [GitLab issue](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/issues).
+- How to get help: open a [GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues).
 
 # Community
-- Questions, ideas, and general discussion: open a [GitLab issue](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/issues).
-- Bugs and feature requests: [GitLab Issues](https://gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/-/issues).
+- Questions, ideas, and general discussion: open a [GitHub Discussion](https://github.com/NVIDIA/fleet-intelligence-client/discussions) or [issue](https://github.com/NVIDIA/fleet-intelligence-client/issues).
+- Bugs and feature requests: [GitHub Issues](https://github.com/NVIDIA/fleet-intelligence-client/issues).
 
 # References
 - [Architecture notes](docs/ARCHITECTURE.md) — CLI/SDK design and repository boundary

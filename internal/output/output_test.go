@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/pkg/fleetintelligence"
+	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
 // Returns an error for every write

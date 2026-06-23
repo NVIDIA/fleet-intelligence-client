@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/generated/fleetapi"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
 
 // DefaultTimeout is the per-request timeout applied when none is configured.

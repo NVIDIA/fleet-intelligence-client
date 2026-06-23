@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/pkg/fleetintelligence"
+	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
 const (

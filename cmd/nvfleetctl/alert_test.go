@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/config"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 )
 
 // Verifies all-page alert JSON output

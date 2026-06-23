@@ -12,7 +12,7 @@ import (
 
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/sign"
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/config"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 )
 
 // Changes the working directory for the duration of a test

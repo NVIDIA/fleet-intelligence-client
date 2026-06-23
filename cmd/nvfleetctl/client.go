@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/config"
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/pkg/fleetintelligence"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
+	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
 // Builds an SDK client from the stored auth config

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go/internal/generated/fleetapi"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
 
 // Represents physical location metadata for a fleet resource

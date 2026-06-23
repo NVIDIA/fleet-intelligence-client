@@ -1,4 +1,4 @@
-module gitlab-master.nvidia.com/gpu-health/fleet-intelligence-client-go
+module github.com/NVIDIA/fleet-intelligence-client
 
 go 1.23.0
 
