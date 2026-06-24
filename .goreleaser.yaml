@@ -47,12 +47,24 @@ checksum:
 
 changelog:
   use: github
-  sort: asc
+  groups:
+    - title: New Features
+      regexp: '^feat'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix'
+      order: 1
+    - title: Documentation
+      regexp: '^docs'
+      order: 2
+    - title: Maintenance
+      regexp: '^(chore|refactor)'
+      order: 3
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
+      - '^Merge '
+      - '^chore\(release\):'
+      - '^chore\(oss\):'
 
 release:
   github:
