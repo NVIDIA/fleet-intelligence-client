@@ -21,7 +21,12 @@ terminal or Go program.
 
 ## Install
 
+Use Go installer:
+
 ```bash
+# While this repository is private, set GOPRIVATE first so `go install`
+# fetches via git instead of the public proxy:
+export GOPRIVATE=github.com/NVIDIA/fleet-intelligence-client
 go install github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl@latest
 ```
 

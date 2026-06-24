@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# GoReleaser configuration for nvfleetctl.
+# Docs: https://goreleaser.com
+version: 2
+
+project_name: nvfleetctl
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: nvfleetctl
+    main: ./cmd/nvfleetctl
+    binary: nvfleetctl
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .ShortCommit }}
+      - -X main.buildDate={{ .CommitDate }}
+
+archives:
+  - id: nvfleetctl
+    formats: [tar.gz]
+    # Use zip for Windows.
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: NVIDIA
+    name: fleet-intelligence-client
+  draft: false
+  prerelease: auto
