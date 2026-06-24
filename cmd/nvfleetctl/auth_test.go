@@ -1,3 +1,18 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -12,7 +27,7 @@ import (
 
 const (
 	serviceKey = "test-key"
-	apiUrl     = "https://fleet.example.com"
+	apiURL     = "https://fleet.example.com"
 )
 
 func TestAuthLoginSavesKeyAndDefaultAPIURL(t *testing.T) {
@@ -44,7 +59,7 @@ func TestAuthLoginSavesExplicitAPIURL(t *testing.T) {
 
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"auth", "login", "--key", serviceKey, "--api-url", apiUrl})
+	cmd.SetArgs([]string{"auth", "login", "--key", serviceKey, "--api-url", apiURL})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("login failed: %v", err)
@@ -54,7 +69,7 @@ func TestAuthLoginSavesExplicitAPIURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load failed: %v", err)
 	}
-	if cfg.APIURL != apiUrl {
+	if cfg.APIURL != apiURL {
 		t.Fatalf("unexpected API URL: %q", cfg.APIURL)
 	}
 	if cfg.ServiceKey != serviceKey {
@@ -97,7 +112,7 @@ func TestAuthLoginRejectsInvalidAPIURL(t *testing.T) {
 func TestAuthLogoutClearsKeyAndPreservesAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: apiUrl, ServiceKey: serviceKey}); err != nil {
+	if err := config.Save(config.Config{APIURL: apiURL, ServiceKey: serviceKey}); err != nil {
 		t.Fatalf("save failed: %v", err)
 	}
 
@@ -113,7 +128,7 @@ func TestAuthLogoutClearsKeyAndPreservesAPIURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load failed: %v", err)
 	}
-	if cfg.APIURL != apiUrl {
+	if cfg.APIURL != apiURL {
 		t.Fatalf("unexpected API URL: %q", cfg.APIURL)
 	}
 	if cfg.ServiceKey != "" {
@@ -124,7 +139,7 @@ func TestAuthLogoutClearsKeyAndPreservesAPIURL(t *testing.T) {
 func TestAuthStatusReportsConfiguredKeyAndDoesNotPrintSecret(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: apiUrl, ServiceKey: serviceKey}); err != nil {
+	if err := config.Save(config.Config{APIURL: apiURL, ServiceKey: serviceKey}); err != nil {
 		t.Fatalf("save failed: %v", err)
 	}
 
@@ -138,7 +153,7 @@ func TestAuthStatusReportsConfiguredKeyAndDoesNotPrintSecret(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(got, "API URL: "+apiUrl) {
+	if !strings.Contains(got, "API URL: "+apiURL) {
 		t.Fatalf("status missing API URL: %q", got)
 	}
 	if !strings.Contains(got, "Service key: configured") {

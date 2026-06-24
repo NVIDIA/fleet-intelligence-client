@@ -168,6 +168,3 @@ or `docs/report-examples`.
 
 User-visible changes should update [`CHANGELOG.md`](CHANGELOG.md). The pull
 request title may also be used by maintainers when preparing release notes.
-
-## Attribution
-Portions adopted from https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md

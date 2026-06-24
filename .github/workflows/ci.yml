@@ -27,5 +27,10 @@ jobs:
       - name: Verify Go version
         run: go version
 
-      - name: Run checks (lint, coverage, build)
-        run: make check
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: Run tests and build
+        run: make test-coverage build

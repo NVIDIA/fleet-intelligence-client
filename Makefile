@@ -42,13 +42,14 @@ test-coverage: ## Run tests and fail if total coverage is below $(COVERAGE_THRES
 	fi
 
 .PHONY: lint
-lint: ## Run formatting check and go vet
+lint: ## Run formatting check, go vet, and golangci-lint
 	@unformatted="$$(gofmt -l $(GO_FILES))"; \
 	if [ -n "$$unformatted" ]; then \
 		echo "$$unformatted"; \
 		exit 1; \
 	fi
 	go vet ./...
+	golangci-lint run ./...
 
 .PHONY: check
 check: lint test-coverage build ## Run all validation (enforces the coverage threshold)
