@@ -46,29 +46,59 @@ checksum:
   name_template: "checksums.txt"
 
 changelog:
+  sort: asc
   use: github
   groups:
-    - title: New Features
-      regexp: '^feat'
+    - title: 'New Features'
+      regexp: '.*\bfeat(?:\([^)]+\))?!?:'
       order: 0
-    - title: Bug Fixes
-      regexp: '^fix'
+    - title: 'Bug Fixes'
+      regexp: '.*\bfix(?:\([^)]+\))?!?:'
       order: 1
-    - title: Documentation
-      regexp: '^docs'
+    - title: 'Documentation Updates'
+      regexp: '.*\bdocs(?:\([^)]+\))?!?:'
       order: 2
-    - title: Maintenance
-      regexp: '^(chore|refactor)'
+    - title: 'Maintenance'
+      regexp: '.*\b(?:refactor|chore)(?:\([^)]+\))?!?:'
       order: 3
+    - title: 'Other Changes'
+      order: 999
   filters:
     exclude:
       - '^Merge '
-      - '^chore\(release\):'
-      - '^chore\(oss\):'
+      - '^chore\\(release\\):'
+      - '^chore\\(oss\\):'
 
 release:
   github:
     owner: NVIDIA
     name: fleet-intelligence-client
+  header: |
+    ## NVIDIA Fleet Intelligence Client v{{.Version}}
+
+    This release includes nvfleetctl, the command-line client for NVIDIA Fleet Intelligence.
+
+    ### Available Packages
+
+    - **Binary archives**: Standalone `nvfleetctl` binaries for Linux, macOS, and Windows on `amd64` and `arm64`
+
+    ### Installation
+
+    Download the appropriate archive for your system from the assets below. For installation instructions, see the project README.
+
+  footer: |
+    ### Verification
+
+    All release artifacts are checksummed. Verify downloads using:
+    ```bash
+    sha256sum -c checksums.txt
+    ```
+
+    ### Support
+
+    For issues and questions, please visit: https://github.com/NVIDIA/fleet-intelligence-client/issues
   draft: false
-  prerelease: auto
+  prerelease: auto  # Auto-detect pre-release based on version (e.g., v1.0.0-beta)
+  mode: replace  # Replace existing release if it exists
+  replace_existing_artifacts: true  # Handle reruns where GitHub assets with same name already exist
+  skip_upload: false

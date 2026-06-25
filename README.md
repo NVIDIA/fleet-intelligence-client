@@ -44,6 +44,14 @@ sudo mv nvfleetctl /usr/local/bin/nvfleetctl
 nvfleetctl version
 ```
 
+On macOS, Gatekeeper quarantines binaries downloaded outside the App Store. If
+macOS blocks the binary, clear the quarantine attribute (adjust the path to
+wherever you installed it):
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/nvfleetctl
+```
+
 If you do not have permission to write to `/usr/local/bin`, install to a
 user-local directory:
 
