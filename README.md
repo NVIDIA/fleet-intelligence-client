@@ -21,11 +21,77 @@ terminal or Go program.
 
 ## Install
 
+### Use a prebuilt binary
+
+Download the `nvfleetctl` archive for your platform from the
+[release artifacts](https://github.com/NVIDIA/fleet-intelligence-client/releases).
+
+#### Linux and macOS
+
+Choose the matching OS and architecture:
+
+- Linux amd64: `nvfleetctl_<version>_linux_amd64.tar.gz`
+- Linux arm64: `nvfleetctl_<version>_linux_arm64.tar.gz`
+- macOS Intel: `nvfleetctl_<version>_darwin_amd64.tar.gz`
+- macOS Apple Silicon: `nvfleetctl_<version>_darwin_arm64.tar.gz`
+
+Then extract and install:
+
 ```bash
+tar -xzf nvfleetctl_<version>_<os>_<arch>.tar.gz
+chmod +x nvfleetctl
+sudo mv nvfleetctl /usr/local/bin/nvfleetctl
+nvfleetctl version
+```
+
+On macOS, Gatekeeper quarantines binaries downloaded outside the App Store. If
+macOS blocks the binary, clear the quarantine attribute (adjust the path to
+wherever you installed it):
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/nvfleetctl
+```
+
+If you do not have permission to write to `/usr/local/bin`, install to a
+user-local directory:
+
+```bash
+mkdir -p "$HOME/.local/bin"
+mv nvfleetctl "$HOME/.local/bin/nvfleetctl"
+```
+
+Make sure `$HOME/.local/bin` is on your `PATH`, then verify the install:
+
+```bash
+nvfleetctl version
+```
+
+#### Windows
+
+Download the matching Windows zip:
+
+- Windows amd64: `nvfleetctl_<version>_windows_amd64.zip`
+- Windows arm64: `nvfleetctl_<version>_windows_arm64.zip`
+
+Unzip the archive, then add the directory containing `nvfleetctl.exe` to your
+`PATH`. Verify the install:
+
+```powershell
+nvfleetctl version
+```
+
+### Install with Go
+
+Use Go installer:
+
+```bash
+# While this repository is private, set GOPRIVATE first so `go install`
+# fetches via git instead of the public proxy:
+export GOPRIVATE=github.com/NVIDIA/fleet-intelligence-client
 go install github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl@latest
 ```
 
-Or build from source:
+### Build from source
 
 ```bash
 git clone https://github.com/NVIDIA/fleet-intelligence-client.git

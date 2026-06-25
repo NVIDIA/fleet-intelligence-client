@@ -30,7 +30,7 @@ test: ## Run unit tests
 	go test ./...
 
 .PHONY: test-coverage
-test-coverage: ## Run tests and fail if total coverage is below $(COVERAGE_THRESHOLD)%
+test-coverage: ## Run tests + enforce $(COVERAGE_THRESHOLD)% coverage gate
 	@packages=$$(go list ./... | grep -v -E "$(COVERAGE_EXCLUDE_PATTERN)"); \
 	go test $$packages -coverprofile=$(COVERAGE_FILE) -covermode=atomic
 	@go tool cover -func=$(COVERAGE_FILE) | tail -1
