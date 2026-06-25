@@ -18,6 +18,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -35,6 +37,25 @@ func TestVersionCommand(t *testing.T) {
 	got := out.String()
 	if !strings.Contains(got, "nvfleetctl ") {
 		t.Fatalf("version output missing binary name: %q", got)
+	}
+}
+
+func TestVersionCommandJSON(t *testing.T) {
+	cmd := newRootCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"version", "--output", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("version command failed: %v", err)
+	}
+
+	var got versionOutput
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode version JSON failed: %v", err)
+	}
+	if got.Name != "nvfleetctl" || got.Version == "" {
+		t.Fatalf("unexpected version JSON: %#v", got)
 	}
 }
 
@@ -62,7 +83,6 @@ func TestCommandsRejectUnsupportedCommonFlags(t *testing.T) {
 		want string
 	}{
 		{name: "root output", args: []string{"--output", "json"}, want: "unknown flag: --output"},
-		{name: "auth output", args: []string{"auth", "status", "--output", "json"}, want: "unknown flag: --output"},
 		{name: "auth pagination", args: []string{"auth", "login", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
 		{name: "version pagination", args: []string{"version", "--page", "1"}, want: "unknown flag: --page"},
 		{name: "read pagination", args: []string{"node", "describe", "node-1", "--page-size", "10"}, want: "unknown flag: --page-size"},
@@ -117,5 +137,18 @@ func TestCommandsRejectNonPositiveTimeout(t *testing.T) {
 func TestExecuteRunsRootCommand(t *testing.T) {
 	if err := execute(context.Background(), []string{"version"}); err != nil {
 		t.Fatalf("execute failed: %v", err)
+	}
+}
+
+func TestWriteCLIErrorJSON(t *testing.T) {
+	var out bytes.Buffer
+	writeCLIError(&out, []string{"node", "list", "--output", "json"}, errors.New("bad input"))
+
+	var got errorOutput
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode error JSON failed: %v", err)
+	}
+	if got.Error.Code != "command_error" || got.Error.Message != "bad input" {
+		t.Fatalf("unexpected error JSON: %#v", got)
 	}
 }

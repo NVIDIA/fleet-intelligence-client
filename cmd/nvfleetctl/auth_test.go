@@ -17,6 +17,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -185,6 +186,32 @@ func TestAuthStatusWithoutConfigExitsZero(t *testing.T) {
 	}
 	if !strings.Contains(got, "Service key: not configured") {
 		t.Fatalf("status missing not configured state: %q", got)
+	}
+}
+
+func TestAuthStatusJSONUsesEnvFallback(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvAPIURL, apiURL)
+	t.Setenv(config.EnvServiceKey, serviceKey)
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"auth", "status", "--output", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("status failed: %v", err)
+	}
+
+	var got authStatusOutput
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode status JSON failed: %v", err)
+	}
+	if got.APIURL != apiURL || !got.ServiceKeyConfigured || got.Connection != "not checked" {
+		t.Fatalf("unexpected status JSON: %#v", got)
+	}
+	if strings.Contains(out.String(), serviceKey) {
+		t.Fatalf("status printed secret: %q", out.String())
 	}
 }
 

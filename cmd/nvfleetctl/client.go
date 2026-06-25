@@ -25,7 +25,7 @@ import (
 
 // Builds an SDK client from the stored auth config
 func newConfiguredClient(opts ...fleetintelligence.Option) (*fleetintelligence.Client, error) {
-	cfg, err := config.Load()
+	cfg, err := config.LoadWithEnv()
 	if err != nil {
 		return nil, err
 	}
