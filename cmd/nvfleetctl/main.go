@@ -27,6 +27,12 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
+// Exit codes: 0 = success, 1 = general error, 77 = auth/permission failure.
+const (
+	exitError        = 1
+	exitNoPermission = 77
+)
+
 type errorOutput struct {
 	Error errorDetails `json:"error"`
 }
@@ -42,8 +48,17 @@ type errorDetails struct {
 func main() {
 	if err := execute(context.Background(), os.Args[1:]); err != nil {
 		writeCLIError(os.Stderr, os.Args[1:], err)
-		os.Exit(1)
+		os.Exit(exitCodeFor(err))
 	}
+}
+
+// exitCodeFor returns 77 for API 401/403 responses and 1 for everything else.
+func exitCodeFor(err error) int {
+	var apiErr *fleetintelligence.APIError
+	if errors.As(err, &apiErr) && (apiErr.StatusCode == 401 || apiErr.StatusCode == 403) {
+		return exitNoPermission
+	}
+	return exitError
 }
 
 func writeCLIError(out io.Writer, args []string, err error) {

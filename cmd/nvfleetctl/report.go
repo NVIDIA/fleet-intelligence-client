@@ -505,7 +505,7 @@ func validateReportInventoryFlags(flags reportInventoryFlags, common resolvedCom
 	}
 	if fleetintelligence.ReportFormat(flags.format) == fleetintelligence.ReportFormatCSV && !flags.signed {
 		if common.outputSet {
-			return errors.New("--output cannot be used with --format csv")
+			return errors.New("--output cannot be used with --format csv; use --signed to download a signed bundle (returns JSON status), or omit --format csv to get a JSON inventory report")
 		}
 		if common.allSet || common.pageSet || common.pageSizeSet {
 			return errors.New("pagination flags cannot be used with --format csv")
