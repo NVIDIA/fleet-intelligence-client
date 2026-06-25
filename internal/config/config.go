@@ -25,7 +25,12 @@ import (
 )
 
 const (
+	// DefaultAPIURL is the production Fleet Intelligence API root.
 	DefaultAPIURL = "https://api.fleet-intelligence.nvidia.com"
+	// EnvAPIURL overrides the configured API URL for the current process.
+	EnvAPIURL = "NVFLEETCTL_API_URL"
+	// EnvServiceKey overrides the configured service key for the current process.
+	EnvServiceKey = "NVFLEETCTL_SERVICE_KEY"
 	dirName       = "nvfleetctl"
 	fileName      = "config.yaml"
 	fileMode      = 0o600
@@ -74,6 +79,29 @@ func Load() (Config, error) {
 	normalize(&cfg)
 
 	return cfg, nil
+}
+
+// LoadWithEnv loads config from disk and overlays supported environment variables.
+func LoadWithEnv() (Config, error) {
+	cfg, err := Load()
+	if err != nil {
+		return Config{}, err
+	}
+	ApplyEnv(&cfg)
+	return cfg, nil
+}
+
+// ApplyEnv overlays supported environment variables onto cfg.
+func ApplyEnv(cfg *Config) {
+	apiURL := strings.TrimSpace(os.Getenv(EnvAPIURL))
+	if apiURL != "" {
+		cfg.APIURL = apiURL
+	}
+	serviceKey := strings.TrimSpace(os.Getenv(EnvServiceKey))
+	if serviceKey != "" {
+		cfg.ServiceKey = serviceKey
+	}
+	normalize(cfg)
 }
 
 func Save(cfg Config) error {

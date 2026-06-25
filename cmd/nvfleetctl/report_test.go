@@ -202,6 +202,42 @@ func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	}
 }
 
+func TestReportInventorySignedJSONStatus(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	payload := []byte("PK\x03\x04 signed-zip-bytes")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", `attachment; filename="fleet-inventory.zip"`)
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	dir := t.TempDir()
+	chdir(t, dir)
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	var got signedReportOutput
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode signed report JSON failed: %v", err)
+	}
+	if got.Status != "written" || !strings.HasSuffix(got.Path, "fleet-inventory.zip") {
+		t.Fatalf("unexpected signed report JSON: %#v", got)
+	}
+}
+
 // Verifies --output-path directs the signed bundle to an explicit file
 func TestReportInventorySignedOutputPath(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -665,6 +701,30 @@ func TestReportVerifySucceedsWithKey(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "Verified OK") {
 		t.Fatalf("output missing success message: %q", out.String())
+	}
+}
+
+func TestReportVerifySucceedsWithKeyJSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	dir := t.TempDir()
+	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath, "--key", keyPath, "--output", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	var got commandStatusOutput
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode verify JSON failed: %v", err)
+	}
+	if got.Status != "verified" {
+		t.Fatalf("unexpected verify JSON: %#v", got)
 	}
 }
 

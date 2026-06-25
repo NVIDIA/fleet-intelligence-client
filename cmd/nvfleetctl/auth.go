@@ -24,9 +24,16 @@ import (
 	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
+	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 
 	"github.com/spf13/cobra"
 )
+
+type authStatusOutput struct {
+	APIURL               string `json:"apiUrl"`
+	ServiceKeyConfigured bool   `json:"serviceKeyConfigured"`
+	Connection           string `json:"connection"`
+}
 
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -98,28 +105,44 @@ func newAuthLogoutCmd() *cobra.Command {
 }
 
 func newAuthStatusCmd() *cobra.Command {
-	return &cobra.Command{
+	common := newCommonFlags()
+	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show authentication status",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := config.Load()
+			commonFlags := resolveCommonFlags(cmd, common)
+			if err := validateReadCommonFlags(commonFlags); err != nil {
+				return err
+			}
+
+			cfg, err := config.LoadWithEnv()
 			if err != nil {
 				return err
 			}
 
-			serviceKeyStatus := "not configured"
-			if strings.TrimSpace(cfg.ServiceKey) != "" {
-				serviceKeyStatus = "configured"
+			status := authStatusOutput{
+				APIURL:               cfg.APIURL,
+				ServiceKeyConfigured: strings.TrimSpace(cfg.ServiceKey) != "",
+				Connection:           "not checked",
+			}
+			if commonFlags.output == clioutput.FormatJSON {
+				return clioutput.WriteJSON(cmd.OutOrStdout(), status)
 			}
 
+			serviceKeyStatus := "not configured"
+			if status.ServiceKeyConfigured {
+				serviceKeyStatus = "configured"
+			}
 			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "API URL: %s\n", cfg.APIURL)
+			fmt.Fprintf(out, "API URL: %s\n", status.APIURL)
 			fmt.Fprintf(out, "Service key: %s\n", serviceKeyStatus)
-			fmt.Fprintln(out, "Connection: not checked")
+			fmt.Fprintf(out, "Connection: %s\n", status.Connection)
 
 			return nil
 		},
 	}
+	registerOutputFlag(cmd, common)
+	return cmd
 }
 
 func validateAPIURL(rawURL string) error {

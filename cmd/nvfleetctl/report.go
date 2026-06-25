@@ -63,6 +63,15 @@ type reportVerifyFlags struct {
 	key    string
 }
 
+type commandStatusOutput struct {
+	Status string `json:"status"`
+}
+
+type signedReportOutput struct {
+	Status string `json:"status"`
+	Path   string `json:"path"`
+}
+
 // Stores data ready for inventory report rendering
 type reportInventoryOutput struct {
 	Report    fleetintelligence.InventoryReport
@@ -218,6 +227,7 @@ offline with a previously downloaded public key.`,
 	cmd.Flags().StringVar(&flags.csv, "csv", "", "Path to the report CSV file to verify")
 	cmd.Flags().StringVar(&flags.bundle, "bundle", "", "Path to the .sig.bundle signature file")
 	cmd.Flags().StringVar(&flags.key, "key", "", "Path to a PEM public key for offline verification; defaults to the key fetched from the API")
+	registerOutputFlag(cmd, common)
 	registerTimeoutFlag(cmd, common)
 
 	return cmd
@@ -247,6 +257,9 @@ func runReportVerify(cmd *cobra.Command, flags reportVerifyFlags, common resolve
 		return reportVerifyError(flags, err)
 	}
 
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteJSON(cmd.OutOrStdout(), commandStatusOutput{Status: "verified"})
+	}
 	fmt.Fprintln(cmd.OutOrStdout(), "Verified OK")
 	return nil
 }
@@ -335,6 +348,12 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 		path, err := writeSignedReport(flags.outputPath, report.Filename, report.RawSigned)
 		if err != nil {
 			return err
+		}
+		if common.output == clioutput.FormatJSON {
+			return clioutput.WriteJSON(cmd.OutOrStdout(), signedReportOutput{
+				Status: "written",
+				Path:   path,
+			})
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Signed report written to %s\n", path)
 		return nil
@@ -484,9 +503,9 @@ func validateReportInventoryFlags(flags reportInventoryFlags, common resolvedCom
 	if flags.outputPath != "" && !flags.signed {
 		return errors.New("--output-path can only be used with --signed")
 	}
-	if fleetintelligence.ReportFormat(flags.format) == fleetintelligence.ReportFormatCSV {
+	if fleetintelligence.ReportFormat(flags.format) == fleetintelligence.ReportFormatCSV && !flags.signed {
 		if common.outputSet {
-			return errors.New("--output cannot be used with --format csv")
+			return errors.New("--output cannot be used with --format csv; use --signed to download a signed bundle (returns JSON status), or omit --format csv to get a JSON inventory report")
 		}
 		if common.allSet || common.pageSet || common.pageSizeSet {
 			return errors.New("pagination flags cannot be used with --format csv")

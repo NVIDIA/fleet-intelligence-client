@@ -61,6 +61,41 @@ func TestNewConfiguredClientRequiresServiceKey(t *testing.T) {
 	}
 }
 
+func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
+	t.Setenv(config.EnvServiceKey, "env-test-key")
+
+	client, err := newConfiguredClient()
+	if err != nil {
+		t.Fatalf("new configured client failed: %v", err)
+	}
+	if client.BaseURL() != "https://env-fleet.example.com" {
+		t.Fatalf("unexpected base URL: %q", client.BaseURL())
+	}
+	if !client.ServiceKeyConfigured() {
+		t.Fatal("expected service key to be configured")
+	}
+}
+
+func TestNewConfiguredClientEnvOverridesConfig(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
+	t.Setenv(config.EnvServiceKey, "env-test-key")
+
+	if err := config.Save(config.Config{APIURL: "https://file-fleet.example.com", ServiceKey: "file-test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	client, err := newConfiguredClient()
+	if err != nil {
+		t.Fatalf("new configured client failed: %v", err)
+	}
+	if client.BaseURL() != "https://env-fleet.example.com" {
+		t.Fatalf("unexpected base URL: %q", client.BaseURL())
+	}
+}
+
 // Verifies config load failures are returned
 func TestNewConfiguredClientReturnsLoadError(t *testing.T) {
 	homeDir := t.TempDir()
