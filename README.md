@@ -119,6 +119,53 @@ nvfleetctl node list --health Degraded,Unhealthy
 
 Run `nvfleetctl <command> --help` for command-specific flags.
 
+## Use with AI agents (Claude Code and Codex)
+
+This repo ships an [Agent Skill](skills/nvfleetctl/SKILL.md) that teaches a
+coding agent how to drive `nvfleetctl` to answer fleet questions in plain
+language ("how many nodes are unhealthy?", "any critical alerts?"). The skill is
+a single portable `SKILL.md` file, so it works in any agent that supports the
+Agent Skills format.
+
+The agent still calls the `nvfleetctl` binary, so [install](#install) and
+[authenticate](#quick-start) it first.
+
+### Claude Code
+
+Install the skill for your user (available in every project):
+
+```bash
+mkdir -p ~/.claude/skills/nvfleetctl
+curl -fsSL https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/skills/nvfleetctl/SKILL.md \
+  -o ~/.claude/skills/nvfleetctl/SKILL.md
+```
+
+Or scope it to a single project by replacing `~/.claude` with `.claude` in the
+target path. Claude Code discovers the skill automatically — just ask a fleet
+question and it invokes `nvfleetctl`.
+
+### Codex
+
+Install the skill into your Codex home:
+
+```bash
+mkdir -p ~/.codex/skills/nvfleetctl
+curl -fsSL https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/skills/nvfleetctl/SKILL.md \
+  -o ~/.codex/skills/nvfleetctl/SKILL.md
+```
+
+Then ask Codex a fleet question and it loads the skill to run `nvfleetctl`.
+
+### From a clone
+
+If you already cloned the repo, copy (or symlink) the skill directory instead of
+downloading it:
+
+```bash
+cp -r skills/nvfleetctl ~/.claude/skills/   # Claude Code
+cp -r skills/nvfleetctl ~/.codex/skills/    # Codex
+```
+
 ## Documentation
 
 - [Examples](docs/EXAMPLES.md)
