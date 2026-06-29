@@ -1,11 +1,11 @@
 ---
 name: nvfleetctl
-description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or integrity checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence (also called GPU Health — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
+description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or integrity checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
 ---
 
 # Answering fleet questions with nvfleetctl
 
-**Fleet Intelligence** (also called **GPU Health**) is the NVIDIA backend product for understanding a GPU fleet — its inventory, health, alerts, and reports. `nvfleetctl` is the command-line client for that backend's customer API.
+**Fleet Intelligence** is the NVIDIA backend product for understanding a GPU fleet — its inventory, health, alerts, and reports. `nvfleetctl` is the command-line client for that backend's customer API.
 
 Treat `nvfleetctl` as **your data-access tool**: it's how you read live state from the Fleet Intelligence backend. Whenever the user asks about the state of their fleet, don't answer from memory or guess — run the right `nvfleetctl` command(s), parse the output, and answer their actual question in plain language. The data is live, so every answer should be grounded in a command you just ran.
 

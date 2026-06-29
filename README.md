@@ -1,5 +1,7 @@
 # Fleet Intelligence Client
 
+[github.com/NVIDIA/fleet-intelligence-client](https://github.com/NVIDIA/fleet-intelligence-client)
+
 Go SDK and `nvfleetctl` CLI for the NVIDIA Fleet Intelligence customer API.
 Use it to inspect GPU fleet health, inventory, alerts, and reports from a
 terminal or Go program.
@@ -130,41 +132,15 @@ Agent Skills format.
 The agent still calls the `nvfleetctl` binary, so [install](#install) and
 [authenticate](#quick-start) it first.
 
-### Claude Code
+Download [`skills/nvfleetctl/SKILL.md`](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/skills/nvfleetctl/SKILL.md)
+from this repo and place it in a `nvfleetctl/` folder under your agent's skills
+directory:
 
-Install the skill for your user (available in every project):
+- **Claude Code:** `~/.claude/skills/nvfleetctl/SKILL.md` (or `.claude/skills/nvfleetctl/SKILL.md` to scope it to a single project)
+- **Codex:** `~/.codex/skills/nvfleetctl/SKILL.md`
 
-```bash
-mkdir -p ~/.claude/skills/nvfleetctl
-curl -fsSL https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/skills/nvfleetctl/SKILL.md \
-  -o ~/.claude/skills/nvfleetctl/SKILL.md
-```
-
-Or scope it to a single project by replacing `~/.claude` with `.claude` in the
-target path. Claude Code discovers the skill automatically — just ask a fleet
-question and it invokes `nvfleetctl`.
-
-### Codex
-
-Install the skill into your Codex home:
-
-```bash
-mkdir -p ~/.codex/skills/nvfleetctl
-curl -fsSL https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/skills/nvfleetctl/SKILL.md \
-  -o ~/.codex/skills/nvfleetctl/SKILL.md
-```
-
-Then ask Codex a fleet question and it loads the skill to run `nvfleetctl`.
-
-### From a clone
-
-If you already cloned the repo, copy (or symlink) the skill directory instead of
-downloading it:
-
-```bash
-cp -r skills/nvfleetctl ~/.claude/skills/   # Claude Code
-cp -r skills/nvfleetctl ~/.codex/skills/    # Codex
-```
+The agent discovers the skill automatically — just ask a fleet question and it
+invokes `nvfleetctl`.
 
 ## Documentation
 
