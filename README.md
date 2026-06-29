@@ -1,5 +1,7 @@
 # Fleet Intelligence Client
 
+[github.com/NVIDIA/fleet-intelligence-client](https://github.com/NVIDIA/fleet-intelligence-client)
+
 Go SDK and `nvfleetctl` CLI for the NVIDIA Fleet Intelligence customer API.
 Use it to inspect GPU fleet health, inventory, alerts, and reports from a
 terminal or Go program.
@@ -118,6 +120,27 @@ nvfleetctl node list --health Degraded,Unhealthy
 ```
 
 Run `nvfleetctl <command> --help` for command-specific flags.
+
+## Use with AI agents (Claude Code and Codex)
+
+This repo ships an [Agent Skill](skills/nvfleetctl/SKILL.md) that teaches a
+coding agent how to drive `nvfleetctl` to answer fleet questions in plain
+language ("how many nodes are unhealthy?", "any critical alerts?"). The skill is
+a single portable `SKILL.md` file, so it works in any agent that supports the
+Agent Skills format.
+
+The agent still calls the `nvfleetctl` binary, so [install](#install) and
+[authenticate](#quick-start) it first.
+
+Download [`skills/nvfleetctl/SKILL.md`](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/skills/nvfleetctl/SKILL.md)
+from this repo and place it in a `nvfleetctl/` folder under your agent's skills
+directory:
+
+- **Claude Code:** `~/.claude/skills/nvfleetctl/SKILL.md` (or `.claude/skills/nvfleetctl/SKILL.md` to scope it to a single project)
+- **Codex:** `~/.codex/skills/nvfleetctl/SKILL.md`
+
+The agent discovers the skill automatically — just ask a fleet question and it
+invokes `nvfleetctl`.
 
 ## Documentation
 

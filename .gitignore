@@ -4,6 +4,8 @@
 /.cache/
 /.goreleaser-*.yml
 .DS_Store
+.agents/
+.claude/
 
 AGENTS.md
 CLAUDE.md
