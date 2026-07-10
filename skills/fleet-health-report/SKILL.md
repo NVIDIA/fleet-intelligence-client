@@ -84,9 +84,9 @@ Treat exit code `77`, HTTP 401/403, or a JSON `api_error` as authentication or a
 - Calculate the displayed **node health score** as `100 * healthy nodes / total nodes`, rounded reasonably. Label it as a report-derived node health rate and show the formula; do not imply that the backend supplied a composite score.
 - Derive at-a-glance status transparently:
   - Use **Critical** when any active Critical alert or Unhealthy node exists.
-  - Otherwise use **Needs attention** when any active Warning alert, Degraded or Unknown node, offline or unknown agent, failed or unknown firmware check, or degraded, unverified, pending, unsupported, unknown, or missing integrity state exists.
+  - Otherwise use **Needs attention** when any active Warning or `Other` (unrecognized-severity) alert, Degraded or Unknown node, offline or unknown agent, failed or unknown firmware check, or degraded, unverified, pending, unsupported, unknown, or missing integrity state exists.
   - Otherwise use **Healthy** when at least one node exists and no attention signal exists.
-  - Use **No data** when no nodes were returned or required health fields are unavailable.
+  - Use **No data** only when no nodes were returned, or when *every* returned node is missing the required health fields. When only some nodes lack a required field, keep the known values, count the missing ones as `Unknown`/`N/A`, and still derive the status from the populated nodes — never suppress a valid metric because part of the fleet is unpopulated.
 - Rank machines needing attention using explicit evidence. Prioritize critical-alert count, Unhealthy health, total active-alert count, warning-alert count, Degraded or Unknown health, offline agent, failed firmware, and integrity problems. Show the reasons and counts used; do not present the ranking as a backend-defined risk score.
 - Calculate trend from the summed error counts in the two equal windows. Show current, previous, absolute delta, direction, and percentage change. If the previous value is zero, show `new increase` or `no change` instead of an infinite percentage.
 - Identify recurring issues as error names present with positive counts in both windows. Rank by current count, persistence, affected-node count when available, and change. Label types found only in the current window as new and types found only in the previous window as no longer observed. Do not claim event-level recurrence from aggregate data.
@@ -96,11 +96,11 @@ Treat exit code `77`, HTTP 401/403, or a JSON `api_error` as authentication or a
 
 Create one standalone `.html` file in the current workspace or the user's requested path, and leave no other generated files in the workspace. Use semantic HTML with inline CSS and only optional inline JavaScript. Avoid external fonts, CDNs, remote images, network calls, and runtime dependencies so the file opens offline. Escape every backend-derived string before inserting it into HTML.
 
-Choose charts, tables, color, typography, density, and layout based on the actual dataset. Use the NVIDIA/Kaizen-aligned visual system below for every report. Make the result responsive, accessible, and print-friendly. Do not embed raw credentials or a full raw-data dump. When showing only the highest-ranked rows, state the displayed count and the full population count.
+Choose charts, tables, color, typography, density, and layout based on the actual dataset. Use the NVIDIA-aligned visual system below for every report. Make the result responsive, accessible, and print-friendly. Do not embed raw credentials or a full raw-data dump. When showing only the highest-ranked rows, state the displayed count and the full population count.
 
 ### NVIDIA-aligned dark visual system
 
-The report is standalone HTML, not a KUI app, so encode Kaizen conventions as inline CSS variables and semantic class names instead of importing KUI packages or external assets. Generate the report in dark mode by default; do not include a light-mode fallback unless the user explicitly requests it.
+The concrete palette, tokens, and styling rules below are the source of truth for this report; do not rely on any external design system or prior styling knowledge. Because the output is standalone HTML, encode these conventions as inline CSS variables and semantic class names instead of importing packages or external assets. Generate the report in dark mode by default; do not include a light-mode fallback unless the user explicitly requests it.
 
 Use this dark baseline palette:
 
