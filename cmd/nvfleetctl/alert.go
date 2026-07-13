@@ -199,7 +199,6 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  alertPageHasMore(page),
 		},
 	})
 }
@@ -270,7 +269,6 @@ func runAlertTimelineNodes(cmd *cobra.Command, client *fleetintelligence.Client,
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
@@ -324,7 +322,6 @@ func runNodeAlertTimeline(cmd *cobra.Command, client *fleetintelligence.Client, 
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }

@@ -163,7 +163,6 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }

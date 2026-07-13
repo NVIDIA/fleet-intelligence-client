@@ -38,7 +38,6 @@ type Pagination struct {
 	Page     int
 	PageSize int
 	Total    int
-	HasMore  bool
 }
 
 // Reports whether format is a supported output format
@@ -168,7 +167,11 @@ func WriteTable(w io.Writer, headers []string, rows [][]string) error {
 
 // Writes the standard single-page pagination footer
 func WritePaginationFooter(w io.Writer, page Pagination) error {
-	_, err := fmt.Fprintf(w, "Page: %d  Page Size: %d  Total: %d  Has More: %t\n", page.Page, page.PageSize, page.Total, page.HasMore)
+	totalPages := 0
+	if page.PageSize > 0 {
+		totalPages = (page.Total + page.PageSize - 1) / page.PageSize
+	}
+	_, err := fmt.Fprintf(w, "Page: %d  Total Pages: %d  Page Size: %d  Total Entries: %d\n", page.Page, totalPages, page.PageSize, page.Total)
 	return err
 }
 

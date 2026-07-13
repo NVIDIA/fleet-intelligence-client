@@ -139,7 +139,6 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }

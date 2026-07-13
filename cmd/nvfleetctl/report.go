@@ -408,7 +408,6 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 			Page:     report.Page,
 			PageSize: report.PageSize,
 			Total:    report.Total,
-			HasMore:  report.HasMore,
 		},
 	})
 }
@@ -677,7 +676,6 @@ func errorReportPagination(report fleetintelligence.ErrorReport) *clioutput.Pagi
 		Page:     report.Page,
 		PageSize: report.PageSize,
 		Total:    report.Total,
-		HasMore:  report.HasMore,
 	}
 }
 

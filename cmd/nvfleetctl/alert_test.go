@@ -128,7 +128,7 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "NODE UUID", "COMPONENT", "SEVERITY", "STATE", "FIRED-AT", "alert-1", "Warning", "Has More: true"} {
+	for _, want := range []string{"UUID", "NODE UUID", "COMPONENT", "SEVERITY", "STATE", "FIRED-AT", "alert-1", "Warning", "Page: 0  Total Pages: 2  Page Size: 1  Total Entries: 2"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}

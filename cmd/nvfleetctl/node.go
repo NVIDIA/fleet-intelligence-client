@@ -200,7 +200,6 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonF
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
