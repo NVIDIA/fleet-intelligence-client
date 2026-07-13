@@ -719,7 +719,8 @@ func writeReportErrorOutput(w io.Writer, common resolvedCommonFlags, result repo
 
 // Renders inventory report nodes as a table
 func writeReportInventoryTable(w io.Writer, nodes []fleetintelligence.InventoryNode) error {
-	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "INTEGRITY CHECK", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP"}, reportInventoryRows(nodes))
+	// "VERIFICATION CHECK" is the user-facing label for the backend integrityCheck field.
+	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP"}, reportInventoryRows(nodes))
 }
 
 // Renders an error report using its selected view

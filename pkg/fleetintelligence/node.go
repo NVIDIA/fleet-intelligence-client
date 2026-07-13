@@ -82,7 +82,9 @@ func (status NodeHealthStatus) Valid() bool {
 	return fleetapi.GetV1NodesParamsHealthStatuses(status).Valid()
 }
 
-// Represents supported integrity check filters for listing nodes
+// Represents supported integrity check filters for listing nodes.
+// This retains the backend "integrity check" vocabulary; the CLI surfaces it
+// to users as "verification check".
 type NodeIntegrityCheck string
 
 // Reports whether the integrity check status is accepted by the API

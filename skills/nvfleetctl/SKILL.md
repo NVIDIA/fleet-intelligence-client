@@ -1,6 +1,6 @@
 ---
 name: nvfleetctl
-description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or integrity checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
+description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or verification (integrity) checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
 ---
 
 # Answering fleet questions with nvfleetctl
@@ -34,7 +34,7 @@ Use this to pick the entry point. Each command takes `--output json`, `--timeout
 | --- | --- |
 | Regions / zones / where capacity lives | `computezone list` |
 | Node groups, their health %, GPU utilization | `nodegroup list` |
-| Individual nodes — health, GPU type/count, agent online/offline, firmware/integrity | `node list`, then `node describe <uuid>` for one node |
+| Individual nodes — health, GPU type/count, agent online/offline, firmware/verification | `node list`, then `node describe <uuid>` for one node |
 | Active problems, severities, what's firing now | `alert list`, `alert timeline`, `alert describe` |
 | A full inventory snapshot (export, audit, signed bundle) | `report inventory` |
 | Error trends / counts over a time range | `report error` |
@@ -66,9 +66,11 @@ nvfleetctl node describe <node-uuid> --output json
 Filter vocabularies (case-sensitive, comma-separate multiple values):
 - **health**: `Healthy`, `Degraded`, `Unhealthy`, `Unknown`
 - **agent-status**: `Online`, `Offline`, `Unknown`
-- **integrity-check**: `Verified`, `Unverified`, `Degraded`, `Pending`, `Unsupported`, `Unknown`
+- **verification-check**: `Verified`, `Unverified`, `Degraded`, `Pending`, `Unsupported`, `Unknown`
 - **firmware-check**: `Passed`, `Failed`, `Unknown`
-- **node sort-by**: `hostname`, `nodeUUID`, `health`, `nodeGroup`, `computeZone`, `gpuType`, `gpuCount`, `integrityCheck`, `agentStatus` (+ `--order asc|desc`)
+- **node sort-by**: `hostname`, `nodeUUID`, `health`, `nodeGroup`, `computeZone`, `gpuType`, `gpuCount`, `integrityCheck`, `agentStatus` (+ `--order asc|desc`) — the `integrityCheck` sort key keeps the backend field name and corresponds to the `verification-check` filter
+
+`--output json` returns the raw backend field names, not the display terms: verification state is `integrityCheck` (with `integrityCheckReason`, `lastIntegrityCheckTS`) and location is `geoLocation`. The `verification-check`/"location" naming applies only to the CLI flag and table output.
 
 To get an exact **count**, add `--all --output json` and read `pagination.total` (the merged shape is `{"items": [...], "pagination": {"total": N, "hasMore": ..., "pagesFetched": ...}}`). Don't eyeball the length of one page — it's only the first page unless you pass `--all`.
 

@@ -178,7 +178,8 @@ func writeComputeZoneTable(w io.Writer, view string, zones []fleetintelligence.C
 	if fleetintelligence.ComputeZoneView(view) == fleetintelligence.ComputeZoneViewBasic {
 		return clioutput.WriteTable(w, []string{"ID", "NAME"}, basicComputeZoneRows(zones))
 	}
-	return clioutput.WriteTable(w, []string{"ID", "NAME", "TYPE", "GEOLOCATION", "NODE COUNT"}, detailComputeZoneRows(zones))
+	// "LOCATION" is the user-facing label for the backend geoLocation field.
+	return clioutput.WriteTable(w, []string{"ID", "NAME", "TYPE", "LOCATION", "NODE COUNT"}, detailComputeZoneRows(zones))
 }
 
 // Converts compute zones into basic table rows

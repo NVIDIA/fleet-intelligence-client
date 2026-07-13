@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Breaking Changes
+
+- Renamed the `node list` `--integrity-check` flag to `--verification-check`.
+  This aligns the CLI with the user-facing "verification check" terminology;
+  the backend API field remains `integrityCheck` (including the `--sort-by
+  integrityCheck` token). Scripts using the old flag name must be updated.
+
+### Changed
+
+- Renamed user-facing "integrity check" labels to "verification check" and
+  "geolocation" to "location" in table output and `node describe` fields. The
+  underlying backend API vocabulary is unchanged.
+
 ## nvfleetctl 0.0.0 (23 Jun 2026)
 
 Initial public development release.

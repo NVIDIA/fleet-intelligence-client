@@ -83,7 +83,8 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online, Offline, or Unknown")
-	cmd.Flags().StringVar(&flags.integrityCheck, "integrity-check", "", "Comma-separated integrity check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
+	// User-facing "verification check" maps to the backend "integrity check" API field.
+	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, nodeUUID, health, healthStatus, nodeGroup, nodegroup, computeZone, computezone, gpuType, gpuCount, integrityCheck, or agentStatus")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
@@ -259,7 +260,7 @@ func validateNodeListFlags(flags nodeListFlags, sortBy fleetintelligence.NodeSor
 	}
 	if fleetintelligence.NodeView(flags.view) == fleetintelligence.NodeViewBasic {
 		if strings.TrimSpace(flags.health) != "" || strings.TrimSpace(flags.agentStatus) != "" || strings.TrimSpace(flags.integrityCheck) != "" || strings.TrimSpace(flags.firmwareCheck) != "" {
-			return errors.New("basic node view is incompatible with health, agent-status, integrity-check, and firmware-check filters")
+			return errors.New("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
 		}
 		if sortBy != "" && !basicNodeSortCompatible(sortBy) {
 			return fmt.Errorf("basic node view is incompatible with sort %q", flags.sortBy)
@@ -338,7 +339,8 @@ func parseNodeAgentStatusList(raw string) ([]fleetintelligence.NodeAgentStatus, 
 	return statuses, nil
 }
 
-// Converts comma-separated integrity filters into API values
+// Converts comma-separated verification filters into API values.
+// Verification check is the user-facing name for the backend integrity check.
 func parseNodeIntegrityCheckList(raw string) ([]fleetintelligence.NodeIntegrityCheck, error) {
 	values, err := clihelpers.ParseCommaList(raw)
 	if err != nil {
@@ -352,7 +354,7 @@ func parseNodeIntegrityCheckList(raw string) ([]fleetintelligence.NodeIntegrityC
 	for _, value := range values {
 		check := fleetintelligence.NodeIntegrityCheck(value)
 		if !check.Valid() {
-			return nil, fmt.Errorf("invalid integrity-check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", value)
+			return nil, fmt.Errorf("invalid verification-check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", value)
 		}
 		checks = append(checks, check)
 	}
@@ -405,7 +407,8 @@ func writeNodeTable(w io.Writer, view string, nodes []fleetintelligence.Node) er
 	if fleetintelligence.NodeView(view) == fleetintelligence.NodeViewBasic {
 		return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME"}, basicNodeRows(nodes))
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "INTEGRITY CHECK", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
+	// "VERIFICATION CHECK" is the user-facing label for the backend integrityCheck field.
+	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
 }
 
 // Converts nodes into basic table rows
@@ -453,19 +456,21 @@ func nodeDescribeRows(node fleetintelligence.NodeDetails) [][]string {
 		{"GPU TYPE", clioutput.DisplayString(node.GPUType)},
 		{"GPU COUNT", clioutput.FormatOptionalInt(node.GPUCount)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		{"INTEGRITY CHECK", clioutput.DisplayString(node.IntegrityCheck)},
-		{"INTEGRITY REASON", clioutput.DisplayString(node.IntegrityCheckReason)},
+		// Verification check/reason/last-check map to the backend integrityCheck* fields.
+		{"VERIFICATION CHECK", clioutput.DisplayString(node.IntegrityCheck)},
+		{"VERIFICATION REASON", clioutput.DisplayString(node.IntegrityCheckReason)},
 		{"FIRMWARE CHECK", clioutput.DisplayString(node.FirmwareCheck)},
 		{"PUBLIC IP", clioutput.DisplayString(node.PublicIP)},
 		{"PRIVATE IP", clioutput.DisplayString(node.PrivateIP)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST INTEGRITY CHECK", clioutput.DisplayString(node.LastIntegrityCheckTime)},
+		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastIntegrityCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
-		{"GEOLOCATION", clioutput.FormatGeoLocation(node.GeoLocation)},
+		// "LOCATION" is the user-facing label for the backend geoLocation field.
+		{"LOCATION", clioutput.FormatGeoLocation(node.GeoLocation)},
 	}
 
 	if node.Resources != nil {

@@ -117,14 +117,14 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--integrity-check", "Verified", "--firmware-check", "Unknown", "--sort-by", "computeZone", "--order", "desc", "--page-size", "10"})
+	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--sort-by", "computeZone", "--order", "desc", "--page-size", "10"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "INTEGRITY CHECK", "FIRMWARE CHECK", "AGENT STATUS", "node-1", "gpu-001", "East", "Training", "Verified", "Unknown", "Online", "Page: 0"} {
+	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS", "node-1", "gpu-001", "East", "Training", "Verified", "Unknown", "Online", "Page: 0"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
@@ -289,7 +289,7 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 	}{
 		{name: "health", args: []string{"node", "list", "--health", "Broken"}, want: "invalid health"},
 		{name: "agent", args: []string{"node", "list", "--agent-status", "Missing"}, want: "invalid agent-status"},
-		{name: "integrity", args: []string{"node", "list", "--integrity-check", "Missing"}, want: "invalid integrity-check"},
+		{name: "verification", args: []string{"node", "list", "--verification-check", "Missing"}, want: "invalid verification-check"},
 		{name: "firmware", args: []string{"node", "list", "--firmware-check", "Missing"}, want: "invalid firmware-check"},
 		{name: "sort", args: []string{"node", "list", "--sort-by", "bad"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
