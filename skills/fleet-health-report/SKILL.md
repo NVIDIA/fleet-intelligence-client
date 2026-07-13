@@ -79,15 +79,16 @@ Treat exit code `77`, HTTP 401/403, or a JSON `api_error` as authentication or a
 ## Derive metrics without inventing semantics
 
 - Join nodes and alerts by the stable node UUID. Preserve unmatched alert records and label unavailable node metadata instead of dropping them.
-- Count health, agent, firmware, and integrity states from the complete node dataset. Keep `Unknown`, missing, and unexpected values visible rather than coercing them to healthy.
+- Count health, agent, firmware, and verification states from the complete node dataset. Keep `Unknown`, missing, and unexpected values visible rather than coercing them to healthy.
+  - The backend JSON keeps its original field names: read verification state from `integrityCheck` (with `integrityCheckReason`, `lastIntegrityCheckTS`) and location from `geoLocation`. "Verification" and "location" are display terms only — the JSON never contains those keys.
 - Count active alerts by severity and component from the complete alert dataset. Preserve unexpected severities as `Other`.
 - Calculate the displayed **node health score** as `100 * healthy nodes / total nodes`, rounded reasonably. Label it as a report-derived node health rate and show the formula; do not imply that the backend supplied a composite score.
 - Derive at-a-glance status transparently:
   - Use **Critical** when any active Critical alert or Unhealthy node exists.
-  - Otherwise use **Needs attention** when any active Warning or `Other` (unrecognized-severity) alert, Degraded or Unknown node, offline or unknown agent, failed or unknown firmware check, or degraded, unverified, pending, unsupported, unknown, or missing integrity state exists.
+  - Otherwise use **Needs attention** when any active Warning or `Other` (unrecognized-severity) alert, Degraded or Unknown node, offline or unknown agent, failed or unknown firmware check, or degraded, unverified, pending, unsupported, unknown, or missing verification state exists.
   - Otherwise use **Healthy** when at least one node exists and no attention signal exists.
   - Use **No data** only when no nodes were returned, or when *every* returned node is missing the required health fields. When only some nodes lack a required field, keep the known values, count the missing ones as `Unknown`/`N/A`, and still derive the status from the populated nodes — never suppress a valid metric because part of the fleet is unpopulated.
-- Rank machines needing attention using explicit evidence. Prioritize critical-alert count, Unhealthy health, total active-alert count, warning-alert count, Degraded or Unknown health, offline agent, failed firmware, and integrity problems. Show the reasons and counts used; do not present the ranking as a backend-defined risk score.
+- Rank machines needing attention using explicit evidence. Prioritize critical-alert count, Unhealthy health, total active-alert count, warning-alert count, Degraded or Unknown health, offline agent, failed firmware, and verification problems. Show the reasons and counts used; do not present the ranking as a backend-defined risk score.
 - Calculate trend from the summed error counts in the two equal windows. Show current, previous, absolute delta, direction, and percentage change. If the previous value is zero, show `new increase` or `no change` instead of an infinite percentage.
 - Identify recurring issues as error names present with positive counts in both windows. Rank by current count, persistence, affected-node count when available, and change. Label types found only in the current window as new and types found only in the previous window as no longer observed. Do not claim event-level recurrence from aggregate data.
 - Mark unavailable fields as `N/A`. Never manufacture timestamps, hostnames, alert causes, remediation, utilization, or capacity.
@@ -143,10 +144,10 @@ Apply these styling rules:
 Include these sections:
 
 1. **Fleet-wide health / at a glance** — derived node health score and formula, overall status, node and GPU totals when present, healthy/degraded/unhealthy/unknown counts, active-alert totals by severity, and collection timestamp.
-2. **Fleet distribution and operational signals** — concise health breakdowns by compute zone and node group, GPU type/capacity, agent connectivity, firmware, and integrity. Omit unavailable metrics rather than estimating them.
+2. **Fleet distribution and operational signals** — concise health breakdowns by compute zone and node group, GPU type/capacity, agent connectivity, firmware, and verification. Omit unavailable metrics rather than estimating them.
 3. **Trend direction** — current versus previous equal windows, error totals, delta, percentage or zero-baseline wording, direction, and exact time boundaries.
 4. **Issue concentration** — alert/error distribution by component or type and the share concentrated in the leading nodes, when fields support it.
-5. **Machines needing immediate attention** — most-alerted/highest-risk nodes with hostname, UUID or shortened UUID, health, critical and warning counts, agent/firmware/integrity signals, and concise evidence-based reasons.
+5. **Machines needing immediate attention** — most-alerted/highest-risk nodes with hostname, UUID or shortened UUID, health, critical and warning counts, agent/firmware/verification signals, and concise evidence-based reasons.
 
 Add a short evidence-based action summary when useful. Use remediation or suggested actions only when returned by the backend; otherwise describe what deserves investigation without prescribing unsupported fixes.
 

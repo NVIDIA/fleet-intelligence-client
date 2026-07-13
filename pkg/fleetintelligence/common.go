@@ -24,7 +24,9 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
 
-// Represents physical location metadata for a fleet resource
+// Represents physical location metadata for a fleet resource.
+// This retains the backend "geoLocation" vocabulary; the CLI surfaces it
+// to users as "location".
 type GeoLocation struct {
 	City      string   `json:"city,omitempty"`
 	Country   string   `json:"country,omitempty"`
