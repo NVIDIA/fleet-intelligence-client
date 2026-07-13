@@ -199,7 +199,6 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  alertPageHasMore(page),
 		},
 	})
 }
@@ -270,7 +269,6 @@ func runAlertTimelineNodes(cmd *cobra.Command, client *fleetintelligence.Client,
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
@@ -324,7 +322,6 @@ func runNodeAlertTimeline(cmd *cobra.Command, client *fleetintelligence.Client, 
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
@@ -392,10 +389,7 @@ func alertPageHasMore(page fleetintelligence.AlertsPage) bool {
 // Writes JSON or table output for alert list results
 func writeAlertListOutput(w io.Writer, common resolvedCommonFlags, result alertListOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	if err := clioutput.WriteTable(w, []string{"UUID", "NODE UUID", "COMPONENT", "SEVERITY", "STATE", "FIRED-AT"}, alertRows(result.Alerts)); err != nil {
@@ -410,10 +404,7 @@ func writeAlertListOutput(w io.Writer, common resolvedCommonFlags, result alertL
 // Writes JSON or table output for alert timeline results
 func writeAlertTimelineOutput(w io.Writer, common resolvedCommonFlags, result alertTimelineOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	var err error

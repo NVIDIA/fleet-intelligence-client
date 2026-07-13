@@ -91,7 +91,7 @@ func TestAlertListAllJSONMergesRawItems(t *testing.T) {
 	if len(got.Items) != 2 || got.Items[0]["alertUUID"] != "alert-1" || got.Items[0]["extra"] != "kept" {
 		t.Fatalf("unexpected merged items: %#v", got.Items)
 	}
-	if got.Pagination.Page != 0 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
+	if got.Pagination.Page != 1 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
 		t.Fatalf("unexpected pagination: %#v", got.Pagination)
 	}
 }
@@ -104,7 +104,8 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 		if r.URL.Path != "/v1/alerts" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		// 0-indexed --page 0 is translated to the 1-indexed API's page 1.
+		// --page 1 (1-based) maps to the SDK's 0-based page 0, which the alerts
+		// API sees as its 1-based page 1.
 		if got := r.URL.Query().Get("page"); got != "1" {
 			t.Fatalf("unexpected page: %q", got)
 		}
@@ -121,14 +122,14 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "list", "--page", "0"})
+	cmd.SetArgs([]string{"alert", "list", "--page", "1"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "NODE UUID", "COMPONENT", "SEVERITY", "STATE", "FIRED-AT", "alert-1", "Warning", "Has More: true"} {
+	for _, want := range []string{"UUID", "NODE UUID", "COMPONENT", "SEVERITY", "STATE", "FIRED-AT", "alert-1", "Warning", "Page: 1  Total Pages: 2  Page Size: 1  Total Entries: 2"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
@@ -242,17 +243,17 @@ func TestAlertListRejectsInvalidSeverity(t *testing.T) {
 	}
 }
 
-// Verifies alert list uses the shared 0-indexed page rule and rejects negatives
+// Verifies alert list uses the shared 1-based page rule and rejects out-of-range
 func TestAlertListRejectsNegativePage(t *testing.T) {
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"alert", "list", "--page=-1"})
+	cmd.SetArgs([]string{"alert", "list", "--page=0"})
 
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected page error")
 	}
-	if !strings.Contains(err.Error(), "--page must be greater than or equal to 0") {
+	if !strings.Contains(err.Error(), "--page must be greater than or equal to 1") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

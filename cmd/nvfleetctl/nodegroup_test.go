@@ -147,7 +147,7 @@ func TestNodeGroupListAllJSONMergesRawItems(t *testing.T) {
 	if len(got.Items) != 2 || got.Items[0]["id"] != "ng-1" || got.Items[0]["extra"] != "kept" {
 		t.Fatalf("unexpected merged items: %#v", got.Items)
 	}
-	if got.Pagination.Page != 0 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
+	if got.Pagination.Page != 1 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
 		t.Fatalf("unexpected pagination: %#v", got.Pagination)
 	}
 }

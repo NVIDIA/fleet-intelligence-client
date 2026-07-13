@@ -17,6 +17,7 @@ package helpers
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -112,6 +113,30 @@ func TestFetchAllRawPagesReturnsFetchError(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "backend failed") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies raw page numbers are normalized only when safe to increment.
+func TestOneIndexRawPage(t *testing.T) {
+	maxInt := strconv.Itoa(int(^uint(0) >> 1))
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "page", raw: `{"page":0}`, want: `{"page":1}`},
+		{name: "missing", raw: `{"items":[]}`, want: `{"items":[]}`},
+		{name: "null", raw: `{"page":null}`, want: `{"page":null}`},
+		{name: "max int", raw: `{"page":` + maxInt + `}`, want: `{"page":` + maxInt + `}`},
+		{name: "invalid json", raw: `not-json`, want: `not-json`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := string(OneIndexRawPage([]byte(tt.raw))); got != tt.want {
+				t.Fatalf("unexpected raw page: got %q want %q", got, tt.want)
+			}
+		})
 	}
 }
 

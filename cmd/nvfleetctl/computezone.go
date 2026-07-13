@@ -139,7 +139,6 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
@@ -158,10 +157,7 @@ func validateComputeZoneListFlags(flags computeZoneListFlags, common resolvedCom
 // Writes JSON or table output for compute zone list results
 func writeComputeZoneListOutput(w io.Writer, common resolvedCommonFlags, result computeZoneListOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	if err := writeComputeZoneTable(w, result.View, result.ComputeZones); err != nil {

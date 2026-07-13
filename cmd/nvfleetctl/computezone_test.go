@@ -46,7 +46,8 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
 			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
 		}
-		if got := query.Get("page"); got != "2" {
+		// --page 2 (1-based) maps to the SDK's 0-based page 1.
+		if got := query.Get("page"); got != "1" {
 			t.Fatalf("unexpected page: %q", got)
 		}
 		if got := query.Get("pageSize"); got != "50" {
@@ -54,7 +55,7 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","name":"East","type":"datacenter","geoLocation":{"city":"Santa Clara","country":"US"},"nodesCount":7}],"hasMore":false,"page":2,"pageSize":50,"total":1}`))
+		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","name":"East","type":"datacenter","geoLocation":{"city":"Santa Clara","country":"US"},"nodesCount":7}],"hasMore":false,"page":1,"pageSize":50,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -141,7 +142,7 @@ func TestComputeZoneListAllJSONMergesRawItems(t *testing.T) {
 	if len(got.Items) != 2 || got.Items[0]["id"] != "cz-1" || got.Items[0]["extra"] != "kept" {
 		t.Fatalf("unexpected merged items: %#v", got.Items)
 	}
-	if got.Pagination.Page != 0 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
+	if got.Pagination.Page != 1 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
 		t.Fatalf("unexpected pagination: %#v", got.Pagination)
 	}
 }

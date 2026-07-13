@@ -200,7 +200,6 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonF
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
@@ -387,10 +386,7 @@ func parseNodeFirmwareCheckList(raw string) ([]fleetintelligence.NodeFirmwareChe
 // Writes JSON or table output for node list results
 func writeNodeListOutput(w io.Writer, common resolvedCommonFlags, result nodeListOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	if err := writeNodeTable(w, result.View, result.Nodes); err != nil {

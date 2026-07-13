@@ -108,6 +108,38 @@ func FetchAllRawPages(itemKey string, startPage int, fetch func(page int) (RawPa
 	}
 }
 
+// OneIndexRawPage rewrites the 0-indexed "page" field in a raw list payload to
+// its 1-indexed equivalent so JSON consumers see the CLI's 1-based paging
+// contract. The original bytes are returned unchanged when the payload has no
+// usable page field.
+func OneIndexRawPage(data []byte) []byte {
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(data, &body); err != nil {
+		return data
+	}
+	raw, ok := body["page"]
+	if !ok {
+		return data
+	}
+	var page *int
+	if err := json.Unmarshal(raw, &page); err != nil {
+		return data
+	}
+	if page == nil || *page == int(^uint(0)>>1) {
+		return data
+	}
+	normalized, err := json.Marshal(*page + 1)
+	if err != nil {
+		return data
+	}
+	body["page"] = normalized
+	out, err := json.Marshal(body)
+	if err != nil {
+		return data
+	}
+	return out
+}
+
 // Extracts raw array items from an API response object
 func ExtractRawItems(data []byte, itemKey string) ([]json.RawMessage, error) {
 	var body map[string]json.RawMessage

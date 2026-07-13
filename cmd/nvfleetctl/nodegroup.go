@@ -163,7 +163,6 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 			Page:     page.Page,
 			PageSize: page.PageSize,
 			Total:    page.Total,
-			HasMore:  page.HasMore,
 		},
 	})
 }
@@ -221,10 +220,7 @@ func parseNodeGroupHealthList(raw string) ([]fleetintelligence.NodeGroupHealthSt
 // Writes JSON or table output for node group list results
 func writeNodeGroupListOutput(w io.Writer, common resolvedCommonFlags, result nodeGroupListOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	if err := writeNodeGroupTable(w, result.View, result.NodeGroups); err != nil {
