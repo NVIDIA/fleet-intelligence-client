@@ -121,11 +121,14 @@ func OneIndexRawPage(data []byte) []byte {
 	if !ok {
 		return data
 	}
-	var page int
+	var page *int
 	if err := json.Unmarshal(raw, &page); err != nil {
 		return data
 	}
-	normalized, err := json.Marshal(page + 1)
+	if page == nil || *page == int(^uint(0)>>1) {
+		return data
+	}
+	normalized, err := json.Marshal(*page + 1)
 	if err != nil {
 		return data
 	}
