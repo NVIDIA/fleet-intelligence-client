@@ -131,7 +131,8 @@ func TestWriteTableAndPaginationFooter(t *testing.T) {
 	if err := WriteTable(&out, []string{"ID", "NAME"}, [][]string{{"cz-1", "East"}}); err != nil {
 		t.Fatalf("write table failed: %v", err)
 	}
-	if err := WritePaginationFooter(&out, Pagination{Page: 1, PageSize: 20, Total: 50}); err != nil {
+	// Page carries the SDK's 0-based page number; the footer presents it 1-based.
+	if err := WritePaginationFooter(&out, Pagination{Page: 0, PageSize: 20, Total: 50}); err != nil {
 		t.Fatalf("write footer failed: %v", err)
 	}
 

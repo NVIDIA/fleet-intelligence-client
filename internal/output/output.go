@@ -165,13 +165,14 @@ func WriteTable(w io.Writer, headers []string, rows [][]string) error {
 	return tw.Flush()
 }
 
-// Writes the standard single-page pagination footer
+// Writes the standard single-page pagination footer. Page carries the SDK's
+// 0-based page number and is presented as the CLI's 1-based page.
 func WritePaginationFooter(w io.Writer, page Pagination) error {
 	totalPages := 0
 	if page.PageSize > 0 {
 		totalPages = (page.Total + page.PageSize - 1) / page.PageSize
 	}
-	_, err := fmt.Fprintf(w, "Page: %d  Total Pages: %d  Page Size: %d  Total Entries: %d\n", page.Page, totalPages, page.PageSize, page.Total)
+	_, err := fmt.Fprintf(w, "Page: %d  Total Pages: %d  Page Size: %d  Total Entries: %d\n", page.Page+1, totalPages, page.PageSize, page.Total)
 	return err
 }
 

@@ -33,6 +33,8 @@ func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	raw := `{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","healthStatus":"Healthy"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`
+	// JSON output presents the page 1-based, which re-serializes top-level keys.
+	want := `{"hasMore":false,"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","healthStatus":"Healthy"}],"page":1,"pageSize":20,"total":1}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
@@ -57,8 +59,8 @@ func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
 	}
-	if strings.TrimSpace(out.String()) != raw {
-		t.Fatalf("raw JSON changed: got %q want %q", strings.TrimSpace(out.String()), raw)
+	if strings.TrimSpace(out.String()) != want {
+		t.Fatalf("unexpected JSON: got %q want %q", strings.TrimSpace(out.String()), want)
 	}
 }
 
@@ -124,7 +126,7 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS", "node-1", "gpu-001", "East", "Training", "Verified", "Unknown", "Online", "Page: 0"} {
+	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS", "node-1", "gpu-001", "East", "Training", "Verified", "Unknown", "Online", "Page: 1"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
@@ -193,7 +195,7 @@ func TestNodeListAllJSONMergesRawItems(t *testing.T) {
 	if len(got.Items) != 2 || got.Items[0]["nodeUUID"] != "node-1" || got.Items[0]["extra"] != "kept" {
 		t.Fatalf("unexpected merged items: %#v", got.Items)
 	}
-	if got.Pagination.Page != 0 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
+	if got.Pagination.Page != 1 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
 		t.Fatalf("unexpected pagination: %#v", got.Pagination)
 	}
 }

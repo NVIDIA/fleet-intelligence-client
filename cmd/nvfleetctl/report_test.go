@@ -81,7 +81,7 @@ func TestReportInventoryTable(t *testing.T) {
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "node-1", "gpu-001", "NVIDIA-H100", "Page: 0"} {
+	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "node-1", "gpu-001", "NVIDIA-H100", "Page: 1"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
@@ -417,7 +417,7 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 	if len(got.Items) != 2 || got.Items[0]["name"] != "xid_154" || got.Items[0]["extra"] != "kept" {
 		t.Fatalf("unexpected merged items: %#v", got.Items)
 	}
-	if got.Pagination.Page != 0 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
+	if got.Pagination.Page != 1 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
 		t.Fatalf("unexpected pagination: %#v", got.Pagination)
 	}
 }

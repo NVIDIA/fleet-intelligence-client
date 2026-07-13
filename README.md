@@ -115,7 +115,7 @@ Common output and pagination flags:
 
 ```bash
 nvfleetctl node list --all --output json
-nvfleetctl node list --page 0 --page-size 25
+nvfleetctl node list --page 1 --page-size 25
 nvfleetctl node list --health Degraded,Unhealthy
 ```
 

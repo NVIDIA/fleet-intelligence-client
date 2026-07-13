@@ -104,7 +104,7 @@ func registerOutputFlag(cmd *cobra.Command, flags *commonFlags) {
 // Registers pagination flags on a command
 func registerPaginationFlags(cmd *cobra.Command, flags *commonFlags) {
 	cmd.Flags().BoolVar(&flags.all, "all", false, "Fetch all pages")
-	cmd.Flags().IntVar(&flags.page, "page", 0, "Page number to fetch")
+	cmd.Flags().IntVar(&flags.page, "page", 1, "Page number to fetch (1-based)")
 	cmd.Flags().IntVar(&flags.pageSize, "page-size", 0, "Page size to fetch")
 }
 
@@ -150,8 +150,8 @@ func validateListCommonFlags(flags resolvedCommonFlags) error {
 	if flags.all && flags.pageSet {
 		return errors.New("--page cannot be used with --all")
 	}
-	if flags.pageSet && flags.page < 0 {
-		return errors.New("--page must be greater than or equal to 0")
+	if flags.pageSet && flags.page < 1 {
+		return errors.New("--page must be greater than or equal to 1")
 	}
 	if flags.pageSizeSet && (flags.pageSize < clihelpers.MinPageSize || flags.pageSize > clihelpers.MaxPageSize) {
 		return fmt.Errorf("--page-size must be between %d and %d", clihelpers.MinPageSize, clihelpers.MaxPageSize)
@@ -176,7 +176,8 @@ func validateReadCommonFlags(flags resolvedCommonFlags) error {
 // Applies explicitly supplied pagination flags to request options
 func applyPagination(flags resolvedCommonFlags, setPage func(*int), setPageSize func(*int)) {
 	if flags.pageSet {
-		page := flags.page
+		// --page is 1-based; the SDK uses a 0-based paging contract.
+		page := flags.page - 1
 		setPage(&page)
 	}
 	if flags.pageSizeSet {
@@ -187,6 +188,20 @@ func applyPagination(flags resolvedCommonFlags, setPage func(*int), setPageSize 
 		pageSize := clihelpers.MaxPageSize
 		setPageSize(&pageSize)
 	}
+}
+
+// Writes paginated list output as JSON, presenting the page number with the
+// CLI's 1-based contract. rawJSON is a single API page; jsonValue is the merged
+// result produced for --all.
+func writePaginatedListJSON(w io.Writer, rawJSON []byte, jsonValue any) error {
+	if rawJSON != nil {
+		return clioutput.WriteRawJSON(w, clihelpers.OneIndexRawPage(rawJSON))
+	}
+	if merged, ok := jsonValue.(clihelpers.MergedJSONResult); ok {
+		merged.Pagination.Page++
+		return clioutput.WriteJSON(w, merged)
+	}
+	return clioutput.WriteJSON(w, jsonValue)
 }
 
 // Creates the version command

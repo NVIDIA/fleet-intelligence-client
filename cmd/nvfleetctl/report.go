@@ -682,10 +682,7 @@ func errorReportPagination(report fleetintelligence.ErrorReport) *clioutput.Pagi
 // Writes JSON or table output for inventory report results
 func writeReportInventoryOutput(w io.Writer, common resolvedCommonFlags, result reportInventoryOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	if err := writeReportInventoryTable(w, result.Report.Nodes); err != nil {
@@ -700,10 +697,7 @@ func writeReportInventoryOutput(w io.Writer, common resolvedCommonFlags, result 
 // Writes JSON or table output for error report results
 func writeReportErrorOutput(w io.Writer, common resolvedCommonFlags, result reportErrorOutput) error {
 	if common.output == clioutput.FormatJSON {
-		if result.RawJSON != nil {
-			return clioutput.WriteRawJSON(w, result.RawJSON)
-		}
-		return clioutput.WriteJSON(w, result.JSONValue)
+		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
 	if err := writeReportErrorTable(w, result.Report); err != nil {
