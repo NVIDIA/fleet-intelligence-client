@@ -183,7 +183,7 @@ func TestNodeGroupListHelpExplainsOrderDefaultSort(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"Sort field: health, gpuUtil, or nodes",
+		"Sort field: health or nodes",
 		"Sort order for --sort-by: asc or desc; node groups default --sort-by to health",
 	} {
 		if !strings.Contains(got, want) {

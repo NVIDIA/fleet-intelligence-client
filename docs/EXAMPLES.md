@@ -36,7 +36,7 @@ nvfleetctl computezone list --view basic
 # Node groups
 nvfleetctl nodegroup list
 nvfleetctl nodegroup list --health Degraded,Unhealthy
-nvfleetctl nodegroup list --gpu-type H100 --sort-by gpuUtil --order desc
+nvfleetctl nodegroup list --gpu-type H100 --sort-by health --order desc
 
 # Nodes
 nvfleetctl node list

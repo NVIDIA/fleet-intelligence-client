@@ -2,10 +2,170 @@ info:
   title: Fleet Intelligence API (external)
   version: ''
 externalDocs:
-  description: ''
-  url: ''
+  description: OpenAPI specification
+  url: /fleet-intelligence/public/openapi.json
 openapi: 3.1.0
 paths:
+  /.well-known/signing-key.pub:
+    get:
+      description: Returns NVIDIA's currently-active public key for verifying signed
+        inventory reports. Use with `cosign verify-blob --key signing-key.pub --bundle
+        <file>.sig.bundle <file>.csv`. The key is PEM-encoded (PKIX SubjectPublicKeyInfo).
+        After a key rotation this URL serves the new key; reports signed under previous
+        keys cease to verify and customers must re-download.
+      responses:
+        '200':
+          content:
+            application/x-pem-file:
+              schema:
+                type: string
+          description: PEM-encoded ECDSA-P256 public key
+        '503':
+          content:
+            application/x-pem-file:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Signing not configured on this server, or upstream NVault is
+            unreachable
+      summary: Get inventory-report public verification key
+      tags:
+        - reports
+  /v1/alert_mute_rules:
+    delete:
+      description: 'Delete mute rules for a specific component, or delete all mute
+        rules for the customer.
+
+        With body: provide component (required) and optionally severities. If severities
+        is empty, deletes all rules for the component.
+
+        Without body: deletes ALL mute rules for the customer.'
+      operationId: deleteV1AlertMuteRules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.DeleteMuteRulesRequest'
+              summary: request
+              description: Delete mute rules request (omit body to delete all)
+        description: Delete mute rules request (omit body to delete all)
+      responses:
+        '204':
+          description: No Content
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found - No rules exist for the specified component
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Delete mute rules
+      tags:
+        - alert_mute_rules
+    get:
+      description: Get all customer-wide mute rules grouped by component. Each component
+        shows which severities (Critical, Warning) are muted.
+      operationId: getV1AlertMuteRules
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ListMuteRulesResponse'
+          description: List of mute rules grouped by component
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: List mute rules
+      tags:
+        - alert_mute_rules
+    put:
+      description: 'Declarative per-component update: set this component to exactly
+        the specified severities.
+
+        If severities is empty or omitted, defaults to both Critical and Warning.
+
+        This replaces any existing mute configuration for the component.
+
+        Returns 204 No Content on success. Use GET /v1/alert_mute_rules to retrieve
+        current state.'
+      operationId: putV1AlertMuteRules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.UpdateMuteRuleRequest'
+              summary: request
+              description: Update mute rule request
+        description: Update mute rule request
+        required: true
+      responses:
+        '204':
+          description: No Content
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Update mute rule for a component
+      tags:
+        - alert_mute_rules
   /v1/alert_timeline/nodes:
     get:
       description: Get list of nodes with alert summary for progressive disclosure.
@@ -83,6 +243,12 @@ paths:
         - description: 'Filter only currently active alerts (default: false)'
           in: query
           name: active
+          schema:
+            default: false
+            type: boolean
+        - description: 'Exclude PSIRT alerts from results (default: false)'
+          in: query
+          name: withoutPsirt
           schema:
             default: false
             type: boolean
@@ -452,6 +618,448 @@ paths:
       summary: Update compute zone
       tags:
         - computezones
+  /v1/events:
+    get:
+      description: Get list of events with optional filtering by node UUID, component,
+        and time range. Returns events from the events table for the specified time
+        period.
+      operationId: getV1Events
+      parameters:
+        - description: Start time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z). Cannot be more than 1 year in the past.
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: End time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z)
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: Time mode for range selection. Defaults to absolute.
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: 'Relative duration window (required for relative mode). Valid
+            units: h, m, s (e.g. 24h, 1h30m, 90m). ''d'' is not supported; use hours
+            instead (e.g. 168h for 7 days)'
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Filter by node UUID (optional)
+          in: query
+          name: nodeUUID
+          schema:
+            type: string
+        - description: Filter by component (optional)
+          in: query
+          name: component
+          schema:
+            type: string
+        - description: 'Page number (default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Page size (default: 50, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 50
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.EventsResponse'
+          description: Array of events with pagination info
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get events
+      tags:
+        - events
+  /v1/events/buckets:
+    get:
+      description: Returns time-bucketed event counts for histogram display. The server
+        picks a clean bucket interval based on the maxBuckets hint.
+      operationId: getV1EventsBuckets
+      parameters:
+        - description: Start time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z). Cannot be more than 1 year in the past.
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: End time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z)
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: Time mode for range selection. Defaults to absolute.
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: 'Relative duration window (required for relative mode). Valid
+            units: h, m, s (e.g. 24h, 1h30m, 90m). ''d'' is not supported; use hours
+            instead (e.g. 168h for 7 days)'
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Filter by node UUID (optional)
+          in: query
+          name: nodeUUID
+          schema:
+            type: string
+        - description: Filter by component (optional)
+          in: query
+          name: component
+          schema:
+            type: string
+        - description: 'Maximum number of buckets (default: 100, max: 1000)'
+          in: query
+          name: maxBuckets
+          schema:
+            default: 100
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.EventBucketsResponse'
+          description: Time-bucketed event counts
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get event counts bucketed by time
+      tags:
+        - events
+  /v1/metrics:
+    get:
+      description: 'Get a list of all available metrics, organized by component. Supports
+        optional filtering by isCritical, aggregatable, and type. Unknown or false
+        values for boolean params are treated as no filter.
+
+        Use psirtComponent=true to include active PSIRT CVE sub-components under the
+        "psirt" component.'
+      operationId: getV1Metrics
+      parameters:
+        - description: If 'true', only critical metrics are returned. If absent or
+            'false', all metrics are returned.
+          in: query
+          name: isCritical
+          schema:
+            type: string
+        - description: If 'true', metrics that cannot be aggregated across nodes are
+            excluded. If absent or 'false', all metrics are returned.
+          in: query
+          name: aggregatable
+          schema:
+            type: string
+        - description: If set, only metrics matching this type are returned (e.g.,
+            'utilization', 'limit'). If absent, all metrics are returned.
+          in: query
+          name: type
+          schema:
+            type: string
+        - description: 'Include active PSIRT CVE sub-components (default: false)'
+          in: query
+          name: psirtComponent
+          schema:
+            type: boolean
+        - description: Optional entity scope for architecture-aware filtering. Currently
+            only 'node' is supported.
+          in: query
+          name: entityLevel
+          schema:
+            enum:
+              - node
+            type: string
+        - description: Entity ID for architecture-aware filtering. Required when entityLevel
+            is set.
+          in: query
+          name: entityID
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.GetMetricsResponse'
+          description: Successful response
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get available metrics
+      tags:
+        - metrics
+  /v1/metrics/query_range:
+    get:
+      description: Query data for a particular metric for a node, node group, or compute
+        zone over a range of time
+      operationId: getV1MetricsQueryRange
+      parameters:
+        - description: Start time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z). Cannot be more than 1 year in the past.
+          in: query
+          name: start
+          schema:
+            type: string
+        - description: End time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z)
+          in: query
+          name: end
+          schema:
+            type: string
+        - description: Time mode for range selection. Defaults to absolute.
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: 'Relative duration window (required for relative mode). Valid
+            units: h, m, s (e.g. 24h, 1h30m, 90m). ''d'' is not supported; use hours
+            instead (e.g. 168h for 7 days)'
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Query resolution step width in duration format (e.g. 1h, 1m).
+            Minimum step width is 1 minute.
+          in: query
+          name: step
+          required: true
+          schema:
+            type: string
+        - description: Component name (e.g., accelerator-nvidia-clock-speed)
+          in: query
+          name: component
+          required: true
+          schema:
+            type: string
+        - description: Name of the metric to query (e.g., accelerator_nvidia_clock_speed_graphics_mhz)
+          in: query
+          name: metric
+          required: true
+          schema:
+            type: string
+        - description: The level of the entity to query for. In the future we intend
+            to support aggregation across tags, node groups, and compute zones
+          in: query
+          name: entityLevel
+          required: true
+          schema:
+            enum:
+              - node
+            type: string
+        - description: The ID of the compute zone, node group, or node
+          in: query
+          name: entityID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.QueryMetricRangeResponse'
+          description: 'Successful response" (NOTE: the result fields will be JSON
+            objects and JSON arrays in the actual response, not strings)'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Query metric range
+      tags:
+        - metrics
+  /v1/node_group_memberships:
+    get:
+      description: Get list of node group memberships with optional filtering. Customer
+        ID is automatically extracted from the NV-ngc-nca-id header and used for filtering.
+      operationId: getV1NodeGroupMemberships
+      parameters:
+        - description: Node group ID to filter memberships
+          in: query
+          name: nodeGroupId
+          schema:
+            type: string
+        - description: Node UUID to filter memberships
+          in: query
+          name: nodeUUID
+          schema:
+            type: string
+        - description: 'Page number (0-based, default: 0)'
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: 'Page size (default: 20, max: 100)'
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NodeGroupMembershipsResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get node group memberships
+      tags:
+        - node-memberships
   /v1/nodegroups:
     get:
       description: 'Get list of node groups with optional filtering and different
@@ -525,14 +1133,13 @@ paths:
             items:
               type: string
             type: array
-        - description: Field to sort by (health, gpuUtil, nodes)
+        - description: Field to sort by (health, nodes)
           in: query
           name: sortBy
           schema:
             default: health
             enum:
               - health
-              - gpuUtil
               - nodes
             type: string
         - description: Sort order (asc, desc)
@@ -850,7 +1457,9 @@ paths:
           name: hostname
           schema:
             type: string
-        - description: Field to sort by
+        - description: Field to sort by. gpuFirmwareVersions pins nodes whose GPUs
+            have mismatched vbios versions to the top, then sorts the remaining (uniform)
+            nodes by that common vbios in the requested order.
           in: query
           name: sortBy
           schema:
@@ -865,6 +1474,10 @@ paths:
               - gpuCount
               - integrityCheck
               - agentStatus
+              - agentVersion
+              - kernelVersion
+              - gpuDriverVersion
+              - gpuFirmwareVersions
             type: string
         - description: Sort order (asc, desc)
           in: query
@@ -1198,6 +1811,447 @@ paths:
       summary: Set all tags for a node
       tags:
         - tags
+  /v1/notification_delivery_log:
+    get:
+      description: 'Get paginated notification delivery log entries for the customer,
+        with optional filtering
+
+        by component, channel, status, alertUUID, and time range.'
+      operationId: getV1NotificationDeliveryLog
+      parameters:
+        - description: Filter by component (GPU, NVSwitch, etc.)
+          in: query
+          name: component
+          schema:
+            type: string
+        - description: Filter by delivery channel (email, slack, webhook)
+          in: query
+          name: channel
+          schema:
+            type: string
+        - description: Filter by delivery outcome (sent, failed)
+          in: query
+          name: status
+          schema:
+            type: string
+        - description: Filter by alert lifecycle UUID
+          in: query
+          name: alertUUID
+          schema:
+            type: string
+        - description: Start of time range (RFC3339)
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: End of time range (RFC3339)
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: Sort direction on createdAt (asc, desc)
+          in: query
+          name: order
+          schema:
+            default: desc
+            type: string
+        - description: Page number (0-indexed)
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: Page size (max 100)
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.DeliveryLogResponse'
+          description: Paginated delivery log entries
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: List notification delivery logs
+      tags:
+        - notification_delivery_log
+  /v1/notification_preferences:
+    get:
+      description: 'Get all notification preferences for the customer. The public
+        resource name remains preferences for compatibility,
+
+        but each preference is now id-addressable and applies one configuration
+
+        (alert statuses, scope, and notification targets) to a set of components.
+        Multiple
+
+        preferences may cover the same component. Returns an empty list if none are
+        configured.'
+      operationId: getV1NotificationPreferences
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ListNotificationPreferencesResponse'
+          description: List of notification preferences
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: List notification preferences
+      tags:
+        - notification_preferences
+    post:
+      description: 'Create a notification preference. The public path remains notification_preferences
+
+        for compatibility; each row is id-addressable and applies one configuration
+        (alert statuses, scope,
+
+        notification targets) to one or more components. The settings apply equally
+        to every
+
+        component listed. To give a component different settings, create a separate
+        preference.
+
+
+        notifiedOn: array of alert statuses to notify on. Valid values: Critical,
+        Warning, Resolved.
+
+        If notifiedOn is empty or omitted, defaults to all three: [Critical, Warning,
+        Resolved].
+
+
+        Channel config structures:
+
+        - email:   {"recipients": ["addr@example.com", ...]}  (at least one required)
+
+        - slack:   {"recipients": ["channel@workspace.slack.com", ...]}  (at least
+        one required)
+
+        - webhook: {"customerID": "cust-acme" (optional), "orgName": "0000000000000000"
+        (optional), "webhookIDs": ["wh_abc123", ...]}  (at least one webhook ID required;
+        customerID defaults to the current customer when omitted; orgName is round-tripped
+        for UI display only)'
+      operationId: postV1NotificationPreferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.NotificationPreferenceRequest'
+              summary: request
+              description: Notification preference configuration
+        description: Notification preference configuration
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.CreateNotificationPreferenceResponse'
+          description: Created - returns the new preference id
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request - Invalid body, missing/unknown components or targets,
+            invalid channel/config
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: Create a notification preference
+      tags:
+        - notification_preferences
+  /v1/notification_preferences/{id}:
+    delete:
+      operationId: deleteV1NotificationPreferenceByID
+      parameters:
+        - description: Preference id (UUID)
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content - Preference deleted
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found - No preference with this id
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: Delete a notification preference by id
+      tags:
+        - notification_preferences
+    get:
+      operationId: getV1NotificationPreferenceByID
+      parameters:
+        - description: Preference id (UUID)
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NotificationPreferenceDetail'
+          description: The notification preference
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found - No preference with this id
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: Get a notification preference by id
+      tags:
+        - notification_preferences
+    put:
+      description: Update the preference addressed by id. Uses the same body shape
+        as create; components, notifiedOn, scope, and targets replace the stored configuration,
+        while omitted active preserves the existing pause/resume toggle.
+      operationId: putV1NotificationPreferenceByID
+      parameters:
+        - description: Preference id (UUID)
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.NotificationPreferenceRequest'
+              summary: request
+              description: Notification preference configuration
+        description: Notification preference configuration
+        required: true
+      responses:
+        '204':
+          description: No Content - Preference updated
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found - No preference with this id
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: Update a notification preference
+      tags:
+        - notification_preferences
+  /v1/overview:
+    get:
+      description: Get overview of the system
+      operationId: getV1Overview
+      parameters:
+        - description: 'Include metrics in response (default: true). Set to false
+            for better performance when metrics are not needed.'
+          in: query
+          name: includeMetrics
+          schema:
+            default: true
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.OverviewResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get overview
+      tags:
+        - overview
   /v1/reports/error:
     get:
       description: 'Get error report grouped by error type or node in JSON or CSV
@@ -1526,95 +2580,137 @@ paths:
       summary: Get inventory report
       tags:
         - reports
-  /v1/reports/mtbi:
+  /v1/retention_policy:
     get:
-      description: 'Returns fleet-level MTBI (Mean Time Between Interruptions) metrics
-        and a per-burst timeline of all job-disrupting XID bursts in the requested
-        time window. Only finalized bursts (finalized_at IS NOT NULL) with job_disruption=true
-        are counted. GPU hours are enrollment-aware: each node contributes hours only
-        from its created_at date. Use format=csv to download a combined CSV containing
-        the overview summary rows followed by the full timeline.'
-      operationId: getV1ReportsMTBI
+      description: Returns the customer's current data retention policy (retention
+        period in days).
+      operationId: getV1RetentionPolicy
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.GetRetentionPolicyResponse'
+          description: Current retention policy
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Not Found - No retention policy exists for the customer
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: Get data retention policy
+      tags:
+        - retention_policy
+    put:
+      description: Sets the customer's data retention period (1–365 days). Returns
+        204 No Content on success.
+      operationId: putV1RetentionPolicy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.UpdateRetentionPolicyRequest'
+              summary: request
+              description: Retention policy update request
+        description: Retention policy update request
+        required: true
+      responses:
+        '204':
+          description: No Content - Retention policy updated
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request - Invalid body or retentionDays out of range
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Aurora database not available
+      summary: Update data retention policy
+      tags:
+        - retention_policy
+  /v1/tags:
+    get:
+      description: 'Returns all unique tags for the customer with optional filtering.
+
+        Supports filtering by prefix, node UUID, node group ID, or compute zone ID.
+
+        At most one of nodeUUID, nodeGroupId, or computeZoneId can be specified.
+
+        Prefix can be combined with any of the other filters.'
+      operationId: getV1Tags
       parameters:
-        - description: Window start (RFC3339). Required for absolute mode.
+        - description: Filter tags by prefix (case-insensitive)
           in: query
-          name: startTime
+          name: prefix
           schema:
             type: string
-        - description: Window end (RFC3339). Required for absolute mode.
+        - description: Filter to tags from a specific node
           in: query
-          name: endTime
+          name: nodeUUID
           schema:
             type: string
-        - description: 'Time mode: absolute (default) or relative'
+        - description: Filter to tags from nodes in a specific node group
           in: query
-          name: timeMode
-          schema:
-            enum:
-              - absolute
-              - relative
-            type: string
-        - description: Relative duration (e.g. 168h for 7 days). Required for relative
-            mode.
-          in: query
-          name: window
+          name: nodeGroupId
           schema:
             type: string
-        - description: Filter by compute zone IDs (multi-value)
+        - description: Filter to tags from nodes in a specific compute zone
           in: query
-          name: computeZoneIds
+          name: computeZoneId
           schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by node group IDs (multi-value)
-          in: query
-          name: nodeGroupIds
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by tags — ANY-of semantics (multi-value)
-          in: query
-          name: tags
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by specific node UUIDs (multi-value)
-          in: query
-          name: nodeUUIDs
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by GPU product name (multi-value)
-          in: query
-          name: gpuTypes
-          schema:
-            items:
-              type: string
-            type: array
-        - description: 'Response format: json (default) or csv'
-          in: query
-          name: format
-          schema:
-            default: json
-            enum:
-              - json
-              - csv
             type: string
       responses:
         '200':
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/models.MTBIReportResponse'
-                  - type: string
-            text/csv:
-              schema:
-                type: string
+                $ref: '#/components/schemas/models.ListTagsResponse'
           description: OK
         '400':
           content:
@@ -1633,125 +2729,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Forbidden
+          description: Forbidden - UAM authorization denied
         '500':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
-        '503':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable
-      summary: Get MTBI report (overview + timeline)
+      summary: List all unique tags
       tags:
-        - reports
-  /v1/reports/mtbi/interruptions:
-    get:
-      description: Returns a paginated breakdown of interruptions grouped by category.
-        Each item contains the category-level aggregate (occurrences and machines
-        affected across all subcategories) plus a subcategories array with the per-subcategory
-        breakdown. Pagination is by category; total reflects the number of distinct
-        categories. Use format=csv to download all rows as a CSV file with Category
-        and Subcategory columns (pagination is ignored for CSV). Shares all filter
-        parameters with GET /v1/reports/mtbi.
-      operationId: getV1ReportsMTBIInterruptions
-      parameters:
-        - description: Window start (RFC3339). Required for absolute mode.
-          in: query
-          name: startTime
-          schema:
-            type: string
-        - description: Window end (RFC3339). Required for absolute mode.
-          in: query
-          name: endTime
-          schema:
-            type: string
-        - description: 'Time mode: absolute (default) or relative'
-          in: query
-          name: timeMode
-          schema:
-            enum:
-              - absolute
-              - relative
-            type: string
-        - description: Relative duration (e.g. 168h for 7 days). Required for relative
-            mode.
-          in: query
-          name: window
-          schema:
-            type: string
-        - description: Filter by compute zone IDs (multi-value)
-          in: query
-          name: computeZoneIds
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by node group IDs (multi-value)
-          in: query
-          name: nodeGroupIds
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by tags — ANY-of semantics (multi-value)
-          in: query
-          name: tags
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by specific node UUIDs (multi-value)
-          in: query
-          name: nodeUUIDs
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by GPU product name (multi-value)
-          in: query
-          name: gpuTypes
-          schema:
-            items:
-              type: string
-            type: array
-        - description: 'Page number, 0-indexed (default: 0)'
-          in: query
-          name: page
-          schema:
-            default: 0
-            type: integer
-        - description: 'Rows per page (default: 20, max: 100)'
-          in: query
-          name: pageSize
-          schema:
-            default: 20
-            type: integer
-        - description: 'Response format: json (default) or csv'
-          in: query
-          name: format
-          schema:
-            default: json
-            enum:
-              - json
-              - csv
-            type: string
+        - tags
+    patch:
+      description: 'Add and/or remove tags for multiple nodes in a single atomic operation.
+
+        Returns 204 No Content on success. Fails if all nodes are invalid.
+
+
+        Tag Validation Rules (applies to tags being added):
+
+        - Format: lowercase letters (a-z), numbers (0-9), hyphens (-), and underscores
+        (_)
+
+        - Must start and end with alphanumeric characters
+
+        - Separators (hyphen, underscore) cannot be consecutive
+
+        - Maximum length: 50 characters
+
+        - Reserved names: null, none, undefined, true, false
+
+        - Examples: "gpu-health", "test_tag", "node123"
+
+
+        Note: Tags being removed are not validated, allowing removal of invalid legacy
+        tags.'
+      operationId: patchV1Tags
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.BatchUpdateTagsRequest'
+              summary: request
+              description: Batch update tags request
+        description: Batch update tags request
+        required: true
       responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/models.MTBIInterruptionsResponse'
-                  - type: string
-            text/csv:
-              schema:
-                type: string
-          description: OK
+        '204':
+          description: No Content
         '400':
           content:
             application/json:
@@ -1769,42 +2793,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Forbidden
+          description: Forbidden - UAM authorization denied
         '500':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
-        '503':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable
-      summary: Get MTBI interruptions table (paginated or CSV)
+      summary: Batch update tags for multiple nodes
       tags:
-        - reports
-  /v1/reports/mtbi/machines:
+        - tags
+  /v2/metrics:
     get:
-      description: Returns a paginated list of machines that had at least one job-disrupting
-        XID burst in the requested window, ordered by interruption count descending.
-        Each row shows the node's hostname, UUID, total interruption count, and all
-        interruption types experienced (ordered by frequency). Use format=csv to download
-        all rows as a CSV file.
-      operationId: getV1ReportsMTBIMachines
+      description: Returns historical chart data for customer, node group, compute
+        zone, or node level. This endpoint follows the v1/metrics/query_range pattern
+        with a unified interface. Aggregation functions are determined by metric configuration
+        in base-config.yaml.
+      operationId: getV2Metrics
       parameters:
-        - description: Window start (RFC3339). Required for absolute mode.
+        - description: The aggregation level to group metrics by
+          example: nodegroup
+          in: query
+          name: groupBy
+          required: true
+          schema:
+            enum:
+              - customer
+              - nodegroup
+              - computezone
+              - node
+            type: string
+        - description: The ID of the entity (required for nodegroup, computezone,
+            node; not needed for customer level)
+          example: 550e8400-e29b-41d4-a716-446655440000
+          in: query
+          name: groupId
+          schema:
+            type: string
+        - description: Comma-separated list of metric names to query (e.g., dcgm_fi_dev_gpu_util,cpu_used_percent,memory_used_percent)
+          example: dcgm_fi_dev_gpu_util,cpu_used_percent
+          in: query
+          name: metricNames
+          required: true
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Start time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T00:00:00Z)
           in: query
           name: startTime
           schema:
             type: string
-        - description: Window end (RFC3339). Required for absolute mode.
+        - description: End time in RFC3339 format (required for absolute mode, e.g.,
+            2024-01-01T01:00:00Z)
           in: query
           name: endTime
           schema:
             type: string
-        - description: 'Time mode: absolute (default) or relative'
+        - description: Time mode for range selection. Defaults to absolute.
           in: query
           name: timeMode
           schema:
@@ -1812,131 +2859,32 @@ paths:
               - absolute
               - relative
             type: string
-        - description: Relative duration (e.g. 168h for 7 days). Required for relative
-            mode.
+        - description: 'Relative duration window (required for relative mode). Uses
+            Go duration syntax — valid units: h, m, s (e.g. 24h, 1h30m, 90m). ''d''
+            is not supported; use hours instead (e.g. 168h for 7 days)'
+          example: 24h
           in: query
           name: window
           schema:
             type: string
-        - description: Filter by compute zone IDs (multi-value)
+        - description: Query resolution step width in duration format (e.g., 1m, 5m,
+            1h). Minimum step width is 1 minute.
+          example: 5m
           in: query
-          name: computeZoneIds
+          name: step
+          required: true
           schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by node group IDs (multi-value)
-          in: query
-          name: nodeGroupIds
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by tags — ANY-of semantics (multi-value)
-          in: query
-          name: tags
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by specific node UUIDs (multi-value)
-          in: query
-          name: nodeUUIDs
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter by GPU product name (multi-value)
-          in: query
-          name: gpuTypes
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Filter machines to those that had a burst in any of these categories
-            (multi-value, e.g. 'Off the Bus'). Returns all categories for matching
-            machines.
-          in: query
-          name: interruptionCategories
-          schema:
-            items:
-              type: string
-            type: array
-        - description: Further narrow by subcategory within the selected categories
-            (multi-value, e.g. 'SBE'). Only applied when interruptionCategories is
-            also set.
-          in: query
-          name: interruptionSubcategories
-          schema:
-            items:
-              type: string
-            type: array
-        - description: 'Page number, 0-indexed (default: 0)'
-          in: query
-          name: page
-          schema:
-            default: 0
-            type: integer
-        - description: 'Rows per page (default: 20, max: 100)'
-          in: query
-          name: pageSize
-          schema:
-            default: 20
-            type: integer
-        - description: 'Response format: json (default) or csv'
-          in: query
-          name: format
-          schema:
-            default: json
-            enum:
-              - json
-              - csv
             type: string
       responses:
         '200':
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/models.MTBIMachinesResponse'
-                  - type: string
-            text/csv:
-              schema:
-                type: string
-          description: OK
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Bad Request
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Unauthorized
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Forbidden
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Internal Server Error
-        '503':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable
-      summary: Get machines with interruptions table (paginated or CSV)
+                $ref: '#/components/schemas/models.MetricsAggregationResponse'
+          description: Metrics with time series for the requested aggregation level
+      summary: Get aggregated metrics with time series for any aggregation level
       tags:
-        - reports
+        - v2/metrics
 components:
   schemas:
     models.ActionPersona:
@@ -2047,7 +2995,7 @@ components:
         AlertEventNotifyFailed: Notification failed
         AlertEventNotifySent: Notification sent successfully
         AlertEventResolved: Issue fixed, alert closed
-        AlertEventRetriggered: 6+ hours later, still active
+        AlertEventRetriggered: historical audit entries only
         AlertEventSeverityChanged: Warning ↔ Critical
         AlertEventTriggered: Alert activated with severity
         AlertEventUnmuted: Alert was unmuted
@@ -2263,6 +3211,17 @@ components:
           example: 25
           type: integer
       type: object
+    models.Audience:
+      enum:
+        - default
+        - external_cloud_provider
+        - forbidden
+      example: default
+      type: string
+      x-enum-varnames:
+        - AudienceDefault
+        - AudienceExternalCloudProvider
+        - AudienceForbidden
     models.BasicNodesResponse:
       properties:
         hasMore:
@@ -2282,6 +3241,36 @@ components:
         total:
           example: 100
           type: integer
+      type: object
+    models.BatchUpdateTagsRequest:
+      properties:
+        add:
+          example:
+            - production
+            - gpu-enabled
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        nodeUUIDs:
+          example:
+            - 84ad8912-1821-4597-bf4f-56a1234abcd7
+            - 95be9023-2932-5608-cf5g-67b2345bcde8
+          items:
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: false
+        remove:
+          example:
+            - staging
+            - deprecated
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+        - nodeUUIDs
       type: object
     models.BlockDevice:
       properties:
@@ -2413,6 +3402,26 @@ components:
         x-nvidia-cert-status:
           type: string
       type: object
+    models.ComponentMetricList:
+      properties:
+        displayName:
+          type: string
+        isBackendComponent:
+          type: boolean
+        metrics:
+          items:
+            $ref: '#/components/schemas/models.MetricInfo'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        subComponents:
+          description: Dynamic children (e.g., active PSIRT CVEs)
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
     models.ComputeZoneOverview:
       properties:
         alertOverview:
@@ -2517,6 +3526,30 @@ components:
           example: John Doe
           type: string
       type: object
+    models.CreateNotificationPreferenceResponse:
+      properties:
+        id:
+          example: 6f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f
+          type: string
+      required:
+        - id
+      type: object
+    models.DeleteMuteRulesRequest:
+      properties:
+        component:
+          example: GPU
+          type: string
+        severities:
+          example:
+            - Critical
+            - Warning
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+        - component
+      type: object
     models.DeleteNodesRequest:
       properties:
         nodeUUIDs:
@@ -2531,6 +3564,61 @@ components:
       required:
         - nodeUUIDs
       type: object
+    models.DeliveryLogItem:
+      properties:
+        alertEventType:
+          $ref: '#/components/schemas/models.AlertEventType'
+        alertStatus:
+          description: 'Alert status at time of notification: "Critical", "Warning",
+            or "Resolved"'
+          type: string
+        alertUUID:
+          type: string
+        channel:
+          type: string
+        component:
+          type: string
+        componentDisplayName:
+          type: string
+        createdAt:
+          type: string
+        hostname:
+          type: string
+        nodeUUID:
+          type: string
+        recipient:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.DeliveryStatus'
+      type: object
+    models.DeliveryLogResponse:
+      properties:
+        deliveryLog:
+          items:
+            $ref: '#/components/schemas/models.DeliveryLogItem'
+          type: array
+          uniqueItems: false
+        hasMore:
+          example: true
+          type: boolean
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          example: 142
+          type: integer
+      type: object
+    models.DeliveryStatus:
+      enum:
+        - sent
+        - failed
+      type: string
+      x-enum-varnames:
+        - DeliveryStatusSent
+        - DeliveryStatusFailed
     models.DiskInfo:
       properties:
         blockDevices:
@@ -2593,6 +3681,90 @@ components:
           example: '[[1716153600, 5], [1716157200, 8], [1716160800, 3]]'
           type: string
       type: object
+    models.Event:
+      properties:
+        component:
+          description: Component name
+          example: gpu
+          type: string
+        createdAt:
+          example: '2024-01-15T14:30:00Z'
+          type: string
+        eventId:
+          description: Unique event identifier
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        message:
+          example: GPU error occurred
+          type: string
+        name:
+          description: Event name
+          example: gpu_error
+          type: string
+        nodeUUID:
+          description: Node UUID
+          example: node-123
+          type: string
+        suggestedActions:
+          description: Suggested actions for resolving the event
+          items:
+            $ref: '#/components/schemas/models.SuggestedAction'
+          type: array
+          uniqueItems: false
+        timestamp:
+          example: '2024-01-15T14:30:00Z'
+          type: string
+        type:
+          description: Event type
+          example: error
+          type: string
+      type: object
+    models.EventBucket:
+      properties:
+        count:
+          example: 3
+          type: integer
+        endTime:
+          example: '2024-01-01T00:01:00Z'
+          type: string
+        firstEventTime:
+          example: '2024-01-01T00:00:30Z'
+          type: string
+        startTime:
+          example: '2024-01-01T00:00:00Z'
+          type: string
+      type: object
+    models.EventBucketsResponse:
+      properties:
+        bucketInterval:
+          example: 15m
+          type: string
+        buckets:
+          items:
+            $ref: '#/components/schemas/models.EventBucket'
+          type: array
+          uniqueItems: false
+      type: object
+    models.EventsResponse:
+      properties:
+        events:
+          items:
+            $ref: '#/components/schemas/models.Event'
+          type: array
+          uniqueItems: false
+        hasMore:
+          example: true
+          type: boolean
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 50
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
     models.FilterField:
       properties:
         name:
@@ -2652,6 +3824,15 @@ components:
           example: 90.17.A9.00.0B
           type: string
       type: object
+    models.GPUFirmwareVersion:
+      properties:
+        firmwareVersion:
+          example: 90.17.A9.00.0B
+          type: string
+        gpuIndex:
+          example: '0'
+          type: string
+      type: object
     models.GPUInfo:
       properties:
         architecture:
@@ -2688,6 +3869,25 @@ components:
           type: number
         region:
           example: us-east-1
+          type: string
+      type: object
+    models.GetMetricsResponse:
+      properties:
+        components:
+          items:
+            $ref: '#/components/schemas/models.ComponentMetricList'
+          type: array
+          uniqueItems: false
+      type: object
+    models.GetRetentionPolicyResponse:
+      properties:
+        createdAt:
+          type: string
+        retentionDays:
+          type: integer
+        updatedAt:
+          type: string
+        updatedBy:
           type: string
       type: object
     models.HealthSegment:
@@ -2770,6 +3970,9 @@ components:
       type: object
     models.InventoryNode:
       properties:
+        agentVersion:
+          example: 1.2.3
+          type: string
         computeZone:
           example: compute-zone-1
           type: string
@@ -2780,6 +3983,14 @@ components:
         gpuCount:
           example: 4
           type: integer
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        gpuFirmwareVersions:
+          items:
+            $ref: '#/components/schemas/models.GPUFirmwareVersion'
+          type: array
+          uniqueItems: false
         gpuType:
           example: NVIDIA-T400-4GB
           type: string
@@ -2800,6 +4011,9 @@ components:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
         integrityCheckReason:
           example: 'Attestation verification unavailable: SDK error'
+          type: string
+        kernelVersion:
+          example: 6.8.0-49-generic
           type: string
         lastIntegrityCheckTS:
           example: '2024-01-15T10:30:00Z'
@@ -2949,6 +4163,17 @@ components:
           example: 0
           type: integer
       type: object
+    models.ListMuteRulesResponse:
+      properties:
+        rules:
+          items:
+            $ref: '#/components/schemas/models.MuteRuleWithDetails'
+          type: array
+          uniqueItems: false
+        total:
+          example: 3
+          type: integer
+      type: object
     models.ListNodeGroupsResponse:
       properties:
         hasMore:
@@ -2969,165 +4194,33 @@ components:
           example: 0
           type: integer
       type: object
-    models.MTBIInterruptionRow:
+    models.ListNotificationPreferencesResponse:
       properties:
-        category:
-          example: NVLink
-          type: string
-        machinesAffected:
-          example: 6
-          type: integer
-        occurrences:
-          example: 22
-          type: integer
-        subcategories:
-          items:
-            $ref: '#/components/schemas/models.MTBISubcategoryRow'
-          type: array
-          uniqueItems: false
-      type: object
-    models.MTBIInterruptionsResponse:
-      properties:
-        hasMore:
-          example: false
-          type: boolean
-        items:
-          items:
-            $ref: '#/components/schemas/models.MTBIInterruptionRow'
-          type: array
-          uniqueItems: false
-        page:
-          example: 0
-          type: integer
-        pageSize:
-          example: 20
-          type: integer
-        total:
-          example: 10
-          type: integer
-      type: object
-    models.MTBIMachineRow:
-      properties:
-        hostname:
-          example: gpu-node-01
-          type: string
-        interruptionCount:
-          example: 7
-          type: integer
-        interruptionTypes:
+        componentPreferenceCounts:
+          additionalProperties:
+            type: integer
           example:
-            - Off the Bus
-            - User-App
+            GPU: 2
+            NVLink: 1
+          type: object
+        preferences:
+          items:
+            $ref: '#/components/schemas/models.NotificationPreferenceDetail'
+          type: array
+          uniqueItems: false
+        total:
+          example: 3
+          type: integer
+      type: object
+    models.ListTagsResponse:
+      properties:
+        tags:
+          example:
+            - production
+            - staging
+            - gpu-enabled
           items:
             type: string
-          type: array
-          uniqueItems: false
-        nodeUUID:
-          example: 550e8400-e29b-41d4-a716-446655440000
-          type: string
-      type: object
-    models.MTBIMachinesResponse:
-      properties:
-        hasMore:
-          example: false
-          type: boolean
-        items:
-          items:
-            $ref: '#/components/schemas/models.MTBIMachineRow'
-          type: array
-          uniqueItems: false
-        page:
-          example: 0
-          type: integer
-        pageSize:
-          example: 20
-          type: integer
-        total:
-          example: 18
-          type: integer
-      type: object
-    models.MTBIOverview:
-      properties:
-        fleetSize:
-          example: 101
-          type: integer
-        mtbiDays:
-          example: 16.67
-          type: number
-        mtbiGPUHours:
-          example: 400
-          type: number
-        totalAffectedGPUHours:
-          example: 144
-          type: number
-        totalGPUHours:
-          example: 16800
-          type: number
-        totalGPUs:
-          example: 808
-          type: integer
-        totalInterruptionTypes:
-          example: 3
-          type: integer
-        totalInterruptions:
-          example: 42
-          type: integer
-        totalMachinesAffected:
-          example: 18
-          type: integer
-      type: object
-    models.MTBIReportResponse:
-      properties:
-        overview:
-          $ref: '#/components/schemas/models.MTBIOverview'
-        timeRange:
-          $ref: '#/components/schemas/models.TimeRange'
-        timeline:
-          items:
-            $ref: '#/components/schemas/models.MTBITimelineEntry'
-          type: array
-          uniqueItems: false
-      type: object
-    models.MTBISubcategoryRow:
-      properties:
-        machinesAffected:
-          example: 3
-          type: integer
-        occurrences:
-          example: 10
-          type: integer
-        subcategory:
-          example: MFDE
-          type: string
-      type: object
-    models.MTBITimelineEntry:
-      properties:
-        burstId:
-          example: 550e8400-e29b-41d4-a716-446655440000
-          type: string
-        durationSeconds:
-          example: 780
-          type: integer
-        endTime:
-          example: '2024-01-15T14:43:00Z'
-          type: string
-        hostname:
-          example: gpu-node-01
-          type: string
-        interruptionType:
-          example: Off the Bus:SBE
-          type: string
-        nodeUUID:
-          example: node-abc123
-          type: string
-        startTime:
-          example: '2024-01-15T14:30:00Z'
-          type: string
-        xidNumbers:
-          example:
-            - 79
-          items:
-            type: integer
           type: array
           uniqueItems: false
       type: object
@@ -3156,6 +4249,140 @@ components:
         value:
           example: 72.3
           type: number
+      type: object
+    models.MetricInfo:
+      properties:
+        displayName:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        unit:
+          type: string
+      type: object
+    models.MetricQueryWarning:
+      description: e.g. omitted invalid metric points; null when no issues
+      properties:
+        code:
+          example: invalidMetricValues
+          type: string
+        message:
+          example: 1 data point(s) had invalid values and were omitted.
+          type: string
+      type: object
+      x-nullable: true
+    models.MetricSeriesData:
+      properties:
+        displayLabel:
+          description: 'DisplayLabel is the preferred label value for UI display (e.g.,
+            GPU index for DCGM metrics).
+
+            Derived from the "gpu" key if present, otherwise falls back to "gpu_uuid".
+
+            Omitted for aggregated levels where labels are not present.'
+          example: GPU 0
+          type: string
+        label:
+          additionalProperties:
+            type: string
+          description: 'Label contains identifying information (e.g., GPU UUID) for
+            node-level queries.
+
+            Omitted for aggregated levels (customer/nodegroup/computezone).
+
+            Typical keys: "gpu" (GPU index), "uuid" (GPU UUID).'
+          type: object
+        values:
+          description: 'Values is a 2D array where each inner array contains [unix_timestamp,
+            metric_value]
+
+            This follows the Prometheus/Grafana standard format for compatibility
+
+            The last element in the array represents the most recent/latest value
+
+            Example: [[1705276800, 0.723], [1705277100, 0.741]]
+
+            NOTE: swaggertype:"string" is a workaround for swag limitations with nested
+            arrays'
+          example: '[[1705276800, 0.723], [1705277100, 0.741]]'
+          type: string
+      type: object
+    models.MetricTimeSeries:
+      properties:
+        aggregation:
+          $ref: '#/components/schemas/models.Aggregation'
+        displayName:
+          example: GPU Utilization
+          type: string
+        emptyStateMessage:
+          example: No error detected
+          type: string
+          x-nullable: true
+        falseLabel:
+          description: 'FalseLabel is the human-readable label for value 0 in boolean/count-as-bool
+            metrics.
+
+            Omitted for non-boolean metrics.'
+          example: Down
+          type: string
+        name:
+          example: dcgm_fi_dev_gpu_util
+          type: string
+        result:
+          description: Array of series data (1 for aggregated, multiple for node-level)
+          items:
+            $ref: '#/components/schemas/models.MetricSeriesData'
+          type: array
+          uniqueItems: false
+        trueLabel:
+          description: 'TrueLabel is the human-readable label for value 1 in boolean/count-as-bool
+            metrics.
+
+            Omitted for non-boolean metrics.'
+          example: Up
+          type: string
+        unit:
+          example: ratio
+          type: string
+        warning:
+          $ref: '#/components/schemas/models.MetricQueryWarning'
+      required:
+        - warning
+      type: object
+    models.MetricsAggregationResponse:
+      properties:
+        metrics:
+          items:
+            $ref: '#/components/schemas/models.MetricTimeSeries'
+          type: array
+          uniqueItems: false
+        step:
+          description: Query resolution step width from request
+          example: 5m
+          type: string
+        timeRange:
+          $ref: '#/components/schemas/models.TimeRange'
+      type: object
+    models.MuteRuleWithDetails:
+      properties:
+        component:
+          example: GPU
+          type: string
+        componentDisplayName:
+          example: Memory
+          type: string
+        reason:
+          example: Scheduled maintenance
+          type: string
+        severities:
+          example:
+            - Critical
+            - Warning
+          items:
+            type: string
+          type: array
+          uniqueItems: false
       type: object
     models.NRASErrorDetail:
       properties:
@@ -3194,6 +4421,9 @@ components:
       properties:
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
+        agentVersion:
+          example: 1.2.3
+          type: string
         computeZone:
           example: compute-zone-1
           type: string
@@ -3202,6 +4432,14 @@ components:
         gpuCount:
           example: 4
           type: integer
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        gpuFirmwareVersions:
+          items:
+            $ref: '#/components/schemas/models.GPUFirmwareVersion'
+          type: array
+          uniqueItems: false
         gpuType:
           example: NVIDIA-T400-4GB
           type: string
@@ -3216,6 +4454,9 @@ components:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
         integrityCheckReason:
           example: 'Attestation verification unavailable: SDK error'
+          type: string
+        kernelVersion:
+          example: 6.8.0-49-generic
           type: string
         lastIntegrityCheckTS:
           example: '2024-01-15T10:30:00Z'
@@ -3270,6 +4511,9 @@ components:
       properties:
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
+        agentVersion:
+          example: 1.2.3
+          type: string
         computeZone:
           example: compute-zone-1
           type: string
@@ -3289,6 +4533,14 @@ components:
         gpuCount:
           example: 4
           type: integer
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        gpuFirmwareVersions:
+          items:
+            $ref: '#/components/schemas/models.GPUFirmwareVersion'
+          type: array
+          uniqueItems: false
         gpuType:
           example: NVIDIA-T400-4GB
           type: string
@@ -3306,6 +4558,9 @@ components:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
         integrityCheckReason:
           example: 'Attestation verification unavailable: SDK error'
+          type: string
+        kernelVersion:
+          example: 6.8.0-49-generic
           type: string
         lastIntegrityCheckTS:
           example: '2024-01-15T10:30:00Z'
@@ -3341,6 +4596,41 @@ components:
           type: array
           uniqueItems: false
         unhealthyComponentCount:
+          example: 1
+          type: integer
+      type: object
+    models.NodeGroupMembership:
+      properties:
+        createdAt:
+          example: '2024-01-15T15:00:00Z'
+          type: string
+        nodeGroupId:
+          example: 2e16f0f4-41b8-4fd0-b6ef-8b1234abcd56
+          type: string
+        nodeUUID:
+          example: 84ad8912-1821-4597-bf4f-56a1234abcd7
+          type: string
+        updatedAt:
+          example: '2024-01-15T15:00:00Z'
+          type: string
+      type: object
+    models.NodeGroupMembershipsResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        memberships:
+          items:
+            $ref: '#/components/schemas/models.NodeGroupMembership'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
           example: 1
           type: integer
       type: object
@@ -3479,12 +4769,238 @@ components:
           example: 100
           type: integer
       type: object
+    models.NotificationChannel:
+      description: 'Channel type: email, slack, or webhook'
+      enum:
+        - email
+        - slack
+        - webhook
+      example: email
+      type: string
+      x-enum-varnames:
+        - NotificationChannelEmail
+        - NotificationChannelSlack
+        - NotificationChannelWebhook
+    models.NotificationPreferenceDetail:
+      properties:
+        active:
+          example: true
+          type: boolean
+        audience:
+          $ref: '#/components/schemas/models.Audience'
+        component:
+          example: GPU
+          type: string
+        componentDisplayName:
+          example: Memory
+          type: string
+        componentDisplayNames:
+          additionalProperties:
+            type: string
+          type: object
+        components:
+          example:
+            - GPU
+            - NVLink
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        id:
+          example: 6f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f
+          type: string
+        notificationTargets:
+          items:
+            $ref: '#/components/schemas/models.NotificationTarget'
+          type: array
+          uniqueItems: false
+        notifiedOn:
+          example:
+            - Critical
+            - Warning
+            - Resolved
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        scope:
+          $ref: '#/components/schemas/models.NotificationScopeResponse'
+      type: object
+    models.NotificationPreferenceRequest:
+      properties:
+        active:
+          description: 'Active flag: when false, this preference is temporarily paused
+            (other preferences covering
+
+            the same component still fire). If omitted on create, defaults to true.
+            If omitted on update, the
+
+            existing value is preserved.'
+          example: true
+          type: boolean
+        components:
+          description: 'Components this preference applies to (e.g. GPU, CPU, NVLink,
+            agent_liveness). At least one;
+
+            all settings below apply equally to every listed component.'
+          example:
+            - GPU
+            - NVLink
+          items:
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: false
+        notificationTargets:
+          description: 'At least one notification target is required.
+
+            Config structure depends on channel — see EmailNotificationConfig, SlackNotificationConfig,
+            WebhookNotificationConfig.'
+          items:
+            $ref: '#/components/schemas/models.NotificationTarget'
+          minItems: 1
+          type: array
+          uniqueItems: false
+        notifiedOn:
+          description: 'Alert statuses to notify on. Valid values: Critical, Warning,
+            Resolved.
+
+            If empty or omitted, defaults to all three: [Critical, Warning, Resolved].'
+          example:
+            - Critical
+            - Warning
+            - Resolved
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        scope:
+          $ref: '#/components/schemas/models.NotificationScope'
+      required:
+        - components
+        - notificationTargets
+      type: object
+    models.NotificationScope:
+      description: 'Optional scope to narrow which nodes trigger notifications.
+
+        If omitted or null, all nodes for this component trigger notifications.'
+      properties:
+        type:
+          $ref: '#/components/schemas/models.NotificationScopeType'
+        values:
+          description: 'Scope values: UUIDs for nodes/node_groups/compute_zones, or
+            tag name strings for tags.
+
+            At least one value is required for all types except "all".'
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    models.NotificationScopeResponse:
+      properties:
+        type:
+          $ref: '#/components/schemas/models.NotificationScopeType'
+        values:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+    models.NotificationScopeType:
+      description: 'Scope type: all, nodes, node_groups, compute_zones, or tags'
+      enum:
+        - all
+        - compute_zones
+        - node_groups
+        - tags
+        - nodes
+      example: node_groups
+      type: string
+      x-enum-varnames:
+        - ScopeAll
+        - ScopeComputeZones
+        - ScopeNodeGroups
+        - ScopeTags
+        - ScopeNodes
+    models.NotificationTarget:
+      properties:
+        channel:
+          $ref: '#/components/schemas/models.NotificationChannel'
+        config:
+          additionalProperties: {}
+          description: Channel-specific configuration (see EmailNotificationConfig,
+            SlackNotificationConfig, WebhookNotificationConfig)
+          type: object
+      required:
+        - channel
+        - config
+      type: object
     models.Options:
       properties:
         filters:
           $ref: '#/components/schemas/models.FilterOptions'
         sorting:
           $ref: '#/components/schemas/models.SortingOptions'
+      type: object
+    models.OverviewResponse:
+      properties:
+        computeZoneCount:
+          example: 5
+          type: integer
+        cpuCoresCount:
+          example: 5
+          type: integer
+        degradedNodeCount:
+          example: 5
+          type: integer
+        gpusCount:
+          example: 5
+          type: integer
+        healthNodeCount:
+          example: 5
+          type: integer
+        healthPercentage:
+          example: 50
+          type: number
+        metrics:
+          items:
+            $ref: '#/components/schemas/models.Metric'
+          type: array
+          uniqueItems: false
+        nodeGroupCount:
+          example: 5
+          type: integer
+        nodesCount:
+          example: 5
+          type: integer
+        unhealthyNodeCount:
+          example: 5
+          type: integer
+        unknownNodeCount:
+          example: 5
+          type: integer
+      type: object
+    models.QueryMetricRangeResponse:
+      properties:
+        result:
+          description: 'NodeAggregationFunction string         `json:"nodeAggregationFunction"
+            example:"avg"` // TODO: add this in later'
+          items:
+            $ref: '#/components/schemas/models.MetricSeriesData'
+          type: array
+          uniqueItems: false
+        step:
+          example: 5m
+          type: string
+        stepAggregationFunction:
+          example: avg
+          type: string
+        timeRange:
+          $ref: '#/components/schemas/models.TimeRange'
+        warning:
+          $ref: '#/components/schemas/models.MetricQueryWarning'
+      required:
+        - warning
       type: object
     models.SetNodeTagsRequest:
       properties:
@@ -3678,4 +5194,32 @@ components:
         id:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
+      type: object
+    models.UpdateMuteRuleRequest:
+      properties:
+        component:
+          example: GPU
+          type: string
+        reason:
+          example: Scheduled maintenance
+          type: string
+        severities:
+          example:
+            - Critical
+            - Warning
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+        - component
+      type: object
+    models.UpdateRetentionPolicyRequest:
+      properties:
+        retentionDays:
+          maximum: 365
+          minimum: 1
+          type: integer
+      required:
+        - retentionDays
       type: object
