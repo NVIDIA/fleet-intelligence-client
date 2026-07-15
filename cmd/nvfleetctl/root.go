@@ -78,6 +78,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newAuthCmd())
+	cmd.AddCommand(newOverviewCmd())
 	cmd.AddCommand(newComputeZoneCmd())
 	cmd.AddCommand(newNodeGroupCmd())
 	cmd.AddCommand(newNodeCmd())
