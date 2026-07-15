@@ -59,6 +59,7 @@ func newNodeCmd() *cobra.Command {
 
 	cmd.AddCommand(newNodeListCmd())
 	cmd.AddCommand(newNodeDescribeCmd())
+	cmd.AddCommand(newNodeHealthCmd())
 
 	return cmd
 }
