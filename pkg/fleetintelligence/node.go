@@ -130,17 +130,25 @@ func (order NodeSortOrder) Valid() bool {
 
 // Represents request options for listing nodes
 type ListNodesOptions struct {
-	View            NodeView
-	NodeUUIDs       []string
-	HealthStatuses  []NodeHealthStatus
-	Hostname        string
-	AgentStatuses   []NodeAgentStatus
-	IntegrityChecks []NodeIntegrityCheck
-	FirmwareChecks  []NodeFirmwareCheck
-	SortBy          NodeSortBy
-	Order           NodeSortOrder
-	Page            *int
-	PageSize        *int
+	View             NodeView
+	NodeUUIDs        []string
+	HealthStatuses   []NodeHealthStatus
+	ComputeZoneIDs   []string
+	ComputeZoneNames []string
+	NodeGroupIDs     []string
+	NodeGroupNames   []string
+	GPUTypes         []string
+	GPUCounts        []int
+	PublicIPs        []string
+	PrivateIPs       []string
+	Hostname         string
+	AgentStatuses    []NodeAgentStatus
+	IntegrityChecks  []NodeIntegrityCheck
+	FirmwareChecks   []NodeFirmwareCheck
+	SortBy           NodeSortBy
+	Order            NodeSortOrder
+	Page             *int
+	PageSize         *int
 }
 
 // Represents a paginated node response with the raw backend payload
@@ -301,6 +309,38 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if opts.Hostname != "" {
 		params.Hostname = &opts.Hostname
 	}
+	if len(opts.ComputeZoneIDs) > 0 {
+		computeZoneIDs := append([]string(nil), opts.ComputeZoneIDs...)
+		params.ComputeZoneIds = &computeZoneIDs
+	}
+	if len(opts.ComputeZoneNames) > 0 {
+		computeZoneNames := append([]string(nil), opts.ComputeZoneNames...)
+		params.ComputeZoneNames = &computeZoneNames
+	}
+	if len(opts.NodeGroupIDs) > 0 {
+		nodeGroupIDs := append([]string(nil), opts.NodeGroupIDs...)
+		params.NodeGroupIds = &nodeGroupIDs
+	}
+	if len(opts.NodeGroupNames) > 0 {
+		nodeGroupNames := append([]string(nil), opts.NodeGroupNames...)
+		params.NodeGroupNames = &nodeGroupNames
+	}
+	if len(opts.GPUTypes) > 0 {
+		gpuTypes := append([]string(nil), opts.GPUTypes...)
+		params.GpuTypes = &gpuTypes
+	}
+	if len(opts.GPUCounts) > 0 {
+		gpuCounts := append([]int(nil), opts.GPUCounts...)
+		params.GpuCounts = &gpuCounts
+	}
+	if len(opts.PublicIPs) > 0 {
+		publicIPs := append([]string(nil), opts.PublicIPs...)
+		params.PublicIPs = &publicIPs
+	}
+	if len(opts.PrivateIPs) > 0 {
+		privateIPs := append([]string(nil), opts.PrivateIPs...)
+		params.PrivateIPs = &privateIPs
+	}
 	if view == NodeViewDetail {
 		if len(opts.HealthStatuses) > 0 {
 			statuses := make([]fleetapi.GetV1NodesParamsHealthStatuses, 0, len(opts.HealthStatuses))
@@ -420,6 +460,11 @@ func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
 	for _, check := range opts.FirmwareChecks {
 		if !check.Valid() {
 			return fmt.Errorf("invalid node firmware check %q: expected Passed, Failed, or Unknown", check)
+		}
+	}
+	for _, count := range opts.GPUCounts {
+		if count < 0 {
+			return fmt.Errorf("invalid node GPU count %d: expected a non-negative integer", count)
 		}
 	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {

@@ -155,6 +155,30 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 		if got := query["firmwareChecks"]; !slices.Equal(got, []string{"Unknown"}) {
 			t.Fatalf("unexpected firmwareChecks: %#v raw query %q", got, r.URL.RawQuery)
 		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["computeZoneNames"]; !slices.Equal(got, []string{"East"}) {
+			t.Fatalf("unexpected computeZoneNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupNames"]; !slices.Equal(got, []string{"Training"}) {
+			t.Fatalf("unexpected nodeGroupNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["gpuTypes"]; !slices.Equal(got, []string{"NVIDIA-H100"}) {
+			t.Fatalf("unexpected gpuTypes: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["gpuCounts"]; !slices.Equal(got, []string{"8", "4"}) {
+			t.Fatalf("unexpected gpuCounts: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["publicIPs"]; !slices.Equal(got, []string{"203.0.113.10"}) {
+			t.Fatalf("unexpected publicIPs: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["privateIPs"]; !slices.Equal(got, []string{"10.0.0.10"}) {
+			t.Fatalf("unexpected privateIPs: %#v raw query %q", got, r.URL.RawQuery)
+		}
 		if got := query.Get("sortBy"); got != "computezone" {
 			t.Fatalf("unexpected sortBy: %q", got)
 		}
@@ -177,7 +201,7 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--sort-by", "computeZone", "--order", "desc", "--page-size", "10"})
+	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computeZone", "--order", "desc", "--page-size", "10"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -351,6 +375,8 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "agent", args: []string{"node", "list", "--agent-status", "Missing"}, want: "invalid agent-status"},
 		{name: "verification", args: []string{"node", "list", "--verification-check", "Missing"}, want: "invalid verification-check"},
 		{name: "firmware", args: []string{"node", "list", "--firmware-check", "Missing"}, want: "invalid firmware-check"},
+		{name: "gpu-count", args: []string{"node", "list", "--gpu-count", "eight"}, want: "invalid gpu-count"},
+		{name: "negative gpu-count", args: []string{"node", "list", "--gpu-count", "8,-1"}, want: "invalid gpu-count"},
 		{name: "sort", args: []string{"node", "list", "--sort-by", "bad"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
