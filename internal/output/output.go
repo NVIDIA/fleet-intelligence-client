@@ -176,8 +176,23 @@ func WritePaginationFooter(w io.Writer, page Pagination) error {
 	return err
 }
 
-// Writes one tab-separated table row
+// Collapses characters that would corrupt tabwriter's structure — tabs (column
+// separators), newlines and carriage returns (row separators) — into single
+// spaces so a multi-line field renders on one table line.
+var cellSanitizer = strings.NewReplacer("\t", " ", "\r\n", " ", "\n", " ", "\r", " ")
+
+// Flattens a value to a single table-cell-safe line
+func sanitizeTableCell(value string) string {
+	return cellSanitizer.Replace(value)
+}
+
+// Writes one tab-separated table row, flattening any multi-line cells so they
+// do not break column alignment
 func writeTableRow(w io.Writer, fields []string) error {
-	_, err := fmt.Fprintln(w, strings.Join(fields, "\t"))
+	sanitized := make([]string, len(fields))
+	for i, field := range fields {
+		sanitized[i] = sanitizeTableCell(field)
+	}
+	_, err := fmt.Fprintln(w, strings.Join(sanitized, "\t"))
 	return err
 }

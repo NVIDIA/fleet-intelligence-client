@@ -143,3 +143,26 @@ func TestWriteTableAndPaginationFooter(t *testing.T) {
 		}
 	}
 }
+
+// Verifies multi-line cells are flattened so they do not break column alignment
+func TestWriteTableFlattensMultilineCells(t *testing.T) {
+	var out bytes.Buffer
+	if err := WriteTable(&out, []string{"ID", "MESSAGE", "STATE"}, [][]string{
+		{"e1", "Component: agent\n\nStatus: unhealthy", "Critical"},
+		{"e2", "single line", "Warning"},
+	}); err != nil {
+		t.Fatalf("write table failed: %v", err)
+	}
+
+	got := out.String()
+	// Each input row must render as exactly one physical line (plus the header).
+	if lines := strings.Count(strings.TrimRight(got, "\n"), "\n"); lines != 2 {
+		t.Fatalf("expected 3 lines (header + 2 rows), got %d:\n%s", lines+1, got)
+	}
+	if !strings.Contains(got, "Component: agent  Status: unhealthy") {
+		t.Fatalf("newlines not flattened to spaces: %q", got)
+	}
+	if strings.Contains(got, "Component: agent\n") {
+		t.Fatalf("embedded newline leaked into table: %q", got)
+	}
+}
