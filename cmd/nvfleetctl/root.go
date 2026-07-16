@@ -85,6 +85,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newAlertCmd())
 	cmd.AddCommand(newEventCmd())
 	cmd.AddCommand(newReportCmd())
+	cmd.AddCommand(newTagCmd())
 	cmd.AddCommand(newVersionCmd())
 
 	return cmd

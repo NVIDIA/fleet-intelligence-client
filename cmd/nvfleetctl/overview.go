@@ -121,13 +121,15 @@ func metricValue(metric fleetintelligence.OverviewMetric) string {
 	if metric.Value == nil {
 		return "-"
 	}
-	value := strconv.FormatFloat(float64(*metric.Value), 'f', -1, 32)
-	switch unit := strings.TrimSpace(metric.Unit); unit {
-	case "":
-		return value
-	case "%":
-		return value + unit
-	default:
-		return value + " " + unit
+	unit := strings.TrimSpace(metric.Unit)
+	if unit == "%" {
+		// Reuse the shared percentage formatter so a "%" metric renders
+		// identically to the summary health-percentage row ("70%").
+		return clioutput.FormatOptionalPercentage(metric.Value)
 	}
+	value := strconv.FormatFloat(float64(*metric.Value), 'f', -1, 32)
+	if unit == "" {
+		return value
+	}
+	return value + " " + unit
 }
