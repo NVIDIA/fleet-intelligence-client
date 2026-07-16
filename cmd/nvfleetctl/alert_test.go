@@ -109,6 +109,12 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 		if got := r.URL.Query().Get("page"); got != "1" {
 			t.Fatalf("unexpected page: %q", got)
 		}
+		if got := r.URL.Query().Get("component"); got != "gpu" {
+			t.Fatalf("unexpected component: %q", got)
+		}
+		if got := r.URL.Query().Get("state"); got != "Triggered" {
+			t.Fatalf("unexpected state: %q", got)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-1","nodeUUID":"node-1","component":"gpu","severity":"Warning","state":"Detected","detectedAt":"2026-05-01T00:00:00Z"}],"page":1,"pageSize":1,"total":2}`))
@@ -122,7 +128,7 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "list", "--page", "1"})
+	cmd.SetArgs([]string{"alert", "list", "--page", "1", "--component", "gpu", "--state", "Triggered"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -239,6 +245,21 @@ func TestAlertListRejectsInvalidSeverity(t *testing.T) {
 		t.Fatal("expected invalid severity error")
 	}
 	if !strings.Contains(err.Error(), "invalid severity") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies alert state flag validation
+func TestAlertListRejectsInvalidState(t *testing.T) {
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"alert", "list", "--state", "Pending"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected invalid state error")
+	}
+	if !strings.Contains(err.Error(), "invalid state") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

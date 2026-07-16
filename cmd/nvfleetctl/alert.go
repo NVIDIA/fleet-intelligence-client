@@ -30,8 +30,10 @@ import (
 
 // Stores local flag values for alert list
 type alertListFlags struct {
-	node     string
-	severity string
+	node      string
+	component string
+	state     string
+	severity  string
 }
 
 // Stores local flag values for alert timeline
@@ -95,6 +97,8 @@ func newAlertListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.node, "node", "", "Node UUID to filter")
+	cmd.Flags().StringVar(&flags.component, "component", "", "Component name to filter")
+	cmd.Flags().StringVar(&flags.state, "state", "", "Alert state to filter: Detected, Triggered, or Resolved")
 	cmd.Flags().StringVar(&flags.severity, "severity", "", "Alert severity to filter: Critical or Warning")
 	registerListCommonFlags(cmd, common)
 
@@ -141,6 +145,10 @@ func newAlertDescribeCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommonFlags) error {
+	state, err := parseAlertState(flags.state)
+	if err != nil {
+		return err
+	}
 	severity, err := parseAlertSeverity(flags.severity)
 	if err != nil {
 		return err
@@ -155,8 +163,10 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 	}
 
 	opts := fleetintelligence.ListAlertsOptions{
-		NodeUUID: strings.TrimSpace(flags.node),
-		Severity: severity,
+		NodeUUID:  strings.TrimSpace(flags.node),
+		Component: strings.TrimSpace(flags.component),
+		State:     state,
+		Severity:  severity,
 	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
@@ -359,6 +369,19 @@ func runAlertDescribe(cmd *cobra.Command, alertUUID string, flags alertDescribeF
 // Checks alert timeline flags
 func validateAlertTimelineFlags(common resolvedCommonFlags) error {
 	return validateListCommonFlags(common)
+}
+
+// Converts a state flag into an API value
+func parseAlertState(raw string) (fleetintelligence.AlertState, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+	state := fleetintelligence.AlertState(raw)
+	if !state.Valid() {
+		return "", fmt.Errorf("invalid state %q: expected Detected, Triggered, or Resolved", raw)
+	}
+	return state, nil
 }
 
 // Converts a severity flag into an API value
