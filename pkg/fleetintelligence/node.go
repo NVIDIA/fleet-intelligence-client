@@ -52,15 +52,19 @@ const (
 	NodeAgentOffline NodeAgentStatus = "Offline"
 	NodeAgentUnknown NodeAgentStatus = "Unknown"
 
-	NodeSortByHostname       NodeSortBy = "hostname"
-	NodeSortByUUID           NodeSortBy = "nodeUUID"
-	NodeSortByHealthStatus   NodeSortBy = "healthStatus"
-	NodeSortByNodeGroup      NodeSortBy = "nodegroup"
-	NodeSortByComputeZone    NodeSortBy = "computezone"
-	NodeSortByGPUType        NodeSortBy = "gpuType"
-	NodeSortByGPUCount       NodeSortBy = "gpuCount"
-	NodeSortByIntegrityCheck NodeSortBy = "integrityCheck"
-	NodeSortByAgentStatus    NodeSortBy = "agentStatus"
+	NodeSortByHostname            NodeSortBy = "hostname"
+	NodeSortByUUID                NodeSortBy = "nodeUUID"
+	NodeSortByHealthStatus        NodeSortBy = "healthStatus"
+	NodeSortByNodeGroup           NodeSortBy = "nodegroup"
+	NodeSortByComputeZone         NodeSortBy = "computezone"
+	NodeSortByGPUType             NodeSortBy = "gpuType"
+	NodeSortByGPUCount            NodeSortBy = "gpuCount"
+	NodeSortByIntegrityCheck      NodeSortBy = "integrityCheck"
+	NodeSortByAgentStatus         NodeSortBy = "agentStatus"
+	NodeSortByAgentVersion        NodeSortBy = "agentVersion"
+	NodeSortByKernelVersion       NodeSortBy = "kernelVersion"
+	NodeSortByGPUDriverVersion    NodeSortBy = "gpuDriverVersion"
+	NodeSortByGPUFirmwareVersions NodeSortBy = "gpuFirmwareVersions"
 
 	NodeOrderAsc  NodeSortOrder = "asc"
 	NodeOrderDesc NodeSortOrder = "desc"
@@ -410,7 +414,7 @@ func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
 	}
 	for _, check := range opts.IntegrityChecks {
 		if !check.Valid() {
-			return fmt.Errorf("invalid node integrity check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", check)
+			return fmt.Errorf("invalid node verification check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", check)
 		}
 	}
 	for _, check := range opts.FirmwareChecks {
@@ -419,14 +423,14 @@ func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
 		}
 	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node sort %q: expected hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, or agentStatus", opts.SortBy)
+		return fmt.Errorf("invalid node sort %q: expected hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions", opts.SortBy)
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
 		return fmt.Errorf("invalid node order %q: expected asc or desc", opts.Order)
 	}
 	if view == NodeViewBasic {
 		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.IntegrityChecks) > 0 || len(opts.FirmwareChecks) > 0 {
-			return fmt.Errorf("basic node view is incompatible with health, agent-status, integrity-check, and firmware-check filters")
+			return fmt.Errorf("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
 		}
 		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
 			return fmt.Errorf("basic node view is incompatible with sort %q", opts.SortBy)

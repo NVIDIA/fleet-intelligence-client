@@ -64,6 +64,64 @@ func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
 	}
 }
 
+// Verifies detail-only sort fields pass through to the API unchanged
+func TestNodeListDetailSortFields(t *testing.T) {
+	for _, field := range []string{"agentVersion", "kernelVersion", "gpuDriverVersion", "gpuFirmwareVersions"} {
+		t.Run(field, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got := r.URL.Query().Get("sortBy"); got != field {
+					t.Fatalf("unexpected sortBy: got %q want %q", got, field)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
+			}))
+			defer server.Close()
+
+			if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+				t.Fatalf("save config failed: %v", err)
+			}
+
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", field})
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("command failed: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies the user-facing "verificationCheck" sort token maps to the backend "integrityCheck"
+func TestNodeListSortVerificationCheckAlias(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("sortBy"); got != "integrityCheck" {
+			t.Fatalf("unexpected sortBy: got %q want %q", got, "integrityCheck")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "verificationCheck"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+}
+
 // Verifies table output and filter translation
 func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())

@@ -262,7 +262,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
-		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node integrity check"},
+		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node verification check"},
 		{name: "firmware", opts: ListNodesOptions{FirmwareChecks: []NodeFirmwareCheck{"Missing"}}, want: "invalid node firmware check"},
 		{name: "sort", opts: ListNodesOptions{SortBy: "bad"}, want: "invalid node sort"},
 		{name: "order", opts: ListNodesOptions{Order: "up"}, want: "invalid node order"},
@@ -299,6 +299,31 @@ func TestNodeIntegrityCheckValid(t *testing.T) {
 	for _, check := range tests {
 		if !check.Valid() {
 			t.Fatalf("expected %q to be valid", check)
+		}
+	}
+}
+
+// Verifies supported sort fields match the API vocabulary
+func TestNodeSortByValid(t *testing.T) {
+	tests := []NodeSortBy{
+		NodeSortByHostname,
+		NodeSortByUUID,
+		NodeSortByHealthStatus,
+		NodeSortByNodeGroup,
+		NodeSortByComputeZone,
+		NodeSortByGPUType,
+		NodeSortByGPUCount,
+		NodeSortByIntegrityCheck,
+		NodeSortByAgentStatus,
+		NodeSortByAgentVersion,
+		NodeSortByKernelVersion,
+		NodeSortByGPUDriverVersion,
+		NodeSortByGPUFirmwareVersions,
+	}
+
+	for _, sortBy := range tests {
+		if !sortBy.Valid() {
+			t.Fatalf("expected %q to be valid", sortBy)
 		}
 	}
 }
