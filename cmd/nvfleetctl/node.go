@@ -104,7 +104,7 @@ func newNodeListCmd() *cobra.Command {
 	// User-facing "verification check" maps to the backend "integrity check" API field.
 	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, nodeUUID, health, healthStatus, nodeGroup, nodegroup, computeZone, computezone, gpuType, gpuCount, verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	registerListCommonFlags(cmd, common)
 
@@ -313,7 +313,7 @@ func validateNodeListFlags(flags nodeListFlags, sortBy fleetintelligence.NodeSor
 		return err
 	}
 	if sortBy != "" && !sortBy.Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected hostname, nodeUUID, health, healthStatus, nodeGroup, nodegroup, computeZone, computezone, gpuType, gpuCount, verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions", flags.sortBy)
+		return fmt.Errorf("invalid sort-by %q: expected hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions", flags.sortBy)
 	}
 	if flags.order != "" && !fleetintelligence.NodeSortOrder(flags.order).Valid() {
 		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
@@ -339,23 +339,9 @@ func basicNodeSortCompatible(sortBy fleetintelligence.NodeSortBy) bool {
 	}
 }
 
-// Maps friendly CLI aliases to API sort fields
+// Normalizes the raw sort-by flag into an API sort field
 func normalizeNodeSortBy(raw string) (fleetintelligence.NodeSortBy, error) {
-	switch strings.TrimSpace(raw) {
-	case "":
-		return "", nil
-	case "health":
-		return fleetintelligence.NodeSortByHealthStatus, nil
-	case "nodeGroup":
-		return fleetintelligence.NodeSortByNodeGroup, nil
-	case "computeZone":
-		return fleetintelligence.NodeSortByComputeZone, nil
-	case "verificationCheck":
-		// User-facing "verificationCheck" maps to the backend "integrityCheck" sort field.
-		return fleetintelligence.NodeSortByIntegrityCheck, nil
-	default:
-		return fleetintelligence.NodeSortBy(raw), nil
-	}
+	return fleetintelligence.NodeSortBy(strings.TrimSpace(raw)), nil
 }
 
 // Converts comma-separated health filters into API values

@@ -28,8 +28,8 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
-// Verifies local output flags and friendly sort aliases
-func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
+// Verifies local output flags and sort field pass-through
+func TestNodeListLocalJSONAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	raw := `{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","healthStatus":"Healthy"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`
@@ -54,7 +54,7 @@ func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "health"})
+	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "healthStatus"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -95,8 +95,8 @@ func TestNodeListDetailSortFields(t *testing.T) {
 	}
 }
 
-// Verifies the user-facing "verificationCheck" sort token maps to the backend "integrityCheck"
-func TestNodeListSortVerificationCheckAlias(t *testing.T) {
+// Verifies the "integrityCheck" sort field passes through to the API unchanged
+func TestNodeListSortIntegrityCheck(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +115,7 @@ func TestNodeListSortVerificationCheckAlias(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "verificationCheck"})
+	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "integrityCheck"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -123,7 +123,7 @@ func TestNodeListSortVerificationCheckAlias(t *testing.T) {
 }
 
 // Verifies table output and filter translation
-func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
+func TestNodeListTableFiltersAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +201,7 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computeZone", "--order", "desc", "--page-size", "10"})
+	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computezone", "--order", "desc", "--page-size", "10"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -380,7 +380,7 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "sort", args: []string{"node", "list", "--sort-by", "bad"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
-		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "health"}, want: "basic node view is incompatible"},
+		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view is incompatible"},
 	}
 
 	for _, tt := range tests {
