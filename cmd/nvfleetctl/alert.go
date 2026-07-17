@@ -131,7 +131,7 @@ func newAlertDescribeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "describe <alertUUID>",
 		Short: "Describe an alert timeline",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireSingleArg("alert UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAlertDescribe(cmd, args[0], flags, resolveCommonFlags(cmd, common))
 		},

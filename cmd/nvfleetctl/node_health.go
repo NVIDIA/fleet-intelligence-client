@@ -46,7 +46,7 @@ func newNodeHealthCmd() *cobra.Command {
 
 Both --start and --end are required and must be RFC3339 timestamps.`,
 		Example: `  nvfleetctl node health 1e9c0d2a-0000-4a1b-9c3d-000000000001 --start 2026-04-07T00:00:00Z --end 2026-04-14T00:00:00Z`,
-		Args:    cobra.ExactArgs(1),
+		Args:    requireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runNodeHealth(cmd, args[0], flags, resolveCommonFlags(cmd, common))
 		},

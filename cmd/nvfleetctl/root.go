@@ -129,6 +129,19 @@ func registerReadCommonFlags(cmd *cobra.Command, flags *commonFlags) {
 	registerTimeoutFlag(cmd, flags)
 }
 
+// Validates that exactly one positional argument was given, naming it in errors
+func requireSingleArg(name string) cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		switch {
+		case len(args) == 0:
+			return fmt.Errorf("%s is required", name)
+		case len(args) > 1:
+			return fmt.Errorf("only one %s may be given, got %d", name, len(args))
+		}
+		return nil
+	}
+}
+
 // Returns common flag values and whether pagination flags were supplied
 func resolveCommonFlags(cmd *cobra.Command, flags *commonFlags) resolvedCommonFlags {
 	return resolvedCommonFlags{

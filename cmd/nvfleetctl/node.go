@@ -117,7 +117,7 @@ func newNodeDescribeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "describe <uuid>",
 		Short: "Describe a node",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runNodeDescribe(cmd, args[0], resolveCommonFlags(cmd, common))
 		},
