@@ -18,6 +18,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +32,23 @@ const (
 	serviceKey = "test-key"
 	apiURL     = "https://fleet.example.com"
 )
+
+// newAuthStatusServer starts a test server that mimics GET /v1/auth/status,
+// asserting the bearer token and replying with the given status and body.
+func newAuthStatusServer(t *testing.T, statusCode int, body string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/auth/status" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer "+serviceKey {
+			t.Errorf("unexpected auth header: %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		_, _ = w.Write([]byte(body))
+	}))
+}
 
 func TestAuthLoginSavesKeyAndDefaultAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -137,10 +156,13 @@ func TestAuthLogoutClearsKeyAndPreservesAPIURL(t *testing.T) {
 	}
 }
 
-func TestAuthStatusReportsConfiguredKeyAndDoesNotPrintSecret(t *testing.T) {
+func TestAuthStatusChecksConnectionAndDoesNotPrintSecret(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: apiURL, ServiceKey: serviceKey}); err != nil {
+	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: serviceKey}); err != nil {
 		t.Fatalf("save failed: %v", err)
 	}
 
@@ -154,17 +176,42 @@ func TestAuthStatusReportsConfiguredKeyAndDoesNotPrintSecret(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(got, "API URL: "+apiURL) {
+	if !strings.Contains(got, "API URL: "+server.URL) {
 		t.Fatalf("status missing API URL: %q", got)
 	}
 	if !strings.Contains(got, "Service key: configured") {
 		t.Fatalf("status missing service key state: %q", got)
 	}
-	if !strings.Contains(got, "Connection: not checked") {
+	if !strings.Contains(got, "Connection: ok") {
 		t.Fatalf("status missing connection state: %q", got)
 	}
 	if strings.Contains(got, serviceKey) {
 		t.Fatalf("status printed secret: %q", got)
+	}
+}
+
+func TestAuthStatusReportsUnauthorizedOnRejectedKey(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := newAuthStatusServer(t, http.StatusUnauthorized, `{"error":"unauthorized"}`)
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: serviceKey}); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"auth", "status"})
+
+	// A rejected key is a reportable status, not a command failure.
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("status failed: %v", err)
+	}
+
+	if got := out.String(); !strings.Contains(got, "Connection: unauthorized") {
+		t.Fatalf("status missing unauthorized state: %q", got)
 	}
 }
 
@@ -191,7 +238,11 @@ func TestAuthStatusWithoutConfigExitsZero(t *testing.T) {
 
 func TestAuthStatusJSONUsesEnvFallback(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv(config.EnvAPIURL, apiURL)
+
+	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
+	defer server.Close()
+
+	t.Setenv(config.EnvAPIURL, server.URL)
 	t.Setenv(config.EnvServiceKey, serviceKey)
 
 	var out bytes.Buffer
@@ -207,7 +258,7 @@ func TestAuthStatusJSONUsesEnvFallback(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 		t.Fatalf("decode status JSON failed: %v", err)
 	}
-	if got.APIURL != apiURL || !got.ServiceKeyConfigured || got.Connection != "not checked" {
+	if got.APIURL != server.URL || !got.ServiceKeyConfigured || got.Connection != "ok" {
 		t.Fatalf("unexpected status JSON: %#v", got)
 	}
 	if strings.Contains(out.String(), serviceKey) {

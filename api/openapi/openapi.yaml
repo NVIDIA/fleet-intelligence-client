@@ -486,6 +486,33 @@ paths:
       summary: Get alerts for a specific node
       tags:
         - alerts
+  /v1/auth/status:
+    get:
+      description: Returns whether the request reached the backend through the authenticated
+        KAS path.
+      operationId: getV1AuthStatus
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.AuthStatusResponse'
+          description: OK
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+      summary: Get authentication status
+      tags:
+        - auth
   /v1/computezones:
     get:
       description: Get list of compute zones with optional filtering and different
@@ -3222,6 +3249,12 @@ components:
         - AudienceDefault
         - AudienceExternalCloudProvider
         - AudienceForbidden
+    models.AuthStatusResponse:
+      properties:
+        authenticated:
+          example: true
+          type: boolean
+      type: object
     models.BasicNodesResponse:
       properties:
         hasMore:

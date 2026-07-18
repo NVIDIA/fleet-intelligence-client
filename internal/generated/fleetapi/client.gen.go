@@ -1047,6 +1047,11 @@ type ModelsAlertTimelineNodesResponse struct {
 // ModelsAudience defines model for models.Audience.
 type ModelsAudience string
 
+// ModelsAuthStatusResponse defines model for models.AuthStatusResponse.
+type ModelsAuthStatusResponse struct {
+	Authenticated *bool `json:"authenticated,omitempty"`
+}
+
 // ModelsBasicNodesResponse defines model for models.BasicNodesResponse.
 type ModelsBasicNodesResponse struct {
 	HasMore  *bool               `json:"hasMore,omitempty"`
@@ -3109,6 +3114,9 @@ type ClientInterface interface {
 	// GetV1AlertsNodeUuid request
 	GetV1AlertsNodeUuid(ctx context.Context, nodeUUID string, params *GetV1AlertsNodeUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetV1AuthStatus request
+	GetV1AuthStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetV1Computezones request
 	GetV1Computezones(ctx context.Context, params *GetV1ComputezonesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3336,6 +3344,18 @@ func (c *Client) GetV1Alerts(ctx context.Context, params *GetV1AlertsParams, req
 
 func (c *Client) GetV1AlertsNodeUuid(ctx context.Context, nodeUUID string, params *GetV1AlertsNodeUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1AlertsNodeUuidRequest(c.Server, nodeUUID, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV1AuthStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1AuthStatusRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -4353,6 +4373,33 @@ func NewGetV1AlertsNodeUuidRequest(server string, nodeUUID string, params *GetV1
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
 		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1AuthStatusRequest generates requests for GetV1AuthStatus
+func NewGetV1AuthStatusRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/auth/status")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -7000,6 +7047,9 @@ type ClientWithResponsesInterface interface {
 	// GetV1AlertsNodeUuidWithResponse request
 	GetV1AlertsNodeUuidWithResponse(ctx context.Context, nodeUUID string, params *GetV1AlertsNodeUuidParams, reqEditors ...RequestEditorFn) (*GetV1AlertsNodeUuidResponse, error)
 
+	// GetV1AuthStatusWithResponse request
+	GetV1AuthStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1AuthStatusResponse, error)
+
 	// GetV1ComputezonesWithResponse request
 	GetV1ComputezonesWithResponse(ctx context.Context, params *GetV1ComputezonesParams, reqEditors ...RequestEditorFn) (*GetV1ComputezonesResponse, error)
 
@@ -7394,6 +7444,38 @@ func (r GetV1AlertsNodeUuidResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetV1AlertsNodeUuidResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1AuthStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelsAuthStatusResponse
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1AuthStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1AuthStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1AuthStatusResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8531,6 +8613,15 @@ func (c *ClientWithResponses) GetV1AlertsNodeUuidWithResponse(ctx context.Contex
 	return ParseGetV1AlertsNodeUuidResponse(rsp)
 }
 
+// GetV1AuthStatusWithResponse request returning *GetV1AuthStatusResponse
+func (c *ClientWithResponses) GetV1AuthStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1AuthStatusResponse, error) {
+	rsp, err := c.GetV1AuthStatus(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1AuthStatusResponse(rsp)
+}
+
 // GetV1ComputezonesWithResponse request returning *GetV1ComputezonesResponse
 func (c *ClientWithResponses) GetV1ComputezonesWithResponse(ctx context.Context, params *GetV1ComputezonesParams, reqEditors ...RequestEditorFn) (*GetV1ComputezonesResponse, error) {
 	rsp, err := c.GetV1Computezones(ctx, params, reqEditors...)
@@ -9257,6 +9348,46 @@ func ParseGetV1AlertsNodeUuidResponse(rsp *http.Response) (*GetV1AlertsNodeUuidR
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1AuthStatusResponse parses an HTTP response from a GetV1AuthStatusWithResponse call
+func ParseGetV1AuthStatusResponse(rsp *http.Response) (*GetV1AuthStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1AuthStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsAuthStatusResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
