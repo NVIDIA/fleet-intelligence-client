@@ -234,8 +234,8 @@ func TestGetEventBucketsValidatesMaxBuckets(t *testing.T) {
 	}
 
 	for _, value := range []int{0, MaxEventBuckets + 1} {
-		max := value
-		if _, err := client.GetEventBuckets(context.Background(), EventBucketsOptions{Window: "24h", MaxBuckets: &max}); err == nil {
+		maxBuckets := value
+		if _, err := client.GetEventBuckets(context.Background(), EventBucketsOptions{Window: "24h", MaxBuckets: &maxBuckets}); err == nil {
 			t.Fatalf("expected error for max buckets %d", value)
 		}
 	}
