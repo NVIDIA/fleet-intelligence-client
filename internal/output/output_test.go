@@ -100,6 +100,12 @@ func TestFormatHelpers(t *testing.T) {
 	}{
 		{name: "display empty", got: DisplayString("  "), want: "-"},
 		{name: "display value", got: DisplayString("gpu"), want: "gpu"},
+		{name: "truncate short", got: Truncate("short", 60), want: "short"},
+		{name: "truncate exact", got: Truncate("abcde", 5), want: "abcde"},
+		{name: "truncate long", got: Truncate("abcdefghij", 5), want: "abcd…"},
+		{name: "truncate multibyte", got: Truncate("héllo wörld", 6), want: "héllo…"},
+		{name: "truncate zero max", got: Truncate("abcde", 0), want: "abcde"},
+		{name: "truncate one max", got: Truncate("abcde", 1), want: "…"},
 		{name: "name and id", got: FormatNameAndID("East", "cz-1"), want: "East (cz-1)"},
 		{name: "name and id missing name", got: FormatNameAndID("", "cz-1"), want: "cz-1"},
 		{name: "name or id", got: FormatNameOrID("", "ng-1"), want: "ng-1"},

@@ -219,6 +219,48 @@ func TestAlertDescribeTable(t *testing.T) {
 	}
 }
 
+// Verifies long free-text columns are truncated in the table while JSON keeps
+// the full payload
+func TestAlertDescribeTruncatesLongMessage(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	longMessage := strings.Repeat("x", 200)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"alertUuid":"alert-1","nodeUuid":"node-1","component":"gpu","timeline":[{"eventType":"triggered","alertStatus":"Critical","eventTimestamp":"2026-05-01T00:00:00Z","message":"` + longMessage + `"}]}`))
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	var table bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&table)
+	cmd.SetArgs([]string{"alert", "describe", "alert-1", "--node", "node-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("describe failed: %v", err)
+	}
+	if got := table.String(); strings.Contains(got, longMessage) {
+		t.Fatalf("expected truncated message in table, got %q", got)
+	}
+	if got := table.String(); !strings.Contains(got, "…") {
+		t.Fatalf("expected ellipsis in truncated table, got %q", got)
+	}
+
+	var jsonOut bytes.Buffer
+	jsonCmd := newRootCmd()
+	jsonCmd.SetOut(&jsonOut)
+	jsonCmd.SetArgs([]string{"alert", "describe", "alert-1", "--node", "node-1", "-o", "json"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatalf("describe json failed: %v", err)
+	}
+	if got := jsonOut.String(); !strings.Contains(got, longMessage) {
+		t.Fatalf("expected full message in json output, got %q", got)
+	}
+}
+
 // Verifies node context is required
 func TestAlertDescribeRequiresNode(t *testing.T) {
 	cmd := newRootCmd()

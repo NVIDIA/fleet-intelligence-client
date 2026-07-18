@@ -280,7 +280,7 @@ func writeEventListOutput(w io.Writer, common resolvedCommonFlags, result eventL
 	// Columns mirror the event JSON fields one-to-one, in the SDK model's field
 	// order, so the table is a faithful human-readable view of the same data the
 	// JSON output carries.
-	headers := []string{"EVENT ID", "NODE UUID", "COMPONENT", "NAME", "TYPE", "MESSAGE", "TIMESTAMP", "CREATED AT", "SUGGESTED ACTIONS"}
+	headers := []string{"EVENT ID", "NODE UUID", "COMPONENT", "NAME", "TYPE", "MESSAGE", "TIMESTAMP"}
 	if err := clioutput.WriteTable(w, headers, eventRows(result.Events)); err != nil {
 		return err
 	}
@@ -290,8 +290,14 @@ func writeEventListOutput(w io.Writer, common resolvedCommonFlags, result eventL
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
+// The MESSAGE column is free-text and can be arbitrarily long, so it is
+// truncated with an ellipsis to keep the table readable; the full text (and the
+// omitted createdAt / suggestedActions fields) is available via -o json.
+const eventMessageColumnWidth = 60
+
 // Converts events into table rows. Each column corresponds to an event JSON
-// field; suggestedActions is rendered as a human-readable summary.
+// field. The verbose createdAt and suggestedActions fields are intentionally
+// omitted from the table to keep it narrow; use -o json for the full payload.
 func eventRows(events []fleetintelligence.Event) [][]string {
 	rows := make([][]string, 0, len(events))
 	for _, event := range events {
@@ -301,26 +307,11 @@ func eventRows(events []fleetintelligence.Event) [][]string {
 			clioutput.DisplayString(event.Component),
 			clioutput.DisplayString(event.Name),
 			clioutput.DisplayString(event.Type),
-			clioutput.DisplayString(event.Message),
+			clioutput.Truncate(clioutput.DisplayString(event.Message), eventMessageColumnWidth),
 			clioutput.DisplayString(event.Timestamp),
-			clioutput.DisplayString(event.CreatedAt),
-			formatSuggestedActions(event.SuggestedActions),
 		})
 	}
 	return rows
-}
-
-// Formats a list of suggested actions for table output, reusing the same
-// per-action rendering as the error report.
-func formatSuggestedActions(actions []fleetintelligence.SuggestedAction) string {
-	if len(actions) == 0 {
-		return "-"
-	}
-	parts := make([]string, 0, len(actions))
-	for i := range actions {
-		parts = append(parts, formatSuggestedAction(&actions[i]))
-	}
-	return strings.Join(parts, "; ")
 }
 
 // Renders event buckets as a table with a summary footer

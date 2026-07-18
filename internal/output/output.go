@@ -64,6 +64,24 @@ func WriteRawJSON(w io.Writer, data []byte) error {
 	return err
 }
 
+// Truncate shortens a single-line display value to at most max runes,
+// replacing the trailing overflow with an ellipsis. It counts runes (not
+// bytes) so multi-byte text is not cut mid-character. Table output is a
+// human-friendly summary; the full value remains available via -o json.
+func Truncate(value string, max int) string {
+	if max <= 0 {
+		return value
+	}
+	runes := []rune(value)
+	if len(runes) <= max {
+		return value
+	}
+	if max == 1 {
+		return "…"
+	}
+	return string(runes[:max-1]) + "…"
+}
+
 // Returns a printable placeholder for empty strings
 func DisplayString(value string) string {
 	if strings.TrimSpace(value) == "" {

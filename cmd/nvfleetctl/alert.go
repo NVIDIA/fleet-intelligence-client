@@ -446,6 +446,11 @@ func writeAlertTimelineOutput(w io.Writer, common resolvedCommonFlags, result al
 }
 
 // Renders alert timeline events as a table
+// Maximum width for free-text alert timeline columns. Longer values are
+// truncated with an ellipsis to keep the table aligned; the full text is
+// available via -o json.
+const alertMessageColumnWidth = 80
+
 func writeAlertDescribeTable(w io.Writer, details fleetintelligence.AlertTimelineDetails) error {
 	rows := make([][]string, 0, len(details.Timeline))
 	for _, event := range details.Timeline {
@@ -453,8 +458,8 @@ func writeAlertDescribeTable(w io.Writer, details fleetintelligence.AlertTimelin
 			clioutput.DisplayString(event.EventTimestamp),
 			clioutput.DisplayString(event.EventType),
 			clioutput.DisplayString(event.AlertStatus),
-			clioutput.DisplayString(event.Message),
-			clioutput.DisplayString(event.Error),
+			clioutput.Truncate(clioutput.DisplayString(event.Message), alertMessageColumnWidth),
+			clioutput.Truncate(clioutput.DisplayString(event.Error), alertMessageColumnWidth),
 		})
 	}
 	return clioutput.WriteTable(w, []string{"TIMESTAMP", "EVENT", "STATUS", "MESSAGE", "ERROR"}, rows)
