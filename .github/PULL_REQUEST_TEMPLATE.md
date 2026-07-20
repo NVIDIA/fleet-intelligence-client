@@ -1,7 +1,7 @@
 ## Description
 <!-- Provide a standalone description of changes in this PR. -->
 <!-- Reference any issues closed by this PR with "closes #1234". -->
-<!-- Note: The pull request title will be included in the CHANGELOG. -->
+<!-- Note: The pull request title will be included in generated release notes. -->
 
 ## Checklist
 - [ ] I am familiar with the [Contributing Guidelines](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/CONTRIBUTING.md).

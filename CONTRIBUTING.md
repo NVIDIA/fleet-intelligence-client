@@ -166,5 +166,5 @@ or `docs/report-examples`.
 
 ### Release notes
 
-User-visible changes should update [`CHANGELOG.md`](CHANGELOG.md). The pull
-request title may also be used by maintainers when preparing release notes.
+Pull request titles are used to generate release notes. Make them concise and
+descriptive of the user-visible change.

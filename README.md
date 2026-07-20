@@ -148,7 +148,6 @@ invokes `nvfleetctl`.
 - [Examples](docs/EXAMPLES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [OpenAPI contract](api/openapi/openapi.yaml)
-- [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
