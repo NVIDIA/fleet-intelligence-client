@@ -35,6 +35,9 @@ builds:
 archives:
   - id: nvfleetctl
     formats: [tar.gz]
+    files:
+      - LICENSE
+      - NOTICE
     # Use zip for Windows.
     format_overrides:
       - goos: windows
