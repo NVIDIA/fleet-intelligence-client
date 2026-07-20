@@ -79,7 +79,7 @@ func newNodeGroupListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: health, gpuUtil, or nodes")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: health or nodes")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order for --sort-by: asc or desc; node groups default --sort-by to health")
 	registerListCommonFlags(cmd, common)
 
@@ -179,7 +179,7 @@ func validateNodeGroupListFlags(flags nodeGroupListFlags, common resolvedCommonF
 		return err
 	}
 	if flags.sortBy != "" && !fleetintelligence.NodeGroupSortBy(flags.sortBy).Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected health, gpuUtil, or nodes", flags.sortBy)
+		return fmt.Errorf("invalid sort-by %q: expected health or nodes", flags.sortBy)
 	}
 	if flags.order != "" && !fleetintelligence.NodeGroupSortOrder(flags.order).Valid() {
 		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)

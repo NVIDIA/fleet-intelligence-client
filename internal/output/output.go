@@ -64,6 +64,24 @@ func WriteRawJSON(w io.Writer, data []byte) error {
 	return err
 }
 
+// Truncate shortens a single-line display value to at most maxRunes runes,
+// replacing the trailing overflow with an ellipsis. It counts runes (not
+// bytes) so multi-byte text is not cut mid-character. Table output is a
+// human-friendly summary; the full value remains available via -o json.
+func Truncate(value string, maxRunes int) string {
+	if maxRunes <= 0 {
+		return value
+	}
+	runes := []rune(value)
+	if len(runes) <= maxRunes {
+		return value
+	}
+	if maxRunes == 1 {
+		return "…"
+	}
+	return string(runes[:maxRunes-1]) + "…"
+}
+
 // Returns a printable placeholder for empty strings
 func DisplayString(value string) string {
 	if strings.TrimSpace(value) == "" {
@@ -176,8 +194,23 @@ func WritePaginationFooter(w io.Writer, page Pagination) error {
 	return err
 }
 
-// Writes one tab-separated table row
+// Collapses characters that would corrupt tabwriter's structure — tabs (column
+// separators), newlines and carriage returns (row separators) — into single
+// spaces so a multi-line field renders on one table line.
+var cellSanitizer = strings.NewReplacer("\t", " ", "\r\n", " ", "\n", " ", "\r", " ")
+
+// Flattens a value to a single table-cell-safe line
+func sanitizeTableCell(value string) string {
+	return cellSanitizer.Replace(value)
+}
+
+// Writes one tab-separated table row, flattening any multi-line cells so they
+// do not break column alignment
 func writeTableRow(w io.Writer, fields []string) error {
-	_, err := fmt.Fprintln(w, strings.Join(fields, "\t"))
+	sanitized := make([]string, len(fields))
+	for i, field := range fields {
+		sanitized[i] = sanitizeTableCell(field)
+	}
+	_, err := fmt.Fprintln(w, strings.Join(sanitized, "\t"))
 	return err
 }

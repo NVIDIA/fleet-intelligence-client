@@ -100,6 +100,12 @@ func TestFormatHelpers(t *testing.T) {
 	}{
 		{name: "display empty", got: DisplayString("  "), want: "-"},
 		{name: "display value", got: DisplayString("gpu"), want: "gpu"},
+		{name: "truncate short", got: Truncate("short", 60), want: "short"},
+		{name: "truncate exact", got: Truncate("abcde", 5), want: "abcde"},
+		{name: "truncate long", got: Truncate("abcdefghij", 5), want: "abcd…"},
+		{name: "truncate multibyte", got: Truncate("héllo wörld", 6), want: "héllo…"},
+		{name: "truncate zero max", got: Truncate("abcde", 0), want: "abcde"},
+		{name: "truncate one max", got: Truncate("abcde", 1), want: "…"},
 		{name: "name and id", got: FormatNameAndID("East", "cz-1"), want: "East (cz-1)"},
 		{name: "name and id missing name", got: FormatNameAndID("", "cz-1"), want: "cz-1"},
 		{name: "name or id", got: FormatNameOrID("", "ng-1"), want: "ng-1"},
@@ -141,5 +147,28 @@ func TestWriteTableAndPaginationFooter(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
+	}
+}
+
+// Verifies multi-line cells are flattened so they do not break column alignment
+func TestWriteTableFlattensMultilineCells(t *testing.T) {
+	var out bytes.Buffer
+	if err := WriteTable(&out, []string{"ID", "MESSAGE", "STATE"}, [][]string{
+		{"e1", "Component: agent\n\nStatus: unhealthy", "Critical"},
+		{"e2", "single line", "Warning"},
+	}); err != nil {
+		t.Fatalf("write table failed: %v", err)
+	}
+
+	got := out.String()
+	// Each input row must render as exactly one physical line (plus the header).
+	if lines := strings.Count(strings.TrimRight(got, "\n"), "\n"); lines != 2 {
+		t.Fatalf("expected 3 lines (header + 2 rows), got %d:\n%s", lines+1, got)
+	}
+	if !strings.Contains(got, "Component: agent  Status: unhealthy") {
+		t.Fatalf("newlines not flattened to spaces: %q", got)
+	}
+	if strings.Contains(got, "Component: agent\n") {
+		t.Fatalf("embedded newline leaked into table: %q", got)
 	}
 }

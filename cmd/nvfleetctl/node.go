@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl/helpers"
@@ -30,15 +31,23 @@ import (
 
 // Stores local flag values for node list
 type nodeListFlags struct {
-	view           string
-	nodeUUIDs      string
-	health         string
-	hostname       string
-	agentStatus    string
-	integrityCheck string
-	firmwareCheck  string
-	sortBy         string
-	order          string
+	view             string
+	nodeUUIDs        string
+	health           string
+	computeZoneIDs   string
+	computeZoneNames string
+	nodeGroupIDs     string
+	nodeGroupNames   string
+	gpuType          string
+	gpuCount         string
+	publicIP         string
+	privateIP        string
+	hostname         string
+	agentStatus      string
+	integrityCheck   string
+	firmwareCheck    string
+	sortBy           string
+	order            string
 }
 
 // Stores data ready for node list rendering
@@ -59,6 +68,7 @@ func newNodeCmd() *cobra.Command {
 
 	cmd.AddCommand(newNodeListCmd())
 	cmd.AddCommand(newNodeDescribeCmd())
+	cmd.AddCommand(newNodeHealthCmd())
 
 	return cmd
 }
@@ -81,12 +91,20 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
 	cmd.Flags().StringVar(&flags.nodeUUIDs, "node-uuids", "", "Comma-separated node UUIDs to filter")
 	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.computeZoneNames, "compute-zone-names", "", "Comma-separated compute zone names to filter (partial match)")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupNames, "nodegroup-names", "", "Comma-separated node group names to filter (partial match)")
+	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
+	cmd.Flags().StringVar(&flags.gpuCount, "gpu-count", "", "Comma-separated GPU counts to filter")
+	cmd.Flags().StringVar(&flags.publicIP, "public-ip", "", "Comma-separated public IP addresses to filter")
+	cmd.Flags().StringVar(&flags.privateIP, "private-ip", "", "Comma-separated private IP addresses to filter")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online, Offline, or Unknown")
 	// User-facing "verification check" maps to the backend "integrity check" API field.
 	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, nodeUUID, health, healthStatus, nodeGroup, nodegroup, computeZone, computezone, gpuType, gpuCount, integrityCheck, or agentStatus")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	registerListCommonFlags(cmd, common)
 
@@ -99,7 +117,7 @@ func newNodeDescribeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "describe <uuid>",
 		Short: "Describe a node",
-		Args:  cobra.ExactArgs(1),
+		Args:  requireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runNodeDescribe(cmd, args[0], resolveCommonFlags(cmd, common))
 		},
@@ -128,6 +146,38 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonF
 	if err != nil {
 		return err
 	}
+	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
+	if err != nil {
+		return err
+	}
+	computeZoneNames, err := clihelpers.ParseCommaList(flags.computeZoneNames)
+	if err != nil {
+		return err
+	}
+	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
+	if err != nil {
+		return err
+	}
+	nodeGroupNames, err := clihelpers.ParseCommaList(flags.nodeGroupNames)
+	if err != nil {
+		return err
+	}
+	gpuTypes, err := clihelpers.ParseCommaList(flags.gpuType)
+	if err != nil {
+		return err
+	}
+	gpuCounts, err := parseNodeGPUCountList(flags.gpuCount)
+	if err != nil {
+		return err
+	}
+	publicIPs, err := clihelpers.ParseCommaList(flags.publicIP)
+	if err != nil {
+		return err
+	}
+	privateIPs, err := clihelpers.ParseCommaList(flags.privateIP)
+	if err != nil {
+		return err
+	}
 	agentStatuses, err := parseNodeAgentStatusList(flags.agentStatus)
 	if err != nil {
 		return err
@@ -147,15 +197,23 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonF
 	}
 
 	opts := fleetintelligence.ListNodesOptions{
-		View:            fleetintelligence.NodeView(flags.view),
-		NodeUUIDs:       nodeUUIDs,
-		HealthStatuses:  healthStatuses,
-		Hostname:        strings.TrimSpace(flags.hostname),
-		AgentStatuses:   agentStatuses,
-		IntegrityChecks: integrityChecks,
-		FirmwareChecks:  firmwareChecks,
-		SortBy:          sortBy,
-		Order:           fleetintelligence.NodeSortOrder(flags.order),
+		View:             fleetintelligence.NodeView(flags.view),
+		NodeUUIDs:        nodeUUIDs,
+		HealthStatuses:   healthStatuses,
+		ComputeZoneIDs:   computeZoneIDs,
+		ComputeZoneNames: computeZoneNames,
+		NodeGroupIDs:     nodeGroupIDs,
+		NodeGroupNames:   nodeGroupNames,
+		GPUTypes:         gpuTypes,
+		GPUCounts:        gpuCounts,
+		PublicIPs:        publicIPs,
+		PrivateIPs:       privateIPs,
+		Hostname:         strings.TrimSpace(flags.hostname),
+		AgentStatuses:    agentStatuses,
+		IntegrityChecks:  integrityChecks,
+		FirmwareChecks:   firmwareChecks,
+		SortBy:           sortBy,
+		Order:            fleetintelligence.NodeSortOrder(flags.order),
 	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
@@ -251,8 +309,11 @@ func validateNodeListFlags(flags nodeListFlags, sortBy fleetintelligence.NodeSor
 	if _, err := parseNodeFirmwareCheckList(flags.firmwareCheck); err != nil {
 		return err
 	}
+	if _, err := parseNodeGPUCountList(flags.gpuCount); err != nil {
+		return err
+	}
 	if sortBy != "" && !sortBy.Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected hostname, nodeUUID, health, healthStatus, nodeGroup, nodegroup, computeZone, computezone, gpuType, gpuCount, integrityCheck, or agentStatus", flags.sortBy)
+		return fmt.Errorf("invalid sort-by %q: expected hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions", flags.sortBy)
 	}
 	if flags.order != "" && !fleetintelligence.NodeSortOrder(flags.order).Valid() {
 		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
@@ -278,20 +339,9 @@ func basicNodeSortCompatible(sortBy fleetintelligence.NodeSortBy) bool {
 	}
 }
 
-// Maps friendly CLI aliases to API sort fields
+// Normalizes the raw sort-by flag into an API sort field
 func normalizeNodeSortBy(raw string) (fleetintelligence.NodeSortBy, error) {
-	switch strings.TrimSpace(raw) {
-	case "":
-		return "", nil
-	case "health":
-		return fleetintelligence.NodeSortByHealthStatus, nil
-	case "nodeGroup":
-		return fleetintelligence.NodeSortByNodeGroup, nil
-	case "computeZone":
-		return fleetintelligence.NodeSortByComputeZone, nil
-	default:
-		return fleetintelligence.NodeSortBy(raw), nil
-	}
+	return fleetintelligence.NodeSortBy(strings.TrimSpace(raw)), nil
 }
 
 // Converts comma-separated health filters into API values
@@ -359,6 +409,31 @@ func parseNodeIntegrityCheckList(raw string) ([]fleetintelligence.NodeIntegrityC
 	}
 
 	return checks, nil
+}
+
+// Converts comma-separated GPU count filters into API values
+func parseNodeGPUCountList(raw string) ([]int, error) {
+	values, err := clihelpers.ParseCommaList(raw)
+	if err != nil {
+		return nil, err
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+
+	counts := make([]int, 0, len(values))
+	for _, value := range values {
+		count, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid gpu-count %q: expected an integer", value)
+		}
+		if count < 0 {
+			return nil, fmt.Errorf("invalid gpu-count %q: expected a non-negative integer", value)
+		}
+		counts = append(counts, count)
+	}
+
+	return counts, nil
 }
 
 // Converts comma-separated firmware filters into API values

@@ -203,13 +203,13 @@ func TestListNodeGroupsRejectsInvalidOptions(t *testing.T) {
 
 // Verifies sort field validation tracks the generated API enum
 func TestNodeGroupSortByValid(t *testing.T) {
-	valid := []NodeGroupSortBy{NodeGroupSortByHealth, NodeGroupSortByGPUUtil, NodeGroupSortByNodes}
+	valid := []NodeGroupSortBy{NodeGroupSortByHealth, NodeGroupSortByNodes}
 	for _, sortBy := range valid {
 		if !sortBy.Valid() {
 			t.Errorf("expected %q to be a valid node group sort field", sortBy)
 		}
 	}
-	for _, sortBy := range []NodeGroupSortBy{"", "name", "gpuutil"} {
+	for _, sortBy := range []NodeGroupSortBy{"", "name", "gpuUtil", "gpuutil"} {
 		if sortBy.Valid() {
 			t.Errorf("expected %q to be an invalid node group sort field", sortBy)
 		}

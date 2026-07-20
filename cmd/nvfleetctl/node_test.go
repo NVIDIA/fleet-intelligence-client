@@ -28,8 +28,8 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
-// Verifies local output flags and friendly sort aliases
-func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
+// Verifies local output flags and sort field pass-through
+func TestNodeListLocalJSONAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	raw := `{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","healthStatus":"Healthy"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`
@@ -54,7 +54,7 @@ func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "health"})
+	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "healthStatus"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -64,8 +64,66 @@ func TestNodeListLocalJSONAndSortAlias(t *testing.T) {
 	}
 }
 
+// Verifies detail-only sort fields pass through to the API unchanged
+func TestNodeListDetailSortFields(t *testing.T) {
+	for _, field := range []string{"agentVersion", "kernelVersion", "gpuDriverVersion", "gpuFirmwareVersions"} {
+		t.Run(field, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got := r.URL.Query().Get("sortBy"); got != field {
+					t.Fatalf("unexpected sortBy: got %q want %q", got, field)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
+			}))
+			defer server.Close()
+
+			if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+				t.Fatalf("save config failed: %v", err)
+			}
+
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", field})
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("command failed: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies the "integrityCheck" sort field passes through to the API unchanged
+func TestNodeListSortIntegrityCheck(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("sortBy"); got != "integrityCheck" {
+			t.Fatalf("unexpected sortBy: got %q want %q", got, "integrityCheck")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
+	}))
+	defer server.Close()
+
+	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "integrityCheck"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+}
+
 // Verifies table output and filter translation
-func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
+func TestNodeListTableFiltersAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +155,30 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 		if got := query["firmwareChecks"]; !slices.Equal(got, []string{"Unknown"}) {
 			t.Fatalf("unexpected firmwareChecks: %#v raw query %q", got, r.URL.RawQuery)
 		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["computeZoneNames"]; !slices.Equal(got, []string{"East"}) {
+			t.Fatalf("unexpected computeZoneNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupNames"]; !slices.Equal(got, []string{"Training"}) {
+			t.Fatalf("unexpected nodeGroupNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["gpuTypes"]; !slices.Equal(got, []string{"NVIDIA-H100"}) {
+			t.Fatalf("unexpected gpuTypes: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["gpuCounts"]; !slices.Equal(got, []string{"8", "4"}) {
+			t.Fatalf("unexpected gpuCounts: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["publicIPs"]; !slices.Equal(got, []string{"203.0.113.10"}) {
+			t.Fatalf("unexpected publicIPs: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["privateIPs"]; !slices.Equal(got, []string{"10.0.0.10"}) {
+			t.Fatalf("unexpected privateIPs: %#v raw query %q", got, r.URL.RawQuery)
+		}
 		if got := query.Get("sortBy"); got != "computezone" {
 			t.Fatalf("unexpected sortBy: %q", got)
 		}
@@ -119,7 +201,7 @@ func TestNodeListTableFiltersAndSortAliases(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--sort-by", "computeZone", "--order", "desc", "--page-size", "10"})
+	cmd.SetArgs([]string{"node", "list", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computezone", "--order", "desc", "--page-size", "10"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -293,10 +375,12 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "agent", args: []string{"node", "list", "--agent-status", "Missing"}, want: "invalid agent-status"},
 		{name: "verification", args: []string{"node", "list", "--verification-check", "Missing"}, want: "invalid verification-check"},
 		{name: "firmware", args: []string{"node", "list", "--firmware-check", "Missing"}, want: "invalid firmware-check"},
+		{name: "gpu-count", args: []string{"node", "list", "--gpu-count", "eight"}, want: "invalid gpu-count"},
+		{name: "negative gpu-count", args: []string{"node", "list", "--gpu-count", "8,-1"}, want: "invalid gpu-count"},
 		{name: "sort", args: []string{"node", "list", "--sort-by", "bad"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
-		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "health"}, want: "basic node view is incompatible"},
+		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view is incompatible"},
 	}
 
 	for _, tt := range tests {

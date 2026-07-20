@@ -106,6 +106,7 @@ make build
 
 ```bash
 nvfleetctl auth login --key <your-ngc-service-key>
+nvfleetctl overview
 nvfleetctl node list
 nvfleetctl alert list
 nvfleetctl report inventory

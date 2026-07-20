@@ -47,10 +47,10 @@ Use this to pick the entry point. Each command takes `--output json`, `--timeout
 nvfleetctl computezone list --output json
 nvfleetctl computezone list --zone-ids zone-1,zone-2 --output json
 
-# Node groups — filter by health, GPU type; sort by health/gpuUtil/nodes
+# Node groups — filter by health, GPU type; sort by health/nodes
 nvfleetctl nodegroup list --output json
 nvfleetctl nodegroup list --health Degraded,Unhealthy --output json
-nvfleetctl nodegroup list --gpu-type H100 --sort-by gpuUtil --order desc --output json
+nvfleetctl nodegroup list --gpu-type H100 --sort-by health --order desc --output json
 
 # Nodes — the most filterable command
 nvfleetctl node list --output json

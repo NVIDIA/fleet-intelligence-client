@@ -18,15 +18,26 @@ package main
 // This file defines the auth command group: login, logout, and status.
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
+	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 
 	"github.com/spf13/cobra"
+)
+
+// Connection states reported by `auth status`.
+const (
+	connectionNotChecked      = "not checked"
+	connectionOK              = "ok"
+	connectionUnauthorized    = "unauthorized"
+	connectionUnauthenticated = "unauthenticated"
 )
 
 type authStatusOutput struct {
@@ -123,7 +134,12 @@ func newAuthStatusCmd() *cobra.Command {
 			status := authStatusOutput{
 				APIURL:               cfg.APIURL,
 				ServiceKeyConfigured: strings.TrimSpace(cfg.ServiceKey) != "",
-				Connection:           "not checked",
+				Connection:           connectionNotChecked,
+			}
+			// Only reach out to the backend when we have both a key and a URL;
+			// otherwise the request can't be authenticated.
+			if status.ServiceKeyConfigured && strings.TrimSpace(cfg.APIURL) != "" {
+				status.Connection = checkConnection(cmd.Context(), commonFlags)
 			}
 			if commonFlags.output == clioutput.FormatJSON {
 				return clioutput.WriteJSON(cmd.OutOrStdout(), status)
@@ -141,8 +157,34 @@ func newAuthStatusCmd() *cobra.Command {
 			return nil
 		},
 	}
-	registerOutputFlag(cmd, common)
+	registerReadCommonFlags(cmd, common)
 	return cmd
+}
+
+// checkConnection verifies the stored credentials against the API's
+// /v1/auth/status endpoint and returns a human-readable connection state.
+// `auth status` is diagnostic, so transport and auth failures are folded into
+// the returned string rather than surfaced as command errors.
+func checkConnection(ctx context.Context, common resolvedCommonFlags) string {
+	client, err := newConfiguredClient(commonClientOptions(common)...)
+	if err != nil {
+		return "error: " + err.Error()
+	}
+
+	status, err := client.GetAuthStatus(ctx)
+	if err != nil {
+		var apiErr *fleetintelligence.APIError
+		if errors.As(err, &apiErr) &&
+			(apiErr.StatusCode == http.StatusUnauthorized || apiErr.StatusCode == http.StatusForbidden) {
+			return connectionUnauthorized
+		}
+		return "error: " + err.Error()
+	}
+
+	if !status.Authenticated {
+		return connectionUnauthenticated
+	}
+	return connectionOK
 }
 
 func validateAPIURL(rawURL string) error {

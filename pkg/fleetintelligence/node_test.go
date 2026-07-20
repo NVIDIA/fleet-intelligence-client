@@ -53,6 +53,30 @@ func TestListNodesDetailSendsAuthAndParams(t *testing.T) {
 		if got := query["firmwareChecks"]; !slices.Equal(got, []string{"Unknown"}) {
 			t.Fatalf("unexpected firmwareChecks: %#v raw query %q", got, r.URL.RawQuery)
 		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["computeZoneNames"]; !slices.Equal(got, []string{"East"}) {
+			t.Fatalf("unexpected computeZoneNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupNames"]; !slices.Equal(got, []string{"Training"}) {
+			t.Fatalf("unexpected nodeGroupNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["gpuTypes"]; !slices.Equal(got, []string{"NVIDIA-H100"}) {
+			t.Fatalf("unexpected gpuTypes: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["gpuCounts"]; !slices.Equal(got, []string{"8", "4"}) {
+			t.Fatalf("unexpected gpuCounts: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["publicIPs"]; !slices.Equal(got, []string{"203.0.113.10"}) {
+			t.Fatalf("unexpected publicIPs: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["privateIPs"]; !slices.Equal(got, []string{"10.0.0.10"}) {
+			t.Fatalf("unexpected privateIPs: %#v raw query %q", got, r.URL.RawQuery)
+		}
 		if got := query.Get("hostname"); got != "gpu" {
 			t.Fatalf("unexpected hostname: %q", got)
 		}
@@ -82,17 +106,25 @@ func TestListNodesDetailSendsAuthAndParams(t *testing.T) {
 	page := 2
 	pageSize := 50
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		View:            NodeViewDetail,
-		NodeUUIDs:       []string{"node-1", "node-2"},
-		HealthStatuses:  []NodeHealthStatus{NodeHealthHealthy, NodeHealthDegraded},
-		Hostname:        "gpu",
-		AgentStatuses:   []NodeAgentStatus{NodeAgentOnline},
-		IntegrityChecks: []NodeIntegrityCheck{NodeIntegrityVerified},
-		FirmwareChecks:  []NodeFirmwareCheck{NodeFirmwareUnknown},
-		SortBy:          NodeSortByHealthStatus,
-		Order:           NodeOrderDesc,
-		Page:            &page,
-		PageSize:        &pageSize,
+		View:             NodeViewDetail,
+		NodeUUIDs:        []string{"node-1", "node-2"},
+		HealthStatuses:   []NodeHealthStatus{NodeHealthHealthy, NodeHealthDegraded},
+		ComputeZoneIDs:   []string{"cz-1", "cz-2"},
+		ComputeZoneNames: []string{"East"},
+		NodeGroupIDs:     []string{"ng-1"},
+		NodeGroupNames:   []string{"Training"},
+		GPUTypes:         []string{"NVIDIA-H100"},
+		GPUCounts:        []int{8, 4},
+		PublicIPs:        []string{"203.0.113.10"},
+		PrivateIPs:       []string{"10.0.0.10"},
+		Hostname:         "gpu",
+		AgentStatuses:    []NodeAgentStatus{NodeAgentOnline},
+		IntegrityChecks:  []NodeIntegrityCheck{NodeIntegrityVerified},
+		FirmwareChecks:   []NodeFirmwareCheck{NodeFirmwareUnknown},
+		SortBy:           NodeSortByHealthStatus,
+		Order:            NodeOrderDesc,
+		Page:             &page,
+		PageSize:         &pageSize,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
@@ -125,6 +157,13 @@ func TestListNodesBasic(t *testing.T) {
 		if got := query["healthStatuses"]; len(got) != 0 {
 			t.Fatalf("basic view sent healthStatuses: %#v raw query %q", got, r.URL.RawQuery)
 		}
+		// Compute-zone/nodegroup/GPU/IP filters are basic-view compatible per the API.
+		if got := query["gpuTypes"]; !slices.Equal(got, []string{"NVIDIA-H100"}) {
+			t.Fatalf("basic view dropped gpuTypes: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1"}) {
+			t.Fatalf("basic view dropped computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
 		if got := query.Get("sortBy"); got != "hostname" {
 			t.Fatalf("unexpected sortBy: %q", got)
 		}
@@ -140,8 +179,10 @@ func TestListNodesBasic(t *testing.T) {
 	}
 
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		View:   NodeViewBasic,
-		SortBy: NodeSortByHostname,
+		View:           NodeViewBasic,
+		SortBy:         NodeSortByHostname,
+		GPUTypes:       []string{"NVIDIA-H100"},
+		ComputeZoneIDs: []string{"cz-1"},
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
@@ -262,8 +303,9 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
-		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node integrity check"},
+		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node verification check"},
 		{name: "firmware", opts: ListNodesOptions{FirmwareChecks: []NodeFirmwareCheck{"Missing"}}, want: "invalid node firmware check"},
+		{name: "gpu count", opts: ListNodesOptions{GPUCounts: []int{8, -1}}, want: "invalid node GPU count"},
 		{name: "sort", opts: ListNodesOptions{SortBy: "bad"}, want: "invalid node sort"},
 		{name: "order", opts: ListNodesOptions{Order: "up"}, want: "invalid node order"},
 		{name: "basic health", opts: ListNodesOptions{View: NodeViewBasic, HealthStatuses: []NodeHealthStatus{NodeHealthHealthy}}, want: "basic node view is incompatible"},
@@ -299,6 +341,31 @@ func TestNodeIntegrityCheckValid(t *testing.T) {
 	for _, check := range tests {
 		if !check.Valid() {
 			t.Fatalf("expected %q to be valid", check)
+		}
+	}
+}
+
+// Verifies supported sort fields match the API vocabulary
+func TestNodeSortByValid(t *testing.T) {
+	tests := []NodeSortBy{
+		NodeSortByHostname,
+		NodeSortByUUID,
+		NodeSortByHealthStatus,
+		NodeSortByNodeGroup,
+		NodeSortByComputeZone,
+		NodeSortByGPUType,
+		NodeSortByGPUCount,
+		NodeSortByIntegrityCheck,
+		NodeSortByAgentStatus,
+		NodeSortByAgentVersion,
+		NodeSortByKernelVersion,
+		NodeSortByGPUDriverVersion,
+		NodeSortByGPUFirmwareVersions,
+	}
+
+	for _, sortBy := range tests {
+		if !sortBy.Valid() {
+			t.Fatalf("expected %q to be valid", sortBy)
 		}
 	}
 }

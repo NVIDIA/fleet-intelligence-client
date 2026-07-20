@@ -33,9 +33,8 @@ const (
 	NodeGroupHealthUnhealthy NodeGroupHealthStatus = "Unhealthy"
 	NodeGroupHealthUnknown   NodeGroupHealthStatus = "Unknown"
 
-	NodeGroupSortByHealth  NodeGroupSortBy = "health"
-	NodeGroupSortByGPUUtil NodeGroupSortBy = "gpuUtil"
-	NodeGroupSortByNodes   NodeGroupSortBy = "nodes"
+	NodeGroupSortByHealth NodeGroupSortBy = "health"
+	NodeGroupSortByNodes  NodeGroupSortBy = "nodes"
 
 	NodeGroupOrderAsc  NodeGroupSortOrder = "asc"
 	NodeGroupOrderDesc NodeGroupSortOrder = "desc"
@@ -189,7 +188,7 @@ func validateNodeGroupOptions(view NodeGroupView, opts ListNodeGroupsOptions) er
 		}
 	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node group sort %q: expected health, gpuUtil, or nodes", opts.SortBy)
+		return fmt.Errorf("invalid node group sort %q: expected health or nodes", opts.SortBy)
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
 		return fmt.Errorf("invalid node group order %q: expected asc or desc", opts.Order)
