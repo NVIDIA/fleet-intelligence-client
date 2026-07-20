@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: NVIDIA CORPORATION & AFFILIATES
+    copyright-year: "2026"
+    content: |
+      SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+      SPDX-License-Identifier: Apache-2.0
+    pattern: |
+      SPDX-FileCopyrightText: Copyright \(c\) [0-9]{4}, NVIDIA CORPORATION & AFFILIATES\. All rights reserved\.
+      SPDX-License-Identifier: Apache-2\.0
+
+  paths:
+    - "**/*.go"
+
+  paths-ignore:
+    - "internal/generated/**"
+
+  comment: never

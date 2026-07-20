@@ -1,4 +1,7 @@
 ---
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 name: nvfleetctl
 description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or verification (integrity) checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
 ---
