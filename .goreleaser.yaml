@@ -19,7 +19,6 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
       - windows
     goarch:
       - amd64
@@ -83,7 +82,8 @@ release:
 
     ### Available Packages
 
-    - **Binary archives**: Standalone `nvfleetctl` binaries for Linux, macOS, and Windows on `amd64` and `arm64`
+    - **Binary archives**: Standalone `nvfleetctl` binaries for Linux and Windows on `amd64` and `arm64`
+    - **macOS installers**: Developer ID-signed and notarized `.pkg` installers for Intel and Apple Silicon
 
     ### Installation
 
@@ -95,6 +95,7 @@ release:
     All release artifacts are checksummed. Verify downloads using:
     ```bash
     sha256sum -c checksums.txt
+    shasum -a 256 -c checksums-macos.txt
     ```
 
     ### Support
