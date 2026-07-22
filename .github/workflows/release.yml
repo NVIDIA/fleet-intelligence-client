@@ -95,7 +95,7 @@ jobs:
           echo "$RUNNER_TEMP/nvsec-venv/bin" >> "$GITHUB_PATH"
 
       - name: Sign macOS binaries with 3S
-        run: scripts/release-macos.sh sign-binaries "$GITHUB_REF_NAME" dist/macos signed-binaries
+        run: scripts/sign-macos-binaries.sh "$GITHUB_REF_NAME" dist/macos signed-binaries
         env:
           NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
           NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
@@ -127,7 +127,7 @@ jobs:
           path: signed-binaries
 
       - name: Build unsigned macOS packages
-        run: scripts/release-macos.sh build-packages "$GITHUB_REF_NAME" signed-binaries unsigned-packages
+        run: scripts/build-macos-packages.sh "$GITHUB_REF_NAME" signed-binaries unsigned-packages
 
       - name: Upload unsigned macOS packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -167,7 +167,7 @@ jobs:
           path: unsigned-packages
 
       - name: Sign macOS packages with 3S
-        run: scripts/release-macos.sh sign-packages "$GITHUB_REF_NAME" unsigned-packages signed-packages
+        run: scripts/sign-macos-packages.sh "$GITHUB_REF_NAME" unsigned-packages signed-packages
         env:
           NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
           NVSEC_SSA_CLIENT_SECRET: ${{ secrets.NVSEC_SSA_CLIENT_SECRET }}
@@ -199,7 +199,7 @@ jobs:
           path: signed-packages
 
       - name: Notarize macOS packages
-        run: scripts/release-macos.sh notarize-packages "$GITHUB_REF_NAME" signed-packages notarized-packages
+        run: scripts/notarize-macos-packages.sh "$GITHUB_REF_NAME" signed-packages notarized-packages
         env:
           APPLE_ID: ${{ secrets.APPLE_NOTARY_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
