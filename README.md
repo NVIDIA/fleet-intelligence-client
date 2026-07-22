@@ -14,93 +14,49 @@ terminal or Go program.
 
 ## Requirements
 
-- Go 1.23+ for source builds and `go install`.
 - An NGC service key from
   <https://org.ngc.nvidia.com/identity-access/service-keys>. See the
   [Fleet Intelligence API reference](https://docs.nvidia.com/fleet-intelligence/latest/api-reference.html)
   for key-generation instructions.
-- Linux, macOS, or Windows on a Go-supported amd64/arm64 platform.
+- Linux, macOS, or Windows on an amd64 or arm64 platform.
 
 ## Install
 
-### Use a prebuilt binary
+### Linux and macOS
 
-Download the `nvfleetctl` archive for your platform from the
-[release artifacts](https://github.com/NVIDIA/fleet-intelligence-client/releases).
-
-#### Linux and macOS
-
-Choose the matching OS and architecture:
-
-- Linux amd64: `nvfleetctl_<version>_linux_amd64.tar.gz`
-- Linux arm64: `nvfleetctl_<version>_linux_arm64.tar.gz`
-- macOS Intel: `nvfleetctl_<version>_darwin_amd64.tar.gz`
-- macOS Apple Silicon: `nvfleetctl_<version>_darwin_arm64.tar.gz`
-
-Then extract and install:
+Download and inspect the installer, then run it:
 
 ```bash
-tar -xzf nvfleetctl_<version>_<os>_<arch>.tar.gz
-chmod +x nvfleetctl
-sudo mv nvfleetctl /usr/local/bin/nvfleetctl
-nvfleetctl version
+curl -fsSLO https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/install.sh
+less install.sh
+bash install.sh
 ```
 
-On macOS, Gatekeeper quarantines binaries downloaded outside the App Store. If
-macOS blocks the binary, clear the quarantine attribute (adjust the path to
-wherever you installed it):
+By default, this installs `nvfleetctl` to `$HOME/.local/bin`. Select a version
+or another installation directory with:
 
 ```bash
-xattr -d com.apple.quarantine /usr/local/bin/nvfleetctl
+bash install.sh --version v1.2.3 --install-dir "$HOME/bin"
 ```
 
-If you do not have permission to write to `/usr/local/bin`, install to a
-user-local directory:
+The installer verifies the release checksum and, on macOS, the Developer ID
+signature and Apple notarization ticket before installing the executable.
 
-```bash
-mkdir -p "$HOME/.local/bin"
-mv nvfleetctl "$HOME/.local/bin/nvfleetctl"
-```
+### Windows
 
-Make sure `$HOME/.local/bin` is on your `PATH`, then verify the install:
-
-```bash
-nvfleetctl version
-```
-
-#### Windows
-
-Download the matching Windows zip:
-
-- Windows amd64: `nvfleetctl_<version>_windows_amd64.zip`
-- Windows arm64: `nvfleetctl_<version>_windows_arm64.zip`
-
-Unzip the archive, then add the directory containing `nvfleetctl.exe` to your
-`PATH`. Verify the install:
+Download and inspect the PowerShell installer, then run it:
 
 ```powershell
-nvfleetctl version
+Invoke-WebRequest `
+  https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/install.ps1 `
+  -OutFile install.ps1
+Get-Content .\install.ps1
+.\install.ps1
 ```
 
-### Install with Go
-
-Use Go installer:
-
-```bash
-# While this repository is private, set GOPRIVATE first so `go install`
-# fetches via git instead of the public proxy:
-export GOPRIVATE=github.com/NVIDIA/fleet-intelligence-client
-go install github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl@latest
-```
-
-### Build from source
-
-```bash
-git clone https://github.com/NVIDIA/fleet-intelligence-client.git
-cd fleet-intelligence-client
-make build
-./bin/nvfleetctl --help
-```
+The installer verifies the SHA-256 checksum and 3S Authenticode signature,
+installs under `%LOCALAPPDATA%\Programs\nvfleetctl\bin`, and adds that directory
+to the user `PATH`. Use `-NoModifyPath` to leave `PATH` unchanged.
 
 ## Quick Start
 
@@ -124,24 +80,28 @@ Run `nvfleetctl <command> --help` for command-specific flags.
 
 ## Use with AI agents (Claude Code and Codex)
 
-This repo ships an [Agent Skill](skills/nvfleetctl/SKILL.md) that teaches a
-coding agent how to drive `nvfleetctl` to answer fleet questions in plain
-language ("how many nodes are unhealthy?", "any critical alerts?"). The skill is
-a single portable `SKILL.md` file, so it works in any agent that supports the
-Agent Skills format.
+This repository ships Agent Skills for answering fleet questions with
+`nvfleetctl` and generating fleet health reports. Install them interactively:
 
-The agent still calls the `nvfleetctl` binary, so [install](#install) and
-[authenticate](#quick-start) it first.
+```bash
+npx skills add NVIDIA/fleet-intelligence-client
+```
 
-Download [`skills/nvfleetctl/SKILL.md`](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/skills/nvfleetctl/SKILL.md)
-from this repo and place it in a `nvfleetctl/` folder under your agent's skills
-directory:
+To install both skills globally for Codex and Claude Code without prompts:
 
-- **Claude Code:** `~/.claude/skills/nvfleetctl/SKILL.md` (or `.claude/skills/nvfleetctl/SKILL.md` to scope it to a single project)
-- **Codex:** `~/.codex/skills/nvfleetctl/SKILL.md`
+```bash
+npx skills add NVIDIA/fleet-intelligence-client \
+  --skill nvfleetctl \
+  --skill fleet-health-report \
+  --agent codex \
+  --agent claude-code \
+  --global \
+  --yes
+```
 
-The agent discovers the skill automatically — just ask a fleet question and it
-invokes `nvfleetctl`.
+The skills use the installed `nvfleetctl` binary, so [install](#install) and
+[authenticate](#quick-start) it first. Restart the agent after installation,
+then ask it a fleet question or request a fleet health report.
 
 ## Documentation
 
