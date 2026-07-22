@@ -26,7 +26,7 @@ trap 'rm -rf "$work_dir"' EXIT
 args=(
   3s submit
   --job_type "${NVSEC_WINDOWS_JOB_TYPE:-WINDOWS_AUTH}"
-  --scope "${NVSEC_SSA_SCOPE:-SIGNING_WINDOWS_AUTHENTICODE}"
+  --scope "${NVSEC_SSA_SCOPE:-SIGNING_WINDOWS_AUTH}"
   --auth ssa
   --input_file "$binary"
   --description "nvfleetctl ${GITHUB_REF_NAME:-snapshot} ${target}"
