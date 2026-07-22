@@ -30,6 +30,10 @@ builds:
       - -X main.version={{ .Version }}
       - -X main.commit={{ .ShortCommit }}
       - -X main.buildDate={{ .CommitDate }}
+    hooks:
+      post:
+        - cmd: scripts/sign-windows-binary.sh "{{ .Target }}" "{{ .Path }}"
+          output: true
 
 archives:
   - id: nvfleetctl
@@ -82,7 +86,8 @@ release:
 
     ### Available Packages
 
-    - **Binary archives**: Standalone `nvfleetctl` binaries for Linux and Windows on `amd64` and `arm64`
+    - **Linux archives**: Standalone binaries with SHA-256 checksums on `amd64` and `arm64`
+    - **Windows archives**: Authenticode-signed binaries on `amd64` and `arm64`
     - **macOS installers**: Developer ID-signed and notarized `.pkg` installers for Intel and Apple Silicon
 
     ### Installation
