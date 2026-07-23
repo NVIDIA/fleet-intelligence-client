@@ -1,149 +1,64 @@
 # Fleet Intelligence Client
 
-[github.com/NVIDIA/fleet-intelligence-client](https://github.com/NVIDIA/fleet-intelligence-client)
-
 Go SDK and `nvfleetctl` CLI for the NVIDIA Fleet Intelligence customer API.
-Use it to inspect GPU fleet health, inventory, alerts, and reports from a
-terminal or Go program.
-
-## What is included
-
-- `nvfleetctl`: CLI for authentication, fleet inspection, alerts, and reports.
-- `pkg/fleetintelligence`: public Go SDK over the generated OpenAPI client.
-- `api/openapi`: public customer API contract used by the SDK and CLI.
-
-## Requirements
-
-- Go 1.23+ for source builds and `go install`.
-- An NGC service key from
-  <https://org.ngc.nvidia.com/identity-access/service-keys>. See the
-  [Fleet Intelligence API reference](https://docs.nvidia.com/fleet-intelligence/latest/api-reference.html)
-  for key-generation instructions.
-- Linux, macOS, or Windows on a Go-supported amd64/arm64 platform.
+Inspect GPU fleet health, inventory, alerts, and reports from a terminal or Go
+program.
 
 ## Install
 
-### Use a prebuilt binary
+### Linux and macOS
 
-Download the `nvfleetctl` archive for your platform from the
-[release artifacts](https://github.com/NVIDIA/fleet-intelligence-client/releases).
-
-#### Linux and macOS
-
-Choose the matching OS and architecture:
-
-- Linux amd64: `nvfleetctl_<version>_linux_amd64.tar.gz`
-- Linux arm64: `nvfleetctl_<version>_linux_arm64.tar.gz`
-- macOS Intel: `nvfleetctl_<version>_darwin_amd64.tar.gz`
-- macOS Apple Silicon: `nvfleetctl_<version>_darwin_arm64.tar.gz`
-
-Then extract and install:
+Install `nvfleetctl`:
 
 ```bash
-tar -xzf nvfleetctl_<version>_<os>_<arch>.tar.gz
-chmod +x nvfleetctl
-sudo mv nvfleetctl /usr/local/bin/nvfleetctl
-nvfleetctl version
+NVFLEETCTL_VERSION=v1.0.0
+curl -fsSL "https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/${NVFLEETCTL_VERSION}/install.sh" | \
+  bash -s -- --version "$NVFLEETCTL_VERSION"
 ```
 
-On macOS, Gatekeeper quarantines binaries downloaded outside the App Store. If
-macOS blocks the binary, clear the quarantine attribute (adjust the path to
-wherever you installed it):
+The installer verifies the release checksum and, on macOS, the Developer ID
+signature and Apple notarization ticket before installing the executable.
 
-```bash
-xattr -d com.apple.quarantine /usr/local/bin/nvfleetctl
-```
+### Windows
 
-If you do not have permission to write to `/usr/local/bin`, install to a
-user-local directory:
-
-```bash
-mkdir -p "$HOME/.local/bin"
-mv nvfleetctl "$HOME/.local/bin/nvfleetctl"
-```
-
-Make sure `$HOME/.local/bin` is on your `PATH`, then verify the install:
-
-```bash
-nvfleetctl version
-```
-
-#### Windows
-
-Download the matching Windows zip:
-
-- Windows amd64: `nvfleetctl_<version>_windows_amd64.zip`
-- Windows arm64: `nvfleetctl_<version>_windows_arm64.zip`
-
-Unzip the archive, then add the directory containing `nvfleetctl.exe` to your
-`PATH`. Verify the install:
+Install `nvfleetctl`:
 
 ```powershell
-nvfleetctl version
-```
-
-### Install with Go
-
-Use Go installer:
-
-```bash
-# While this repository is private, set GOPRIVATE first so `go install`
-# fetches via git instead of the public proxy:
-export GOPRIVATE=github.com/NVIDIA/fleet-intelligence-client
-go install github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetctl@latest
-```
-
-### Build from source
-
-```bash
-git clone https://github.com/NVIDIA/fleet-intelligence-client.git
-cd fleet-intelligence-client
-make build
-./bin/nvfleetctl --help
+$Version = "v1.0.0"
+$Installer = "https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/$Version/install.ps1"
+Invoke-WebRequest $Installer -OutFile install.ps1
+.\install.ps1 -Version $Version
 ```
 
 ## Quick Start
 
+Choose an NGC API key:
+
+- [Personal API key](https://docs.nvidia.com/ngc/latest/ngc-user-guide.html#generating-a-personal-api-key)
+  for individual use.
+- [Service key](https://org.ngc.nvidia.com/identity-access/service-keys) for
+  programmatic integrations.
+
 ```bash
-nvfleetctl auth login --key <your-ngc-service-key>
+nvfleetctl auth login --key <your-ngc-api-key>
 nvfleetctl overview
 nvfleetctl node list
-nvfleetctl alert list
-nvfleetctl report inventory
-```
-
-Common output and pagination flags:
-
-```bash
-nvfleetctl node list --all --output json
-nvfleetctl node list --page 1 --page-size 25
-nvfleetctl node list --health Degraded,Unhealthy
 ```
 
 Run `nvfleetctl <command> --help` for command-specific flags.
 
-## Use with AI agents (Claude Code and Codex)
+## Use with AI agents
 
-This repo ships an [Agent Skill](skills/nvfleetctl/SKILL.md) that teaches a
-coding agent how to drive `nvfleetctl` to answer fleet questions in plain
-language ("how many nodes are unhealthy?", "any critical alerts?"). The skill is
-a single portable `SKILL.md` file, so it works in any agent that supports the
-Agent Skills format.
+Install the `nvfleetctl` and fleet health report skills:
 
-The agent still calls the `nvfleetctl` binary, so [install](#install) and
-[authenticate](#quick-start) it first.
+```bash
+npx skills add NVIDIA/fleet-intelligence-client
+```
 
-Download [`skills/nvfleetctl/SKILL.md`](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/skills/nvfleetctl/SKILL.md)
-from this repo and place it in a `nvfleetctl/` folder under your agent's skills
-directory:
+[Install](#install) and [authenticate](#quick-start) `nvfleetctl` first, then
+restart the agent.
 
-- **Claude Code:** `~/.claude/skills/nvfleetctl/SKILL.md` (or `.claude/skills/nvfleetctl/SKILL.md` to scope it to a single project)
-- **Codex:** `~/.codex/skills/nvfleetctl/SKILL.md`
-
-The agent discovers the skill automatically — just ask a fleet question and it
-invokes `nvfleetctl`.
-
-## Documentation
+## Learn more
 
 - [Examples](docs/EXAMPLES.md)
 - [Architecture](docs/ARCHITECTURE.md)
@@ -151,26 +66,7 @@ invokes `nvfleetctl`.
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
-## Development
-
-```bash
-make build
-make test
-make lint
-make check
-```
-
-Commit subjects follow conventional commits:
-`<type>(<scope>): <subject>`. Contributions require DCO sign-off; see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-## Support
-
-This client is experimental and under active development. Open a
+This project is experimental and available under the
+[Apache License 2.0](LICENSE). Open a
 [GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues) for
-bugs, feature requests, or questions. Do not file public issues for security
-vulnerabilities; follow [`SECURITY.md`](SECURITY.md).
-
-## License
-
-Apache License 2.0. See [LICENSE](LICENSE).
+support, and report vulnerabilities through the [security policy](SECURITY.md).

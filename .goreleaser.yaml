@@ -18,8 +18,8 @@ builds:
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
       - darwin
+      - linux
       - windows
     goarch:
       - amd64
@@ -31,6 +31,12 @@ builds:
       - -X main.version={{ .Version }}
       - -X main.commit={{ .ShortCommit }}
       - -X main.buildDate={{ .CommitDate }}
+    hooks:
+      post:
+        - cmd: scripts/sign-macos-binary.sh "{{ .Target }}" "{{ .Path }}"
+          output: true
+        - cmd: scripts/sign-windows-binary.sh "{{ .Target }}" "{{ .Path }}"
+          output: true
 
 archives:
   - id: nvfleetctl
@@ -38,8 +44,10 @@ archives:
     files:
       - LICENSE
       - NOTICE
-    # Use zip for Windows.
+    # Use zip for macOS and Windows.
     format_overrides:
+      - goos: darwin
+        formats: [zip]
       - goos: windows
         formats: [zip]
     name_template: >-
@@ -83,7 +91,9 @@ release:
 
     ### Available Packages
 
-    - **Binary archives**: Standalone `nvfleetctl` binaries for Linux, macOS, and Windows on `amd64` and `arm64`
+    - **Linux archives**: Standalone binaries with SHA-256 checksums on `amd64` and `arm64`
+    - **Windows archives**: Authenticode-signed binaries on `amd64` and `arm64`
+    - **macOS archives**: Developer ID-signed and notarized `.zip` archives for Intel and Apple Silicon
 
     ### Installation
 
@@ -100,8 +110,13 @@ release:
     ### Support
 
     For issues and questions, please visit: https://github.com/NVIDIA/fleet-intelligence-client/issues
-  draft: false
+  # The workflow publishes this draft only after Apple accepts both macOS ZIPs.
+  draft: true
   prerelease: auto  # Auto-detect pre-release based on version (e.g., v1.0.0-beta)
   mode: replace  # Replace existing release if it exists
+  use_existing_draft: true  # Reuse a draft left by a failed or rerun workflow
   replace_existing_artifacts: true  # Handle reruns where GitHub assets with same name already exist
   skip_upload: false
+  extra_files:
+    - glob: ./install.sh
+    - glob: ./install.ps1
