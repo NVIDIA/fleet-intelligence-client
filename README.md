@@ -27,16 +27,23 @@ terminal or Go program.
 Download and inspect the installer, then run it:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/main/install.sh
+NVFLEETCTL_VERSION=v1.0.0
+curl -fsSLO "https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/${NVFLEETCTL_VERSION}/install.sh"
 less install.sh
-bash install.sh
+bash install.sh --version "${NVFLEETCTL_VERSION}"
 ```
 
-By default, this installs `nvfleetctl` to `$HOME/.local/bin`. Select a version
-or another installation directory with:
+By default, this installs `nvfleetctl` to `$HOME/.local/bin`. Add that directory
+to your shell profile for future sessions and to `PATH` in the current session:
 
 ```bash
-bash install.sh --version v1.2.3 --install-dir "$HOME/bin"
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Select another installation directory with:
+
+```bash
+bash install.sh --version "${NVFLEETCTL_VERSION}" --install-dir "$HOME/bin"
 ```
 
 The installer verifies the release checksum and, on macOS, the Developer ID
