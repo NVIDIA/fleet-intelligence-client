@@ -92,7 +92,6 @@ jobs:
     name: Notarize macOS archives
     needs: goreleaser
     runs-on: macos-14
-    environment: apple-notarization
     steps:
       - name: Check out code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -137,7 +136,11 @@ jobs:
       - name: Replace macOS archives and publish release
         run: |
           set -euo pipefail
-          gh release upload "$GITHUB_REF_NAME" notarized-archives/* --clobber
-          gh release edit "$GITHUB_REF_NAME" --draft=false
+          gh release upload "$GITHUB_REF_NAME" notarized-archives/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+          gh release edit "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
