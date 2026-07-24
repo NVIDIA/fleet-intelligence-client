@@ -4,6 +4,7 @@
 
 name: nvfleetctl
 description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or verification (integrity) checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
+author: Emily Zhang <emizhang@nvidia.com>
 ---
 
 # Answering fleet questions with nvfleetctl
@@ -18,8 +19,9 @@ The user wants an *answer*, not a command dump. So:
 
 1. **Run commands with `--output json`** (or the command's JSON `--format`). JSON parses reliably; table output is for humans and is easy to misread. You read the JSON, the user gets prose.
 2. **Summarize findings in plain language.** Lead with the answer ("3 of your 48 nodes are unhealthy"), then the supporting detail. Show a small table only when the user is comparing items or explicitly wants a listing.
-3. **Filter at the source.** These commands have rich filter flags (`--health`, `--severity`, `--gpu-type`, etc.). Filtering server-side is faster and more accurate than pulling everything and grepping. Reach for `--all` only when you genuinely need the whole set (counts, reports).
-4. **Don't invent data.** If a field isn't in the output, say so rather than guessing. UUIDs, hostnames, and counts must come from real command output.
+3. **Filter at the source.** These commands have rich filter flags (`--health`, `--severity`, `--gpu-type`, etc.). Filtering server-side is faster and more accurate than pulling everything and grepping.
+4. **Keep commands small and fast.** A fleet can hold hundreds of thousands of nodes/alerts/events, so an unbounded pull is slow and can time out or blow up your context. Ask for the least data that answers the question: filter tightly, and page in small chunks (`--page-size` is 1–100, default is fine). **For a count, don't fetch the rows at all** — run with `--page-size 1` and read the top-level `total` (see [Counting without fetching](#counting-without-fetching)). Avoid `--all` unless you truly need every row (e.g. building a report or exporting the full set), and even then prefer a tight filter first. Always ask for permission when running with `--all` flag.
+5. **Don't invent data.** If a field isn't in the output, say so rather than guessing. UUIDs, hostnames, and counts must come from real command output.
 
 Before relying on output, confirm the tool is installed and authenticated — see [Setup and auth](#setup-and-auth). If `nvfleetctl` isn't found (e.g. `command not found`, exit code **127**), it isn't installed — don't try to build it from source; point the user at the releases page as described in [Setup and auth](#setup-and-auth). If a command exits with code **77**, that's an auth/permission failure, not a real "no results" — handle it as described there.
 
@@ -27,7 +29,7 @@ Before relying on output, confirm the tool is installed and authenticated — se
 > ```
 > Get "https://.../v1/nodes?...": tls: failed to verify certificate: x509: OSStatus -26276
 > ```
-> This is *not* a real cert problem, an auth failure, or "no data" — it's the sandbox. Don't report it to the user as a TLS/cert issue. Just re-run the command with `dangerouslyDisableSandbox: true`. Purely local commands (`auth status`, `--help`) work inside the sandbox, but anything that contacts the backend (`node`/`nodegroup`/`computezone`/`alert`/`report` and `auth login`) needs the sandbox off, so default to disabling it for all nvfleetctl calls.
+> This is *not* a real cert problem, an auth failure, or "no data" — it's the sandbox. Don't report it to the user as a TLS/cert issue. Just re-run the command with `dangerouslyDisableSandbox: true`. Only `--help` is purely local; everything that reaches the backend needs the sandbox off — that now includes `auth status` (it verifies the stored key against the backend when a key and URL are configured) and `auth login`, on top of `overview`/`node`/`nodegroup`/`computezone`/`alert`/`event`/`tag`/`report`. So default to disabling the sandbox for all nvfleetctl calls.
 
 ## Mapping questions to commands
 
@@ -35,13 +37,28 @@ Use this to pick the entry point. Each command takes `--output json`, `--timeout
 
 | The user is asking about… | Start here |
 | --- | --- |
+| A one-shot fleet summary — total/healthy/unhealthy counts, top-line metrics | `overview` |
 | Regions / zones / where capacity lives | `computezone list` |
 | Node groups, their health %, GPU utilization | `nodegroup list` |
 | Individual nodes — health, GPU type/count, agent online/offline, firmware/verification | `node list`, then `node describe <uuid>` for one node |
+| How one node's health changed over a time window | `node health <uuid>` |
 | Active problems, severities, what's firing now | `alert list`, `alert timeline`, `alert describe` |
+| Raw event stream or an event histogram over time | `event list`, `event buckets` |
+| What customer tags exist (optionally scoped to a resource) | `tag list` |
 | A full inventory snapshot (export, audit, signed bundle) | `report inventory` |
 | Error trends / counts over a time range | `report error` |
 | Checking a previously downloaded signed report | `report verify` |
+
+### Fleet overview
+
+For a fast, top-line answer ("how's the fleet doing?", "how many nodes total / unhealthy?") start with `overview` — a single call returns fleet-wide counts plus summary metrics, no pagination.
+
+```bash
+nvfleetctl overview --output json
+nvfleetctl overview --include-metrics=false --output json   # counts only, skip the metrics block
+```
+
+Use it for the headline number; drop to `node list` / `nodegroup list` when the user wants the actual nodes behind the count.
 
 ### Inspecting the fleet
 
@@ -64,7 +81,12 @@ nvfleetctl node list --gpu-type H100 --sort-by hostname --order asc --output jso
 
 # Everything about one node (system info, resources, network, health, components)
 nvfleetctl node describe <node-uuid> --output json
+
+# One node's health status timeline + summary over a window (both --start and --end REQUIRED, RFC3339)
+nvfleetctl node health <node-uuid> --start 2026-07-14T00:00:00Z --end 2026-07-21T00:00:00Z --output json
 ```
+
+`node describe` is the current-state snapshot; `node health` answers "when did this node go bad / how has its health trended?" over an explicit window (there's no `--window` shortcut here — pass absolute `--start`/`--end`).
 
 Filter vocabularies (case-sensitive, comma-separate multiple values):
 - **health**: `Healthy`, `Degraded`, `Unhealthy`, `Unknown`
@@ -75,15 +97,33 @@ Filter vocabularies (case-sensitive, comma-separate multiple values):
 
 `--output json` returns the raw backend field names, not the display terms: verification state is `integrityCheck` (with `integrityCheckReason`, `lastIntegrityCheckTS`) and location is `geoLocation`. The `verification-check`/"location" naming applies only to the CLI flag and table output.
 
-To get an exact **count**, add `--all --output json` and read `pagination.total` (the merged shape is `{"items": [...], "pagination": {"total": N, "hasMore": ..., "pagesFetched": ...}}`). Don't eyeball the length of one page — it's only the first page unless you pass `--all`.
+To get an exact **count**, use the [Counting without fetching](#counting-without-fetching) trick — `--page-size 1` and read the top-level `total`. Don't eyeball the length of one page (it's only the first page), and don't pull `--all` just to count — on a large fleet that fetches thousands of rows you'll immediately throw away.
+
+### Counting without fetching
+
+When the user only wants a number ("how many nodes are unhealthy?", "how many critical alerts?"), you don't need the rows — you need the `total`. Run the same filtered `list` with **`--page-size 1`** and read the **top-level `total`** field. This is one tiny request regardless of fleet size, and every filter still applies, so the count is exactly the filtered count.
+
+```bash
+nvfleetctl node list --health Unhealthy --page-size 1 --output json      # -> read .total
+nvfleetctl alert list --severity Critical --page-size 1 --output json    # -> read .total
+nvfleetctl event list --window 24h --page-size 1 --output json           # -> read .total
+```
+
+Two different JSON shapes carry the total, depending on whether you paged or pulled everything:
+
+- **Single page** (default / `--page-size N`, no `--all`): `total` is at the **top level**, alongside the resource-specific item array. Keys are `total`, `page`, `pageSize`, and a "more pages?" indicator; the items live under a per-resource key — `nodes` / `nodeGroups` / `computezones` (lowercase) / `alerts` / `events`. Read `.total`. The more-pages indicator is `hasMore` (a bool) on every list **except `alert list`**, which instead exposes `pageCursorNext` (a string that's non-empty when more pages exist and absent/empty otherwise) and has **no `hasMore` field** — so for alerts, check `pageCursorNext`, not `hasMore`.
+- **`--all`** (merged across every page): the shape is `{"items": [...], "pagination": {"total": N, "hasMore": ..., "pagesFetched": ...}}`. Read `.pagination.total`.
+
+So for a count, `--page-size 1` → `.total`; only reach for `--all` → `.pagination.total` when you actually want the rows too.
 
 ### Alerts
 
 ```bash
-# Alerts firing now; filter by severity (Critical|Warning) and/or node
+# Alerts firing now; filter by severity, state, component, and/or node
 nvfleetctl alert list --output json
 nvfleetctl alert list --severity Critical --output json
 nvfleetctl alert list --severity Critical --node <node-uuid> --output json
+nvfleetctl alert list --state Triggered --component GPU --output json
 
 # Timeline: which nodes have alert history, or one node's history
 nvfleetctl alert timeline --output json                 # all nodes with history
@@ -94,7 +134,40 @@ nvfleetctl alert timeline --node <node-uuid> --output json
 nvfleetctl alert describe <alert-uuid> --node <node-uuid> --output json
 ```
 
+`alert list` filter vocabularies: **severity** = `Critical`, `Warning`; **state** = `Detected`, `Triggered`, `Resolved`; `--component` matches a component name (e.g. `GPU`).
+
 When the user says "what's wrong right now?" prefer `alert list --severity Critical` and `node list --health Unhealthy,Degraded`. Use the timeline when they ask about history or recurrence.
+
+### Events
+
+Events are the raw, time-stamped fleet event stream (below the alert layer). Every event command **requires a time range** — either `--window <dur>` (relative) or `--start`/`--end` (absolute RFC3339, used together) — and can be narrowed by `--node` and `--component`.
+
+```bash
+# Individual events over a range
+nvfleetctl event list --window 24h --output json
+nvfleetctl event list --window 168h --node <node-uuid> --component GPU --output json
+nvfleetctl event list --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z --output json
+
+# Time-bucketed counts for a histogram (--max-buckets 1-1000, default 100)
+nvfleetctl event buckets --window 24h --output json
+nvfleetctl event buckets --window 168h --max-buckets 50 --output json
+```
+
+`event list` paginates (`--all`, `--page`, `--page-size`); `event buckets` does not — it returns the bucketed series in one call. Reach for events when the user wants the granular "what happened, and when" detail that `alert list` (current problems) and `report error` (aggregate counts) don't give.
+
+### Tags
+
+```bash
+# All unique customer tags across the fleet
+nvfleetctl tag list --output json
+nvfleetctl tag list --prefix gpu --output json                       # case-insensitive prefix filter
+
+# Scope to one resource (use at MOST one of --node / --nodegroup / --computezone)
+nvfleetctl tag list --node <node-uuid> --output json
+nvfleetctl tag list --computezone <zone-id> --prefix env --output json
+```
+
+`tag list` answers "what tags are in use?" — the resource filters are mutually exclusive, but `--prefix` can combine with any one of them. There's no pagination here.
 
 ### Reports
 
@@ -106,7 +179,7 @@ nvfleetctl report inventory --format csv --signed               # signed zip bun
 nvfleetctl report inventory --format csv --signed --output-path ./reports/
 
 # Error report over a time range. Pick ONE time selector:
-#   --window <dur>            relative, e.g. 24h, 168h, 7d
+#   --window <dur>            relative, e.g. 24h, 168h (Go duration; no d unit)
 #   --start ... --end ...     absolute RFC3339, used together
 nvfleetctl report error --window 24h --output json                          # overview (totals)
 nvfleetctl report error --view list --group-by error --window 168h --output json
@@ -148,8 +221,8 @@ If a query fails with **exit code 77** or a 401/403, the user isn't authenticate
 
 User: *"Are any of my H100 nodes having problems?"*
 
-1. `nvfleetctl node list --gpu-type H100 --health Degraded,Unhealthy --all --output json`
-2. Read `pagination.total` and the `items`. Say something like: *"Yes — 2 of your 16 H100 nodes are degraded: `gpu-node-12` (firmware check Failed) and `gpu-node-31` (agent Offline). The other 14 are healthy."*
+1. `nvfleetctl node list --gpu-type H100 --health Degraded,Unhealthy --output json` — the tight filter keeps the result small, so the first page is usually the whole answer (check `hasMore`; only page further or add `--all` if it's set and you need the rest). For just the *count* of degraded H100s, `--page-size 1` and read `total`. (On `alert list` the more-pages field is `pageCursorNext`, not `hasMore` — see [Counting without fetching](#counting-without-fetching).)
+2. Read `total` and the `nodes`. Say something like: *"Yes — 2 of your 16 H100 nodes are degraded: `gpu-node-12` (firmware check Failed) and `gpu-node-31` (agent Offline). The other 14 are healthy."*
 3. If they want detail on one, follow with `nvfleetctl node describe <uuid> --output json` and `nvfleetctl alert list --node <uuid> --output json`.
 
 That's the loop: pick the command, filter tightly, run with JSON, answer in prose, drill down on request.
