@@ -5,9 +5,10 @@ Produce a standalone `.html` file for the final RCA/RCCA report.
 ## File Requirements
 
 - Use one self-contained HTML file with `<!doctype html>`, `<html lang="en">`,
-  `<meta charset="utf-8">`, and a responsive `<meta name="viewport">`.
+  `<meta charset="utf-8">`, and a responsive `<meta name="viewport">`. These, and
+  the CSS, are given verbatim in the skeleton below — copy them as-is.
 - Use inline CSS only. Do not reference external fonts, scripts, images, or
-  stylesheets.
+  stylesheets, so the final file is fully self-contained and opens offline.
 - HTML-escape all dynamic values from `nvfleetctl` output.
 - Do not embed full raw JSON unless the user explicitly asks for it.
 - Include command provenance and evidence summaries, not secrets or config file
@@ -21,8 +22,8 @@ Produce a standalone `.html` file for the final RCA/RCCA report.
 Match the `fleet-health-report` skill so the two reports read as one product.
 Render in dark mode by default; do not add a light-mode fallback unless the user
 explicitly asks for one. The palette and tokens below are the source of truth —
-encode them as inline CSS variables and semantic class names, and do not rely on
-any external design system.
+they are encoded as inline CSS variables and semantic class names in the skeleton
+below; do not rely on any external design system.
 
 - Treat `--nv-green` as the NVIDIA brand accent for the masthead rule, links,
   and small highlights only. Do not use brand green to mean healthy; healthy uses
@@ -55,8 +56,10 @@ Use these sections in this order:
 7. Contributing Factors.
 8. Corrective and Preventive Actions.
 9. Validation Plan.
-10. Evidence Appendix.
-11. Assumptions and Unknowns.
+10. Reference (optional — include only when code or reason-string enrichment was
+    performed; omit the entire section otherwise).
+11. Evidence Appendix.
+12. Assumptions and Unknowns.
 
 ## Status Styling
 
@@ -83,9 +86,29 @@ Populate `[evidence_rows]` with one row per command actually run, including
 (full and `--active`), and each `alert describe`. Each row lists the exact
 command, its purpose, and a one-line result summary — never secrets or raw JSON.
 
+## Reference (optional)
+
+Include the `#reference` section only when the optional code/reason enrichment
+step produced at least one explanation; omit the whole `<div>` otherwise. Each
+row pairs a raw code or reason string (for example `XID 79`, or an
+`integrityCheckReason` value) with its plain-language meaning and an explicit
+source (title and URL). This section is attribution for external explanations
+only — it must never restate telemetry as if it were external, and its content
+must not have influenced the timeline, impact, root cause, or confidence badge.
+Bake the looked-up text in as static prose so the file still opens offline.
+
 ## HTML Skeleton
 
-Copy and adapt this skeleton. Replace bracketed placeholders with report content.
+Write the whole document from this skeleton in one shot. Everything from
+`<!doctype html>` through the end of the `</style>` block is **invariant** — copy
+it byte-for-byte every run, and do not restyle, reorder, or "improve" the CSS.
+The palette/tokens described above are exactly what this CSS encodes.
+
+The `<title>` is a fixed, generic string; the per-node title
+(`RCA/RCCA: [node] [health] on [date]`) lives in the `<h1>` masthead.
+
+Only the body content varies: replace bracketed placeholders with report content
+and choose each `[*_class]` from the Status Styling map above.
 
 ```html
 <!doctype html>
@@ -93,7 +116,7 @@ Copy and adapt this skeleton. Replace bracketed placeholders with report content
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RCA/RCCA: [node] [health] on [date]</title>
+  <title>NVIDIA Fleet Intelligence — Node RCA/RCCA</title>
   <style>
     :root {
       --nv-green: #76b900;
@@ -287,6 +310,16 @@ Copy and adapt this skeleton. Replace bracketed placeholders with report content
     <div class="report-section" id="validation">
       <h2>Validation Plan</h2>
       <ul>[validation_items]</ul>
+    </div>
+
+    <!-- Optional: include only when code/reason enrichment was performed; omit otherwise. -->
+    <div class="report-section" id="reference">
+      <h2>Reference</h2>
+      <p class="subtitle">Plain-language explanations of codes and check-reasons from external sources, provided for attribution only. These are not telemetry-derived facts and did not affect the timeline, impact, root cause, or confidence.</p>
+      <table>
+        <thead><tr><th>Code / Reason</th><th>Meaning</th><th>Source</th></tr></thead>
+        <tbody>[reference_rows]</tbody>
+      </table>
     </div>
 
     <div class="report-section" id="evidence">
