@@ -4,7 +4,7 @@
 
 name: node-rca-rcca
 description: Produce a structured Root Cause Analysis (RCA) and Root Cause Corrective Action (RCCA) document for a specific degraded or unhealthy NVIDIA Fleet Intelligence node, using live nvfleetctl evidence. Use when the user asks to investigate a node health issue, root-cause a degraded or unhealthy node, explain why a node went unhealthy, analyze a node incident or alert history, or write an RCA/RCCA, post-incident, or corrective-action report for a node.
-author: Emily Zhang <emizhang@nvidia.com>
+author: NVIDIA Fleet Intelligence <fleetint@exchange.nvidia.com>
 ---
 
 # Node RCA/RCCA
@@ -123,12 +123,21 @@ is derived from the node UUID, so any later command can reconstruct the path
 without remembering state:
 
 ```bash
-work="${TMPDIR:-/tmp}/node-rca-<node_uuid>"; mkdir -p "$work"
+node_uuid="<node_uuid>"
+printf '%s' "$node_uuid" \
+  | grep -qiE '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' \
+  || { echo "refusing: malformed node UUID" >&2; exit 1; }
+work="${TMPDIR:-/tmp}/node-rca-$node_uuid"; mkdir -p "$work"
 ```
 
-Re-derive `work` with that same line at the top of **every** command that reads
+Re-derive `work` with that same block at the top of **every** command that reads
 or writes scratch, and delete the whole directory with `rm -rf "$work"` in the
-write command.
+write command. **Keep the UUID check** — `$work` is the argument to `mkdir -p`
+and `rm -rf`, so a value carrying `/` or `..` (a hostname pasted where a UUID
+belongs, a truncated or hand-typed id) would point those at a directory outside
+the scratch tree. Validating the canonical `8-4-4-4-12` hex form first rejects
+the bad value before any filesystem call. Use the UUID from `node list`, never
+a hostname.
 
 Shell variables do **not** survive from one command invocation to the next — each
 runs in a fresh shell. So do not accumulate paths in a variable
@@ -392,16 +401,24 @@ masthead (health + confidence badges) and the `page-main` sections. Emit it once
 in full, via a single heredoc:
 
 ```bash
-out="node-rca-rcca-<hostname-or-node-uuid>.html"
-work="${TMPDIR:-/tmp}/node-rca-<node_uuid>"
+slug=$(printf '%s' "<hostname-or-node-uuid>" | tr -c 'A-Za-z0-9._-' '-' \
+  | sed 's/^[.-]*//')
+[ -n "$slug" ] || { echo "refusing: empty report name" >&2; exit 1; }
+out="node-rca-rcca-$slug.html"
+node_uuid="<node_uuid>"
+printf '%s' "$node_uuid" \
+  | grep -qiE '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' \
+  || { echo "refusing: malformed node UUID" >&2; exit 1; }
+work="${TMPDIR:-/tmp}/node-rca-$node_uuid"
 cat > "$out" <<'NVFLEET_REPORT'
 <!doctype html>
 ... entire document, chrome copied verbatim from the template ...
 </html>
 NVFLEET_REPORT
-# same turn: fail on leftover placeholders, report the section count, confirm the
-# document closed, then remove the scratch directory
-! grep -qE '\[[a-z_]+\]' "$out" && grep -c 'id="[a-z-]*"' "$out" \
+# same turn: fail on leftover placeholders, require the documented section count,
+# confirm the document closed, then remove the scratch directory
+n=$(grep -c 'id="[a-z-]*"' "$out"); echo "sections: $n"
+! grep -qE '\[[a-z_]+\]' "$out" && { [ "$n" -eq 11 ] || [ "$n" -eq 10 ]; } \
   && grep -q '</html>' "$out" && rm -rf "$work"
 ```
 
@@ -415,11 +432,17 @@ NVFLEET_REPORT
   validation turns into one — the largest avoidable round-trip in the skill.
 - Set `out` and `work` **in this same command**. Nothing carries over from the
   collection turns, so `rm -rf "$work"` deletes nothing unless `work` is
-  re-derived here from the node UUID exactly as it was in "Cleanup discipline".
-- The `grep -c` prints how many section `id`s made it into the file (11, or 10
-  when the optional Reference section is omitted) — read that number and confirm
-  it. Its exit status only proves the file is non-empty; a wrong count still
-  passes the `&&` chain.
+  re-derived here from the node UUID exactly as it was in "Cleanup discipline",
+  UUID check included.
+- The `slug` line folds the hostname (or UUID) into a bare filename component —
+  anything outside `[A-Za-z0-9._-]` becomes `-`, and leading dots/dashes are
+  stripped, so a hostname carrying `/` or `..` cannot redirect `$out` out of the
+  working directory or turn it into an option-looking argument. When the user
+  gives an explicit output path, use it as given and skip the slug.
+- The `grep -c` prints how many section `id`s made it into the file and the chain
+  requires that count to be 11 (or 10 when the optional Reference section is
+  omitted) — any other count fails the `&&` chain and leaves `$work` in place, so
+  the document can be rewritten without re-collecting.
 
 Requirements:
 
@@ -457,8 +480,10 @@ concrete blocker.
    (`nvfleetctl node list --hostname gpu-h100-3271 --view detail --all --output json`);
    confirm the single matching UUID.
 3. Set a 7-day window and collect Batch B in one parallel turn: `node describe`,
-   `node health --start <T-7d> --end <T>`, `event list --window 168h --all`,
-   `event buckets --window 168h`, and `alert timeline` (full and `--active`).
+   `node health --start <T-7d> --end <T>`,
+   `event list --node <node_uuid> --window 168h --all`,
+   `event buckets --node <node_uuid> --window 168h`, and
+   `alert timeline --node <node_uuid>` (full and `--active`).
 4. Validate completeness, then apply the fast-path gate:
    - **Trivial** (≤1 active alert, 0 events, one health segment): describe just the
      single active alert, then write. *(This is the common case — e.g. a lone
