@@ -221,8 +221,8 @@ If a query fails with **exit code 77** or a 401/403, the user isn't authenticate
 
 User: *"Are any of my H100 nodes having problems?"*
 
-1. `nvfleetctl node list --gpu-type H100 --health Degraded,Unhealthy --output json` — the tight filter keeps the result small, so the first page is usually the whole answer (check `hasMore`; only page further or add `--all` if it's set and you need the rest). For just the *count* of degraded H100s, `--page-size 1` and read `total`. (On `alert list` the more-pages field is `pageCursorNext`, not `hasMore` — see [Counting without fetching](#counting-without-fetching).)
-2. Read `total` and the `nodes`. Say something like: *"Yes — 2 of your 16 H100 nodes are degraded: `gpu-node-12` (firmware check Failed) and `gpu-node-31` (agent Offline). The other 14 are healthy."*
+1. `nvfleetctl node list --gpu-type H100 --health Degraded,Unhealthy,Unknown --output json` — include `Unknown` so nodes the backend can't report on don't silently disappear. The tight filter keeps the result small, so the first page is usually the whole answer (check `hasMore`; only page further or add `--all` if it's set and you need the rest). For just the *count*, `--page-size 1` and read `total`. (On `alert list` the more-pages field is `pageCursorNext`, not `hasMore` — see [Counting without fetching](#counting-without-fetching).)
+2. Read `total` and the `nodes` — `total` counts only the filtered matches, not the H100 fleet. Break the count out by state: *"Yes — 2 H100 nodes are in trouble: `gpu-node-12` (firmware check Failed) and `gpu-node-31` (agent Offline). 1 more, `gpu-node-07`, is reporting Unknown health."* Don't claim anything about the rest without querying for it.
 3. If they want detail on one, follow with `nvfleetctl node describe <uuid> --output json` and `nvfleetctl alert list --node <uuid> --output json`.
 
 That's the loop: pick the command, filter tightly, run with JSON, answer in prose, drill down on request.
