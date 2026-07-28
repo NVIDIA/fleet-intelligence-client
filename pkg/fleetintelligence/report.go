@@ -160,7 +160,8 @@ type InventoryNode struct {
 	IntegrityCheckReason   string       `json:"integrityCheckReason,omitempty"`
 	LastIntegrityCheckTime string       `json:"lastIntegrityCheckTS,omitempty"`
 	FirmwareCheck          string       `json:"firmwareCheck,omitempty"`
-	LastUpdatedTime        string       `json:"lastUpdatedTS,omitempty"`
+	EnrolledAt             string       `json:"enrolledAt,omitempty"`
+	RemovedAt              string       `json:"removedAt,omitempty"`
 	GeoLocation            *GeoLocation `json:"geoLocation,omitempty"`
 	SerialNumbers          []string     `json:"serialNumbers,omitempty"`
 }
@@ -750,7 +751,8 @@ func inventoryNodeFromGenerated(node fleetapi.ModelsInventoryNode) InventoryNode
 		IntegrityCheckReason:   stringValue(node.IntegrityCheckReason),
 		LastIntegrityCheckTime: stringValue(node.LastIntegrityCheckTS),
 		FirmwareCheck:          enumStringValue(node.FirmwareCheck),
-		LastUpdatedTime:        stringValue(node.LastUpdatedTS),
+		EnrolledAt:             stringValue(node.EnrolledAt),
+		RemovedAt:              stringValue(node.RemovedAt),
 		GeoLocation:            geoLocationFromGenerated(node.GeoLocation),
 		SerialNumbers:          cloneStringSlice(node.SerialNumbers),
 	}

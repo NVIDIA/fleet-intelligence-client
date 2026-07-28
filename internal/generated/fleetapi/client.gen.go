@@ -371,6 +371,153 @@ func (e ModelsNotificationScopeType) Valid() bool {
 	}
 }
 
+// Defines values for GetV1AlertTimelineNodesParamsSortBy.
+const (
+	GetV1AlertTimelineNodesParamsSortByAlert       GetV1AlertTimelineNodesParamsSortBy = "alert"
+	GetV1AlertTimelineNodesParamsSortByComputeZone GetV1AlertTimelineNodesParamsSortBy = "computeZone"
+	GetV1AlertTimelineNodesParamsSortByGpuType     GetV1AlertTimelineNodesParamsSortBy = "gpuType"
+	GetV1AlertTimelineNodesParamsSortByHostname    GetV1AlertTimelineNodesParamsSortBy = "hostname"
+	GetV1AlertTimelineNodesParamsSortByLastUpdate  GetV1AlertTimelineNodesParamsSortBy = "lastUpdate"
+	GetV1AlertTimelineNodesParamsSortByNodeGroup   GetV1AlertTimelineNodesParamsSortBy = "nodeGroup"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesParamsSortBy enum.
+func (e GetV1AlertTimelineNodesParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesParamsSortByAlert:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByComputeZone:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByGpuType:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByHostname:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByLastUpdate:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByNodeGroup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesParamsOrder.
+const (
+	GetV1AlertTimelineNodesParamsOrderAsc  GetV1AlertTimelineNodesParamsOrder = "asc"
+	GetV1AlertTimelineNodesParamsOrderDesc GetV1AlertTimelineNodesParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesParamsOrder enum.
+func (e GetV1AlertTimelineNodesParamsOrder) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesParamsOrderAsc:
+		return true
+	case GetV1AlertTimelineNodesParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesParamsAlertStates.
+const (
+	GetV1AlertTimelineNodesParamsAlertStatesCritical GetV1AlertTimelineNodesParamsAlertStates = "Critical"
+	GetV1AlertTimelineNodesParamsAlertStatesResolved GetV1AlertTimelineNodesParamsAlertStates = "Resolved"
+	GetV1AlertTimelineNodesParamsAlertStatesWarning  GetV1AlertTimelineNodesParamsAlertStates = "Warning"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesParamsAlertStates enum.
+func (e GetV1AlertTimelineNodesParamsAlertStates) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesParamsAlertStatesCritical:
+		return true
+	case GetV1AlertTimelineNodesParamsAlertStatesResolved:
+		return true
+	case GetV1AlertTimelineNodesParamsAlertStatesWarning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy.
+const (
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByComponent  GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy = "component"
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByLastUpdate GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy = "lastUpdate"
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByStartTime  GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy = "startTime"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy enum.
+func (e GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByComponent:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByLastUpdate:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByStartTime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder.
+const (
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsOrderAsc  GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder = "asc"
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsOrderDesc GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder enum.
+func (e GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsOrderAsc:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates.
+const (
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesCritical GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates = "Critical"
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesResolved GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates = "Resolved"
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesWarning  GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates = "Warning"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates enum.
+func (e GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesCritical:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesResolved:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesWarning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder.
+const (
+	GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrderAsc  GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder = "asc"
+	GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrderDesc GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder enum.
+func (e GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrderAsc:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1ComputezonesParamsView.
 const (
 	GetV1ComputezonesParamsViewBasic  GetV1ComputezonesParamsView = "basic"
@@ -734,6 +881,27 @@ func (e GetV1NodesParamsOrder) Valid() bool {
 	}
 }
 
+// Defines values for GetV1NodesHistoryParamsActorType.
+const (
+	All    GetV1NodesHistoryParamsActorType = "all"
+	System GetV1NodesHistoryParamsActorType = "system"
+	User   GetV1NodesHistoryParamsActorType = "user"
+)
+
+// Valid indicates whether the value is a known member of the GetV1NodesHistoryParamsActorType enum.
+func (e GetV1NodesHistoryParamsActorType) Valid() bool {
+	switch e {
+	case All:
+		return true
+	case System:
+		return true
+	case User:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1ReportsErrorParamsGroupBy.
 const (
 	GetV1ReportsErrorParamsGroupByError GetV1ReportsErrorParamsGroupBy = "error"
@@ -853,16 +1021,16 @@ func (e GetV1ReportsInventoryParamsSortBy) Valid() bool {
 
 // Defines values for GetV1ReportsInventoryParamsOrder.
 const (
-	Asc  GetV1ReportsInventoryParamsOrder = "asc"
-	Desc GetV1ReportsInventoryParamsOrder = "desc"
+	GetV1ReportsInventoryParamsOrderAsc  GetV1ReportsInventoryParamsOrder = "asc"
+	GetV1ReportsInventoryParamsOrderDesc GetV1ReportsInventoryParamsOrder = "desc"
 )
 
 // Valid indicates whether the value is a known member of the GetV1ReportsInventoryParamsOrder enum.
 func (e GetV1ReportsInventoryParamsOrder) Valid() bool {
 	switch e {
-	case Asc:
+	case GetV1ReportsInventoryParamsOrderAsc:
 		return true
-	case Desc:
+	case GetV1ReportsInventoryParamsOrderDesc:
 		return true
 	default:
 		return false
@@ -977,15 +1145,33 @@ type ModelsAlertState string
 
 // ModelsAlertTimelineDetailResponse defines model for models.AlertTimelineDetailResponse.
 type ModelsAlertTimelineDetailResponse struct {
+	// AlertStatus Current alert status: severity if active, state if resolved/detected
+	AlertStatus          *string `json:"alertStatus,omitempty"`
 	AlertUuid            *string `json:"alertUuid,omitempty"`
 	Component            *string `json:"component,omitempty"`
 	ComponentDisplayName *string `json:"componentDisplayName,omitempty"`
-	CustomerID           *string `json:"customerID,omitempty"`
-	IsBackendComponent   *bool   `json:"isBackendComponent,omitempty"`
-	NodeUuid             *string `json:"nodeUuid,omitempty"`
+
+	// ComputeZone Compute zone display name from node inventory
+	ComputeZone        *string `json:"computeZone,omitempty"`
+	CustomerID         *string `json:"customerID,omitempty"`
+	HasMore            *bool   `json:"hasMore,omitempty"`
+	IsBackendComponent *bool   `json:"isBackendComponent,omitempty"`
+
+	// NodeGroup Node group display name from node inventory
+	NodeGroup *string `json:"nodeGroup,omitempty"`
+	NodeUuid  *string `json:"nodeUuid,omitempty"`
+
+	// Page Pagination metadata for the timeline events. These fields are populated only when the caller
+	// opts into pagination by supplying the pageSize query parameter; they are omitted entirely
+	// otherwise, so existing clients that expect the full, unpaginated timeline are unaffected.
+	// When present, Timeline holds only the requested page (still ordered oldest→newest) and Total
+	// is the count of all timeline events for the alert.
+	Page     *int `json:"page,omitempty"`
+	PageSize *int `json:"pageSize,omitempty"`
 
 	// Timeline Sorted by eventTimestamp ASC (oldest to newest)
 	Timeline *[]ModelsAlertTimelineEvent `json:"timeline,omitempty"`
+	Total    *int                        `json:"total,omitempty"`
 }
 
 // ModelsAlertTimelineEvent defines model for models.AlertTimelineEvent.
@@ -1003,11 +1189,29 @@ type ModelsAlertTimelineEvent struct {
 
 // ModelsAlertTimelineNode defines model for models.AlertTimelineNode.
 type ModelsAlertTimelineNode struct {
-	// HostStatus "Active" if any active alerts, "Resolved" otherwise
+	// ComputeZone Compute zone display name
+	ComputeZone *string `json:"computeZone,omitempty"`
+
+	// CriticalCount Count of Critical alerts on this node (respects filters and component visibility)
+	CriticalCount *int `json:"criticalCount,omitempty"`
+
+	// GpuType GPU product name from node inventory
+	GpuType *string `json:"gpuType,omitempty"`
+
+	// HostStatus Deprecated: use criticalCount/warningCount; kept for backward compatibility
 	HostStatus    *string `json:"hostStatus,omitempty"`
 	Hostname      *string `json:"hostname,omitempty"`
 	LastAlertTime *string `json:"lastAlertTime,omitempty"`
-	NodeUuid      *string `json:"nodeUuid,omitempty"`
+
+	// NodeGroup Node group display name
+	NodeGroup *string `json:"nodeGroup,omitempty"`
+	NodeUuid  *string `json:"nodeUuid,omitempty"`
+
+	// ResolvedCount Count of Resolved alerts; historical view only (0 when active=true)
+	ResolvedCount *int `json:"resolvedCount,omitempty"`
+
+	// WarningCount Count of Warning alerts on this node
+	WarningCount *int `json:"warningCount,omitempty"`
 }
 
 // ModelsAlertTimelineNodeAlert defines model for models.AlertTimelineNodeAlert.
@@ -1018,6 +1222,9 @@ type ModelsAlertTimelineNodeAlert struct {
 	Component            *string `json:"component,omitempty"`
 	ComponentDisplayName *string `json:"componentDisplayName,omitempty"`
 	LastEventTime        *string `json:"lastEventTime,omitempty"`
+
+	// StartTime When the alert was first detected
+	StartTime *string `json:"startTime,omitempty"`
 }
 
 // ModelsAlertTimelineNodeAlertsResponse defines model for models.AlertTimelineNodeAlertsResponse.
@@ -1035,13 +1242,30 @@ type ModelsAlertTimelineNodeAlertsResponse struct {
 
 // ModelsAlertTimelineNodesResponse defines model for models.AlertTimelineNodesResponse.
 type ModelsAlertTimelineNodesResponse struct {
-	HasMore  *bool                      `json:"hasMore,omitempty"`
-	Nodes    *[]ModelsAlertTimelineNode `json:"nodes,omitempty"`
-	Page     *int                       `json:"page,omitempty"`
-	PageSize *int                       `json:"pageSize,omitempty"`
+	// DistinctComputeZoneCount Distinct compute zones among matching nodes
+	DistinctComputeZoneCount *int `json:"distinctComputeZoneCount,omitempty"`
 
-	// Total Total number of nodes
+	// DistinctGpuTypeCount Distinct GPU types among matching nodes
+	DistinctGpuTypeCount *int `json:"distinctGpuTypeCount,omitempty"`
+
+	// DistinctNodeGroupCount Distinct node groups among matching nodes
+	DistinctNodeGroupCount *int                       `json:"distinctNodeGroupCount,omitempty"`
+	HasMore                *bool                      `json:"hasMore,omitempty"`
+	Nodes                  *[]ModelsAlertTimelineNode `json:"nodes,omitempty"`
+	Page                   *int                       `json:"page,omitempty"`
+	PageSize               *int                       `json:"pageSize,omitempty"`
+
+	// Total Total number of nodes matching filters across all pages
 	Total *int `json:"total,omitempty"`
+
+	// TotalCritical Cross-page critical alert total; drives ALERT header
+	TotalCritical *int `json:"totalCritical,omitempty"`
+
+	// TotalResolved Cross-page resolved alert total; historical view only
+	TotalResolved *int `json:"totalResolved,omitempty"`
+
+	// TotalWarning Cross-page warning alert total
+	TotalWarning *int `json:"totalWarning,omitempty"`
 }
 
 // ModelsAudience defines model for models.Audience.
@@ -1430,6 +1654,7 @@ type ModelsIntegrityCheckExtraInfo struct {
 type ModelsInventoryNode struct {
 	AgentVersion            *string                        `json:"agentVersion,omitempty"`
 	ComputeZone             *string                        `json:"computeZone,omitempty"`
+	EnrolledAt              *string                        `json:"enrolledAt,omitempty"`
 	FirmwareCheck           *ModelsFirmwareCheck           `json:"firmwareCheck,omitempty"`
 	GeoLocation             *ModelsGeoLocation             `json:"geoLocation,omitempty"`
 	GpuCount                *int                           `json:"gpuCount,omitempty"`
@@ -1443,11 +1668,11 @@ type ModelsInventoryNode struct {
 	IntegrityCheckReason    *string                        `json:"integrityCheckReason,omitempty"`
 	KernelVersion           *string                        `json:"kernelVersion,omitempty"`
 	LastIntegrityCheckTS    *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string                        `json:"lastUpdatedTS,omitempty"`
 	NodeGroup               *string                        `json:"nodeGroup,omitempty"`
 	NodeUUID                *string                        `json:"nodeUUID,omitempty"`
 	PrivateIP               *string                        `json:"privateIP,omitempty"`
 	PublicIP                *string                        `json:"publicIP,omitempty"`
+	RemovedAt               *string                        `json:"removedAt,omitempty"`
 	SerialNumbers           *[]string                      `json:"serialNumbers,omitempty"`
 	SystemUUID              *string                        `json:"systemUUID,omitempty"`
 }
@@ -1788,6 +2013,26 @@ type ModelsNodeHealthHistoryResponse struct {
 	MachineStatus *[]ModelsHealthSegment `json:"machineStatus,omitempty"`
 }
 
+// ModelsNodeHistoryEntry defines model for models.NodeHistoryEntry.
+type ModelsNodeHistoryEntry struct {
+	ActorType   *string `json:"actorType,omitempty"`
+	ComputeZone *string `json:"computeZone,omitempty"`
+	DeletedAt   *string `json:"deletedAt,omitempty"`
+	DeletedBy   *string `json:"deletedBy,omitempty"`
+	Hostname    *string `json:"hostname,omitempty"`
+	NodeGroup   *string `json:"nodeGroup,omitempty"`
+	NodeUuid    *string `json:"nodeUuid,omitempty"`
+}
+
+// ModelsNodeHistoryResponse defines model for models.NodeHistoryResponse.
+type ModelsNodeHistoryResponse struct {
+	HasMore  *bool                     `json:"hasMore,omitempty"`
+	History  *[]ModelsNodeHistoryEntry `json:"history,omitempty"`
+	Page     *int                      `json:"page,omitempty"`
+	PageSize *int                      `json:"pageSize,omitempty"`
+	Total    *int                      `json:"total,omitempty"`
+}
+
 // ModelsNodeResources defines model for models.NodeResources.
 type ModelsNodeResources struct {
 	CpuInfo    *ModelsCPUInfo    `json:"cpuInfo,omitempty"`
@@ -2021,9 +2266,15 @@ type ModelsUpdateRetentionPolicyRequest struct {
 	RetentionDays int `json:"retentionDays"`
 }
 
+// GetV1AlertTimelineFilterOptionsParams defines parameters for GetV1AlertTimelineFilterOptions.
+type GetV1AlertTimelineFilterOptionsParams struct {
+	// Active Active Alerts view when true; Historical Alerts when false (default: false)
+	Active *bool `form:"active,omitempty" json:"active,omitempty"`
+}
+
 // GetV1AlertTimelineNodesParams defines parameters for GetV1AlertTimelineNodes.
 type GetV1AlertTimelineNodesParams struct {
-	// Active Filter only nodes with active alerts (default: false)
+	// Active Active Alerts view when true; Historical Alerts when false (default: false)
 	Active *bool `form:"active,omitempty" json:"active,omitempty"`
 
 	// Page Page number (0-indexed, default: 0)
@@ -2031,15 +2282,69 @@ type GetV1AlertTimelineNodesParams struct {
 
 	// PageSize Number of nodes per page (default: 50, max: 100)
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+
+	// Hostname Case-insensitive partial match on hostname
+	Hostname *string `form:"hostname,omitempty" json:"hostname,omitempty"`
+
+	// SortBy Sortable table-header column. alert ranks by critical then warning count.
+	SortBy *GetV1AlertTimelineNodesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// Order Sort direction for sortBy
+	Order *GetV1AlertTimelineNodesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
+
+	// GpuTypes Filter to nodes with matching GPU types (OR within dimension)
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// NodeGroupIds Filter to nodes in matching node groups by node group ID (OR within dimension)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Filter to nodes in matching compute zones by compute zone ID (OR within dimension)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// AlertStates Filter to nodes with at least one alert whose state matches (OR within dimension). Resolved applies to the Historical view only (active=false).
+	AlertStates *[]GetV1AlertTimelineNodesParamsAlertStates `form:"alertStates,omitempty" json:"alertStates,omitempty"`
+
+	// ComponentTypes Filter to nodes with alerts on matching component types. Use the value 'psirt' to match all security-vulnerability CVEs (the collapsed 'Security Vulnerability' option).
+	ComponentTypes *[]string `form:"componentTypes,omitempty" json:"componentTypes,omitempty"`
 }
+
+// GetV1AlertTimelineNodesParamsSortBy defines parameters for GetV1AlertTimelineNodes.
+type GetV1AlertTimelineNodesParamsSortBy string
+
+// GetV1AlertTimelineNodesParamsOrder defines parameters for GetV1AlertTimelineNodes.
+type GetV1AlertTimelineNodesParamsOrder string
+
+// GetV1AlertTimelineNodesParamsAlertStates defines parameters for GetV1AlertTimelineNodes.
+type GetV1AlertTimelineNodesParamsAlertStates string
 
 // GetV1AlertTimelineNodesNodeUuidAlertsParams defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
 type GetV1AlertTimelineNodesNodeUuidAlertsParams struct {
-	// Active Filter only currently active alerts (default: false)
+	// Active Active Alerts view when true; Historical Alerts when false (default: false)
 	Active *bool `form:"active,omitempty" json:"active,omitempty"`
 
 	// WithoutPsirt Exclude PSIRT alerts from results (default: false)
 	WithoutPsirt *bool `form:"withoutPsirt,omitempty" json:"withoutPsirt,omitempty"`
+
+	// SortBy Sortable table-header column. component sorts by component name.
+	SortBy *GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// Order Sort direction for sortBy
+	Order *GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder `form:"order,omitempty" json:"order,omitempty"`
+
+	// AlertStates Filter to alerts whose state matches (OR within dimension), carried from the Level 1 filter. Resolved applies to the Historical view only (active=false).
+	AlertStates *[]GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates `form:"alertStates,omitempty" json:"alertStates,omitempty"`
+
+	// ComponentTypes Filter to alerts on matching component types. Use the value 'psirt' to match all security-vulnerability CVEs (the collapsed 'Security Vulnerability' option).
+	ComponentTypes *[]string `form:"componentTypes,omitempty" json:"componentTypes,omitempty"`
+
+	// GpuTypes Node-level filter carried from Level 1: match the node's GPU type (OR within dimension)
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// NodeGroupIds Node-level filter carried from Level 1: match the node's node group by ID (OR within dimension)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Node-level filter carried from Level 1: match the node's compute zone by ID (OR within dimension)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
 
 	// Page Page number (0-indexed, default: 0)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
@@ -2047,6 +2352,30 @@ type GetV1AlertTimelineNodesNodeUuidAlertsParams struct {
 	// PageSize Number of alerts per page (default: 50, max: 100)
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
+
+// GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
+type GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy string
+
+// GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
+type GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder string
+
+// GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
+type GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates string
+
+// GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams defines parameters for GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid.
+type GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams struct {
+	// Order Sort direction on event time: 'desc' (default, most recent update first) or 'asc' (chronological, oldest first)
+	Order *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder `form:"order,omitempty" json:"order,omitempty"`
+
+	// Page Page number (0-indexed); only applied when pageSize is supplied
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Timeline events per page (1-100). Omit for the full, unpaginated timeline (default behavior)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder defines parameters for GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid.
+type GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder string
 
 // GetV1AlertsParams defines parameters for GetV1Alerts.
 type GetV1AlertsParams struct {
@@ -2386,6 +2715,21 @@ type GetV1NodesParamsOrder string
 type GetV1Nodes200JSONResponseBody struct {
 	union json.RawMessage
 }
+
+// GetV1NodesHistoryParams defines parameters for GetV1NodesHistory.
+type GetV1NodesHistoryParams struct {
+	// Page Page number (0-indexed)
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Page size (max 100)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+
+	// ActorType Filter by removal actor
+	ActorType *GetV1NodesHistoryParamsActorType `form:"actorType,omitempty" json:"actorType,omitempty"`
+}
+
+// GetV1NodesHistoryParamsActorType defines parameters for GetV1NodesHistory.
+type GetV1NodesHistoryParamsActorType string
 
 // GetV1NodesNodeUuidHealthHistoryParams defines parameters for GetV1NodesNodeUuidHealthHistory.
 type GetV1NodesNodeUuidHealthHistoryParams struct {
@@ -3099,6 +3443,9 @@ type ClientInterface interface {
 
 	PutV1AlertMuteRules(ctx context.Context, body PutV1AlertMuteRulesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetV1AlertTimelineFilterOptions request
+	GetV1AlertTimelineFilterOptions(ctx context.Context, params *GetV1AlertTimelineFilterOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetV1AlertTimelineNodes request
 	GetV1AlertTimelineNodes(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3106,7 +3453,7 @@ type ClientInterface interface {
 	GetV1AlertTimelineNodesNodeUuidAlerts(ctx context.Context, nodeUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid request
-	GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid(ctx context.Context, nodeUUID string, alertUUID string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid(ctx context.Context, nodeUUID string, alertUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1Alerts request
 	GetV1Alerts(ctx context.Context, params *GetV1AlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3153,6 +3500,9 @@ type ClientInterface interface {
 
 	// GetV1Nodes request
 	GetV1Nodes(ctx context.Context, params *GetV1NodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1NodesHistory request
+	GetV1NodesHistory(ctx context.Context, params *GetV1NodesHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1NodesOptions request
 	GetV1NodesOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3294,6 +3644,18 @@ func (c *Client) PutV1AlertMuteRules(ctx context.Context, body PutV1AlertMuteRul
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetV1AlertTimelineFilterOptions(ctx context.Context, params *GetV1AlertTimelineFilterOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1AlertTimelineFilterOptionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetV1AlertTimelineNodes(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1AlertTimelineNodesRequest(c.Server, params)
 	if err != nil {
@@ -3318,8 +3680,8 @@ func (c *Client) GetV1AlertTimelineNodesNodeUuidAlerts(ctx context.Context, node
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid(ctx context.Context, nodeUUID string, alertUUID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidRequest(c.Server, nodeUUID, alertUUID)
+func (c *Client) GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid(ctx context.Context, nodeUUID string, alertUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidRequest(c.Server, nodeUUID, alertUUID, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3512,6 +3874,18 @@ func (c *Client) DeleteV1Nodes(ctx context.Context, body DeleteV1NodesJSONReques
 
 func (c *Client) GetV1Nodes(ctx context.Context, params *GetV1NodesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1NodesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV1NodesHistory(ctx context.Context, params *GetV1NodesHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1NodesHistoryRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3944,6 +4318,60 @@ func NewPutV1AlertMuteRulesRequestWithBody(server string, contentType string, bo
 	return req, nil
 }
 
+// NewGetV1AlertTimelineFilterOptionsRequest generates requests for GetV1AlertTimelineFilterOptions
+func NewGetV1AlertTimelineFilterOptionsRequest(server string, params *GetV1AlertTimelineFilterOptionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/alert_timeline/filter_options")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Active != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "active", *params.Active, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV1AlertTimelineNodesRequest generates requests for GetV1AlertTimelineNodes
 func NewGetV1AlertTimelineNodesRequest(server string, params *GetV1AlertTimelineNodesParams) (*http.Request, error) {
 	var err error
@@ -3999,6 +4427,102 @@ func NewGetV1AlertTimelineNodesRequest(server string, params *GetV1AlertTimeline
 		if params.PageSize != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Hostname != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hostname", *params.Hostname, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Order != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "order", *params.Order, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AlertStates != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "alertStates", *params.AlertStates, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComponentTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "componentTypes", *params.ComponentTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -4081,6 +4605,90 @@ func NewGetV1AlertTimelineNodesNodeUuidAlertsRequest(server string, nodeUUID str
 
 		}
 
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Order != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "order", *params.Order, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AlertStates != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "alertStates", *params.AlertStates, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComponentTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "componentTypes", *params.ComponentTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Page != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
@@ -4120,7 +4728,7 @@ func NewGetV1AlertTimelineNodesNodeUuidAlertsRequest(server string, nodeUUID str
 }
 
 // NewGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidRequest generates requests for GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid
-func NewGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidRequest(server string, nodeUUID string, alertUUID string) (*http.Request, error) {
+func NewGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidRequest(server string, nodeUUID string, alertUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4150,6 +4758,57 @@ func NewGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidRequest(server string, nod
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Order != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "order", *params.Order, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -5673,6 +6332,84 @@ func NewGetV1NodesRequest(server string, params *GetV1NodesParams) (*http.Reques
 	return req, nil
 }
 
+// NewGetV1NodesHistoryRequest generates requests for GetV1NodesHistory
+func NewGetV1NodesHistoryRequest(server string, params *GetV1NodesHistoryParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/nodes/history")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ActorType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "actorType", *params.ActorType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV1NodesOptionsRequest generates requests for GetV1NodesOptions
 func NewGetV1NodesOptionsRequest(server string) (*http.Request, error) {
 	var err error
@@ -7032,6 +7769,9 @@ type ClientWithResponsesInterface interface {
 
 	PutV1AlertMuteRulesWithResponse(ctx context.Context, body PutV1AlertMuteRulesJSONRequestBody, reqEditors ...RequestEditorFn) (*PutV1AlertMuteRulesResponse, error)
 
+	// GetV1AlertTimelineFilterOptionsWithResponse request
+	GetV1AlertTimelineFilterOptionsWithResponse(ctx context.Context, params *GetV1AlertTimelineFilterOptionsParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineFilterOptionsResponse, error)
+
 	// GetV1AlertTimelineNodesWithResponse request
 	GetV1AlertTimelineNodesWithResponse(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesResponse, error)
 
@@ -7039,7 +7779,7 @@ type ClientWithResponsesInterface interface {
 	GetV1AlertTimelineNodesNodeUuidAlertsWithResponse(ctx context.Context, nodeUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesNodeUuidAlertsResponse, error)
 
 	// GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse request
-	GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx context.Context, nodeUUID string, alertUUID string, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse, error)
+	GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx context.Context, nodeUUID string, alertUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse, error)
 
 	// GetV1AlertsWithResponse request
 	GetV1AlertsWithResponse(ctx context.Context, params *GetV1AlertsParams, reqEditors ...RequestEditorFn) (*GetV1AlertsResponse, error)
@@ -7086,6 +7826,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1NodesWithResponse request
 	GetV1NodesWithResponse(ctx context.Context, params *GetV1NodesParams, reqEditors ...RequestEditorFn) (*GetV1NodesResponse, error)
+
+	// GetV1NodesHistoryWithResponse request
+	GetV1NodesHistoryWithResponse(ctx context.Context, params *GetV1NodesHistoryParams, reqEditors ...RequestEditorFn) (*GetV1NodesHistoryResponse, error)
 
 	// GetV1NodesOptionsWithResponse request
 	GetV1NodesOptionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1NodesOptionsResponse, error)
@@ -7191,6 +7934,7 @@ type DeleteV1AlertMuteRulesResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7224,6 +7968,7 @@ type GetV1AlertMuteRulesResponse struct {
 	JSON200      *ModelsListMuteRulesResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7257,6 +8002,7 @@ type PutV1AlertMuteRulesResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7284,13 +8030,47 @@ func (r PutV1AlertMuteRulesResponse) ContentType() string {
 	return ""
 }
 
+type GetV1AlertTimelineFilterOptionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelsOptions
+	JSON401      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1AlertTimelineFilterOptionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1AlertTimelineFilterOptionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1AlertTimelineFilterOptionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV1AlertTimelineNodesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ModelsAlertTimelineNodesResponse
-	JSON400      *map[string]interface{}
-	JSON401      *map[string]interface{}
-	JSON500      *map[string]interface{}
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -7321,10 +8101,11 @@ type GetV1AlertTimelineNodesNodeUuidAlertsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ModelsAlertTimelineNodeAlertsResponse
-	JSON400      *map[string]interface{}
-	JSON401      *map[string]interface{}
-	JSON404      *map[string]interface{}
-	JSON500      *map[string]interface{}
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -7355,10 +8136,11 @@ type GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ModelsAlertTimelineDetailResponse
-	JSON400      *map[string]interface{}
-	JSON401      *map[string]interface{}
-	JSON404      *map[string]interface{}
-	JSON500      *map[string]interface{}
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -7390,6 +8172,7 @@ type GetV1AlertsResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *ModelsAlertResponse
 	JSON400      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7423,6 +8206,7 @@ type GetV1AlertsNodeUuidResponse struct {
 	JSON200      *ModelsNodeAlertResponse
 	JSON400      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7456,6 +8240,7 @@ type GetV1AuthStatusResponse struct {
 	JSON200      *ModelsAuthStatusResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -7489,6 +8274,7 @@ type GetV1ComputezonesResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7524,6 +8310,7 @@ type PutV1ComputezonesResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7558,6 +8345,7 @@ type GetV1EventsResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7593,6 +8381,7 @@ type GetV1EventsBucketsResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7627,6 +8416,7 @@ type GetV1MetricsResponse struct {
 	JSON200      *ModelsGetMetricsResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7662,6 +8452,7 @@ type GetV1MetricsQueryRangeResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7697,6 +8488,7 @@ type GetV1NodeGroupMembershipsResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7732,6 +8524,7 @@ type GetV1NodegroupsResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7766,6 +8559,7 @@ type GetV1NodegroupsOptionsResponse struct {
 	JSON200      *ModelsOptions
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7801,6 +8595,7 @@ type DeleteV1NodesResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7836,6 +8631,7 @@ type GetV1NodesResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7864,12 +8660,48 @@ func (r GetV1NodesResponse) ContentType() string {
 	return ""
 }
 
+type GetV1NodesHistoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelsNodeHistoryResponse
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1NodesHistoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1NodesHistoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1NodesHistoryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV1NodesOptionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ModelsOptions
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -7905,6 +8737,7 @@ type DeleteV1NodesNodeUuidResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7941,6 +8774,7 @@ type GetV1NodesNodeUuidResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -7976,6 +8810,7 @@ type GetV1NodesNodeUuidHealthHistoryResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -8009,6 +8844,7 @@ type PutV1NodesNodeUuidTagsResponse struct {
 	JSON200      *ModelsSetNodeTagsResponse
 	JSON400      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -8043,6 +8879,7 @@ type GetV1NotificationDeliveryLogResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8077,6 +8914,7 @@ type GetV1NotificationPreferencesResponse struct {
 	JSON200      *ModelsListNotificationPreferencesResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8112,6 +8950,7 @@ type PostV1NotificationPreferencesResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8147,6 +8986,7 @@ type DeleteV1NotificationPreferenceByIDResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8182,6 +9022,7 @@ type GetV1NotificationPreferenceByIDResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8217,6 +9058,7 @@ type PutV1NotificationPreferenceByIDResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8252,6 +9094,7 @@ type GetV1OverviewResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8287,6 +9130,7 @@ type GetV1ReportsErrorResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8322,6 +9166,7 @@ type GetV1ReportsInventoryResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8357,6 +9202,7 @@ type GetV1RetentionPolicyResponse struct {
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
 	JSON404      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8391,6 +9237,7 @@ type PutV1RetentionPolicyResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 	JSON503      *ModelsErrorResponse
 }
@@ -8426,6 +9273,7 @@ type GetV1TagsResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -8459,6 +9307,7 @@ type PatchV1TagsResponse struct {
 	JSON400      *ModelsErrorResponse
 	JSON401      *ModelsErrorResponse
 	JSON403      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
 	JSON500      *ModelsErrorResponse
 }
 
@@ -8490,6 +9339,7 @@ type GetV2MetricsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ModelsMetricsAggregationResponse
+	JSON499      *ModelsErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -8568,6 +9418,15 @@ func (c *ClientWithResponses) PutV1AlertMuteRulesWithResponse(ctx context.Contex
 	return ParsePutV1AlertMuteRulesResponse(rsp)
 }
 
+// GetV1AlertTimelineFilterOptionsWithResponse request returning *GetV1AlertTimelineFilterOptionsResponse
+func (c *ClientWithResponses) GetV1AlertTimelineFilterOptionsWithResponse(ctx context.Context, params *GetV1AlertTimelineFilterOptionsParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineFilterOptionsResponse, error) {
+	rsp, err := c.GetV1AlertTimelineFilterOptions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1AlertTimelineFilterOptionsResponse(rsp)
+}
+
 // GetV1AlertTimelineNodesWithResponse request returning *GetV1AlertTimelineNodesResponse
 func (c *ClientWithResponses) GetV1AlertTimelineNodesWithResponse(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesResponse, error) {
 	rsp, err := c.GetV1AlertTimelineNodes(ctx, params, reqEditors...)
@@ -8587,8 +9446,8 @@ func (c *ClientWithResponses) GetV1AlertTimelineNodesNodeUuidAlertsWithResponse(
 }
 
 // GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse request returning *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse
-func (c *ClientWithResponses) GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx context.Context, nodeUUID string, alertUUID string, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse, error) {
-	rsp, err := c.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid(ctx, nodeUUID, alertUUID, reqEditors...)
+func (c *ClientWithResponses) GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx context.Context, nodeUUID string, alertUUID string, params *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams, reqEditors ...RequestEditorFn) (*GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse, error) {
+	rsp, err := c.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid(ctx, nodeUUID, alertUUID, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -8735,6 +9594,15 @@ func (c *ClientWithResponses) GetV1NodesWithResponse(ctx context.Context, params
 		return nil, err
 	}
 	return ParseGetV1NodesResponse(rsp)
+}
+
+// GetV1NodesHistoryWithResponse request returning *GetV1NodesHistoryResponse
+func (c *ClientWithResponses) GetV1NodesHistoryWithResponse(ctx context.Context, params *GetV1NodesHistoryParams, reqEditors ...RequestEditorFn) (*GetV1NodesHistoryResponse, error) {
+	rsp, err := c.GetV1NodesHistory(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1NodesHistoryResponse(rsp)
 }
 
 // GetV1NodesOptionsWithResponse request returning *GetV1NodesOptionsResponse
@@ -9006,6 +9874,13 @@ func ParseDeleteV1AlertMuteRulesResponse(rsp *http.Response) (*DeleteV1AlertMute
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9052,6 +9927,13 @@ func ParseGetV1AlertMuteRulesResponse(rsp *http.Response) (*GetV1AlertMuteRulesR
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9100,6 +9982,60 @@ func ParsePutV1AlertMuteRulesResponse(rsp *http.Response) (*PutV1AlertMuteRulesR
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1AlertTimelineFilterOptionsResponse parses an HTTP response from a GetV1AlertTimelineFilterOptionsWithResponse call
+func ParseGetV1AlertTimelineFilterOptionsResponse(rsp *http.Response) (*GetV1AlertTimelineFilterOptionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1AlertTimelineFilterOptionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsOptions
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9134,21 +10070,28 @@ func ParseGetV1AlertTimelineNodesResponse(rsp *http.Response) (*GetV1AlertTimeli
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -9181,28 +10124,35 @@ func ParseGetV1AlertTimelineNodesNodeUuidAlertsResponse(rsp *http.Response) (*Ge
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -9235,28 +10185,35 @@ func ParseGetV1AlertTimelineNodesNodeUuidAlertsAlertUuidResponse(rsp *http.Respo
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest map[string]interface{}
+		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -9294,6 +10251,13 @@ func ParseGetV1AlertsResponse(rsp *http.Response) (*GetV1AlertsResponse, error) 
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9342,6 +10306,13 @@ func ParseGetV1AlertsNodeUuidResponse(rsp *http.Response) (*GetV1AlertsNodeUuidR
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9389,6 +10360,13 @@ func ParseGetV1AuthStatusResponse(rsp *http.Response) (*GetV1AuthStatusResponse,
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	}
 
 	return response, nil
@@ -9435,6 +10413,13 @@ func ParseGetV1ComputezonesResponse(rsp *http.Response) (*GetV1ComputezonesRespo
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9497,6 +10482,13 @@ func ParsePutV1ComputezonesResponse(rsp *http.Response) (*PutV1ComputezonesRespo
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9550,6 +10542,13 @@ func ParseGetV1EventsResponse(rsp *http.Response) (*GetV1EventsResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9612,6 +10611,13 @@ func ParseGetV1EventsBucketsResponse(rsp *http.Response) (*GetV1EventsBucketsRes
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9665,6 +10671,13 @@ func ParseGetV1MetricsResponse(rsp *http.Response) (*GetV1MetricsResponse, error
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9727,6 +10740,13 @@ func ParseGetV1MetricsQueryRangeResponse(rsp *http.Response) (*GetV1MetricsQuery
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9787,6 +10807,13 @@ func ParseGetV1NodeGroupMembershipsResponse(rsp *http.Response) (*GetV1NodeGroup
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9849,6 +10876,13 @@ func ParseGetV1NodegroupsResponse(rsp *http.Response) (*GetV1NodegroupsResponse,
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9902,6 +10936,13 @@ func ParseGetV1NodegroupsOptionsResponse(rsp *http.Response) (*GetV1NodegroupsOp
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -9964,6 +11005,13 @@ func ParseDeleteV1NodesResponse(rsp *http.Response) (*DeleteV1NodesResponse, err
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9999,6 +11047,74 @@ func ParseGetV1NodesResponse(rsp *http.Response) (*GetV1NodesResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GetV1Nodes200JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1NodesHistoryResponse parses an HTTP response from a GetV1NodesHistoryWithResponse call
+func ParseGetV1NodesHistoryResponse(rsp *http.Response) (*GetV1NodesHistoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1NodesHistoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsNodeHistoryResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -10079,6 +11195,13 @@ func ParseGetV1NodesOptionsResponse(rsp *http.Response) (*GetV1NodesOptionsRespo
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10139,6 +11262,13 @@ func ParseDeleteV1NodesNodeUuidResponse(rsp *http.Response) (*DeleteV1NodesNodeU
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -10208,6 +11338,13 @@ func ParseGetV1NodesNodeUuidResponse(rsp *http.Response) (*GetV1NodesNodeUuidRes
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10269,6 +11406,13 @@ func ParseGetV1NodesNodeUuidHealthHistoryResponse(rsp *http.Response) (*GetV1Nod
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10315,6 +11459,13 @@ func ParsePutV1NodesNodeUuidTagsResponse(rsp *http.Response) (*PutV1NodesNodeUui
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -10370,6 +11521,13 @@ func ParseGetV1NotificationDeliveryLogResponse(rsp *http.Response) (*GetV1Notifi
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10423,6 +11581,13 @@ func ParseGetV1NotificationPreferencesResponse(rsp *http.Response) (*GetV1Notifi
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -10485,6 +11650,13 @@ func ParsePostV1NotificationPreferencesResponse(rsp *http.Response) (*PostV1Noti
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10545,6 +11717,13 @@ func ParseDeleteV1NotificationPreferenceByIDResponse(rsp *http.Response) (*Delet
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -10607,6 +11786,13 @@ func ParseGetV1NotificationPreferenceByIDResponse(rsp *http.Response) (*GetV1Not
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10667,6 +11853,13 @@ func ParsePutV1NotificationPreferenceByIDResponse(rsp *http.Response) (*PutV1Not
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -10729,6 +11922,13 @@ func ParseGetV1OverviewResponse(rsp *http.Response) (*GetV1OverviewResponse, err
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10789,6 +11989,13 @@ func ParseGetV1ReportsErrorResponse(rsp *http.Response) (*GetV1ReportsErrorRespo
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -10854,6 +12061,13 @@ func ParseGetV1ReportsInventoryResponse(rsp *http.Response) (*GetV1ReportsInvent
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10878,6 +12092,9 @@ func ParseGetV1ReportsInventoryResponse(rsp *http.Response) (*GetV1ReportsInvent
 	// Content-type (application/zip) unsupported
 
 	case rsp.StatusCode == 403:
+	// Content-type (application/zip) unsupported
+
+	case rsp.StatusCode == 499:
 	// Content-type (application/zip) unsupported
 
 	case rsp.StatusCode == 500:
@@ -10933,6 +12150,13 @@ func ParseGetV1RetentionPolicyResponse(rsp *http.Response) (*GetV1RetentionPolic
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10986,6 +12210,13 @@ func ParsePutV1RetentionPolicyResponse(rsp *http.Response) (*PutV1RetentionPolic
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -11048,6 +12279,13 @@ func ParseGetV1TagsResponse(rsp *http.Response) (*GetV1TagsResponse, error) {
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -11095,6 +12333,13 @@ func ParsePatchV1TagsResponse(rsp *http.Response) (*PatchV1TagsResponse, error) 
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -11127,6 +12372,13 @@ func ParseGetV2MetricsResponse(rsp *http.Response) (*GetV2MetricsResponse, error
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
 
 	}
 

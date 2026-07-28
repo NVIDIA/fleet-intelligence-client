@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
@@ -175,18 +174,11 @@ func checkConnection(ctx context.Context, common resolvedCommonFlags) string {
 	return connectionOK
 }
 
+// validateAPIURL rejects an --api-url value before it is written to disk, so a
+// bad endpoint fails at login rather than on the next command. The rules live
+// in the SDK (fleetintelligence.ValidateBaseURL) so the flag, the
+// NVFLEETCTL_API_URL override, and the stored config are all held to the same
+// standard.
 func validateAPIURL(rawURL string) error {
-	// Explicit URLs must be concrete HTTP(S) API roots, not relative paths.
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return fmt.Errorf("invalid API URL: %w", err)
-	}
-	if !parsedURL.IsAbs() || parsedURL.Host == "" {
-		return fmt.Errorf("invalid API URL %q: absolute http or https URL is required", rawURL)
-	}
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return fmt.Errorf("invalid API URL %q: absolute http or https URL is required", rawURL)
-	}
-
-	return nil
+	return fleetintelligence.ValidateBaseURL(rawURL)
 }
