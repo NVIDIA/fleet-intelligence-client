@@ -93,26 +93,43 @@ The expected Fleet Intelligence signing-key fingerprint is:
 FE0C 8B74 CA66 357C 13BE 197D CCE3 C963 0871 99B3
 ```
 
-Inspect the downloaded key in an isolated temporary GnuPG home:
+Inspect the downloaded key in an isolated temporary GnuPG home and require it
+to contain exactly one primary key with the expected fingerprint:
 
 ```bash
+EXPECTED_FINGERPRINT="FE0C8B74CA66357C13BE197DCCE3C963087199B3"
 VERIFY_HOME="$(mktemp -d)"
 chmod 700 "$VERIFY_HOME"
 
-gpg --batch \
-  --homedir "$VERIFY_HOME" \
-  --show-keys \
-  --fingerprint \
-  fleet-intelligence.pub.asc
+KEY_FINGERPRINTS="$(
+  gpg --batch \
+    --homedir "$VERIFY_HOME" \
+    --show-keys \
+    --with-colons \
+    fleet-intelligence.pub.asc |
+    awk -F: '
+      $1 == "pub" { expect_fingerprint = 1; next }
+      expect_fingerprint && $1 == "fpr" {
+        print $10
+        expect_fingerprint = 0
+      }
+    '
+)"
+
+if [ "$KEY_FINGERPRINTS" != "$EXPECTED_FINGERPRINT" ]; then
+  echo "Unexpected Fleet Intelligence signing key fingerprint:" >&2
+  printf '%s\n' "${KEY_FINGERPRINTS:-<none>}" >&2
+  exit 1
+fi
 ```
 
-Compare the complete fingerprint printed by GnuPG with the expected
-fingerprint above. Do not continue if they differ.
+Do not continue if the command reports an unexpected, missing, or additional
+primary key.
 
 ### Verify the checksum manifest signature
 
-Create a temporary keyring from the verified public key, then verify the
-detached signature:
+After the exact single-key check succeeds, create a temporary keyring from the
+verified public key and verify the detached signature:
 
 ```bash
 gpg --batch \
