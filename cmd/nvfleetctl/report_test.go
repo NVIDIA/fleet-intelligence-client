@@ -118,7 +118,7 @@ func TestReportInventoryCSV(t *testing.T) {
 func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: "http://example.invalid", ServiceKey: "test-key"}); err != nil {
+	if err := config.Save(config.Config{APIURL: "https://example.invalid", ServiceKey: "test-key"}); err != nil {
 		t.Fatalf("save config failed: %v", err)
 	}
 
@@ -302,7 +302,7 @@ func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 func TestReportInventorySignedValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: "http://example.invalid", ServiceKey: "test-key"}); err != nil {
+	if err := config.Save(config.Config{APIURL: "https://example.invalid", ServiceKey: "test-key"}); err != nil {
 		t.Fatalf("save config failed: %v", err)
 	}
 

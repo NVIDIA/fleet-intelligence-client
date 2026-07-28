@@ -215,6 +215,10 @@ nvfleetctl auth login --key <ngc-service-key> --api-url https://api.fleet-intell
 nvfleetctl auth logout
 ```
 
+The API URL must be `https` (plain `http` is only allowed for `localhost`), so never suggest an `http://` endpoint.
+
+`auth status` verifies the stored key against the backend, but it's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on a bad key. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop.
+
 If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetctl auth status` to confirm, then tell the user they need to log in: generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetctl auth login --key <key>`. Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret.
 
 ## Worked example

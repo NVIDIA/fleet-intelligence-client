@@ -117,7 +117,7 @@ func TestOverviewJSONWithoutMetrics(t *testing.T) {
 // Verifies invalid output format is rejected
 func TestOverviewRejectsInvalidOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	if err := config.Save(config.Config{APIURL: "http://example.com", ServiceKey: "test-key"}); err != nil {
+	if err := config.Save(config.Config{APIURL: "https://example.com", ServiceKey: "test-key"}); err != nil {
 		t.Fatalf("save config failed: %v", err)
 	}
 

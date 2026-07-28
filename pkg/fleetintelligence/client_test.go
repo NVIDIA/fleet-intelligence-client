@@ -5,6 +5,8 @@ package fleetintelligence
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,6 +28,107 @@ func TestNewClientRequiresServiceKey(t *testing.T) {
 	if err != ErrMissingServiceKey {
 		t.Fatalf("expected ErrMissingServiceKey, got %v", err)
 	}
+}
+
+// Verifies plaintext remote endpoints are rejected before any request is made
+func TestNewClientRejectsInsecureBaseURL(t *testing.T) {
+	_, err := NewClient("http://example.com", "key")
+	if !errors.Is(err, ErrInsecureBaseURL) {
+		t.Fatalf("expected ErrInsecureBaseURL, got %v", err)
+	}
+}
+
+// Verifies plaintext loopback endpoints remain usable for local development
+func TestNewClientAllowsInsecureLoopbackBaseURL(t *testing.T) {
+	if _, err := NewClient("http://127.0.0.1:8080", "key"); err != nil {
+		t.Fatalf("expected loopback http to be accepted, got %v", err)
+	}
+}
+
+// Verifies the default HTTP client pins a TLS floor
+func TestNewClientDefaultsTLSMinVersion(t *testing.T) {
+	client, err := NewClient("https://example.com", "key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	transport, ok := client.httpClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("expected *http.Transport, got %T", client.httpClient.Transport)
+	}
+	if transport.TLSClientConfig == nil {
+		t.Fatal("expected a TLS config on the default transport")
+	}
+	if transport.TLSClientConfig.MinVersion != tls.VersionTLS12 {
+		t.Fatalf("unexpected TLS MinVersion: %d", transport.TLSClientConfig.MinVersion)
+	}
+	// Cloning the standard transport must preserve its defaults.
+	if transport.Proxy == nil {
+		t.Fatal("expected the cloned transport to retain proxy support")
+	}
+}
+
+// Verifies clients without a caller-supplied HTTP client share one transport,
+// so they also share its connection pool and TLS session cache
+func TestNewClientSharesDefaultTransport(t *testing.T) {
+	first, err := NewClient("https://example.com", "key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	second, err := NewClient("https://example.com", "key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	if first.httpClient.Transport != second.httpClient.Transport {
+		t.Fatal("expected both clients to share the default transport")
+	}
+}
+
+// Verifies transport hardening preserves a stricter configured TLS floor
+func TestHardenedTransportPreservesStricterTLSMinVersion(t *testing.T) {
+	hardened := hardenedTransport(&http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+		},
+	})
+
+	if hardened == nil {
+		t.Fatal("expected a hardened transport")
+	}
+	if hardened.TLSClientConfig.MinVersion != tls.VersionTLS13 {
+		t.Fatalf("expected TLS 1.3 MinVersion to be preserved, got %d", hardened.TLSClientConfig.MinVersion)
+	}
+}
+
+// Verifies transport hardening supplies a TLS config when the base lacks one
+func TestHardenedTransportAddsMissingTLSConfig(t *testing.T) {
+	hardened := hardenedTransport(&http.Transport{})
+
+	if hardened == nil {
+		t.Fatal("expected a hardened transport")
+	}
+	if hardened.TLSClientConfig == nil {
+		t.Fatal("expected a TLS config to be added")
+	}
+	if hardened.TLSClientConfig.MinVersion != tls.VersionTLS12 {
+		t.Fatalf("unexpected TLS MinVersion: %d", hardened.TLSClientConfig.MinVersion)
+	}
+}
+
+// Verifies transport hardening declines round trippers it cannot clone
+func TestHardenedTransportRejectsForeignRoundTripper(t *testing.T) {
+	if hardened := hardenedTransport(roundTripperFunc(nil)); hardened != nil {
+		t.Fatalf("expected nil for a non-*http.Transport base, got %#v", hardened)
+	}
+}
+
+// Stands in for a custom transport implementation
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 // Verifies client configuration accessors
