@@ -272,7 +272,7 @@ func (c *Client) DescribeAlertTimeline(ctx context.Context, nodeUUID, alertUUID 
 		return AlertTimelineDetails{}, fmt.Errorf("alert UUID is required")
 	}
 
-	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx, nodeUUID, alertUUID)
+	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx, nodeUUID, alertUUID, &fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams{})
 	if err != nil {
 		return AlertTimelineDetails{}, err
 	}

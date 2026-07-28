@@ -23,13 +23,18 @@ paths:
               schema:
                 type: string
           description: PEM-encoded ECDSA-P256 public key
-        '503':
+        '499':
           content:
-            application/x-pem-file:
+            application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Signing not configured on this server, or upstream NVault is
-            unreachable
+          description: Client Closed Request - request was canceled by the client
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Signing not configured or temporarily unavailable
       summary: Get inventory-report public verification key
       tags:
         - reports
@@ -78,6 +83,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found - No rules exist for the specified component
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -110,6 +121,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -160,6 +177,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -169,16 +192,71 @@ paths:
       summary: Update mute rule for a component
       tags:
         - alert_mute_rules
+  /v1/alert_timeline/filter_options:
+    get:
+      description: Get the set of filter values (GPU types, node groups, compute zones,
+        component types, alert states) available for the alert panel, returned in
+        the shared options envelope (filters.fields[] + sorting) used by the node
+        and node-group options endpoints. Every value is scoped to the customer's
+        alerts in the chosen view, so each option is guaranteed to return results
+        when applied as a filter. Use the 'active' parameter to switch between the
+        Active and Historical views; the historical view may additionally surface
+        the Resolved alert state. Object-valued options ({id, value}) carry the filter
+        id and its display value (node group / compute zone ids and names; component
+        identifier and display name); gpuTypes and alertStates are plain strings.
+        The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility
+        is resolved server-side from the caller's persona.
+      operationId: getV1AlertTimelineFilterOptions
+      parameters:
+        - description: 'Active Alerts view when true; Historical Alerts when false
+            (default: false)'
+          in: query
+          name: active
+          schema:
+            default: false
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.Options'
+          description: Available filter options (and sorting metadata) scoped to the
+            view, in the shared options envelope
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get filter dropdown options for the alert panel
+      tags:
+        - alerts
   /v1/alert_timeline/nodes:
     get:
-      description: Get list of nodes with alert summary for progressive disclosure.
-        Returns hostname, host status (unhealthy if any active alerts, fixed otherwise),
-        and last alert time. This is the first level of the progressive disclosure
-        API for alert timelines. Currently returns all historical alert data (time
-        filtering will be added in future).
+      description: Returns a paginated list of nodes with per-node alert counts and
+        inventory metadata for the Alerts panel. Use active=true for the Active Alerts
+        view (only nodes with currently active alerts) or active=false for Historical
+        Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount,
+        etc.) reflect the full filtered result set and drive table header counts.
+        componentVisibility is resolved server-side from the user's auth persona and
+        is not an HTTP parameter.
       operationId: getV1AlertTimelineNodes
       parameters:
-        - description: 'Filter only nodes with active alerts (default: false)'
+        - description: 'Active Alerts view when true; Historical Alerts when false
+            (default: false)'
           in: query
           name: active
           schema:
@@ -196,6 +274,78 @@ paths:
           schema:
             default: 50
             type: integer
+        - description: Case-insensitive partial match on hostname
+          in: query
+          name: hostname
+          schema:
+            type: string
+        - description: Sortable table-header column. alert ranks by critical then
+            warning count.
+          in: query
+          name: sortBy
+          schema:
+            default: alert
+            enum:
+              - hostname
+              - alert
+              - gpuType
+              - nodeGroup
+              - computeZone
+              - lastUpdate
+            type: string
+        - description: Sort direction for sortBy
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: Filter to nodes with matching GPU types (OR within dimension)
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter to nodes in matching node groups by node group ID (OR
+            within dimension)
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter to nodes in matching compute zones by compute zone ID
+            (OR within dimension)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter to nodes with at least one alert whose state matches
+            (OR within dimension). Resolved applies to the Historical view only (active=false).
+          in: query
+          name: alertStates
+          schema:
+            items:
+              enum:
+                - Critical
+                - Warning
+                - Resolved
+              type: string
+            type: array
+        - description: Filter to nodes with alerts on matching component types. Use
+            the value 'psirt' to match all security-vulnerability CVEs (the collapsed
+            'Security Vulnerability' option).
+          in: query
+          name: componentTypes
+          schema:
+            items:
+              type: string
+            type: array
       responses:
         '200':
           content:
@@ -207,34 +357,36 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Bad Request - Invalid parameters
         '401':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Unauthorized
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
-      summary: GET nodes in alert audit table - all the nodes ever had alerts (level
-        1)
+      summary: List impacted machines with alert summary (level 1)
       tags:
         - alerts
   /v1/alert_timeline/nodes/{nodeUUID}/alerts:
     get:
       description: Get list of alerts for a specific node. Returns alert UUID, component,
-        alert status (active/resolved), and last event time. Use the 'active' parameter
-        to filter between all alerts or only currently active alerts. This is the
-        second level of the progressive disclosure API for alert timelines. Currently
-        returns all historical alert data (time filtering will be added in future).
+        alert status, start time, and last event time. Use the 'active' parameter
+        to switch between active and historical views. The sortable table-header columns
+        and the filter dimensions mirror the Level 1 nodes list, so the panel can
+        forward the same filter set unchanged.
       operationId: getV1AlertTimelineNodesNodeUuidAlerts
       parameters:
         - description: Node UUID
@@ -243,7 +395,8 @@ paths:
           required: true
           schema:
             type: string
-        - description: 'Filter only currently active alerts (default: false)'
+        - description: 'Active Alerts view when true; Historical Alerts when false
+            (default: false)'
           in: query
           name: active
           schema:
@@ -255,6 +408,72 @@ paths:
           schema:
             default: false
             type: boolean
+        - description: Sortable table-header column. component sorts by component
+            name.
+          in: query
+          name: sortBy
+          schema:
+            default: lastUpdate
+            enum:
+              - component
+              - startTime
+              - lastUpdate
+            type: string
+        - description: Sort direction for sortBy
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: Filter to alerts whose state matches (OR within dimension),
+            carried from the Level 1 filter. Resolved applies to the Historical view
+            only (active=false).
+          in: query
+          name: alertStates
+          schema:
+            items:
+              enum:
+                - Critical
+                - Warning
+                - Resolved
+              type: string
+            type: array
+        - description: Filter to alerts on matching component types. Use the value
+            'psirt' to match all security-vulnerability CVEs (the collapsed 'Security
+            Vulnerability' option).
+          in: query
+          name: componentTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Node-level filter carried from Level 1: match the node''s
+            GPU type (OR within dimension)'
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Node-level filter carried from Level 1: match the node''s
+            node group by ID (OR within dimension)'
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: 'Node-level filter carried from Level 1: match the node''s
+            compute zone by ID (OR within dimension)'
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
         - description: 'Page number (0-indexed, default: 0)'
           in: query
           name: page
@@ -278,38 +497,45 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
-          description: Bad Request - Invalid UUID
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request - Invalid UUID or query parameters
         '401':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Unauthorized
         '404':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Node Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
       summary: Get alerts for a specific node (level 2)
       tags:
         - alerts
   /v1/alert_timeline/nodes/{nodeUUID}/alerts/{alertUUID}:
     get:
-      description: Get complete timeline for a specific alert. Returns alert UUID,
-        component, and complete event timeline. This is the third level of the progressive
-        disclosure API for alert timelines.
+      description: 'Get complete timeline for a specific alert. Returns alert UUID,
+        component, current alertStatus, nodeGroup, computeZone, and complete event
+        timeline. This is the third level of the progressive disclosure API for alert
+        timelines. Events default to newest-first (most recent update first); pass
+        order=asc for chronological (oldest-first) order. Pagination of the timeline
+        events is optional and backward compatible: omit pageSize to receive the full
+        timeline (default); supply pageSize to page through the events, in which case
+        the response also carries page/pageSize/total/hasMore metadata.'
       operationId: getV1AlertTimelineNodesNodeUuidAlertsAlertUuid
       parameters:
         - description: Node UUID
@@ -324,6 +550,31 @@ paths:
           required: true
           schema:
             type: string
+        - description: 'Sort direction on event time: ''desc'' (default, most recent
+            update first) or ''asc'' (chronological, oldest first)'
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: Page number (0-indexed); only applied when pageSize is supplied
+          in: query
+          name: page
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - description: Timeline events per page (1-100). Omit for the full, unpaginated
+            timeline (default behavior)
+          in: query
+          name: pageSize
+          schema:
+            maximum: 100
+            minimum: 1
+            type: integer
       responses:
         '200':
           content:
@@ -335,29 +586,31 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Bad Request - Invalid UUID format
         '401':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Unauthorized
         '404':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Alert Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: object
+                $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
       summary: Get complete timeline for a specific alert (level 3)
       tags:
@@ -413,6 +666,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Bad Request
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -480,6 +739,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Node Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -513,6 +778,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
       summary: Get authentication status
       tags:
         - auth
@@ -586,6 +857,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -639,6 +916,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -729,6 +1012,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -818,6 +1107,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -899,6 +1194,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1007,6 +1308,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1075,6 +1382,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1220,6 +1533,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1271,6 +1590,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1324,6 +1649,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1545,6 +1876,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1558,6 +1895,80 @@ paths:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Service Unavailable
       summary: Get nodes overview and states
+      tags:
+        - nodes
+  /v1/nodes/history:
+    get:
+      description: 'Returns removed machines for the customer, newest first. Covers
+        both
+
+        auto-removed (actorType system, deleted by the node reaper) and manually
+
+        deleted (actorType user) nodes. The same machine may appear multiple times
+
+        across remove/re-enroll cycles.'
+      operationId: getV1NodesHistory
+      parameters:
+        - description: Page number (0-indexed)
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: Page size (max 100)
+          in: query
+          name: pageSize
+          schema:
+            default: 10
+            type: integer
+        - description: Filter by removal actor
+          in: query
+          name: actorType
+          schema:
+            default: system
+            enum:
+              - system
+              - user
+              - all
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NodeHistoryResponse'
+          description: Node removal history page
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request - Invalid pagination or actorType
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Database temporarily unavailable
+      summary: List node removal history
       tags:
         - nodes
   /v1/nodes/options:
@@ -1595,6 +2006,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1646,6 +2063,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1703,6 +2126,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1767,6 +2196,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Node not found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1832,6 +2267,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1922,6 +2363,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1969,6 +2416,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -1980,7 +2433,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: List notification preferences
       tags:
         - notification_preferences
@@ -2051,6 +2504,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2062,7 +2521,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: Create a notification preference
       tags:
         - notification_preferences
@@ -2103,6 +2562,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found - No preference with this id
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2114,7 +2579,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: Delete a notification preference by id
       tags:
         - notification_preferences
@@ -2152,6 +2617,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found - No preference with this id
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2163,7 +2634,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: Get a notification preference by id
       tags:
         - notification_preferences
@@ -2215,6 +2686,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found - No preference with this id
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2226,7 +2703,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: Update a notification preference
       tags:
         - notification_preferences
@@ -2267,6 +2744,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2436,6 +2919,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2453,9 +2942,13 @@ paths:
         - reports
   /v1/reports/inventory:
     get:
-      description: Get inventory report in JSON or CSV format. Default response is
+      description: 'Get inventory report in JSON or CSV format. Default response is
         JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus
         a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+
+        Each node includes enrolledAt (original enrollment time, preserved across
+        re-enrollment) and removedAt (soft-delete time for removed nodes, manual and
+        auto-removed alike; absent for active nodes).'
       operationId: getV1ReportsInventory
       parameters:
         - description: Page number (Not used for CSV format)
@@ -2589,6 +3082,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2640,6 +3142,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Not Found - No retention policy exists for the customer
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2651,7 +3159,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: Get data retention policy
       tags:
         - retention_policy
@@ -2689,6 +3197,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2700,7 +3214,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable - Aurora database not available
+          description: Service Unavailable - Database temporarily unavailable
       summary: Update data retention policy
       tags:
         - retention_policy
@@ -2760,6 +3274,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2824,6 +3344,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
@@ -2912,6 +3438,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.MetricsAggregationResponse'
           description: Metrics with time series for the requested aggregation level
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
       summary: Get aggregated metrics with time series for any aggregation level
       tags:
         - v2/metrics
@@ -3103,6 +3635,10 @@ components:
         - AlertStateResolved
     models.AlertTimelineDetailResponse:
       properties:
+        alertStatus:
+          description: 'Current alert status: severity if active, state if resolved/detected'
+          example: Critical
+          type: string
         alertUuid:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
@@ -3112,20 +3648,54 @@ components:
         componentDisplayName:
           example: GPU
           type: string
+        computeZone:
+          description: Compute zone display name from node inventory
+          example: Compute Zone Name
+          type: string
         customerID:
           example: customer-123
           type: string
+        hasMore:
+          example: true
+          type: boolean
         isBackendComponent:
           type: boolean
+        nodeGroup:
+          description: Node group display name from node inventory
+          example: Node Group Name 1
+          type: string
         nodeUuid:
           example: node-uuid-456
           type: string
+        page:
+          description: 'Pagination metadata for the timeline events. These fields
+            are populated only when the caller
+
+            opts into pagination by supplying the pageSize query parameter; they are
+            omitted entirely
+
+            otherwise, so existing clients that expect the full, unpaginated timeline
+            are unaffected.
+
+            When present, Timeline holds only the requested page (order controlled
+            by query param) and Total
+
+            is the count of all timeline events for the alert.'
+          example: 0
+          type: integer
+        pageSize:
+          example: 50
+          type: integer
         timeline:
-          description: Sorted by eventTimestamp ASC (oldest to newest)
+          description: Sorted by eventTimestamp (default DESC = newest-first; query
+            param order=asc reverses)
           items:
             $ref: '#/components/schemas/models.AlertTimelineEvent'
           type: array
           uniqueItems: false
+        total:
+          example: 120
+          type: integer
       type: object
     models.AlertTimelineEvent:
       properties:
@@ -3159,8 +3729,22 @@ components:
       type: object
     models.AlertTimelineNode:
       properties:
+        computeZone:
+          description: Compute zone display name
+          example: Compute Zone Name
+          type: string
+        criticalCount:
+          description: Count of Critical alerts on this node (respects filters and
+            component visibility)
+          example: 4
+          type: integer
+        gpuType:
+          description: GPU product name from node inventory
+          example: H100
+          type: string
         hostStatus:
-          description: '"Active" if any active alerts, "Resolved" otherwise'
+          description: 'Deprecated: use criticalCount/warningCount; kept for backward
+            compatibility'
           example: Active
           type: string
         hostname:
@@ -3169,9 +3753,21 @@ components:
         lastAlertTime:
           example: '2024-12-01T10:00:00Z'
           type: string
+        nodeGroup:
+          description: Node group display name
+          example: Node Group Name 1
+          type: string
         nodeUuid:
           example: node-uuid-456
           type: string
+        resolvedCount:
+          description: Count of Resolved alerts; historical view only (0 when active=true)
+          example: 0
+          type: integer
+        warningCount:
+          description: Count of Warning alerts on this node
+          example: 2
+          type: integer
       type: object
     models.AlertTimelineNodeAlert:
       properties:
@@ -3191,6 +3787,10 @@ components:
           type: string
         lastEventTime:
           example: '2024-12-01T10:00:00Z'
+          type: string
+        startTime:
+          description: When the alert was first detected
+          example: '2024-11-30T08:00:00Z'
           type: string
       type: object
     models.AlertTimelineNodeAlertsResponse:
@@ -3222,6 +3822,18 @@ components:
       type: object
     models.AlertTimelineNodesResponse:
       properties:
+        distinctComputeZoneCount:
+          description: Distinct compute zones among matching nodes
+          example: 2
+          type: integer
+        distinctGpuTypeCount:
+          description: Distinct GPU types among matching nodes
+          example: 3
+          type: integer
+        distinctNodeGroupCount:
+          description: Distinct node groups among matching nodes
+          example: 4
+          type: integer
         hasMore:
           example: false
           type: boolean
@@ -3237,8 +3849,20 @@ components:
           example: 50
           type: integer
         total:
-          description: Total number of nodes
+          description: Total number of nodes matching filters across all pages
           example: 25
+          type: integer
+        totalCritical:
+          description: Cross-page critical alert total; drives ALERT header
+          example: 14
+          type: integer
+        totalResolved:
+          description: Cross-page resolved alert total; historical view only
+          example: 0
+          type: integer
+        totalWarning:
+          description: Cross-page warning alert total
+          example: 35
           type: integer
       type: object
     models.Audience:
@@ -3438,6 +4062,48 @@ components:
         x-nvidia-cert-status:
           type: string
       type: object
+    models.Command:
+      properties:
+        flavors:
+          items:
+            $ref: '#/components/schemas/models.SingleCommand'
+          type: array
+          uniqueItems: false
+        link:
+          example: https://example.com
+          type: string
+        name:
+          example: some_cmd
+          type: string
+        placeholders:
+          example:
+            - $ARG1
+            - $ARG2
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        template:
+          example: some_cmd -p1 $ARG1 -p2 $ARG2
+          type: string
+      type: object
+    models.CommandsResponse:
+      properties:
+        commands:
+          items:
+            $ref: '#/components/schemas/models.Command'
+          type: array
+          uniqueItems: false
+      type: object
+    models.ComponentInfo:
+      properties:
+        build:
+          example: v0.9.2-amd64
+          type: string
+        version:
+          example: v0.9.2
+          type: string
+      type: object
     models.ComponentMetricList:
       properties:
         displayName:
@@ -3457,6 +4123,13 @@ components:
             type: string
           type: array
           uniqueItems: false
+      type: object
+    models.ComponentsInfo:
+      properties:
+        agentBackend:
+          $ref: '#/components/schemas/models.ComponentInfo'
+        apiBackend:
+          $ref: '#/components/schemas/models.ComponentInfo'
       type: object
     models.ComputeZoneOverview:
       properties:
@@ -3556,7 +4229,7 @@ components:
     models.Contact:
       properties:
         email:
-          example: admin@us-east-1.compute.nvidia.com
+          example: admin@example.com
           type: string
         pic:
           example: John Doe
@@ -3967,6 +4640,13 @@ components:
         unhealthyPercentage:
           type: number
       type: object
+    models.InfoResponse:
+      properties:
+        components:
+          $ref: '#/components/schemas/models.ComponentsInfo'
+        signingKey:
+          $ref: '#/components/schemas/models.SigningKeyInfo'
+      type: object
     models.IntegrityCheck:
       enum:
         - Verified
@@ -4012,6 +4692,9 @@ components:
         computeZone:
           example: compute-zone-1
           type: string
+        enrolledAt:
+          example: '2024-01-10T08:00:00Z'
+          type: string
         firmwareCheck:
           $ref: '#/components/schemas/models.FirmwareCheck'
         geoLocation:
@@ -4054,9 +4737,6 @@ components:
         lastIntegrityCheckTS:
           example: '2024-01-15T10:30:00Z'
           type: string
-        lastUpdatedTS:
-          example: '2024-01-15T10:30:00Z'
-          type: string
         nodeGroup:
           example: node-group-1
           type: string
@@ -4068,6 +4748,9 @@ components:
           type: string
         publicIP:
           example: 203.0.113.100
+          type: string
+        removedAt:
+          example: '2024-01-20T12:00:00Z'
           type: string
         serialNumbers:
           example:
@@ -4772,6 +5455,78 @@ components:
           type: array
           uniqueItems: false
       type: object
+    models.NodeHistoryEntry:
+      properties:
+        actorType:
+          example: system
+          type: string
+        computeZone:
+          example: us-east-datacenter
+          type: string
+        deletedAt:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        deletedBy:
+          example: system
+          type: string
+        hostname:
+          example: node-001
+          type: string
+        nodeGroup:
+          example: gpu-cluster-a
+          type: string
+        nodeUuid:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+      type: object
+    models.NodeHistoryResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        history:
+          items:
+            $ref: '#/components/schemas/models.NodeHistoryEntry'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
+    models.NodeRemovalPolicy:
+      properties:
+        createdAt:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        enabled:
+          example: true
+          type: boolean
+        lastCheckedAt:
+          description: 'LastCheckedAt is the most recent time the node reaper evaluated
+            this customer.
+
+            Zero until the reaper first runs against the customer (DB column is NULL),
+            and
+
+            omitted from the response until then.'
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        offlineThresholdDays:
+          example: 30
+          type: integer
+        updatedAt:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        updatedBy:
+          example: user@example.com
+          type: string
+      type: object
     models.NodeResources:
       properties:
         cpuInfo:
@@ -5065,6 +5820,15 @@ components:
           type: array
           uniqueItems: false
       type: object
+    models.SigningKeyInfo:
+      properties:
+        isRecentlyRotated:
+          example: true
+          type: boolean
+        lastRotatedAt:
+          example: '2026-05-01T12:00:00Z'
+          type: string
+      type: object
     models.SimpleComputeZone:
       properties:
         contact:
@@ -5108,6 +5872,26 @@ components:
           type: string
         name:
           example: GPU Cluster 1
+          type: string
+      type: object
+    models.SingleCommand:
+      properties:
+        link:
+          example: https://example.com
+          type: string
+        name:
+          example: some_cmd
+          type: string
+        placeholders:
+          example:
+            - $ARG1
+            - $ARG2
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        template:
+          example: some_cmd -p1 $ARG1 -p2 $ARG2
           type: string
       type: object
     models.SortingDefaults:
@@ -5249,6 +6033,16 @@ components:
           uniqueItems: false
       required:
         - component
+      type: object
+    models.UpdateNodeRemovalPolicyRequest:
+      properties:
+        enabled:
+          type: boolean
+        offlineThresholdDays:
+          minimum: 1
+          type: integer
+      required:
+        - enabled
       type: object
     models.UpdateRetentionPolicyRequest:
       properties:
