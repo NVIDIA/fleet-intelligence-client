@@ -60,9 +60,11 @@ jobs:
         run: |
           python -m venv "$RUNNER_TEMP/nvsec-venv"
           "$RUNNER_TEMP/nvsec-venv/bin/pip" install nvsec \
-            --index-url "https://gitlab-master.nvidia.com/api/v4/projects/25923/packages/pypi/simple" \
+            --index-url "$NVSEC_PYPI_INDEX_URL" \
             --extra-index-url "https://urm.nvidia.com/artifactory/api/pypi/sw-cftt-pypi-local/simple"
           echo "$RUNNER_TEMP/nvsec-venv/bin" >> "$GITHUB_PATH"
+        env:
+          NVSEC_PYPI_INDEX_URL: ${{ secrets.NVSEC_PYPI_INDEX_URL }}
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
