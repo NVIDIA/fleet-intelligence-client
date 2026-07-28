@@ -25,13 +25,13 @@ paths:
           description: PEM-encoded ECDSA-P256 public key
         '499':
           content:
-            application/x-pem-file:
+            application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Client Closed Request - request was canceled by the client
         '503':
           content:
-            application/x-pem-file:
+            application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Signing not configured or temporarily unavailable
@@ -3677,8 +3677,8 @@ components:
             otherwise, so existing clients that expect the full, unpaginated timeline
             are unaffected.
 
-            When present, Timeline holds only the requested page (still ordered oldest→newest)
-            and Total
+            When present, Timeline holds only the requested page (order controlled
+            by query param) and Total
 
             is the count of all timeline events for the alert.'
           example: 0
@@ -3687,7 +3687,8 @@ components:
           example: 50
           type: integer
         timeline:
-          description: Sorted by eventTimestamp ASC (oldest to newest)
+          description: Sorted by eventTimestamp (default DESC = newest-first; query
+            param order=asc reverses)
           items:
             $ref: '#/components/schemas/models.AlertTimelineEvent'
           type: array
