@@ -25,12 +25,6 @@ The user wants an *answer*, not a command dump. So:
 
 Before relying on output, confirm the tool is installed and authenticated — see [Setup and auth](#setup-and-auth). If `nvfleetctl` isn't found (e.g. `command not found`, exit code **127**), it isn't installed — don't try to build it from source; point the user at the releases page as described in [Setup and auth](#setup-and-auth). If a command exits with code **77**, that's an auth/permission failure, not a real "no results" — handle it as described there.
 
-> **Run nvfleetctl with the Bash sandbox disabled.** Every command hits the Fleet Intelligence API over the network, and the Claude Code Bash sandbox blocks/intercepts outbound TLS — which surfaces as a **certificate error**, not a network-refused error, e.g.:
-> ```
-> Get "https://.../v1/nodes?...": tls: failed to verify certificate: x509: OSStatus -26276
-> ```
-> This is *not* a real cert problem, an auth failure, or "no data" — it's the sandbox. Don't report it to the user as a TLS/cert issue. Just re-run the command with `dangerouslyDisableSandbox: true`. Only `--help` is purely local; everything that reaches the backend needs the sandbox off — that now includes `auth status` (it verifies the stored key against the backend when a key and URL are configured) and `auth login`, on top of `overview`/`node`/`nodegroup`/`computezone`/`alert`/`event`/`tag`/`report`. So default to disabling the sandbox for all nvfleetctl calls.
-
 ## Mapping questions to commands
 
 Use this to pick the entry point. Each command takes `--output json`, `--timeout <dur>` (e.g. `30s`), and — on `list` commands — pagination flags `--all`, `--page`, `--page-size` (1–100).
@@ -216,12 +210,15 @@ nvfleetctl auth logout
 ```
 
 The API URL must be `https` (plain `http` is only allowed for `localhost`), so never suggest an `http://` endpoint.
+`auth status` verifies the credentials the CLI would actually use — the stored config with `NVFLEETCTL_API_URL` / `NVFLEETCTL_SERVICE_KEY` overlaid on top — against the backend. It's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on a bad key. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop. The `API URL:` line tells you which endpoint was checked, which is how you spot an env override pointing somewhere unexpected.
 
 `auth status` verifies the **effective** credentials — the stored config with `NVFLEETCTL_API_URL` / `NVFLEETCTL_SERVICE_KEY` overlaid — against the backend, and the `API URL:` / `Service key:` lines it prints reflect that same resolved config. It's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on bad credentials. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop.
 
 Because a non-empty env var wins over the config file for *every* command, `nvfleetctl auth login` cannot fix a bad override: it writes to `~/.config/nvfleetctl/config.yaml`, but the stale `NVFLEETCTL_SERVICE_KEY` / `NVFLEETCTL_API_URL` keeps shadowing it. If `Connection:` is not `ok` after a login, or the `API URL:` line doesn't match what was logged in, have the user `unset NVFLEETCTL_SERVICE_KEY NVFLEETCTL_API_URL` in their shell (and remove it from any shell profile that exports it), then re-run `auth status`.
 
 If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetctl auth status` to confirm, then tell the user they need to log in: generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetctl auth login --key <key>`. Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret; don't print or read back the value of `NVFLEETCTL_SERVICE_KEY` either, just have the user unset it.
+
+The env vars take precedence over the saved config, so if either is set to a stale or wrong value, `auth login` will appear to succeed and every command will still fail. Have the user `unset NVFLEETCTL_SERVICE_KEY` / `unset NVFLEETCTL_API_URL` (and remove them from their shell profile) before logging in, then re-run `auth status` to confirm `Connection: ok`. Check whether the vars are *set*, not what they contain — never print the value of `NVFLEETCTL_SERVICE_KEY`.
 
 ## Worked example
 
