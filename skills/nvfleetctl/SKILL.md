@@ -209,9 +209,11 @@ nvfleetctl auth login --key <ngc-service-key> --api-url https://api.fleet-intell
 nvfleetctl auth logout
 ```
 
-`auth status` verifies the stored key against the backend, but it's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on a bad key. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop.
+`auth status` verifies the credentials the CLI would actually use — the stored config with `NVFLEETCTL_API_URL` / `NVFLEETCTL_SERVICE_KEY` overlaid on top — against the backend. It's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on a bad key. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop. The `API URL:` line tells you which endpoint was checked, which is how you spot an env override pointing somewhere unexpected.
 
 If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetctl auth status` to confirm, then tell the user they need to log in: generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetctl auth login --key <key>`. Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret.
+
+The env vars take precedence over the saved config, so if either is set to a stale or wrong value, `auth login` will appear to succeed and every command will still fail. Have the user `unset NVFLEETCTL_SERVICE_KEY` / `unset NVFLEETCTL_API_URL` (and remove them from their shell profile) before logging in, then re-run `auth status` to confirm `Connection: ok`. Check whether the vars are *set*, not what they contain — never print the value of `NVFLEETCTL_SERVICE_KEY`.
 
 ## Worked example
 
