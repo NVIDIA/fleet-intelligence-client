@@ -18,6 +18,8 @@ curl -fsSL "https://raw.githubusercontent.com/NVIDIA/fleet-intelligence-client/$
 
 The installer verifies the release checksum and, on macOS, the Developer ID
 signature and Apple notarization ticket before installing the executable.
+For publisher-authenticated verification using the signed checksum manifest,
+see [Verify release artifacts](docs/VERIFY_RELEASES.md).
 
 ### Windows
 
