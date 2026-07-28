@@ -72,26 +72,7 @@ it, use the `node-rca-rcca` skill instead.
   invalid, unauthorized, or incomplete. Explain the failure and identify the
   affected command without guessing the missing results.
 
-## Network execution
-
-Every `nvfleetctl` backend data command hits the Fleet Intelligence API over the
-network. Run backend data commands (`computezone`, `nodegroup`, `node`, `alert`,
-`report`) with the current AI agent platform's approved network-enabled or
-escalated command mechanism. Do not hard-code platform-specific sandbox flags in
-this skill; examples include Codex `sandbox_permissions: "require_escalated"`
-with a concise justification, or another platform's equivalent approved
-network-enabled command runner. Purely local metadata commands such as
-`which nvfleetctl`, `nvfleetctl --help`, and `nvfleetctl auth status` may run
-without network escalation.
-
-In restricted sandboxes, a backend command may fail with a misleading TLS,
-certificate, DNS, or network error before network-enabled execution is approved.
-Treat that first restricted-environment failure as likely sandbox-related and
-retry once with the platform's approved network-enabled mechanism. If no such
-mechanism is available, stop and report that live Fleet Intelligence data cannot
-be collected in the current environment. If the same class of error occurs after
-approved network-enabled execution, report it as a real backend, network, TLS,
-or proxy blocker instead of masking it as sandbox behavior.
+## Running the CLI
 
 Use the installed `nvfleetctl` binary and run each query with a suitable
 `--timeout` (for example `--timeout 60s`). If the installed CLI differs from the
