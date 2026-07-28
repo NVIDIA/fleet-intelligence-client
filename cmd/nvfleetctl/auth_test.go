@@ -112,8 +112,54 @@ func TestAuthLoginRejectsInvalidAPIURL(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected invalid URL error")
 	}
-	if !strings.Contains(err.Error(), "absolute http or https URL is required") {
+	if !strings.Contains(err.Error(), "absolute https URL is required") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// A plaintext remote endpoint would put the service key on the wire, so login
+// must refuse it and leave no config behind.
+func TestAuthLoginRejectsInsecureAPIURL(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"auth", "login", "--key", serviceKey, "--api-url", "http://api.example.com"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected insecure URL error")
+	}
+	if !strings.Contains(err.Error(), "https is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	path := filepath.Join(homeDir, ".config", "nvfleetctl", "config.yaml")
+	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+		t.Fatalf("expected no config file to be written, stat returned %v", statErr)
+	}
+}
+
+// Loopback stays usable so the local mock-server workflow keeps working.
+func TestAuthLoginAcceptsLoopbackHTTPAPIURL(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	const loopbackURL = "http://127.0.0.1:9999"
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"auth", "login", "--key", serviceKey, "--api-url", loopbackURL})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("login failed: %v", err)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if cfg.APIURL != loopbackURL {
+		t.Fatalf("unexpected API URL: %q", cfg.APIURL)
 	}
 }
 

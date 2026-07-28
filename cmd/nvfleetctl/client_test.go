@@ -4,12 +4,14 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
+	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
 )
 
 // Verifies config is converted to an SDK client
@@ -81,6 +83,40 @@ func TestNewConfiguredClientEnvOverridesConfig(t *testing.T) {
 	}
 	if client.BaseURL() != "https://env-fleet.example.com" {
 		t.Fatalf("unexpected base URL: %q", client.BaseURL())
+	}
+}
+
+// The env override never passes through `auth login`, so this is the path that
+// would otherwise smuggle a plaintext endpoint past validation.
+func TestNewConfiguredClientRejectsInsecureEnvAPIURL(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvAPIURL, "http://evil.example.com")
+	t.Setenv(config.EnvServiceKey, "env-test-key")
+
+	_, err := newConfiguredClient()
+	if err == nil {
+		t.Fatal("expected insecure URL error")
+	}
+	if !errors.Is(err, fleetintelligence.ErrInsecureBaseURL) {
+		t.Fatalf("expected ErrInsecureBaseURL, got %v", err)
+	}
+	// The message must name where the bad value came from.
+	if !strings.Contains(err.Error(), config.EnvAPIURL) {
+		t.Fatalf("expected error to mention %s, got %v", config.EnvAPIURL, err)
+	}
+}
+
+// A hand-edited config file bypasses `auth login` too.
+func TestNewConfiguredClientRejectsInsecureConfigAPIURL(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	if err := config.Save(config.Config{APIURL: "http://evil.example.com", ServiceKey: "test-key"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	_, err := newConfiguredClient()
+	if !errors.Is(err, fleetintelligence.ErrInsecureBaseURL) {
+		t.Fatalf("expected ErrInsecureBaseURL, got %v", err)
 	}
 }
 

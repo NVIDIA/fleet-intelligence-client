@@ -26,6 +26,11 @@ nvfleetctl auth logout
 Credentials are stored in `~/.config/nvfleetctl/config.yaml` with file mode
 `0600`.
 
+The API URL must be `https`. Every request carries the service key in an
+`Authorization` header, so plain `http` is rejected — except for loopback hosts
+(`127.0.0.1`, `::1`, `localhost`), which stay available for local development.
+The same rule applies to `NVFLEETCTL_API_URL` and to a hand-edited config file.
+
 ## Fleet Inventory
 
 ```bash

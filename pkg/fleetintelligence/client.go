@@ -5,12 +5,14 @@ package fleetintelligence
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
@@ -72,6 +74,12 @@ func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
 		return nil, ErrMissingBaseURL
 	}
 
+	// Reject plaintext endpoints before any request is built: every call
+	// carries the service key in an Authorization header.
+	if err := ValidateBaseURL(baseURL); err != nil {
+		return nil, err
+	}
+
 	parsedBaseURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
@@ -85,7 +93,7 @@ func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
 	client := &Client{
 		baseURL:    parsedBaseURL,
 		serviceKey: serviceKey,
-		httpClient: &http.Client{},
+		httpClient: defaultHTTPClient(),
 		timeout:    DefaultTimeout,
 	}
 
@@ -104,6 +112,51 @@ func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
 	client.api = api
 
 	return client, nil
+}
+
+// The hardened transport is built once and shared by every client that does
+// not supply its own. Cloning per client would give each one a private
+// connection pool and TLS session cache, so an embedder constructing a client
+// per request would pay a fresh handshake every time and leak idle sockets.
+var (
+	sharedTransportOnce sync.Once
+	sharedTransport     *http.Transport
+)
+
+// Builds the HTTP client used when the caller supplies none. It reuses one
+// hardened clone of the standard transport, so connection pooling behaves as it
+// would with http.DefaultTransport. This is a safe default rather than a
+// guarantee: WithHTTPClient lets a caller substitute their own transport.
+func defaultHTTPClient() *http.Client {
+	sharedTransportOnce.Do(func() {
+		sharedTransport = hardenedTransport(http.DefaultTransport)
+	})
+	if sharedTransport == nil {
+		return &http.Client{}
+	}
+
+	return &http.Client{Transport: sharedTransport}
+}
+
+// Clones base (preserving proxy, keep-alive, and HTTP/2 defaults) and pins at
+// least a TLS 1.2 floor, since Go's default has none. An existing stricter
+// floor is left alone. Returns nil when base is not an *http.Transport, leaving
+// the caller to fall back to net/http's own default.
+func hardenedTransport(base http.RoundTripper) *http.Transport {
+	transport, ok := base.(*http.Transport)
+	if !ok {
+		return nil
+	}
+
+	cloned := transport.Clone()
+	if cloned.TLSClientConfig == nil {
+		cloned.TLSClientConfig = &tls.Config{}
+	}
+	if cloned.TLSClientConfig.MinVersion < tls.VersionTLS12 {
+		cloned.TLSClientConfig.MinVersion = tls.VersionTLS12
+	}
+
+	return cloned
 }
 
 // Wraps the HTTP Doer to translate the configured timeout firing into a

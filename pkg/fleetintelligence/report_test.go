@@ -202,7 +202,7 @@ func TestGetInventoryReportSignedRejectsNonZipContentType(t *testing.T) {
 
 // Verifies signed inventory reports are rejected without csv format
 func TestGetInventoryReportSignedRequiresCSV(t *testing.T) {
-	client, err := NewClient("http://example.invalid", "test-key")
+	client, err := NewClient("https://example.invalid", "test-key")
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
