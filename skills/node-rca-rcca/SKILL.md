@@ -46,17 +46,7 @@ many nodes, use the `fleet-health-report` skill instead.
 - **Fail loud.** If access, auth, or API failures block evidence collection, do
   not publish a report — state the exact command attempted and what is missing.
 
-## Network execution
-
-Every backend command (`node`, `alert`, `event`, `report`) hits the Fleet
-Intelligence API over the network — run them with the platform's approved
-network-enabled/escalated command mechanism (e.g. Codex
-`sandbox_permissions: "require_escalated"`). Local metadata commands
-(`which nvfleetctl`, `nvfleetctl --help`) do not need escalation. In a restricted
-sandbox the first backend call may fail with a misleading TLS/DNS/network error;
-treat that first failure as sandbox-related and retry once network-enabled. If no
-such mechanism exists, stop and report that live data cannot be collected. If the
-same error recurs after escalation, report it as a real backend/network blocker.
+## Running the CLI
 
 Use the installed `nvfleetctl` binary with a suitable `--timeout` (e.g.
 `--timeout 60s`); if it differs from the invocations below, check
