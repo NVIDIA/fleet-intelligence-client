@@ -1,20 +1,23 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-run:
-  timeout: 5m
+version: "2"
 
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - misspell
     - revive
-    - staticcheck
+    - staticcheck # absorbed gosimple in golangci-lint v2
     - unused
-
-issues:
-  exclude-dirs:
-    - internal/generated
+  exclusions:
+    # v1 applied these by default; v2 requires opting in.
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - internal/generated

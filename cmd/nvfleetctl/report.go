@@ -277,8 +277,8 @@ func reportVerifyError(flags reportVerifyFlags, err error) error {
 		}
 		return fmt.Errorf("%q is not a valid PEM public key; pass the signing key (e.g. signing-key.pub) to --key", flags.key)
 	case errors.Is(err, fleetintelligence.ErrVerificationFailed):
-		return fmt.Errorf("verification failed: %q does not match the signature in %q.\n"+
-			"The report may have been modified, or --csv and --bundle may point to the wrong files.", flags.csv, flags.bundle)
+		return fmt.Errorf("verification failed: %q does not match the signature in %q\n"+
+			"The report may have been modified, or --csv and --bundle may point to the wrong files", flags.csv, flags.bundle)
 	default:
 		return err
 	}
