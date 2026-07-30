@@ -11,9 +11,9 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 const (
@@ -157,18 +157,16 @@ func FormatGeoLocation(location *fleetintelligence.GeoLocation) string {
 	return "-"
 }
 
-// Writes headers and rows as tab-aligned text
+// Writes headers and rows with classic ASCII borders
 func WriteTable(w io.Writer, headers []string, rows [][]string) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	if err := writeTableRow(tw, headers); err != nil {
-		return err
-	}
+	tw := table.NewWriter()
+	tw.SetStyle(table.StyleDefault)
+	tw.AppendHeader(prettyTableRow(headers, len(headers)))
 	for _, row := range rows {
-		if err := writeTableRow(tw, row); err != nil {
-			return err
-		}
+		tw.AppendRow(prettyTableRow(row, len(headers)))
 	}
-	return tw.Flush()
+	_, err := io.WriteString(w, tw.Render()+"\n")
+	return err
 }
 
 // Writes the standard single-page pagination footer. Page carries the SDK's
@@ -182,9 +180,8 @@ func WritePaginationFooter(w io.Writer, page Pagination) error {
 	return err
 }
 
-// Collapses characters that would corrupt tabwriter's structure — tabs (column
-// separators), newlines and carriage returns (row separators) — into single
-// spaces so a multi-line field renders on one table line.
+// Collapses characters that would create unintended rows or line breaks into
+// spaces so each input record stays on one physical table row.
 var cellSanitizer = strings.NewReplacer("\t", " ", "\r\n", " ", "\n", " ", "\r", " ")
 
 // Flattens a value to a single table-cell-safe line
@@ -192,13 +189,10 @@ func sanitizeTableCell(value string) string {
 	return cellSanitizer.Replace(value)
 }
 
-// Writes one tab-separated table row, flattening any multi-line cells so they
-// do not break column alignment
-func writeTableRow(w io.Writer, fields []string) error {
-	sanitized := make([]string, len(fields))
-	for i, field := range fields {
-		sanitized[i] = sanitizeTableCell(field)
+func prettyTableRow(fields []string, columns int) table.Row {
+	row := make(table.Row, columns)
+	for index := 0; index < len(fields) && index < columns; index++ {
+		row[index] = sanitizeTableCell(fields[index])
 	}
-	_, err := fmt.Fprintln(w, strings.Join(sanitized, "\t"))
-	return err
+	return row
 }

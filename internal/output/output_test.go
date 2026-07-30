@@ -149,14 +149,44 @@ func TestWriteTableFlattensMultilineCells(t *testing.T) {
 	}
 
 	got := out.String()
-	// Each input row must render as exactly one physical line (plus the header).
-	if lines := strings.Count(strings.TrimRight(got, "\n"), "\n"); lines != 2 {
-		t.Fatalf("expected 3 lines (header + 2 rows), got %d:\n%s", lines+1, got)
+	// The three borders, header, and two input rows must each occupy exactly one
+	// physical line.
+	if lines := strings.Count(strings.TrimRight(got, "\n"), "\n"); lines != 5 {
+		t.Fatalf("expected 6 lines (3 borders + header + 2 rows), got %d:\n%s", lines+1, got)
 	}
 	if !strings.Contains(got, "Component: agent  Status: unhealthy") {
 		t.Fatalf("newlines not flattened to spaces: %q", got)
 	}
 	if strings.Contains(got, "Component: agent\n") {
 		t.Fatalf("embedded newline leaked into table: %q", got)
+	}
+}
+
+// Verifies tables use the classic ASCII style and align flattened cells
+func TestWriteTableASCIIStyle(t *testing.T) {
+	var out bytes.Buffer
+	if err := WriteTable(&out, []string{"ID", "NAME"}, [][]string{
+		{"1", "GPU"},
+		{"22", "Grace\nHopper"},
+	}); err != nil {
+		t.Fatalf("write table failed: %v", err)
+	}
+
+	want := "" +
+		"+----+--------------+\n" +
+		"| ID | NAME         |\n" +
+		"+----+--------------+\n" +
+		"| 1  | GPU          |\n" +
+		"| 22 | Grace Hopper |\n" +
+		"+----+--------------+\n"
+	if got := out.String(); got != want {
+		t.Fatalf("unexpected bordered table:\ngot:\n%swant:\n%s", got, want)
+	}
+}
+
+// Verifies tables propagate writer failures
+func TestWriteTableReturnsWriterError(t *testing.T) {
+	if err := WriteTable(failingWriter{}, []string{"ID"}, [][]string{{"1"}}); err == nil {
+		t.Fatal("expected writer error")
 	}
 }
