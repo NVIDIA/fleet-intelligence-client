@@ -8,10 +8,10 @@ The following third-party software is licensed under the Apache License 2.0. The
 complete license text is reproduced in Appendix A.
 
 ===============================================================================
-github.com/oapi-codegen/runtime v1.2.0
+github.com/oapi-codegen/runtime v1.6.0
 ===============================================================================
 
-Project: https://github.com/oapi-codegen/runtime/tree/v1.2.0
+Project: https://github.com/oapi-codegen/runtime/tree/v1.6.0
 
 Copyright 2019 DeepMap, Inc.
 Copyright 2021 DeepMap, Inc.
@@ -19,20 +19,20 @@ Copyright 2021 DeepMap, Inc.
 License: Apache-2.0
 
 ===============================================================================
-github.com/sigstore/sigstore v1.9.4
+github.com/sigstore/sigstore v1.10.8
 ===============================================================================
 
-Project: https://github.com/sigstore/sigstore/tree/v1.9.4
+Project: https://github.com/sigstore/sigstore/tree/v1.10.8
 
 Copyright 2021 The Sigstore Authors.
 
 License: Apache-2.0
 
 ===============================================================================
-github.com/sigstore/sigstore-go v1.0.0
+github.com/sigstore/sigstore-go v1.3.0
 ===============================================================================
 
-Project: https://github.com/sigstore/sigstore-go/tree/v1.0.0
+Project: https://github.com/sigstore/sigstore-go/tree/v1.3.0
 
 Copyright 2023 The Sigstore Authors.
 
@@ -47,27 +47,6 @@ Project: https://github.com/spf13/cobra/tree/v1.10.2
 Copyright 2013-2023 The Cobra Authors
 
 License: Apache-2.0
-
-The following third-party software is licensed under the Mozilla Public License
-2.0. The software is consumed without modification and is not vendored,
-patched, replaced, or copied into the Fleet Intelligence Client repository.
-
-===============================================================================
-github.com/letsencrypt/boulder v0.0.0-20240620165639-de9c06129bec
-===============================================================================
-
-Project: https://github.com/letsencrypt/boulder
-
-Exact source:
-https://github.com/letsencrypt/boulder/tree/de9c06129bec
-
-Copyright 2016 ISRG. All rights reserved.
-
-License: Mozilla Public License 2.0
-License text: https://www.mozilla.org/MPL/2.0/
-
-The corresponding source code for the version included in the distributed
-executable is available from the exact source URL above.
 
 ===============================================================================
 Appendix A: Apache License 2.0
