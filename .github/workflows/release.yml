@@ -252,9 +252,13 @@ jobs:
   artifactory:
     name: Publish to Artifactory
     needs: publish
-    # Pre-release tags (v1.2.3-rc.1) ship to GitHub but are not promoted to
-    # KITMAKER. Mirrors the hyphen test used by fleet-intelligence-agent.
-    if: ${{ !contains(github.ref_name, '-') }}
+    # Stable tags (v1.2.3) and release candidates (v1.2.3-rc.4) are promoted to
+    # KITMAKER. This is intentionally broader than the plain hyphen test used by
+    # fleet-intelligence-agent, which promotes stable tags only.
+    #
+    # Other pre-release forms — v0.0.0-test.*, -beta, -poc — stay out, so CI
+    # experiments can never reach the KITMAKER release path.
+    if: ${{ !contains(github.ref_name, '-') || contains(github.ref_name, '-rc.') }}
     # NVIDIA Artifactory is not reachable from GitHub-hosted runners.
     runs-on: [self-hosted, linux, x64]
     steps:
