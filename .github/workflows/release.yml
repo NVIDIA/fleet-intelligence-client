@@ -322,7 +322,7 @@ jobs:
           SOURCE="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
           BASE="${ARTIFACTORY_URL%/}"
           BASE="${BASE%/artifactory}/artifactory"
-          REPO_PATH="sw-dgxc-gpuhealth-generic-local/KITMAKER/release/fleetint-client"
+          REPO_PATH="sw-dgxc-gpuhealth-generic-local/fleetint-client"
 
           # archive suffix | KITMAKER platform | os | arch
           TARGETS=(
@@ -374,7 +374,7 @@ jobs:
             echo ""
             echo "**Version:** ${VERSION}"
             echo ""
-            echo "Uploaded to \`sw-dgxc-gpuhealth-generic-local/KITMAKER/release/fleetint-client/\`:"
+            echo "Uploaded to \`sw-dgxc-gpuhealth-generic-local/fleetint-client/\`:"
             for platform in linux-x86_64 linux-sbsa darwin-x86_64 darwin-arm64 windows-x86_64 windows-arm64; do
               echo "- \`${platform}/${VERSION}/\`"
             done
