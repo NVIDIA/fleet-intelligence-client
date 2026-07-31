@@ -178,7 +178,7 @@ nvfleetctl tag list --computezone <zone-id> --prefix env --output json
 # Inventory snapshot of the whole fleet
 nvfleetctl report inventory --all --output json
 nvfleetctl report inventory --format csv > inventory.csv        # CSV for the user
-nvfleetctl report inventory --format csv --signed               # signed zip bundle (CSV + cosign signature)
+nvfleetctl report inventory --format csv --signed               # signed bundle (CSV + cosign signature)
 nvfleetctl report inventory --format csv --signed --output-path ./reports/
 
 # Error report over a time range. Pick ONE time selector:

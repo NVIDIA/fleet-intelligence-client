@@ -47,9 +47,3 @@ Both produce standalone, print-friendly HTML documents using their bundled
 
 Use `nvfleetctl` to explore ad hoc questions before or after generating either
 report.
-
-## Packaging
-
-The repository under `skills/` is the source distribution. `npx skills add`
-installs directly from it, so generated ZIP archives are not committed. Produce
-a ZIP only when a separate upload workflow explicitly requires one.

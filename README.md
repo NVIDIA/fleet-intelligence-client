@@ -64,7 +64,7 @@ npx skills add NVIDIA/fleet-intelligence-client \
 
 [Install](#install) and [authenticate](#quick-start) `nvfleetctl` first, then
 start a new agent session. See [Agent Skills](docs/SKILLS.md) for skill scopes,
-global installation, and packaging guidance.
+global installation, and usage guidance.
 
 ## Learn more
 
