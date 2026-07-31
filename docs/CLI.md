@@ -14,8 +14,11 @@ nvfleetctl auth login --key <your-ngc-api-key>
 nvfleetctl auth status
 ```
 
-Credentials are stored in `~/.config/nvfleetctl/config.yaml` with file mode
-`0600`. To use a different endpoint, pass `--api-url` during login.
+On Linux and macOS, credentials are stored in
+`~/.config/nvfleetctl/config.yaml` with file mode `0600`. On Windows, they are
+stored in `%USERPROFILE%\.config\nvfleetctl\config.yaml`; access follows Windows
+ACLs, and the Go file mode controls only whether the file is writable. To use a
+different endpoint, pass `--api-url` during login.
 
 ## Common commands
 
@@ -55,11 +58,15 @@ nvfleetctl report inventory --format csv > inventory.csv
 Download and verify a signed inventory bundle:
 
 ```bash
-nvfleetctl report inventory --format csv --signed
+nvfleetctl report inventory --format csv --signed \
+  --output-path inventory-report.zip
+unzip -l inventory-report.zip
 unzip inventory-report.zip
+
+# Use the extracted names shown by unzip -l.
 nvfleetctl report verify \
-  --csv inventory_report_<timestamp>.csv \
-  --bundle inventory_report_<timestamp>.sig.bundle
+  --csv <extracted-csv-path> \
+  --bundle <extracted-sig-bundle-path>
 ```
 
 Use `--key signing-key.pub` with `report verify` to supply a local public key.
@@ -105,9 +112,14 @@ written to stderr in this form:
 }
 ```
 
-Exit code `0` means success, `1` means a general failure, and `77` means the API
-returned an authentication or permission failure. Prefer `error.code` over the
-exit code when handling JSON errors.
+Command validation and local failures use `error.code: "command_error"`. API
+failures use `error.code: "api_error"` and may also include `statusCode`,
+`status`, and `details`.
+
+Exit code `0` means success, `1` means a general failure, and `77` means a 401
+or 403 API error reached command failure handling. `auth status` is diagnostic:
+it reports those responses as `connection: "unauthorized"` and exits `0`.
+Prefer `error.code` over the exit code when handling JSON errors.
 
 Commands that stream CSV do not accept `--output`. `auth login` and
 `auth logout` also do not provide JSON output.
