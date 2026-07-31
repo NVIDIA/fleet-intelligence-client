@@ -45,21 +45,28 @@ nvfleetctl node list
 
 Run `nvfleetctl <command> --help` for command-specific flags.
 
-## Use with AI agents
+## AI Skills
 
-Fleet Intelligence provides portable skills for Claude Code, Cursor, and
-Codex. See [Agent Skills](docs/SKILLS.md) for installation and usage.
+Install the bundled Fleet Intelligence skills for Claude Code, Cursor, and
+Codex:
+
+```bash
+npx skills add NVIDIA/fleet-intelligence-client \
+  --skill '*' \
+  --agent claude-code --agent cursor --agent codex
+```
+
+Install and authenticate `nvfleetctl` first. See
+[Agent Skills](docs/SKILLS.md) for available skills and usage guidance.
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
 - [CLI guide](docs/CLI.md)
 - [Go SDK](docs/SDK.md)
 - [OpenAPI contract](api/openapi/openapi.yaml)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
-This project is experimental and available under the
-[Apache License 2.0](LICENSE). Open a
+This project is available under the [Apache License 2.0](LICENSE). Open a
 [GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues) for
 support, and report vulnerabilities through the [security policy](SECURITY.md).
