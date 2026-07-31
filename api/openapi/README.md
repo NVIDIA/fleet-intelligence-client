@@ -7,7 +7,7 @@ The backend service remains the source of truth for API implementation and
 service behavior. This repository should only contain customer-facing API
 surfaces needed by the SDK and CLI.
 
-Current customer-facing surfaces include:
+Examples of customer-facing surfaces include:
 
 - `/v1/computezones`
 - `/v1/nodegroups`
