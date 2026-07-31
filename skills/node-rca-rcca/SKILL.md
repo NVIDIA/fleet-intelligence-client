@@ -1,10 +1,6 @@
 ---
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-
 name: node-rca-rcca
-description: Produce a structured Root Cause Analysis (RCA) and Root Cause Corrective Action (RCCA) document for a specific degraded or unhealthy NVIDIA Fleet Intelligence node, using live nvfleetctl evidence. Use when the user asks to investigate a node health issue, root-cause a degraded or unhealthy node, explain why a node went unhealthy, analyze a node incident or alert history, or write an RCA/RCCA, post-incident, or corrective-action report for a node.
-author: NVIDIA Fleet Intelligence <fleetint@exchange.nvidia.com>
+description: Investigate one degraded or unhealthy NVIDIA Fleet Intelligence node and generate an evidence-backed HTML RCA/RCCA from live nvfleetctl data. Use for node incident analysis, health-transition explanations, root-cause analysis, corrective actions, or post-incident reports. Do not use for fleet-wide status reporting.
 ---
 
 # Node RCA/RCCA
@@ -54,7 +50,13 @@ Use the installed `nvfleetctl` binary with a suitable `--timeout` (e.g.
 
 ## Prerequisites
 
-- `nvfleetctl` on `PATH` — confirm with `which nvfleetctl`.
+- Run commands through the harness's local command-execution capability. The
+  examples use POSIX shell syntax; on Windows, use equivalent PowerShell while
+  preserving the `nvfleetctl` arguments and evidence rules.
+- `nvfleetctl` on `PATH` — confirm with `command -v nvfleetctl` on POSIX or
+  `Get-Command nvfleetctl` in PowerShell.
+- A structured JSON processor is available. The examples use `jq`; an equivalent
+  parser is acceptable, but grepping human-readable table output is not.
 - An authenticated session — confirm with `nvfleetctl auth status` (diagnostic:
   exits `0` and prints a `Connection:` line rather than failing on a bad key).
   **Require `Connection: ok`.** Treat `Connection: unauthorized`/`unauthenticated`
@@ -108,40 +110,10 @@ Fold these into the batches rather than spending separate turns:
   local file independent of evidence — during the prereq checks or Batch B. It
   contains the complete document skeleton, including the invariant `<head>`/CSS.
 
-**Cleanup discipline.** Put every temp file in one scratch directory whose name
-is derived from the node UUID, so any later command can reconstruct the path
-without remembering state:
-
-```bash
-node_uuid="<node_uuid>"
-printf '%s' "$node_uuid" \
-  | grep -qiE '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' \
-  || { echo "refusing: malformed node UUID" >&2; exit 1; }
-work="${TMPDIR:-/tmp}/node-rca-$node_uuid"; mkdir -p "$work"
-```
-
-Re-derive `work` with that same block at the top of **every** command that reads
-or writes scratch, and delete the whole directory with `rm -rf "$work"` in the
-write command. **Keep the UUID check** — `$work` is the argument to `mkdir -p`
-and `rm -rf`, so a value carrying `/` or `..` (a hostname pasted where a UUID
-belongs, a truncated or hand-typed id) would point those at a directory outside
-the scratch tree. Validating the canonical `8-4-4-4-12` hex form first rejects
-the bad value before any filesystem call. Use the UUID from `node list`, never
-a hostname.
-
-Shell variables do **not** survive from one command invocation to the next — each
-runs in a fresh shell. So do not accumulate paths in a variable
-(`tmpfiles="$tmpfiles $tmp"`): by the write turn it is empty, `rm -f $tmpfiles`
-expands to a bare `rm -f` that exits `0` without deleting anything, and the temp
-files silently outlive the report. Do not use a bare glob either
-(`rm $TMPDIR/foo.*.json`), which aborts under `zsh` when it matches nothing. A
-fixed directory name is the only form that works from a cold shell.
-
-Name files inside `work` directly (`"$work/node-describe.json"`). Do **not** use
-`mktemp` — the directory is already unique per node, and templates like
-`mktemp -t node-describe.XXXXXX.json` are not portable: GNU `mktemp` requires the
-`X`s at the end of the template and rejects this one outright, while BSD
-`mktemp` accepts it but leaves a literal `XXXXXX` in the filename.
+Before creating any scratch files, read and follow
+[`references/scratch-workspace.md`](references/scratch-workspace.md). It defines
+the exclusively created, validated scratch path and cleanup rules for both
+POSIX and PowerShell environments.
 
 ### 1. Resolve the target node
 
@@ -161,7 +133,7 @@ Read verification state from `integrityCheck` / `integrityCheckReason` /
 temp file, then project anchor fields:
 
 ```bash
-work="${TMPDIR:-/tmp}/node-rca-<node_uuid>"; mkdir -p "$work"
+work="<validated-work-path>" # exact path created using scratch-workspace.md
 nvfleetctl node describe <node_uuid> --output json --timeout 60s > "$work/node-describe.json"
 jq '{nodeUUID, hostname, healthStatus, nodeGroup, computeZone,
      gpuType, gpuCount, gpuArchitecture: .resources.gpuInfo.architecture,
@@ -277,7 +249,7 @@ required).
 A response can be hundreds of KB, so every fetch is expensive:
 
 ```bash
-work="${TMPDIR:-/tmp}/node-rca-<node_uuid>"; mkdir -p "$work"
+work="<validated-work-path>" # exact path created using scratch-workspace.md
 out="$work/alert-<alert_uuid>.json"
 nvfleetctl alert describe <alert_uuid> --node <node_uuid> --output json --timeout 60s > "$out"
 jq '<expression>' "$out"   # re-run jq against the file as many times as needed
@@ -399,17 +371,19 @@ node_uuid="<node_uuid>"
 printf '%s' "$node_uuid" \
   | grep -qiE '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' \
   || { echo "refusing: malformed node UUID" >&2; exit 1; }
-work="${TMPDIR:-/tmp}/node-rca-$node_uuid"
+work="<validated-work-path>" # exact path created using scratch-workspace.md
 cat > "$out" <<'NVFLEET_REPORT'
 <!doctype html>
 ... entire document, chrome copied verbatim from the template ...
 </html>
 NVFLEET_REPORT
 # same turn: fail on leftover placeholders, require the documented section count,
-# confirm the document closed, then remove the scratch directory
+# confirm the document closed, then clean the validated scratch directory
 n=$(grep -c 'id="[a-z-]*"' "$out"); echo "sections: $n"
 ! grep -qE '\[[a-z_]+\]' "$out" && { [ "$n" -eq 11 ] || [ "$n" -eq 10 ]; } \
-  && grep -q '</html>' "$out" && rm -rf "$work"
+  && grep -q '</html>' "$out" \
+  && find "$work" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) -delete \
+  && rmdir -- "$work"
 ```
 
 - **Quote the heredoc delimiter** (`<<'NVFLEET_REPORT'`) — the document embeds
@@ -420,10 +394,10 @@ n=$(grep -c 'id="[a-z-]*"' "$out"); echo "sections: $n"
   skeleton and edit sections in afterward.
 - Chaining the `grep`/cleanup checks onto the write collapses the write and
   validation turns into one — the largest avoidable round-trip in the skill.
-- Set `out` and `work` **in this same command**. Nothing carries over from the
-  collection turns, so `rm -rf "$work"` deletes nothing unless `work` is
-  re-derived here from the node UUID exactly as it was in "Cleanup discipline",
-  UUID check included.
+- Set `out` and `work` **in this same command**. Use the exact scratch path
+  returned during exclusive creation; do not reconstruct it from the node UUID.
+  Revalidate the path and ownership as specified in "Cleanup discipline" before
+  reading or deleting anything beneath it.
 - The `slug` line folds the hostname (or UUID) into a bare filename component —
   anything outside `[A-Za-z0-9._-]` becomes `-`, and leading dots/dashes are
   stripped, so a hostname carrying `/` or `..` cannot redirect `$out` out of the
@@ -461,27 +435,5 @@ plus the target node, collection time, and window. If generation stops for data
 integrity, auth, or backend access, return no fabricated report and state the
 concrete blocker.
 
-## Example
-
-> User: "Node gpu-h100-3271 has been flaky — write me an RCA."
-
-1. Confirm auth (`nvfleetctl auth status`).
-2. Resolve the hostname
-   (`nvfleetctl node list --hostname gpu-h100-3271 --view detail --all --output json`);
-   confirm the single matching UUID.
-3. Set a 7-day window and collect Batch B in one parallel turn: `node describe`,
-   `node health --start <T-7d> --end <T>`,
-   `event list --node <node_uuid> --window 168h --all`,
-   `event buckets --node <node_uuid> --window 168h`, and
-   `alert timeline --node <node_uuid>` (full and `--active`).
-4. Validate completeness, then apply the fast-path gate:
-   - **Trivial** (≤1 active alert, 0 events, one health segment): describe just the
-     single active alert, then write. *(This is the common case — e.g. a lone
-     `attestation`/integrity Warning driving Degraded on unsupported hardware,
-     root cause `Confirmed` from the anchor + that one alert.)*
-   - **Non-trivial** (multiple active alerts, bursts, or flapping): run full step 6,
-     describing the top 3–5 relevant UUIDs as one parallel batch.
-5. Analyze into timeline, root cause + confidence, and RCCA actions.
-6. Produce `node-rca-rcca-gpu-h100-3271.html`, `rm -rf` the scratch directory,
-   return its path
-   with the node, collection time, and window.
+For a compact end-to-end example, read
+[`references/example.md`](references/example.md).

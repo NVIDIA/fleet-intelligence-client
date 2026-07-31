@@ -51,18 +51,25 @@ Run `nvfleetctl <command> --help` for command-specific flags.
 
 ## Use with AI agents
 
-Install the `nvfleetctl` and fleet health report skills:
+Install the portable `nvfleetctl`, fleet health report, and node RCA/RCCA skills
+for Claude Code, Cursor, and Codex:
 
 ```bash
-npx skills add NVIDIA/fleet-intelligence-client
+npx skills add NVIDIA/fleet-intelligence-client \
+  --skill '*' \
+  --agent claude-code \
+  --agent cursor \
+  --agent codex
 ```
 
 [Install](#install) and [authenticate](#quick-start) `nvfleetctl` first, then
-restart the agent.
+start a new agent session. See [Agent Skills](docs/SKILLS.md) for skill scopes,
+global installation, and usage guidance.
 
 ## Learn more
 
 - [Examples](docs/EXAMPLES.md)
+- [Agent Skills](docs/SKILLS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [OpenAPI contract](api/openapi/openapi.yaml)
 - [Contributing](CONTRIBUTING.md)
