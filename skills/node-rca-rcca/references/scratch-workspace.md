@@ -1,48 +1,40 @@
 # Scratch workspace
 
-Keep every temporary evidence file in one OS-managed scratch directory derived
-from the validated node UUID. This makes the path reconstructable in harnesses
-that start a fresh shell for each command.
+Create one unpredictable, private temporary directory and keep all evidence
+inside it. Preserve the exact path returned at creation; never reconstruct it
+from a UUID or hostname.
 
 ## POSIX shell
 
-Validate the UUID before using it in any filesystem path:
-
 ```bash
-node_uuid="<node_uuid>"
-printf '%s' "$node_uuid" \
-  | grep -qiE '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' \
-  || { echo "refusing: malformed node UUID" >&2; exit 1; }
-work="${TMPDIR:-/tmp}/node-rca-$node_uuid"
-mkdir -p "$work"
+node_uuid="<validated-node-uuid>"
+umask 077
+work=$(mktemp -d "/tmp/node-rca-$node_uuid.XXXXXXXX") || exit 1
+printf 'scratch: %s\n' "$work"
 ```
 
-Re-run that validation block at the start of every command that reads or writes
-scratch. Name files directly inside `work`, such as
-`"$work/node-describe.json"`. Delete only that validated path after the report
-passes its mechanical checks.
+Before each later read, write, or cleanup, set `work` to that exact printed path
+and require `[ -d "$work" ]`, `[ ! -L "$work" ]`, and `[ -O "$work" ]`.
+Keep files directly inside it. After the report passes validation, delete only
+those files and remove the empty directory:
 
-Do not accumulate paths in a shell variable: variables may not survive between
-tool calls. Do not use an unresolved glob for cleanup. Do not use a hostname,
-hand-typed identifier, `/`, `..`, or an unvalidated environment variable in the
-deletion target.
+```bash
+find "$work" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) -delete
+rmdir -- "$work"
+```
 
-The fixed directory avoids incompatible GNU/BSD `mktemp` template behavior.
+Never use recursive deletion, a wildcard, or a reconstructed path. If an
+unexpected subdirectory exists, cleanup must fail and retain the evidence.
 
 ## PowerShell
 
-Apply the same invariant with native operations:
-
 ```powershell
-$NodeUuid = "<node_uuid>"
-if ($NodeUuid -notmatch '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$') {
-    throw "Refusing: malformed node UUID"
-}
-$Work = Join-Path ([System.IO.Path]::GetTempPath()) "node-rca-$NodeUuid"
-New-Item -ItemType Directory -Path $Work -Force | Out-Null
+$Work = Join-Path ([System.IO.Path]::GetTempPath()) ("node-rca-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $Work -ErrorAction Stop | Out-Null
+Write-Output "scratch: $Work"
 ```
 
-Reconstruct and revalidate `$Work` in every command invocation. After all report
-checks pass, remove that exact directory with
-`Remove-Item -LiteralPath $Work -Recurse -Force`. Never use a wildcard cleanup
-target.
+Restrict the directory ACL to the current user before writing evidence. For
+later commands, reuse the exact printed path, reject reparse points, and verify
+ownership. Delete known files with exact `-LiteralPath` values, then remove the
+empty directory without `-Recurse`, `-Force`, or wildcards.

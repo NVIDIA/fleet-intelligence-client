@@ -13,8 +13,9 @@
 4. Validate completeness, then apply the fast-path gate:
    - For a trivial incident with no more than one active alert, zero events, and
      one health segment, describe the single active alert and write the report.
-   - For multiple active alerts, bursts, or flapping, describe the three to five
-     most relevant alert UUIDs as one batch.
+   - For multiple active alerts, bursts, or flapping, select the three to five
+     most relevant alert UUIDs and invoke `alert describe` separately for each
+     UUID. The independent invocations may run in parallel.
 5. Analyze the timeline, root cause and confidence, and RCCA actions.
 6. Produce `node-rca-rcca-gpu-h100-3271.html`, clean the validated scratch
    directory, and return the report path with node, collection time, and window.

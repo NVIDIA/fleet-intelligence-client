@@ -1,7 +1,4 @@
 ---
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-
 name: fleet-health-report
 description: Generate a standalone fleet-wide HTML health snapshot from live nvfleetctl data, including node health, capacity, alerts, error trends, and machines needing attention. Use for fleet dashboards, executive summaries, recurring issue analysis, or fleet-wide reports. Do not use for a single-node root-cause investigation.
 ---

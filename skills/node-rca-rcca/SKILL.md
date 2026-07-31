@@ -1,7 +1,4 @@
 ---
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-
 name: node-rca-rcca
 description: Investigate one degraded or unhealthy NVIDIA Fleet Intelligence node and generate an evidence-backed HTML RCA/RCCA from live nvfleetctl data. Use for node incident analysis, health-transition explanations, root-cause analysis, corrective actions, or post-incident reports. Do not use for fleet-wide status reporting.
 ---
@@ -115,8 +112,8 @@ Fold these into the batches rather than spending separate turns:
 
 Before creating any scratch files, read and follow
 [`references/scratch-workspace.md`](references/scratch-workspace.md). It defines
-the validated, reconstructable scratch path and cleanup rules for both POSIX and
-PowerShell environments.
+the exclusively created, validated scratch path and cleanup rules for both
+POSIX and PowerShell environments.
 
 ### 1. Resolve the target node
 
@@ -136,7 +133,7 @@ Read verification state from `integrityCheck` / `integrityCheckReason` /
 temp file, then project anchor fields:
 
 ```bash
-work="${TMPDIR:-/tmp}/node-rca-<node_uuid>"; mkdir -p "$work"
+work="<validated-work-path>" # exact path created using scratch-workspace.md
 nvfleetctl node describe <node_uuid> --output json --timeout 60s > "$work/node-describe.json"
 jq '{nodeUUID, hostname, healthStatus, nodeGroup, computeZone,
      gpuType, gpuCount, gpuArchitecture: .resources.gpuInfo.architecture,
@@ -252,7 +249,7 @@ required).
 A response can be hundreds of KB, so every fetch is expensive:
 
 ```bash
-work="${TMPDIR:-/tmp}/node-rca-<node_uuid>"; mkdir -p "$work"
+work="<validated-work-path>" # exact path created using scratch-workspace.md
 out="$work/alert-<alert_uuid>.json"
 nvfleetctl alert describe <alert_uuid> --node <node_uuid> --output json --timeout 60s > "$out"
 jq '<expression>' "$out"   # re-run jq against the file as many times as needed
@@ -374,17 +371,19 @@ node_uuid="<node_uuid>"
 printf '%s' "$node_uuid" \
   | grep -qiE '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' \
   || { echo "refusing: malformed node UUID" >&2; exit 1; }
-work="${TMPDIR:-/tmp}/node-rca-$node_uuid"
+work="<validated-work-path>" # exact path created using scratch-workspace.md
 cat > "$out" <<'NVFLEET_REPORT'
 <!doctype html>
 ... entire document, chrome copied verbatim from the template ...
 </html>
 NVFLEET_REPORT
 # same turn: fail on leftover placeholders, require the documented section count,
-# confirm the document closed, then remove the scratch directory
+# confirm the document closed, then clean the validated scratch directory
 n=$(grep -c 'id="[a-z-]*"' "$out"); echo "sections: $n"
 ! grep -qE '\[[a-z_]+\]' "$out" && { [ "$n" -eq 11 ] || [ "$n" -eq 10 ]; } \
-  && grep -q '</html>' "$out" && rm -rf "$work"
+  && grep -q '</html>' "$out" \
+  && find "$work" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) -delete \
+  && rmdir -- "$work"
 ```
 
 - **Quote the heredoc delimiter** (`<<'NVFLEET_REPORT'`) — the document embeds
@@ -395,10 +394,10 @@ n=$(grep -c 'id="[a-z-]*"' "$out"); echo "sections: $n"
   skeleton and edit sections in afterward.
 - Chaining the `grep`/cleanup checks onto the write collapses the write and
   validation turns into one — the largest avoidable round-trip in the skill.
-- Set `out` and `work` **in this same command**. Nothing carries over from the
-  collection turns, so `rm -rf "$work"` deletes nothing unless `work` is
-  re-derived here from the node UUID exactly as it was in "Cleanup discipline",
-  UUID check included.
+- Set `out` and `work` **in this same command**. Use the exact scratch path
+  returned during exclusive creation; do not reconstruct it from the node UUID.
+  Revalidate the path and ownership as specified in "Cleanup discipline" before
+  reading or deleting anything beneath it.
 - The `slug` line folds the hostname (or UUID) into a bare filename component —
   anything outside `[A-Za-z0-9._-]` becomes `-`, and leading dots/dashes are
   stripped, so a hostname carrying `/` or `..` cannot redirect `$out` out of the
