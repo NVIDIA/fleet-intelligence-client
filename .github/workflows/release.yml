@@ -31,6 +31,41 @@ jobs:
       - name: Run tests
         run: make test-coverage
 
+      # GoReleaser no longer runs `go mod tidy`, so assert tidiness here, where
+      # the runner actually has network access to resolve the module graph.
+      - name: Verify go.mod and go.sum are tidy
+        run: |
+          set -euo pipefail
+          cp go.mod go.mod.orig
+          cp go.sum go.sum.orig
+          go mod tidy
+          if ! diff -q go.mod go.mod.orig >/dev/null || ! diff -q go.sum go.sum.orig >/dev/null; then
+            echo "go.mod/go.sum are not tidy; run 'go mod tidy' and commit the result" >&2
+            diff -u go.mod.orig go.mod || true
+            diff -u go.sum.orig go.sum || true
+            exit 1
+          fi
+          rm -f go.mod.orig go.sum.orig
+
+      # The self-hosted release runner has no egress to proxy.golang.org, so it
+      # cannot populate its own module cache — a dependency bump that lands
+      # after its cache was last warm fails the release. Seed it from here,
+      # where the modules have just been downloaded to run the tests.
+      - name: Package module cache for the release runner
+        run: |
+          set -euo pipefail
+          go mod download
+          tar -C "$(go env GOMODCACHE)/cache" -cf go-mod-cache.tar download
+          ls -lh go-mod-cache.tar
+
+      - name: Upload module cache
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-module-cache
+          path: go-mod-cache.tar
+          if-no-files-found: error
+          retention-days: 1
+
   goreleaser:
     name: Build, sign, and create draft release
     needs: validate
@@ -58,6 +93,29 @@ jobs:
             exit 1
           }
 
+      # Staged under runner.temp, not the working tree: GoReleaser refuses to
+      # build from a dirty git state, and an untracked directory counts.
+      - name: Download module cache
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: go-module-cache
+          path: ${{ runner.temp }}/go-mod-cache
+
+      # --skip-old-files: only add modules this runner is missing. Cached module
+      # files are mode 0444, so overwriting them in place would fail.
+      - name: Seed Go module cache
+        run: |
+          set -euo pipefail
+          mkdir -p "$(go env GOMODCACHE)/cache"
+          tar -C "$(go env GOMODCACHE)/cache" \
+            --skip-old-files -xf "$RUNNER_TEMP/go-mod-cache/go-mod-cache.tar"
+          rm -rf "$RUNNER_TEMP/go-mod-cache"
+          go mod verify
+          git status --porcelain
+        env:
+          GOFLAGS: -mod=mod
+          GOPROXY: "off"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
@@ -65,6 +123,10 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Fail fast and loudly on a cache miss instead of hanging on a TLS
+          # handshake the runner's network will never complete.
+          GOFLAGS: -mod=mod
+          GOPROXY: "off"
           SIGN_MACOS_BINARIES: "true"
           SIGN_WINDOWS_BINARIES: "true"
           NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
