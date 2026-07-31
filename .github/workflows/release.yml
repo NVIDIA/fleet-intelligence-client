@@ -172,6 +172,18 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # macOS archives are excluded here: the notarized copies produced by
+      # macos-notarize are the ones that ship to Artifactory.
+      - name: Upload Linux and Windows archives for Artifactory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-windows-archives
+          path: |
+            dist/nvfleetctl_*_linux_*.tar.gz
+            dist/nvfleetctl_*_windows_*.zip
+          if-no-files-found: error
+          retention-days: 7
+
   macos-notarize:
     name: Notarize macOS archives
     needs: goreleaser
@@ -236,3 +248,134 @@ jobs:
             --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  artifactory:
+    name: Publish to Artifactory
+    needs: publish
+    # Pre-release tags (v1.2.3-rc.1) ship to GitHub but are not promoted to
+    # KITMAKER. Mirrors the hyphen test used by fleet-intelligence-agent.
+    if: ${{ !contains(github.ref_name, '-') }}
+    # NVIDIA Artifactory is not reachable from GitHub-hosted runners.
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - name: Download notarized macOS archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: notarized-macos-archives
+          path: artifactory-upload
+
+      - name: Download Linux and Windows archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: linux-windows-archives
+          path: artifactory-upload
+
+      # This job runs on a self-hosted runner with no outbound internet egress,
+      # so jfrog/setup-jfrog-cli cannot be used: it downloads the `jf` binary
+      # from releases.jfrog.io and hangs until the TLS connect times out.
+      # Artifactory's REST API does everything `jf rt upload` did here, using
+      # only curl and intranet-reachable hosts.
+      - name: Write curl credentials
+        run: |
+          set -euo pipefail
+          # Keep the token out of the process table on a shared runner.
+          umask 077
+          printf 'user = "%s:%s"\n' "$ARTIFACTORY_USER" "$ARTIFACTORY_TOKEN" \
+            > "${RUNNER_TEMP}/artifactory.curlrc"
+        env:
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Verify Artifactory repository is reachable
+        run: |
+          set -euo pipefail
+          # ARTIFACTORY_URL is the JFrog platform root; the REST API lives under
+          # /artifactory. Tolerate a trailing slash or an already-suffixed value.
+          BASE="${ARTIFACTORY_URL%/}"
+          BASE="${BASE%/artifactory}/artifactory"
+          echo "Artifactory base: ${BASE}"
+
+          # api/storage needs only read permission on the repo; api/repositories
+          # requires admin, which a deploy-scoped service account will not have.
+          code="$(curl -sS -o "${RUNNER_TEMP}/repo.json" -w '%{http_code}' \
+            --config "${RUNNER_TEMP}/artifactory.curlrc" \
+            "${BASE}/api/storage/sw-dgxc-gpuhealth-generic-local/")"
+          if [[ "$code" != "200" ]]; then
+            echo "Repository sw-dgxc-gpuhealth-generic-local is not available at ${BASE} (HTTP ${code})." >&2
+            echo "Check that the ARTIFACTORY_URL secret points at the JFrog instance hosting" >&2
+            echo "this repo, and that ARTIFACTORY_USER can read it." >&2
+            cat "${RUNNER_TEMP}/repo.json" >&2 || true
+            exit 1
+          fi
+        env:
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
+
+      - name: Upload archives to Artifactory
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          COMMIT="${GITHUB_SHA::7}"
+          SOURCE="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          BASE="${ARTIFACTORY_URL%/}"
+          BASE="${BASE%/artifactory}/artifactory"
+          REPO_PATH="sw-dgxc-gpuhealth-generic-local/KITMAKER/release/fleetint-client"
+
+          # archive suffix | KITMAKER platform | os | arch
+          TARGETS=(
+            "linux_amd64.tar.gz linux-x86_64 linux x86_64"
+            "linux_arm64.tar.gz linux-sbsa linux sbsa"
+            "darwin_amd64.zip darwin-x86_64 darwin x86_64"
+            "darwin_arm64.zip darwin-arm64 darwin arm64"
+            "windows_amd64.zip windows-x86_64 windows x86_64"
+            "windows_arm64.zip windows-arm64 windows arm64"
+          )
+
+          for target in "${TARGETS[@]}"; do
+            read -r suffix platform os arch <<<"$target"
+            archive="artifactory-upload/nvfleetctl_${VERSION}_${suffix}"
+            if [[ ! -f "$archive" ]]; then
+              echo "Expected release archive not found: $archive" >&2
+              exit 1
+            fi
+
+            # Matrix parameters on the deploy URL are the REST equivalent of
+            # `jf rt upload --target-props`. They need the `annotate` permission.
+            props="component_name=fleetint-client;branch=release;os=${os};arch=${arch}"
+            props="${props};platform=${platform};version=${VERSION};changelist=${COMMIT}"
+            props="${props};source=${SOURCE};category=toolkit"
+            sha256="$(sha256sum "$archive" | cut -d' ' -f1)"
+            dest="${BASE}/${REPO_PATH}/${platform}/${VERSION}/$(basename "$archive");${props}"
+
+            echo "Uploading $(basename "$archive") -> ${REPO_PATH}/${platform}/${VERSION}/"
+            code="$(curl -sS -o "${RUNNER_TEMP}/upload.json" -w '%{http_code}' \
+              --config "${RUNNER_TEMP}/artifactory.curlrc" \
+              -H "X-Checksum-Sha256: ${sha256}" \
+              -T "$archive" \
+              "$dest")"
+            if [[ "$code" != "201" && "$code" != "200" ]]; then
+              echo "Upload failed for ${archive} (HTTP ${code})" >&2
+              cat "${RUNNER_TEMP}/upload.json" >&2 || true
+              exit 1
+            fi
+          done
+        env:
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
+
+      - name: Summary
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          {
+            echo "### Artifactory upload complete"
+            echo ""
+            echo "**Version:** ${VERSION}"
+            echo ""
+            echo "Uploaded to \`sw-dgxc-gpuhealth-generic-local/KITMAKER/release/fleetint-client/\`:"
+            for platform in linux-x86_64 linux-sbsa darwin-x86_64 darwin-arm64 windows-x86_64 windows-arm64; do
+              echo "- \`${platform}/${VERSION}/\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove curl credentials
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/artifactory.curlrc"
