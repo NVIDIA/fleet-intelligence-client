@@ -1,0 +1,4 @@
+interface:
+  display_name: "Node RCA/RCCA"
+  short_description: "Investigate one node and build an RCA/RCCA"
+  default_prompt: "Use $node-rca-rcca to investigate an unhealthy node and generate an RCA/RCCA report."

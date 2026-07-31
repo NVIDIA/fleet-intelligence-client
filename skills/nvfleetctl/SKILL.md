@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: nvfleetctl
-description: Answer questions about a user's GPU fleet by running the nvfleetctl CLI. Use this whenever the user asks anything about their fleet, nodes, GPUs, node groups, compute zones, alerts, node/agent health, firmware or verification (integrity) checks, or wants an inventory or error report — for example "how many nodes are unhealthy?", "which GPUs are offline?", "any critical alerts?", "show me the H100 nodes", or "generate an inventory report". Trigger it even when the user doesn't name the tool, as long as they're asking about the state of their fleet, and use it for any question related to Fleet Intelligence — the NVIDIA backend product for GPU fleet inventory, health, alerts, and reports). Also use it to set up or check nvfleetctl authentication.
-author: NVIDIA Fleet Intelligence <fleetint@exchange.nvidia.com>
+description: Query NVIDIA Fleet Intelligence with the nvfleetctl CLI. Use for ad hoc questions about fleets, nodes, GPUs, node groups, compute zones, alerts, agent health, firmware, verification, inventory, errors, or authentication. For a fleet-wide HTML snapshot use fleet-health-report; for a single-node RCA/RCCA use node-rca-rcca.
 ---
 
 # Answering fleet questions with nvfleetctl
@@ -13,6 +12,16 @@ author: NVIDIA Fleet Intelligence <fleetint@exchange.nvidia.com>
 
 Treat `nvfleetctl` as **your data-access tool**: it's how you read live state from the Fleet Intelligence backend. Whenever the user asks about the state of their fleet, don't answer from memory or guess — run the right `nvfleetctl` command(s), parse the output, and answer their actual question in plain language. The data is live, so every answer should be grounded in a command you just ran.
 
+## Runtime requirements
+
+- Run `nvfleetctl` through the harness's local command-execution capability.
+- Require `nvfleetctl` on `PATH` and authenticated network access to the Fleet
+  Intelligence backend.
+- Treat shell snippets as POSIX examples. On Windows, use equivalent PowerShell
+  commands without changing the `nvfleetctl` arguments or evidence rules.
+- Use `jq` only when it is available; otherwise parse the JSON with another
+  local structured-data tool rather than grepping table output.
+
 ## How to work
 
 The user wants an *answer*, not a command dump. So:
@@ -20,7 +29,7 @@ The user wants an *answer*, not a command dump. So:
 1. **Run commands with `--output json`** (or the command's JSON `--format`). JSON parses reliably; table output is for humans and is easy to misread. You read the JSON, the user gets prose.
 2. **Summarize findings in plain language.** Lead with the answer ("3 of your 48 nodes are unhealthy"), then the supporting detail. Show a small table only when the user is comparing items or explicitly wants a listing.
 3. **Filter at the source.** These commands have rich filter flags (`--health`, `--severity`, `--gpu-type`, etc.). Filtering server-side is faster and more accurate than pulling everything and grepping.
-4. **Keep commands small and fast.** A fleet can hold hundreds of thousands of nodes/alerts/events, so an unbounded pull is slow and can time out or blow up your context. Ask for the least data that answers the question: filter tightly, and page in small chunks (`--page-size` is 1–100, default is fine). **For a count, don't fetch the rows at all** — run with `--page-size 1` and read the top-level `total` (see [Counting without fetching](#counting-without-fetching)). Avoid `--all` unless you truly need every row (e.g. building a report or exporting the full set), and even then prefer a tight filter first. Always ask for permission when running with `--all` flag.
+4. **Keep commands small and fast.** A fleet can hold hundreds of thousands of nodes/alerts/events, so an unbounded pull is slow and can time out or blow up your context. Ask for the least data that answers the question: filter tightly, and page in small chunks (`--page-size` is 1–100, default is fine). **For a count, don't fetch the rows at all** — run with `--page-size 1` and read the top-level `total` (see [Counting without fetching](#counting-without-fetching)). Avoid `--all` unless you truly need every row (e.g. building a report or exporting the full set), and even then prefer a tight filter first. Confirm before an unexpectedly broad ad hoc query; a user's explicit request for a complete export or fleet-wide report already supplies that scope.
 5. **Don't invent data.** If a field isn't in the output, say so rather than guessing. UUIDs, hostnames, and counts must come from real command output.
 
 Before relying on output, confirm the tool is installed and authenticated — see [Setup and auth](#setup-and-auth). If `nvfleetctl` isn't found (e.g. `command not found`, exit code **127**), it isn't installed — don't try to build it from source; point the user at the releases page as described in [Setup and auth](#setup-and-auth). If a command exits with code **77**, that's an auth/permission failure, not a real "no results" — handle it as described there.

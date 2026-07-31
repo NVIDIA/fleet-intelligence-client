@@ -55,7 +55,11 @@ lint: ## Run formatting check, go vet, and golangci-lint
 	golangci-lint run ./...
 
 .PHONY: check
-check: lint test-coverage build ## Run all validation (enforces the coverage threshold)
+check: lint test-coverage build skills-check ## Run all validation (enforces the coverage threshold)
+
+.PHONY: skills-check
+skills-check: ## Validate portable Agent Skills metadata and bundled references
+	./scripts/validate-skills.sh
 
 .PHONY: setup-git-hooks
 setup-git-hooks: ## Configure local git hooks

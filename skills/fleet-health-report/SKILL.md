@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: fleet-health-report
-description: Generate a standalone HTML snapshot of NVIDIA Fleet Intelligence health from live nvfleetctl backend data. Use when the user asks for a fleet health report, status dashboard, executive health summary, most-alerted nodes, alert or error trends, recurring fleet issues, or an HTML fleet snapshot.
-author: NVIDIA Fleet Intelligence <fleetint@exchange.nvidia.com>
+description: Generate a standalone fleet-wide HTML health snapshot from live nvfleetctl data, including node health, capacity, alerts, error trends, and machines needing attention. Use for fleet dashboards, executive summaries, recurring issue analysis, or fleet-wide reports. Do not use for a single-node root-cause investigation.
 ---
 
 # Fleet Health Report
@@ -80,7 +79,13 @@ invocations below, inspect `nvfleetctl <command> --help`.
 
 ## Prerequisites
 
-- `nvfleetctl` is installed and on `PATH`. Confirm with `which nvfleetctl`.
+- Run commands through the harness's local command-execution capability. The
+  examples use POSIX shell syntax; on Windows, use equivalent PowerShell while
+  preserving the `nvfleetctl` arguments and evidence rules.
+- `nvfleetctl` is installed and on `PATH`. Confirm with `command -v nvfleetctl`
+  on POSIX or `Get-Command nvfleetctl` in PowerShell.
+- A structured JSON processor is available. The examples use `jq`; an equivalent
+  parser is acceptable, but grepping human-readable table output is not.
 - The session is authenticated. Confirm without exposing secrets:
 
   ```bash

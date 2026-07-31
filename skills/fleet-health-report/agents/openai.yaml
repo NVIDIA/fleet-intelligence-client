@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fleet Health Report"
+  short_description: "Build a fleet-wide HTML health snapshot"
+  default_prompt: "Use $fleet-health-report to generate a current HTML health snapshot for my fleet."
