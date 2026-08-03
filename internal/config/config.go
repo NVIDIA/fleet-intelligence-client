@@ -300,8 +300,11 @@ func acquireLock(lockPath string) (*os.File, error) {
 
 		info, statErr := os.Stat(lockPath)
 		if statErr == nil && time.Since(info.ModTime()) > lockStaleAfter {
-			_ = os.Remove(lockPath)
-			continue
+			// If the stale lock can't be removed, fall through to the deadline
+			// check and sleep rather than spinning on the same failure.
+			if removeErr := os.Remove(lockPath); removeErr == nil {
+				continue
+			}
 		}
 		if time.Now().After(deadline) {
 			return nil, fmt.Errorf("config is locked by another nvfleetint process: %s", lockPath)
