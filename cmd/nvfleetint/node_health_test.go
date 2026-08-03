@@ -9,8 +9,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 )
 
 const nodeHealthBody = `{"enrolledAt":"2026-01-01T00:00:00Z","healthSummary":{"healthyPercentage":99.5,"degradedPercentage":0.5,"unhealthyPercentage":0,"healthyDurationSeconds":600000,"degradedDurationSeconds":3000,"unhealthyDurationSeconds":0},"machineStatus":[{"status":"Healthy","startTime":"2026-04-07T00:00:00Z","endTime":"2026-04-13T00:00:00Z"},{"status":"Degraded","startTime":"2026-04-13T00:00:00Z","endTime":"2026-04-14T00:00:00Z"}]}`
@@ -34,9 +32,7 @@ func TestNodeHealthTable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -72,9 +68,7 @@ func TestNodeHealthJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -98,9 +92,7 @@ func TestNodeHealthRequiresValidTimeRange(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	cases := [][]string{
 		{"node", "health", "node-1", "--start", "2026-04-07T00:00:00Z"},

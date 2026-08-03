@@ -95,10 +95,14 @@ invocations below, inspect `nvfleetint <command> --help`.
   `unauthenticated`, or `error: ...` as an authentication/authorization failure,
   never an empty fleet. Likewise, treat exit code `77` or an HTTP 401/403
   `api_error` on any subsequent data command as an auth failure: ask the user to
-  authenticate (`nvfleetint auth login`) without asking them to paste a key into
-  chat, and stop. Other `api_error` responses (for example HTTP 400 or 5xx) are
-  backend, not auth, failures — report the concrete blocker instead of prompting
-  for re-authentication.
+  authenticate (`nvfleetint auth add --profile <name> --key <key>`) without
+  asking them to paste a key into chat, and stop. Other `api_error` responses
+  (for example HTTP 400 or 5xx) are backend, not auth, failures — report the
+  concrete blocker instead of prompting for re-authentication.
+- Credentials live in named profiles. If the user names an environment or tenant
+  — or `nvfleetint auth list` shows more than one profile — pass the same
+  `--profile <name>` to *every* command in the report, including `auth status`,
+  so the whole snapshot comes from one fleet.
 
 ## Collect live data
 

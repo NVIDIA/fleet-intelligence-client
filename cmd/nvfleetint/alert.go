@@ -145,7 +145,7 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func runAlertTimeline(cmd *cobra.Command, flags alertTimelineFlags, common resol
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func runAlertDescribe(cmd *cobra.Command, alertUUID string, flags alertDescribeF
 		return errors.New("alert UUID is required")
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

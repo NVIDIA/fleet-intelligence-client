@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 )
@@ -55,9 +54,7 @@ func TestReportInventoryTable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -97,9 +94,7 @@ func TestReportInventoryCSV(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -118,9 +113,7 @@ func TestReportInventoryCSV(t *testing.T) {
 func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: "https://example.invalid", ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, "https://example.invalid", "test-key")
 
 	for _, output := range []string{"table", "json"} {
 		t.Run(output, func(t *testing.T) {
@@ -162,9 +155,7 @@ func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	dir := t.TempDir()
 	chdir(t, dir)
@@ -201,9 +192,7 @@ func TestReportInventorySignedJSONStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	dir := t.TempDir()
 	chdir(t, dir)
@@ -238,9 +227,7 @@ func TestReportInventorySignedOutputPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	dir := t.TempDir()
 	target := filepath.Join(dir, "custom-name.zip")
@@ -275,9 +262,7 @@ func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	dir := t.TempDir()
 
@@ -302,9 +287,7 @@ func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 func TestReportInventorySignedValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	if err := config.Save(config.Config{APIURL: "https://example.invalid", ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, "https://example.invalid", "test-key")
 
 	cases := []struct {
 		name string
@@ -373,9 +356,7 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -439,9 +420,7 @@ func TestReportErrorOverviewTable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -481,9 +460,7 @@ func TestReportErrorDefaultsToOverview(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -526,9 +503,7 @@ func TestReportErrorGraphSevenDayHourWindow(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -574,9 +549,7 @@ func TestReportErrorGraphThreeHourWindow(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -754,9 +727,7 @@ func TestReportVerifyFetchesKey(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()

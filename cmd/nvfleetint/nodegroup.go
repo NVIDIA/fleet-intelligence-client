@@ -93,7 +93,7 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

@@ -10,8 +10,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 )
 
 // Verifies all-page alert JSON output
@@ -47,9 +45,7 @@ func TestAlertListAllJSONMergesRawItems(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -109,9 +105,7 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -150,9 +144,7 @@ func TestAlertTimelineTables(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -190,9 +182,7 @@ func TestAlertDescribeTable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -219,9 +209,7 @@ func TestAlertDescribeTruncatesLongMessage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var table bytes.Buffer
 	cmd := newRootCmd()

@@ -75,7 +75,7 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
@@ -30,9 +29,7 @@ func TestOverviewTableCommand(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -69,9 +66,7 @@ func TestOverviewForwardsIncludeMetricsTrue(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
@@ -96,9 +91,7 @@ func TestOverviewJSONWithoutMetrics(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -117,9 +110,7 @@ func TestOverviewJSONWithoutMetrics(t *testing.T) {
 // Verifies invalid output format is rejected
 func TestOverviewRejectsInvalidOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	if err := config.Save(config.Config{APIURL: "https://example.com", ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, "https://example.com", "test-key")
 
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})

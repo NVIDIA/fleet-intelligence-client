@@ -70,7 +70,7 @@ func runNodeHealth(cmd *cobra.Command, nodeUUID string, flags nodeHealthFlags, c
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

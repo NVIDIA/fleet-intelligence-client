@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
+
+	"github.com/spf13/cobra"
 )
 
 func TestVersionCommand(t *testing.T) {
@@ -73,7 +75,7 @@ func TestCommandsRejectUnsupportedCommonFlags(t *testing.T) {
 		want string
 	}{
 		{name: "root output", args: []string{"--output", "json"}, want: "unknown flag: --output"},
-		{name: "auth pagination", args: []string{"auth", "login", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
+		{name: "auth pagination", args: []string{"auth", "add", "--profile", "p", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
 		{name: "version pagination", args: []string{"version", "--page", "1"}, want: "unknown flag: --page"},
 		{name: "read pagination", args: []string{"node", "describe", "node-1", "--page-size", "10"}, want: "unknown flag: --page-size"},
 	}
@@ -121,6 +123,40 @@ func TestCommandsRejectNonPositiveTimeout(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Verifies every command that talks to the API can pick its credentials.
+// The shared helpers (registerListCommonFlags / registerReadCommonFlags) cover
+// most commands, but any command that registers its flags by hand — as
+// `report verify` does — has to opt in explicitly, and this is what catches it.
+func TestClientCommandsAcceptProfileFlag(t *testing.T) {
+	// Commands that run entirely locally and so need no credentials.
+	exempt := map[string]bool{
+		"nvfleetint version":     true,
+		"nvfleetint auth list":   true,
+		"nvfleetint auth add":    true,
+		"nvfleetint auth update": true,
+		"nvfleetint auth remove": true,
+		"nvfleetint auth use":    true,
+	}
+
+	var walk func(cmd *cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		if len(cmd.Commands()) > 0 {
+			for _, child := range cmd.Commands() {
+				walk(child)
+			}
+			return
+		}
+		path := cmd.CommandPath()
+		if exempt[path] {
+			return
+		}
+		if cmd.Flags().Lookup("profile") == nil {
+			t.Errorf("%s does not accept --profile", path)
+		}
+	}
+	walk(newRootCmd())
 }
 
 // Verifies the top-level execute helper

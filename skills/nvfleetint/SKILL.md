@@ -208,25 +208,27 @@ Tell them to grab the latest release asset matching their OS/architecture, extra
 
 ### Auth
 
-Credentials live in `~/.config/nvfleetint/config.yaml` (mode 0600), or can be overridden by env vars `NVFLEETINT_API_URL` and `NVFLEETINT_SERVICE_KEY`.
+Credentials live in named **profiles** in `~/.config/nvfleetint/config.yaml` (mode 0600). A profile pairs a service key with an API URL, so one machine can reach several tenants or endpoints.
 
 ```bash
 nvfleetint auth status                   # check before querying if unsure
-nvfleetint auth login --key <ngc-service-key>
-nvfleetint auth login --key <ngc-service-key> --api-url https://api.fleet-intelligence.nvidia.com
-nvfleetint auth logout
+nvfleetint auth list                     # which profiles exist, and which is current
+nvfleetint auth add --profile <name> --key <ngc-service-key>
+nvfleetint auth add --profile <name> --key <ngc-service-key> --api-url https://api.fleet-intelligence.nvidia.com
+nvfleetint auth use --profile <name>     # change the default
+nvfleetint auth update --profile <name> --key <rotated-key>
+nvfleetint auth remove --profile <name>
 ```
 
+Every API-backed command accepts `--profile <name>` to use one profile for a single invocation (`nvfleetint node list --profile dev`). Without it, commands use the current profile — the one marked `*` in `auth list`. If the user mentions more than one environment, tenant, or org, run `auth list` first and ask which profile they mean rather than guessing.
+
 The API URL must be `https` (plain `http` is only allowed for `localhost`), so never suggest an `http://` endpoint.
-`auth status` verifies the credentials the CLI would actually use — the stored config with `NVFLEETINT_API_URL` / `NVFLEETINT_SERVICE_KEY` overlaid on top — against the backend. It's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on a bad key. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop. The `API URL:` line tells you which endpoint was checked, which is how you spot an env override pointing somewhere unexpected.
 
-`auth status` verifies the **effective** credentials — the stored config with `NVFLEETINT_API_URL` / `NVFLEETINT_SERVICE_KEY` overlaid — against the backend, and the `API URL:` / `Service key:` lines it prints reflect that same resolved config. It's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on bad credentials. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop.
+`auth status` verifies the **effective** credentials against the backend and prints `Profile:`, `API URL:`, and `Service key:` lines showing what resolved and where each value came from. Pass `--profile <name>` to check a specific profile. It's diagnostic: it exits `0` and reports a `Connection:` line rather than failing on bad credentials. Read that line — don't treat exit 0 as "authenticated." Require `Connection: ok`; treat `Connection: unauthorized` (missing, invalid, or expired key), `unauthenticated`, or `error: ...` as an auth failure and stop. The `API URL:` line tells you which endpoint was checked, which is how you spot a profile or env override pointing somewhere unexpected.
 
-Because a non-empty env var wins over the config file for *every* command, `nvfleetint auth login` cannot fix a bad override: it writes to `~/.config/nvfleetint/config.yaml`, but the stale `NVFLEETINT_SERVICE_KEY` / `NVFLEETINT_API_URL` keeps shadowing it. If `Connection:` is not `ok` after a login, or the `API URL:` line doesn't match what was logged in, have the user `unset NVFLEETINT_SERVICE_KEY NVFLEETINT_API_URL` in their shell (and remove it from any shell profile that exports it), then re-run `auth status`.
+Credentials resolve highest-first: `--profile`, then `NVFLEETINT_PROFILE`, then the current profile with `NVFLEETINT_SERVICE_KEY` / `NVFLEETINT_API_URL` overlaid on top. **Selecting a profile explicitly ignores those two env vars entirely** — that is deliberate, so a stale variable can't send one tenant's key to another tenant's endpoint. So a bad env override only affects commands that *don't* pass `--profile`. If `auth status` (without `--profile`) reports a wrong `API URL:` or a `Service key:` sourced from the environment, have the user `unset NVFLEETINT_SERVICE_KEY NVFLEETINT_API_URL` in their shell (and remove them from any shell profile that exports them), then re-run `auth status`. Check whether the vars are *set*, not what they contain — never print the value of `NVFLEETINT_SERVICE_KEY`.
 
-If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetint auth status` to confirm, then tell the user they need to log in: generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetint auth login --key <key>`. Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret; don't print or read back the value of `NVFLEETINT_SERVICE_KEY` either, just have the user unset it.
-
-The env vars take precedence over the saved config, so if either is set to a stale or wrong value, `auth login` will appear to succeed and every command will still fail. Have the user `unset NVFLEETINT_SERVICE_KEY` / `unset NVFLEETINT_API_URL` (and remove them from their shell profile) before logging in, then re-run `auth status` to confirm `Connection: ok`. Check whether the vars are *set*, not what they contain — never print the value of `NVFLEETINT_SERVICE_KEY`.
+If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetint auth status` to confirm, then tell the user to generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetint auth add --profile <name> --key <key>` (or `auth update` if the profile already exists). Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret. `auth list` and `auth status` never print keys, only whether one is configured.
 
 ## Worked example
 

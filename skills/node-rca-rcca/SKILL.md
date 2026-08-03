@@ -62,8 +62,12 @@ Use the installed `nvfleetint` binary with a suitable `--timeout` (e.g.
   **Require `Connection: ok`.** Treat `Connection: unauthorized`/`unauthenticated`
   or `error: ...` — and on any data command, exit code `77`, HTTP 401/403, or a
   JSON `api_error` — as an auth failure, not an empty result. On any of these, ask
-  the user to run `nvfleetint auth login` (never ask them to paste a key into
-  chat) and stop.
+  the user to run `nvfleetint auth add --profile <name> --key <key>` (never ask
+  them to paste a key into chat) and stop.
+- Credentials live in named profiles. If the user names an environment or tenant
+  — or `nvfleetint auth list` shows more than one profile — pass the same
+  `--profile <name>` to every command below, so all the evidence comes from the
+  fleet that owns the node.
 - A target node — a UUID, or a hostname/partial hostname to resolve.
 
 ## Collect live evidence

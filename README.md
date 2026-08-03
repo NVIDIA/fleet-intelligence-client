@@ -61,9 +61,18 @@ Choose an NGC API key:
   programmatic integrations.
 
 ```bash
-nvfleetint auth login --key <your-ngc-api-key>
+nvfleetint auth add --profile default --key <your-ngc-api-key>
 nvfleetint overview
 nvfleetint node list
+```
+
+Credentials are stored in named profiles, so one installation can work against
+several tenants or endpoints. Add more with `nvfleetint auth add --profile
+<name>`, switch the default with `nvfleetint auth use`, and select one for a
+single command with `--profile`:
+
+```bash
+nvfleetint node list --profile dev
 ```
 
 Run `nvfleetint <command> --help` for command-specific flags.
