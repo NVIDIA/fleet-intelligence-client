@@ -64,10 +64,15 @@ Use the installed `nvfleetint` binary with a suitable `--timeout` (e.g.
   JSON `api_error` — as an auth failure, not an empty result. On any of these, ask
   the user to run `nvfleetint auth add --profile <name> --key <key>` (never ask
   them to paste a key into chat) and stop.
-- Credentials live in named profiles. If the user names an environment or tenant
-  — or `nvfleetint auth list` shows more than one profile — pass the same
-  `--profile <name>` to every command below, so all the evidence comes from the
-  fleet that owns the node.
+- Credentials live in named profiles. Run `nvfleetint auth list` first. If the
+  user named an environment or tenant, use that profile. Otherwise, if more than
+  one profile exists, **ask the user which one owns the node and wait for their
+  answer** — do not fall back to the current profile (the one marked `*`) or the
+  first one listed. Querying the wrong tenant yields either no such node or, if
+  the hostname collides, evidence from a different machine entirely. Once the
+  profile is known, pass the same `--profile <name>` to every command below,
+  including `auth status`, so all the evidence comes from the fleet that owns
+  the node.
 - A target node — a UUID, or a hostname/partial hostname to resolve.
 
 ## Collect live evidence

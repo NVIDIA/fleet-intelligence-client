@@ -99,8 +99,12 @@ invocations below, inspect `nvfleetint <command> --help`.
   asking them to paste a key into chat, and stop. Other `api_error` responses
   (for example HTTP 400 or 5xx) are backend, not auth, failures — report the
   concrete blocker instead of prompting for re-authentication.
-- Credentials live in named profiles. If the user names an environment or tenant
-  — or `nvfleetint auth list` shows more than one profile — pass the same
+- Credentials live in named profiles. Run `nvfleetint auth list` first. If the
+  user named an environment or tenant, use that profile. Otherwise, if more than
+  one profile exists, **ask the user which one to report on and wait for their
+  answer** — do not fall back to the current profile (the one marked `*`) or the
+  first one listed, because a fleet report attributed to the wrong tenant is
+  worse than a delayed one. Once the profile is known, pass the same
   `--profile <name>` to *every* command in the report, including `auth status`,
   so the whole snapshot comes from one fleet.
 
