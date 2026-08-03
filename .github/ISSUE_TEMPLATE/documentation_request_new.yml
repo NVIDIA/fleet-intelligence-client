@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Documentation - New Documentation Request
-description: Request additions to nvfleetctl documentation
+description: Request additions to nvfleetint documentation
 title: "[DOC]: "
 labels: ["doc"]
 
@@ -45,7 +45,7 @@ body:
       label: Code of Conduct
       description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/CODE_OF_CONDUCT.md)
       options:
-        - label: I agree to follow nvfleetctl's Code of Conduct
+        - label: I agree to follow nvfleetint's Code of Conduct
           required: true
         - label: I have searched the project's documentation and have found no duplicates for this documentation request
           required: true

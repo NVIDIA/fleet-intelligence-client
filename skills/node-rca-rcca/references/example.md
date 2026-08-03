@@ -2,9 +2,9 @@
 
 > User: "Node gpu-h100-3271 has been flaky — write me an RCA."
 
-1. Confirm authentication with `nvfleetctl auth status`.
+1. Confirm authentication with `nvfleetint auth status`.
 2. Resolve the hostname with
-   `nvfleetctl node list --hostname gpu-h100-3271 --view detail --all --output json`
+   `nvfleetint node list --hostname gpu-h100-3271 --view detail --all --output json`
    and confirm the single matching UUID.
 3. Set a seven-day window and collect Batch B together: `node describe`, `node
    health --start <T-7d> --end <T>`, `event list --node <node_uuid> --window

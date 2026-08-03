@@ -6,7 +6,7 @@ contributions will usually fall into three categories:
     - File an [issue](https://github.com/NVIDIA/fleet-intelligence-client/issues/new/choose)
     describing what you encountered or what you want to see changed.
     - When reporting a bug, please include your OS and architecture, the output
-    of `nvfleetctl version`, and how you installed the tool.
+    of `nvfleetint version`, and how you installed the tool.
     - The maintainers will evaluate the issues and triage them, scheduling
     them for a release. If you believe the issue needs priority attention
     comment on the issue to notify the team.
@@ -44,7 +44,7 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 Install the Go version declared in `go.mod` or newer. Then run:
 
 ```bash
-make build          # build bin/nvfleetctl
+make build          # build bin/nvfleetint
 make test           # run unit tests
 make lint           # check formatting, vet, and lint
 make test-coverage  # enforce the 80% coverage threshold
@@ -58,8 +58,8 @@ code directly.
 
 Each PR must be labeled according to whether it is a "breaking" or "non-breaking" change (using GitHub labels). This is used to highlight changes that users should know about when upgrading.
 
-For nvfleetctl, a "breaking" change is one that modifies the public Go API (the `pkg/fleetintelligence`
-package or the `nvfleetctl` command surface) in a non-backward-compatible way. Internal packages
+For nvfleetint, a "breaking" change is one that modifies the public Go API (the `nvfleetint`
+package or the `nvfleetint` command surface) in a non-backward-compatible way. Internal packages
 (`internal/`) carry no backward-compatibility expectation, so changes to them are not typically considered
 breaking. Backward-compatible additions (such as a new optional flag or a new function) do not need to be
 labeled.

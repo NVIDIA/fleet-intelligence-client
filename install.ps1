@@ -3,11 +3,11 @@
 
 [CmdletBinding()]
 param(
-    [string]$Version = $(if ($env:NVFLEETCTL_VERSION) { $env:NVFLEETCTL_VERSION } else { "latest" }),
-    [string]$InstallDir = $(if ($env:NVFLEETCTL_INSTALL_DIR) {
-        $env:NVFLEETCTL_INSTALL_DIR
+    [string]$Version = $(if ($env:NVFLEETINT_VERSION) { $env:NVFLEETINT_VERSION } else { "latest" }),
+    [string]$InstallDir = $(if ($env:NVFLEETINT_INSTALL_DIR) {
+        $env:NVFLEETINT_INSTALL_DIR
     } else {
-        Join-Path $env:LOCALAPPDATA "Programs\nvfleetctl\bin"
+        Join-Path $env:LOCALAPPDATA "Programs\nvfleetint\bin"
     }),
     [switch]$NoModifyPath
 )
@@ -43,16 +43,16 @@ $architecture = switch ($machineArchitecture.ToUpperInvariant()) {
     default { throw "Unsupported Windows architecture: $machineArchitecture" }
 }
 
-$asset = "nvfleetctl_${releaseVersion}_windows_${architecture}.zip"
+$asset = "nvfleetint_${releaseVersion}_windows_${architecture}.zip"
 $baseUrl = "https://github.com/$repository/releases/download/$tag"
-$workDir = Join-Path ([System.IO.Path]::GetTempPath()) ("nvfleetctl-install-" + [guid]::NewGuid())
+$workDir = Join-Path ([System.IO.Path]::GetTempPath()) ("nvfleetint-install-" + [guid]::NewGuid())
 $archive = Join-Path $workDir $asset
 $checksumPath = Join-Path $workDir "checksums.txt"
 $extractDir = Join-Path $workDir "extract"
 
 try {
     New-Item -ItemType Directory -Path $workDir | Out-Null
-    Write-Host "Downloading nvfleetctl $tag for windows/$architecture"
+    Write-Host "Downloading nvfleetint $tag for windows/$architecture"
     Invoke-WebRequest -Uri "$baseUrl/$asset" -OutFile $archive -UseBasicParsing
     Invoke-WebRequest -Uri "$baseUrl/checksums.txt" -OutFile $checksumPath -UseBasicParsing
 
@@ -72,20 +72,20 @@ try {
 
     New-Item -ItemType Directory -Path $extractDir | Out-Null
     Expand-Archive -Path $archive -DestinationPath $extractDir
-    $binary = Get-ChildItem -Path $extractDir -Filter "nvfleetctl.exe" -File -Recurse |
+    $binary = Get-ChildItem -Path $extractDir -Filter "nvfleetint.exe" -File -Recurse |
         Select-Object -First 1
     if (-not $binary) {
-        throw "nvfleetctl.exe was not found in $asset"
+        throw "nvfleetint.exe was not found in $asset"
     }
 
     $signature = Get-AuthenticodeSignature -FilePath $binary.FullName
     if ($signature.Status -ne "Valid") {
-        throw "nvfleetctl.exe has an invalid Authenticode signature: $($signature.Status)"
+        throw "nvfleetint.exe has an invalid Authenticode signature: $($signature.Status)"
     }
     Write-Host "Authenticode signature valid: $($signature.SignerCertificate.Subject)"
 
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    $destination = Join-Path $InstallDir "nvfleetctl.exe"
+    $destination = Join-Path $InstallDir "nvfleetint.exe"
     Copy-Item -Path $binary.FullName -Destination $destination -Force
 
     if (-not $NoModifyPath) {
@@ -98,7 +98,7 @@ try {
         }
     }
 
-    Write-Host "Installed nvfleetctl to $destination"
+    Write-Host "Installed nvfleetint to $destination"
     & $destination version
 } finally {
     if (Test-Path -LiteralPath $workDir) {

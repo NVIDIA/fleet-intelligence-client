@@ -20,7 +20,7 @@ fi
 : "${NVSEC_SSA_CLIENT_ID:?NVSEC_SSA_CLIENT_ID is required}"
 : "${NVSEC_SSA_CLIENT_SECRET:?NVSEC_SSA_CLIENT_SECRET is required}"
 
-work_dir="$(mktemp -d "${TMPDIR:-/tmp}/nvfleetctl-sign-windows.XXXXXX")"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/nvfleetint-sign-windows.XXXXXX")"
 trap 'rm -rf "$work_dir"' EXIT
 
 args=(
@@ -29,11 +29,11 @@ args=(
   --scope "${NVSEC_WINDOWS_SSA_SCOPE:-${NVSEC_SSA_SCOPE:-SIGNING_WINDOWS_AUTH}}"
   --auth ssa
   --input_file "$binary"
-  --description "nvfleetctl ${GITHUB_REF_NAME:-snapshot} ${target}"
+  --description "nvfleetint ${GITHUB_REF_NAME:-snapshot} ${target}"
   --download --print_log --timeout 600
-  --result_dir "$work_dir" --result_filename nvfleetctl.exe
+  --result_dir "$work_dir" --result_filename nvfleetint.exe
 )
 [[ -z "${NSPECT_ID:-}" ]] || args+=(--nspect_id "$NSPECT_ID")
 
 nvsec "${args[@]}"
-mv "$work_dir/nvfleetctl.exe" "$binary"
+mv "$work_dir/nvfleetint.exe" "$binary"

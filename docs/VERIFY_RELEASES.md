@@ -69,7 +69,7 @@ example uses AMD64:
 
 ```bash
 VERSION=v1.0.0
-ASSET=nvfleetctl_1.0.0_linux_amd64.tar.gz
+ASSET=nvfleetint_1.0.0_linux_amd64.tar.gz
 BASE_URL="https://github.com/NVIDIA/fleet-intelligence-client/releases/download/${VERSION}"
 
 curl -fLO "${BASE_URL}/${ASSET}"

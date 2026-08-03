@@ -59,7 +59,7 @@ func TestSaveUsesExpectedPathAndMode(t *testing.T) {
 		t.Fatalf("path failed: %v", err)
 	}
 
-	wantPath := filepath.Join(homeDir, ".config", "nvfleetctl", "config.yaml")
+	wantPath := filepath.Join(homeDir, ".config", "nvfleetint", "config.yaml")
 	if path != wantPath {
 		t.Fatalf("unexpected path: got %q want %q", path, wantPath)
 	}

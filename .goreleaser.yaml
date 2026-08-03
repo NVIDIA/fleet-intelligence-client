@@ -1,20 +1,20 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# GoReleaser configuration for nvfleetctl.
+# GoReleaser configuration for nvfleetint.
 # Docs: https://goreleaser.com
 version: 2
 
-project_name: nvfleetctl
+project_name: nvfleetint
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: nvfleetctl
-    main: ./cmd/nvfleetctl
-    binary: nvfleetctl
+  - id: nvfleetint
+    main: ./cmd/nvfleetint
+    binary: nvfleetint
     env:
       - CGO_ENABLED=0
     goos:
@@ -39,7 +39,7 @@ builds:
           output: true
 
 archives:
-  - id: nvfleetctl
+  - id: nvfleetint
     formats: [tar.gz]
     files:
       - LICENSE
@@ -87,7 +87,7 @@ release:
   header: |
     ## NVIDIA Fleet Intelligence Client v{{.Version}}
 
-    This release includes nvfleetctl, the command-line client for NVIDIA Fleet Intelligence.
+    This release includes nvfleetint, the command-line client for NVIDIA Fleet Intelligence.
 
     ### Available Packages
 

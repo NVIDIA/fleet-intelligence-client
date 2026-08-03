@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 // Returns an error for every write
@@ -78,8 +78,8 @@ func TestFormatHelpers(t *testing.T) {
 	percentage := float32(95)
 	percentageDecimal := float32(95.5)
 	zeroPercentage := float32(0)
-	location := &fleetintelligence.GeoLocation{City: "Santa Clara", Country: "US"}
-	regionalLocation := &fleetintelligence.GeoLocation{Region: "us-west-1", City: "Ignored"}
+	location := &nvfleetint.GeoLocation{City: "Santa Clara", Country: "US"}
+	regionalLocation := &nvfleetint.GeoLocation{Region: "us-west-1", City: "Ignored"}
 
 	tests := []struct {
 		name string

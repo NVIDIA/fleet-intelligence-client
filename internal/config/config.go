@@ -16,10 +16,10 @@ const (
 	// DefaultAPIURL is the production Fleet Intelligence API root.
 	DefaultAPIURL = "https://api.fleet-intelligence.nvidia.com"
 	// EnvAPIURL overrides the configured API URL for the current process.
-	EnvAPIURL = "NVFLEETCTL_API_URL"
+	EnvAPIURL = "NVFLEETINT_API_URL"
 	// EnvServiceKey overrides the configured service key for the current process.
-	EnvServiceKey = "NVFLEETCTL_SERVICE_KEY"
-	dirName       = "nvfleetctl"
+	EnvServiceKey = "NVFLEETINT_SERVICE_KEY"
+	dirName       = "nvfleetint"
 	fileName      = "config.yaml"
 	fileMode      = 0o600
 	dirMode       = 0o700

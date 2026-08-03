@@ -9,7 +9,7 @@ Produce a standalone `.html` file for the final RCA/RCCA report.
   the CSS, are given verbatim in the skeleton below — copy them as-is.
 - Use inline CSS only. Do not reference external fonts, scripts, images, or
   stylesheets, so the final file is fully self-contained and opens offline.
-- HTML-escape all dynamic values from `nvfleetctl` output.
+- HTML-escape all dynamic values from `nvfleetint` output.
 - Do not embed full raw JSON unless the user explicitly asks for it.
 - Include command provenance and evidence summaries, not secrets or config file
   contents.

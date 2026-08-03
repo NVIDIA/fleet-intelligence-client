@@ -1,12 +1,12 @@
 ---
 name: fleet-health-report
-description: Generate a standalone fleet-wide HTML health snapshot from live nvfleetctl data, including node health, capacity, alerts, error trends, and machines needing attention. Use for fleet dashboards, executive summaries, recurring issue analysis, or fleet-wide reports. Do not use for a single-node root-cause investigation.
+description: Generate a standalone fleet-wide HTML health snapshot from live nvfleetint data, including node health, capacity, alerts, error trends, and machines needing attention. Use for fleet dashboards, executive summaries, recurring issue analysis, or fleet-wide reports. Do not use for a single-node root-cause investigation.
 ---
 
 # Fleet Health Report
 
 Produce a self-contained HTML snapshot from live Fleet Intelligence data across
-the whole fleet. Gather fresh `nvfleetctl` evidence about node health, active
+the whole fleet. Gather fresh `nvfleetint` evidence about node health, active
 alerts, inventory distribution, and error trends, then derive fleet-wide metrics
 and compose the report. Compose the layout and presentation to fit the data
 available on each invocation, working within the required sections and visual
@@ -24,7 +24,7 @@ it, use the `node-rca-rcca` skill instead.
 ## Instructions
 
 1. Read the **Operating rules** before running anything.
-2. **Collect live data** with fresh `nvfleetctl` queries using
+2. **Collect live data** with fresh `nvfleetint` queries using
    `--all --output json`, including the two adjacent trend windows.
 3. **Prove completeness** by validating every response before deriving metrics.
 4. **Derive metrics** exactly as specified — never inventing semantics or values.
@@ -36,10 +36,10 @@ it, use the `node-rca-rcca` skill instead.
 
 - Use read-only Fleet Intelligence commands only. This skill never changes fleet
   state; do not run write/delete/tag commands.
-- Run fresh `nvfleetctl` backend queries during the current invocation. Never
+- Run fresh `nvfleetint` backend queries during the current invocation. Never
   substitute examples, fixtures, cached output, prior reports, assumptions, or
   invented values.
-- Treat `nvfleetctl` output as **evidence**. Prefer `--output json` for capture;
+- Treat `nvfleetint` output as **evidence**. Prefer `--output json` for capture;
   use table output only for quick human scanning, never as the parsed source of
   a metric.
 - Add both `--all` and `--output json` to every command that requests fleet,
@@ -70,23 +70,23 @@ it, use the `node-rca-rcca` skill instead.
 
 ## Running the CLI
 
-Use the installed `nvfleetctl` binary and run each query with a suitable
+Use the installed `nvfleetint` binary and run each query with a suitable
 `--timeout` (for example `--timeout 60s`). If the installed CLI differs from the
-invocations below, inspect `nvfleetctl <command> --help`.
+invocations below, inspect `nvfleetint <command> --help`.
 
 ## Prerequisites
 
 - Run commands through the harness's local command-execution capability. The
   examples use POSIX shell syntax; on Windows, use equivalent PowerShell while
-  preserving the `nvfleetctl` arguments and evidence rules.
-- `nvfleetctl` is installed and on `PATH`. Confirm with `command -v nvfleetctl`
-  on POSIX or `Get-Command nvfleetctl` in PowerShell.
+  preserving the `nvfleetint` arguments and evidence rules.
+- `nvfleetint` is installed and on `PATH`. Confirm with `command -v nvfleetint`
+  on POSIX or `Get-Command nvfleetint` in PowerShell.
 - A structured JSON processor is available. The examples use `jq`; an equivalent
   parser is acceptable, but grepping human-readable table output is not.
 - The session is authenticated. Confirm without exposing secrets:
 
   ```bash
-  nvfleetctl auth status
+  nvfleetint auth status
   ```
 
   `auth status` is diagnostic: it exits `0` and reports a `Connection:` line
@@ -95,7 +95,7 @@ invocations below, inspect `nvfleetctl <command> --help`.
   `unauthenticated`, or `error: ...` as an authentication/authorization failure,
   never an empty fleet. Likewise, treat exit code `77` or an HTTP 401/403
   `api_error` on any subsequent data command as an auth failure: ask the user to
-  authenticate (`nvfleetctl auth login`) without asking them to paste a key into
+  authenticate (`nvfleetint auth login`) without asking them to paste a key into
   chat, and stop. Other `api_error` responses (for example HTTP 400 or 5xx) are
   backend, not auth, failures — report the concrete blocker instead of prompting
   for re-authentication.
@@ -108,11 +108,11 @@ every window you use.
 ### 1. Snapshot the current fleet, inventory, and alerts
 
 ```bash
-nvfleetctl overview --output json --timeout 60s
-nvfleetctl computezone list --all --output json --timeout 60s
-nvfleetctl nodegroup list --all --output json --timeout 60s
-nvfleetctl node list --all --output json --timeout 60s
-nvfleetctl alert list --all --output json --timeout 60s
+nvfleetint overview --output json --timeout 60s
+nvfleetint computezone list --all --output json --timeout 60s
+nvfleetint nodegroup list --all --output json --timeout 60s
+nvfleetint node list --all --output json --timeout 60s
+nvfleetint alert list --all --output json --timeout 60s
 ```
 
 `overview` is the backend's own fleet-wide summary and the headline anchor for
@@ -138,8 +138,8 @@ Default to 24-hour windows unless the user requests another horizon. Compare
 `[T-24h, T)` with `[T-48h, T-24h)`:
 
 ```bash
-nvfleetctl report error --view list --group-by error --start <current-start> --end <current-end> --all --output json --timeout 60s
-nvfleetctl report error --view list --group-by error --start <previous-start> --end <previous-end> --all --output json --timeout 60s
+nvfleetint report error --view list --group-by error --start <current-start> --end <current-end> --all --output json --timeout 60s
+nvfleetint report error --view list --group-by error --start <previous-start> --end <previous-end> --all --output json --timeout 60s
 ```
 
 Use `report error --view list`, not `overview` or `graph`, because only list
@@ -153,9 +153,9 @@ Run additional queries only when they materially clarify the report, and still
 include both required flags:
 
 ```bash
-nvfleetctl alert timeline --all --output json --timeout 60s
-nvfleetctl alert timeline --node <node-uuid> --all --output json --timeout 60s
-nvfleetctl report error --view list --group-by node --start <start> --end <end> --all --output json --timeout 60s
+nvfleetint alert timeline --all --output json --timeout 60s
+nvfleetint alert timeline --node <node-uuid> --all --output json --timeout 60s
+nvfleetint report error --view list --group-by node --start <start> --end <end> --all --output json --timeout 60s
 ```
 
 ## Prove completeness
@@ -304,7 +304,7 @@ or backend access, return no fabricated report and state the concrete blocker.
 
 > User: "Generate a fleet health report."
 
-Confirm auth with `nvfleetctl auth status`, collect the required snapshot and
+Confirm auth with `nvfleetint auth status`, collect the required snapshot and
 trend queries, compare `[T-24h, T)` against `[T-48h, T-24h)`, validate
 completeness, then produce `fleet-health-report-<timestamp>.html` and return its path with
 the collection time and comparison horizon.

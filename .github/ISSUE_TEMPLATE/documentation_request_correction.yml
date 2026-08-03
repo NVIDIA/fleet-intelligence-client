@@ -36,7 +36,7 @@ body:
     id: problem
     attributes:
       label: Describe the problems in the documentation
-      placeholder: The docs say to run `nvfleetctl foo` but that command does not exist
+      placeholder: The docs say to run `nvfleetint foo` but that command does not exist
     validations:
       required: true
 
@@ -52,7 +52,7 @@ body:
       label: Code of Conduct
       description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/CODE_OF_CONDUCT.md)
       options:
-        - label: I agree to follow nvfleetctl's Code of Conduct
+        - label: I agree to follow nvfleetint's Code of Conduct
           required: true
         - label: I have searched the [open documentation issues](https://github.com/NVIDIA/fleet-intelligence-client/issues?q=is%3Aopen+is%3Aissue+label%3Adoc) and have found no duplicates for this documentation request
           required: true

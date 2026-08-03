@@ -1,12 +1,12 @@
 # Go SDK
 
-The `fleetintelligence` package provides a handwritten Go client for the Fleet
+The `nvfleetint` package provides a handwritten Go client for the Fleet
 Intelligence customer API.
 
 ## Install
 
 ```bash
-go get github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence
+go get github.com/NVIDIA/fleet-intelligence-client/nvfleetint
 ```
 
 Use the Go version declared in the repository's `go.mod` file or newer.
@@ -22,19 +22,19 @@ import (
 	"log"
 	"os"
 
-	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 func main() {
-	client, err := fleetintelligence.NewClient(
+	client, err := nvfleetint.NewClient(
 		"https://api.fleet-intelligence.nvidia.com",
-		os.Getenv("NVFLEETCTL_SERVICE_KEY"),
+		os.Getenv("NVFLEETINT_SERVICE_KEY"),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	page, err := client.ListNodes(context.Background(), fleetintelligence.ListNodesOptions{})
+	page, err := client.ListNodes(context.Background(), nvfleetint.ListNodesOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,12 +52,12 @@ The default per-request timeout is two minutes. Override it when constructing
 the client:
 
 ```go
-client, err := fleetintelligence.NewClient(
+client, err := nvfleetint.NewClient(
 	apiURL,
 	serviceKey,
-	fleetintelligence.WithTimeout(30*time.Second),
+	nvfleetint.WithTimeout(30*time.Second),
 )
 ```
 
 Public SDK types and methods are documented in the package source under
-[`pkg/fleetintelligence`](../pkg/fleetintelligence).
+[`nvfleetint`](../nvfleetint).

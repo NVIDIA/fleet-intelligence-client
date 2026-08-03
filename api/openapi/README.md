@@ -1,7 +1,7 @@
 # OpenAPI Contract
 
 This directory contains the curated public Fleet Intelligence customer API
-contract used by the Go SDK and `nvfleetctl` CLI.
+contract used by the Go SDK and `nvfleetint` CLI.
 
 The backend service remains the source of truth for API implementation and
 service behavior. This repository should only contain customer-facing API
@@ -25,4 +25,4 @@ make generate
 ```
 
 Keep the generated client private to this repository. Public SDK types and
-methods should be exposed through `pkg/fleetintelligence`.
+methods should be exposed through `nvfleetint`.
