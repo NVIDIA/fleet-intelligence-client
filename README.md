@@ -1,14 +1,27 @@
-# Fleet Intelligence Client
+# NVIDIA Fleet Intelligence Client
 
-Go SDK and `nvfleetctl` CLI for the NVIDIA Fleet Intelligence customer API.
-Inspect GPU fleet health, inventory, alerts, and reports from a terminal or Go
-program.
+## Overview
+
+`nvfleetint` provides command-line and Go interfaces to NVIDIA Fleet
+Intelligence.
+
+- **CLI:** Use the `nvfleetint` executable to inspect fleet status, node health,
+  inventory, alerts, events, and reports from a terminal or automation
+  workflow.
+- **Go SDK:** Import
+  `github.com/NVIDIA/fleet-intelligence-client/nvfleetint` to integrate Fleet
+  Intelligence data into Go applications and services.
+
+Both interfaces support fleet summaries, compute zones, node groups, nodes,
+health history, alerts, events, tags, inventory reports, and error reports.
 
 ## Install
 
-### Linux and macOS
+### CLI
 
-Install `nvfleetctl`:
+#### Linux and macOS
+
+Install `nvfleetint`:
 
 ```bash
 curl -fsSL https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.sh | bash
@@ -19,14 +32,24 @@ signature and Apple notarization ticket before installing the executable.
 For publisher-authenticated verification using the signed checksum manifest,
 see [Verify release artifacts](docs/VERIFY_RELEASES.md).
 
-### Windows
+#### Windows
 
-Install `nvfleetctl`:
+Install `nvfleetint`:
 
 ```powershell
 Invoke-WebRequest https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.ps1 -OutFile install.ps1
 .\install.ps1
 ```
+
+### Go SDK
+
+Add the `nvfleetint` package to a Go module:
+
+```bash
+go get github.com/NVIDIA/fleet-intelligence-client/nvfleetint
+```
+
+See the [Go SDK guide](docs/SDK.md) for client setup and usage.
 
 ## Quick Start
 
@@ -38,12 +61,12 @@ Choose an NGC API key:
   programmatic integrations.
 
 ```bash
-nvfleetctl auth login --key <your-ngc-api-key>
-nvfleetctl overview
-nvfleetctl node list
+nvfleetint auth login --key <your-ngc-api-key>
+nvfleetint overview
+nvfleetint node list
 ```
 
-Run `nvfleetctl <command> --help` for command-specific flags.
+Run `nvfleetint <command> --help` for command-specific flags.
 
 ## AI Skills
 
@@ -56,7 +79,7 @@ npx skills add NVIDIA/fleet-intelligence-client \
   --agent claude-code --agent cursor --agent codex
 ```
 
-Install and authenticate `nvfleetctl` first. See
+Install and authenticate `nvfleetint` first. See
 [Agent Skills](docs/SKILLS.md) for available skills and usage guidance.
 
 ## Documentation

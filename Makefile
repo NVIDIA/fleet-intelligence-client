@@ -3,10 +3,10 @@
 
 SHELL := /bin/bash
 
-BINARY_NAME := nvfleetctl
-BINARY_PATH := ./cmd/nvfleetctl
+BINARY_NAME := nvfleetint
+BINARY_PATH := ./cmd/nvfleetint
 BIN_DIR := bin
-GO_FILES := $(shell git ls-files '*.go')
+GO_FILES := $(shell find cmd internal nvfleetint -type f -name '*.go' | sort)
 VERSION ?= dev
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -24,7 +24,7 @@ LDFLAGS := -s -w \
 	-X 'main.buildDate=$(BUILD_DATE)'
 
 .PHONY: build
-build: ## Build nvfleetctl
+build: ## Build nvfleetint
 	@mkdir -p $(BIN_DIR)
 	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
 

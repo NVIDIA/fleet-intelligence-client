@@ -1,0 +1,4 @@
+interface:
+  display_name: "NVIDIA Fleet Intelligence CLI"
+  short_description: "Query GPU fleet health with nvfleetint"
+  default_prompt: "Use $nvfleetint to answer a question about my NVIDIA Fleet Intelligence fleet."

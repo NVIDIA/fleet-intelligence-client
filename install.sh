@@ -7,18 +7,18 @@ set -euo pipefail
 
 readonly REPOSITORY="NVIDIA/fleet-intelligence-client"
 
-version="${NVFLEETCTL_VERSION:-latest}"
-install_dir="${NVFLEETCTL_INSTALL_DIR:-${HOME}/.local/bin}"
+version="${NVFLEETINT_VERSION:-latest}"
+install_dir="${NVFLEETINT_INSTALL_DIR:-${HOME}/.local/bin}"
 
 usage() {
   cat <<'EOF'
-Install nvfleetctl for macOS or Linux.
+Install nvfleetint for macOS or Linux.
 
 Usage: install.sh [--version <version>] [--install-dir <directory>]
 
 Environment variables:
-  NVFLEETCTL_VERSION      Release version, for example v1.2.3 (default: latest)
-  NVFLEETCTL_INSTALL_DIR  Installation directory (default: $HOME/.local/bin)
+  NVFLEETINT_VERSION      Release version, for example v1.2.3 (default: latest)
+  NVFLEETINT_INSTALL_DIR  Installation directory (default: $HOME/.local/bin)
 EOF
 }
 
@@ -98,19 +98,19 @@ tag="$version"
   exit 1
 }
 release_version="${tag#v}"
-asset="nvfleetctl_${release_version}_${os}_${arch}.${extension}"
+asset="nvfleetint_${release_version}_${os}_${arch}.${extension}"
 base_url="https://github.com/${REPOSITORY}/releases/download/${tag}"
-work_dir="$(mktemp -d "${TMPDIR:-/tmp}/nvfleetctl-install.XXXXXX")"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/nvfleetint-install.XXXXXX")"
 
 cleanup() {
   case "$work_dir" in
-    "${TMPDIR:-/tmp}"/nvfleetctl-install.*) rm -rf "$work_dir" ;;
+    "${TMPDIR:-/tmp}"/nvfleetint-install.*) rm -rf "$work_dir" ;;
     *) echo "Refusing to remove unexpected temporary directory: $work_dir" >&2 ;;
   esac
 }
 trap cleanup EXIT
 
-echo "Downloading nvfleetctl ${tag} for ${os}/${arch}"
+echo "Downloading nvfleetint ${tag} for ${os}/${arch}"
 curl -fsSL "${base_url}/${asset}" -o "${work_dir}/${asset}"
 curl -fsSL "${base_url}/${checksum_file}" -o "${work_dir}/${checksum_file}"
 
@@ -143,8 +143,8 @@ else
   tar -xzf "${work_dir}/${asset}" -C "$extract_dir"
 fi
 
-binary="$(find "$extract_dir" -type f -name nvfleetctl -print -quit)"
-[[ -n "$binary" ]] || { echo "nvfleetctl was not found in ${asset}" >&2; exit 1; }
+binary="$(find "$extract_dir" -type f -name nvfleetint -print -quit)"
+[[ -n "$binary" ]] || { echo "nvfleetint was not found in ${asset}" >&2; exit 1; }
 
 if [[ "$os" == "darwin" ]]; then
   codesign --verify --strict --verbose=2 "$binary"
@@ -152,11 +152,11 @@ if [[ "$os" == "darwin" ]]; then
 fi
 
 mkdir -p "$install_dir"
-install -m 0755 "$binary" "${install_dir}/nvfleetctl"
+install -m 0755 "$binary" "${install_dir}/nvfleetint"
 
-echo "Installed nvfleetctl to ${install_dir}/nvfleetctl"
+echo "Installed nvfleetint to ${install_dir}/nvfleetint"
 case ":${PATH}:" in
   *":${install_dir}:"*) ;;
-  *) echo "Add ${install_dir} to PATH to run nvfleetctl without its full path." ;;
+  *) echo "Add ${install_dir} to PATH to run nvfleetint without its full path." ;;
 esac
-"${install_dir}/nvfleetctl" version
+"${install_dir}/nvfleetint" version

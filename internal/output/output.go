@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package output formats nvfleetctl command responses.
+// Package output formats nvfleetint command responses.
 package output
 
 import (
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/NVIDIA/fleet-intelligence-client/pkg/fleetintelligence"
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 const (
@@ -135,7 +135,7 @@ func FormatStringList(values []string) string {
 }
 
 // Formats the most useful location label available
-func FormatGeoLocation(location *fleetintelligence.GeoLocation) string {
+func FormatGeoLocation(location *nvfleetint.GeoLocation) string {
 	if location == nil {
 		return "-"
 	}

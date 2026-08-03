@@ -5,7 +5,7 @@ for harnesses such as Claude Code, Cursor, and Codex:
 
 | Skill | Use it for |
 | --- | --- |
-| `nvfleetctl` | Ad hoc fleet questions and CLI authentication |
+| `nvfleetint` | Ad hoc fleet questions and CLI authentication |
 | `fleet-health-report` | A fleet-wide, standalone HTML health snapshot |
 | `node-rca-rcca` | An evidence-backed HTML RCA/RCCA for one node |
 
@@ -27,7 +27,7 @@ npx skills add NVIDIA/fleet-intelligence-client \
 Add `--global` to install them for the current user instead of the current
 project. Select individual skills with repeated `--skill <name>` flags.
 
-Install and authenticate `nvfleetctl` before using any skill. Start a new agent
+Install and authenticate `nvfleetint` before using any skill. Start a new agent
 session if an installed or updated skill is not discovered immediately.
 
 ## Report skills
@@ -45,5 +45,5 @@ Both produce standalone, print-friendly HTML documents using their bundled
 - `node-rca-rcca` covers one node's timeline, impact, root cause, contributing
   factors, corrective actions, and validation plan.
 
-Use `nvfleetctl` to explore ad hoc questions before or after generating either
+Use `nvfleetint` to explore ad hoc questions before or after generating either
 report.

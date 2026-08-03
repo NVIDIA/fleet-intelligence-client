@@ -20,21 +20,21 @@ fi
 : "${NVSEC_SSA_CLIENT_ID:?NVSEC_SSA_CLIENT_ID is required}"
 : "${NVSEC_SSA_CLIENT_SECRET:?NVSEC_SSA_CLIENT_SECRET is required}"
 
-work_dir="$(mktemp -d "${TMPDIR:-/tmp}/nvfleetctl-sign-macos.XXXXXX")"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/nvfleetint-sign-macos.XXXXXX")"
 cleanup() {
   case "$work_dir" in
-    "${TMPDIR:-/tmp}"/nvfleetctl-sign-macos.*) rm -rf "$work_dir" ;;
+    "${TMPDIR:-/tmp}"/nvfleetint-sign-macos.*) rm -rf "$work_dir" ;;
     *) echo "Refusing to remove unexpected temporary directory: $work_dir" >&2 ;;
   esac
 }
 trap cleanup EXIT
 
 mkdir -p "$work_dir/input" "$work_dir/output"
-cp "$binary" "$work_dir/input/nvfleetctl.command"
-chmod 755 "$work_dir/input/nvfleetctl.command"
+cp "$binary" "$work_dir/input/nvfleetint.command"
+chmod 755 "$work_dir/input/nvfleetint.command"
 (
   cd "$work_dir/input"
-  zip -q -X "$work_dir/input.zip" nvfleetctl.command
+  zip -q -X "$work_dir/input.zip" nvfleetint.command
 )
 
 args=(
@@ -43,7 +43,7 @@ args=(
   --scope "${NVSEC_MACOS_SSA_SCOPE:-${NVSEC_SSA_SCOPE:-SIGNING_MACOS}}"
   --auth ssa
   --input_file "$work_dir/input.zip"
-  --description "nvfleetctl ${GITHUB_REF_NAME:-snapshot} ${target}"
+  --description "nvfleetint ${GITHUB_REF_NAME:-snapshot} ${target}"
   --download --print_log --timeout 600
   --result_dir "$work_dir" --result_filename signed.zip
 )
@@ -51,4 +51,4 @@ args=(
 
 nvsec "${args[@]}"
 unzip -q "$work_dir/signed.zip" -d "$work_dir/output"
-install -m 0755 "$work_dir/output/nvfleetctl.command" "$binary"
+install -m 0755 "$work_dir/output/nvfleetint.command" "$binary"

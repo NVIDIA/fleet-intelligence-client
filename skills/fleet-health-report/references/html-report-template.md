@@ -8,7 +8,7 @@ Produce a standalone `.html` file for the final fleet health snapshot.
   `<meta charset="utf-8">`, and a responsive `<meta name="viewport">`.
 - Use inline CSS and only optional inline JavaScript. Do not reference external
   fonts, scripts, CDNs, remote images, or stylesheets, so the file opens offline.
-- HTML-escape all dynamic values from `nvfleetctl` output.
+- HTML-escape all dynamic values from `nvfleetint` output.
 - Do not embed raw credentials or a full raw-data dump. When showing only the
   highest-ranked rows, state the displayed count and the full population count.
 - Use the NVIDIA-aligned dark visual system defined below: a flat dark canvas,

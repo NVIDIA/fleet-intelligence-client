@@ -1,12 +1,12 @@
 ---
 name: node-rca-rcca
-description: Investigate one degraded or unhealthy NVIDIA Fleet Intelligence node and generate an evidence-backed HTML RCA/RCCA from live nvfleetctl data. Use for node incident analysis, health-transition explanations, root-cause analysis, corrective actions, or post-incident reports. Do not use for fleet-wide status reporting.
+description: Investigate one degraded or unhealthy NVIDIA Fleet Intelligence node and generate an evidence-backed HTML RCA/RCCA from live nvfleetint data. Use for node incident analysis, health-transition explanations, root-cause analysis, corrective actions, or post-incident reports. Do not use for fleet-wide status reporting.
 ---
 
 # Node RCA/RCCA
 
 Produce a structured, evidence-backed RCA/RCCA document for one degraded or
-unhealthy node: gather live `nvfleetctl` evidence about its health transitions,
+unhealthy node: gather live `nvfleetint` evidence about its health transitions,
 recurring events, alert history, and affected components, then synthesize a root
 cause and corrective/preventive actions. Compose each report to fit the evidence
 on hand, within the required sections and visual system below — no fixed renderer
@@ -22,13 +22,13 @@ many nodes, use the `fleet-health-report` skill instead.
 
 - **Read-only.** Use read-only Fleet Intelligence commands; never run
   write/delete/tag commands.
-- **Live evidence only.** Run fresh `nvfleetctl` queries this invocation. Never
+- **Live evidence only.** Run fresh `nvfleetint` queries this invocation. Never
   substitute examples, fixtures, cached output, prior reports, or invented values
   (UUIDs, hostnames, timestamps, causes, remediation). Separate observed facts
   from inference; label uncertain conclusions `Likely` or `Not confirmed`.
 - **Fenced enrichment only.** Looking up plain-language explanations of raw codes
   (XID numbers) and firmware/integrity reason strings is the *only* permitted
-  non-`nvfleetctl` input, strictly bounded per "Enrich codes and check-reasons":
+  non-`nvfleetint` input, strictly bounded per "Enrich codes and check-reasons":
   it may inform only the RCCA actions and a **Reference** subsection, never the
   timeline, impact, root cause, or confidence.
 - **JSON is the source.** Prefer `--output json`; parse stdout as JSON only after
@@ -44,25 +44,25 @@ many nodes, use the `fleet-health-report` skill instead.
 
 ## Running the CLI
 
-Use the installed `nvfleetctl` binary with a suitable `--timeout` (e.g.
+Use the installed `nvfleetint` binary with a suitable `--timeout` (e.g.
 `--timeout 60s`); if it differs from the invocations below, check
-`nvfleetctl <command> --help`.
+`nvfleetint <command> --help`.
 
 ## Prerequisites
 
 - Run commands through the harness's local command-execution capability. The
   examples use POSIX shell syntax; on Windows, use equivalent PowerShell while
-  preserving the `nvfleetctl` arguments and evidence rules.
-- `nvfleetctl` on `PATH` — confirm with `command -v nvfleetctl` on POSIX or
-  `Get-Command nvfleetctl` in PowerShell.
+  preserving the `nvfleetint` arguments and evidence rules.
+- `nvfleetint` on `PATH` — confirm with `command -v nvfleetint` on POSIX or
+  `Get-Command nvfleetint` in PowerShell.
 - A structured JSON processor is available. The examples use `jq`; an equivalent
   parser is acceptable, but grepping human-readable table output is not.
-- An authenticated session — confirm with `nvfleetctl auth status` (diagnostic:
+- An authenticated session — confirm with `nvfleetint auth status` (diagnostic:
   exits `0` and prints a `Connection:` line rather than failing on a bad key).
   **Require `Connection: ok`.** Treat `Connection: unauthorized`/`unauthenticated`
   or `error: ...` — and on any data command, exit code `77`, HTTP 401/403, or a
   JSON `api_error` — as an auth failure, not an empty result. On any of these, ask
-  the user to run `nvfleetctl auth login` (never ask them to paste a key into
+  the user to run `nvfleetint auth login` (never ask them to paste a key into
   chat) and stop.
 - A target node — a UUID, or a hostname/partial hostname to resolve.
 
@@ -121,7 +121,7 @@ If given only a hostname/partial hostname, resolve it and confirm when multiple
 match — use `--all` (not just the first page) before deciding:
 
 ```bash
-nvfleetctl node list --hostname <hostname> --view detail --all --output json --timeout 60s
+nvfleetint node list --hostname <hostname> --view detail --all --output json --timeout 60s
 ```
 
 ### 2. Capture current node state (anchor)
@@ -134,7 +134,7 @@ temp file, then project anchor fields:
 
 ```bash
 work="<validated-work-path>" # exact path created using scratch-workspace.md
-nvfleetctl node describe <node_uuid> --output json --timeout 60s > "$work/node-describe.json"
+nvfleetint node describe <node_uuid> --output json --timeout 60s > "$work/node-describe.json"
 jq '{nodeUUID, hostname, healthStatus, nodeGroup, computeZone,
      gpuType, gpuCount, gpuArchitecture: .resources.gpuInfo.architecture,
      agentStatus, agentVersion, gpuDriverVersion, kernelVersion,
@@ -152,7 +152,7 @@ on disk.
 ### 3. Capture node health transitions
 
 ```bash
-nvfleetctl node health <node_uuid> --start <start-rfc3339> --end <end-rfc3339> --output json --timeout 60s
+nvfleetint node health <node_uuid> --start <start-rfc3339> --end <end-rfc3339> --output json --timeout 60s
 ```
 
 Both timestamps required. There is no `items`/`pagination` envelope: read
@@ -163,8 +163,8 @@ known-normal state, first degraded/unhealthy interval, and any flapping.
 ### 4. Capture recurring events
 
 ```bash
-nvfleetctl event list --node <node_uuid> --window 168h --all --output json --timeout 60s
-nvfleetctl event buckets --node <node_uuid> --window 168h --output json --timeout 60s
+nvfleetint event list --node <node_uuid> --window 168h --all --output json --timeout 60s
+nvfleetint event buckets --node <node_uuid> --window 168h --output json --timeout 60s
 ```
 
 `event list` enumerates events; `event buckets` aggregates them into time buckets
@@ -181,8 +181,8 @@ jq '{total: (.items|length), pagination,
 ### 5. Capture alert history and active alerts
 
 ```bash
-nvfleetctl alert timeline --node <node_uuid> --active --all --output json --timeout 60s
-nvfleetctl alert timeline --node <node_uuid> --all --output json --timeout 60s
+nvfleetint alert timeline --node <node_uuid> --active --all --output json --timeout 60s
+nvfleetint alert timeline --node <node_uuid> --all --output json --timeout 60s
 ```
 
 `--active` isolates what is still firing (usually small — pipe directly). The full
@@ -212,7 +212,7 @@ need (state, severity, message) for the alerts that matter, add a node-scoped,
 `--component <name>`:
 
 ```bash
-nvfleetctl alert list --node <node_uuid> --state Triggered --output json --timeout 60s
+nvfleetint alert list --node <node_uuid> --state Triggered --output json --timeout 60s
 ```
 
 ### Fast path (trivial incident)
@@ -251,7 +251,7 @@ A response can be hundreds of KB, so every fetch is expensive:
 ```bash
 work="<validated-work-path>" # exact path created using scratch-workspace.md
 out="$work/alert-<alert_uuid>.json"
-nvfleetctl alert describe <alert_uuid> --node <node_uuid> --output json --timeout 60s > "$out"
+nvfleetint alert describe <alert_uuid> --node <node_uuid> --output json --timeout 60s > "$out"
 jq '<expression>' "$out"   # re-run jq against the file as many times as needed
 ```
 
@@ -275,7 +275,7 @@ omission is explicit.
 When the user asks whether the failure is isolated or fleet-wide:
 
 ```bash
-nvfleetctl report error --view list --group-by node --window 168h --all --output json --timeout 60s
+nvfleetint report error --view list --group-by node --window 168h --all --output json --timeout 60s
 ```
 
 ## Prove completeness

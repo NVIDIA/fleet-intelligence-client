@@ -16,7 +16,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of nvfleetctl are you running?
+      description: What version of nvfleetint are you running?
       placeholder: "example: 0.0.0 or commit abc1234"
     validations:
       required: true
@@ -58,7 +58,7 @@ body:
     id: env-printout
     attributes:
       label: Environment details
-      description: Please include your OS and architecture, the output of `nvfleetctl version`, and how you installed the tool, plus any other relevant environment details
+      description: Please include your OS and architecture, the output of `nvfleetint version`, and how you installed the tool, plus any other relevant environment details
       render: shell
 
   - type: textarea
