@@ -6,6 +6,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
@@ -23,11 +24,11 @@ func newConfiguredClient(common resolvedCommonFlags) (*nvfleetint.Client, error)
 }
 
 func clientFromResolved(resolved config.Resolved, common resolvedCommonFlags) (*nvfleetint.Client, error) {
-	if strings.TrimSpace(resolved.ServiceKey) == "" {
-		return nil, missingServiceKeyError(resolved)
+	if strings.TrimSpace(resolved.APIKey) == "" {
+		return nil, missingAPIKeyError(resolved)
 	}
 
-	client, err := nvfleetint.NewClient(resolved.APIURL, resolved.ServiceKey, commonClientOptions(common)...)
+	client, err := nvfleetint.NewClient(resolved.APIURL, resolved.APIKey, commonClientOptions(common)...)
 	if err != nil {
 		// The URL can come from a profile or the environment, so name the place
 		// the user actually needs to fix.
@@ -53,25 +54,84 @@ func resolveCredentials(profile string) (config.Resolved, error) {
 	return resolved, nil
 }
 
-// Explains which profile (if any) is missing a service key
-func missingServiceKeyError(resolved config.Resolved) error {
-	if resolved.Profile == "" {
-		if resolved.ProfilesConfigured {
-			return fmt.Errorf(
-				"%w; run `nvfleetint auth use <name>`, or pass --profile <name>",
-				config.ErrNoProfile,
-			)
-		}
+// Explains which profile (if any) is missing an API key
+func missingAPIKeyError(resolved config.Resolved) error {
+	hint := legacyAPIKeyEnvHint()
+
+	switch {
+	case resolved.MissingCurrentProfile != "":
+		// The selection survived the profile it points at, so neither "no
+		// profile is selected" nor "this profile has no key" describes it.
 		return fmt.Errorf(
-			"%w; run `nvfleetint auth add <name> --key <service-key>`, or set %s",
-			config.ErrNoProfile, config.EnvServiceKey,
+			"%w; current profile %q is no longer stored; run `nvfleetint auth use <name>`, or pass --profile <name>%s",
+			config.ErrNoProfile, resolved.MissingCurrentProfile, hint,
+		)
+	case resolved.Profile == "" && resolved.ProfilesConfigured:
+		return fmt.Errorf(
+			"%w; run `nvfleetint auth use <name>`, or pass --profile <name>%s",
+			config.ErrNoProfile, hint,
+		)
+	case resolved.Profile == "":
+		return fmt.Errorf(
+			"%w; run `nvfleetint auth add <name> --api-key <api-key>`, or set %s%s",
+			config.ErrNoProfile, config.EnvAPIKey, hint,
 		)
 	}
 
 	return fmt.Errorf(
-		"profile %q has no service key; run `nvfleetint auth add %s --key <service-key>`",
-		resolved.Profile, resolved.Profile,
+		"profile %q has no API key; run `nvfleetint auth add %s --api-key <api-key>`%s",
+		resolved.Profile, resolved.Profile, hint,
 	)
+}
+
+// legacyAPIKeyEnvNote reports an exported NVFLEETINT_SERVICE_KEY that nothing
+// reads any more. The variable was renamed to NVFLEETINT_API_KEY, so a CI job
+// that still exports the old name fails as if it had set no credentials at
+// all; naming it is the only thing that makes the failure diagnosable. It
+// stays quiet once NVFLEETINT_API_KEY is set, since then the old name is
+// leftovers rather than the cause.
+func legacyAPIKeyEnvNote() string {
+	if strings.TrimSpace(os.Getenv(config.EnvLegacyAPIKey)) == "" {
+		return ""
+	}
+	if strings.TrimSpace(os.Getenv(config.EnvAPIKey)) != "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%s is set but no longer read; it was renamed to %s",
+		config.EnvLegacyAPIKey, config.EnvAPIKey)
+}
+
+// legacyAPIKeyEnvHint is legacyAPIKeyEnvNote as a clause to append to an error
+func legacyAPIKeyEnvHint() string {
+	note := legacyAPIKeyEnvNote()
+	if note == "" {
+		return ""
+	}
+
+	return "; " + note
+}
+
+// credentialWarnings lists the conditions that did not stop credential
+// resolution but changed its outcome. `auth status` exists to explain how
+// credentials resolved, so these belong in its output rather than in a
+// silently degraded result.
+func credentialWarnings(resolved config.Resolved) []string {
+	var warnings []string
+	if resolved.ConfigError != nil {
+		warnings = append(warnings, fmt.Sprintf(
+			"%v; continuing with credentials from the environment", resolved.ConfigError))
+	}
+	if resolved.MissingCurrentProfile != "" {
+		warnings = append(warnings, fmt.Sprintf(
+			"current profile %q is no longer stored; run `nvfleetint auth use <name>`",
+			resolved.MissingCurrentProfile))
+	}
+	if note := legacyAPIKeyEnvNote(); note != "" {
+		warnings = append(warnings, note)
+	}
+
+	return warnings
 }
 
 // Names the place a rejected API URL came from
@@ -83,7 +143,7 @@ func fixAPIURLHint(resolved config.Resolved) string {
 		return fmt.Sprintf("run `nvfleetint auth add %s --api-url <https-url>`", resolved.Profile)
 	}
 
-	return "run `nvfleetint auth add <name> --key <service-key> --api-url <https-url>`"
+	return "run `nvfleetint auth add <name> --api-key <api-key> --api-url <https-url>`"
 }
 
 // Builds the SDK options implied by resolved common flags

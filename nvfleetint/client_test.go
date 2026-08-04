@@ -22,11 +22,11 @@ func TestNewClientRequiresBaseURL(t *testing.T) {
 	}
 }
 
-// Verifies service key validation
-func TestNewClientRequiresServiceKey(t *testing.T) {
+// Verifies API key validation
+func TestNewClientRequiresAPIKey(t *testing.T) {
 	_, err := NewClient("https://example.com", "")
-	if err != ErrMissingServiceKey {
-		t.Fatalf("expected ErrMissingServiceKey, got %v", err)
+	if err != ErrMissingAPIKey {
+		t.Fatalf("expected ErrMissingAPIKey, got %v", err)
 	}
 }
 
@@ -142,8 +142,8 @@ func TestNewClientStoresConfiguration(t *testing.T) {
 		t.Fatalf("unexpected base URL: %q", client.BaseURL())
 	}
 
-	if !client.ServiceKeyConfigured() {
-		t.Fatal("expected service key to be configured")
+	if !client.APIKeyConfigured() {
+		t.Fatal("expected API key to be configured")
 	}
 }
 

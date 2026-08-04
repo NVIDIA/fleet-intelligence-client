@@ -61,7 +61,7 @@ Choose an NGC API key:
   programmatic integrations.
 
 ```bash
-nvfleetint auth add --key <your-ngc-api-key>
+nvfleetint auth add --api-key <your-ngc-api-key>
 nvfleetint overview
 nvfleetint node list
 ```

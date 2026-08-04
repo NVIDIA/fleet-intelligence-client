@@ -19,7 +19,7 @@ import (
 func clearEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv(EnvAPIURL, "")
-	t.Setenv(EnvServiceKey, "")
+	t.Setenv(EnvAPIKey, "")
 	t.Setenv(EnvProfile, "")
 }
 
@@ -43,10 +43,10 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	var want Config
-	if err := want.AddProfile("prod", Profile{APIURL: "https://fleet.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := want.AddProfile("prod", Profile{APIURL: "https://fleet.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := want.AddProfile("dev", Profile{APIURL: "https://dev.example.com", ServiceKey: "dev-key"}); err != nil {
+	if err := want.AddProfile("dev", Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
@@ -72,7 +72,7 @@ func TestSaveUsesExpectedPathAndMode(t *testing.T) {
 	t.Setenv("HOME", homeDir)
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "test-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "test-key"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 	if err := Save(cfg); err != nil {
@@ -117,7 +117,7 @@ func TestSaveWritesThroughSymlinkedConfig(t *testing.T) {
 	}
 
 	var cfg Config
-	if err := cfg.AddProfile("dev", Profile{ServiceKey: "dev-key"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 	if err := Save(cfg); err != nil {
@@ -153,7 +153,7 @@ func TestEditConcurrentAddsPreserveProfiles(t *testing.T) {
 			defer wg.Done()
 			name := fmt.Sprintf("p%d", i)
 			_, err := Edit(func(cfg *Config) error {
-				return cfg.AddProfile(name, Profile{ServiceKey: "key-" + name})
+				return cfg.AddProfile(name, Profile{APIKey: "key-" + name})
 			})
 			errs <- err
 		}(i)
@@ -183,7 +183,7 @@ func TestSaveIsDeterministic(t *testing.T) {
 
 	var cfg Config
 	for _, name := range []string{"zeta", "alpha", "prod", "dev", "m1"} {
-		if err := cfg.AddProfile(name, Profile{APIURL: "https://" + name + ".example.com", ServiceKey: "key"}); err != nil {
+		if err := cfg.AddProfile(name, Profile{APIURL: "https://" + name + ".example.com", APIKey: "key"}); err != nil {
 			t.Fatalf("add %s failed: %v", name, err)
 		}
 	}
@@ -216,30 +216,6 @@ func TestSaveIsDeterministic(t *testing.T) {
 	}
 }
 
-// Profiles landed before the first release, so the old flat config is
-// deliberately not migrated: it decodes to zero profiles.
-func TestLoadFlatLegacyConfigYieldsNoProfiles(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-
-	path := filepath.Join(homeDir, ".config", "nvfleetint", "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
-		t.Fatalf("mkdir failed: %v", err)
-	}
-	legacy := "api_url: \"https://fleet.example.com\"\nservice_key: \"legacy-key\"\n"
-	if err := os.WriteFile(path, []byte(legacy), fileMode); err != nil {
-		t.Fatalf("write failed: %v", err)
-	}
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("load failed: %v", err)
-	}
-	if len(cfg.Profiles) != 0 || cfg.CurrentProfile != "" {
-		t.Fatalf("expected legacy config to decode to nothing, got %#v", cfg)
-	}
-}
-
 func TestLoadInvalidYAMLFails(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
@@ -264,7 +240,7 @@ func TestResolveEnvironmentOnlySurvivesMalformedConfig(t *testing.T) {
 	t.Setenv("HOME", homeDir)
 	clearEnv(t)
 	t.Setenv(EnvAPIURL, "https://env.example.com")
-	t.Setenv(EnvServiceKey, "env-key")
+	t.Setenv(EnvAPIKey, "env-key")
 
 	path := filepath.Join(homeDir, ".config", "nvfleetint", "config.yaml")
 	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
@@ -281,29 +257,29 @@ func TestResolveEnvironmentOnlySurvivesMalformedConfig(t *testing.T) {
 	if resolved.APIURL != "https://env.example.com" || resolved.APIURLSource != SourceEnvironment {
 		t.Fatalf("unexpected API URL resolution: %#v", resolved)
 	}
-	if resolved.ServiceKey != "env-key" || resolved.ServiceKeySource != SourceEnvironment {
-		t.Fatalf("unexpected service key resolution: %#v", resolved)
+	if resolved.APIKey != "env-key" || resolved.APIKeySource != SourceEnvironment {
+		t.Fatalf("unexpected API key resolution: %#v", resolved)
 	}
 }
 
 func TestAddProfileRejectsDuplicate(t *testing.T) {
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 
-	err := cfg.AddProfile("prod", Profile{ServiceKey: "b"})
+	err := cfg.AddProfile("prod", Profile{APIKey: "b"})
 	if !errors.Is(err, ErrProfileExists) {
 		t.Fatalf("expected ErrProfileExists, got %v", err)
 	}
-	if got := cfg.Profiles["prod"].ServiceKey; got != "a" {
+	if got := cfg.Profiles["prod"].APIKey; got != "a" {
 		t.Fatalf("expected the stored profile to be untouched, got %q", got)
 	}
 }
 
 func TestAddProfileDefaultsAPIURL(t *testing.T) {
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 
@@ -314,7 +290,7 @@ func TestAddProfileDefaultsAPIURL(t *testing.T) {
 
 func TestAddProfileTrimsName(t *testing.T) {
 	var cfg Config
-	if err := cfg.AddProfile(" dev ", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile(" dev ", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 	if _, ok := cfg.Profiles["dev"]; !ok {
@@ -331,7 +307,7 @@ func TestResolveBlankProfileAPIURLReportsDefaultSource(t *testing.T) {
 	cfg := Config{
 		CurrentProfile: "staging",
 		Profiles: map[string]Profile{
-			"staging": {ServiceKey: "staging-key"},
+			"staging": {APIKey: "staging-key"},
 		},
 	}
 
@@ -349,10 +325,10 @@ func TestResolveBlankProfileAPIURLReportsDefaultSource(t *testing.T) {
 
 func TestAddProfileKeepsExistingCurrent(t *testing.T) {
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", Profile{ServiceKey: "b"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIKey: "b"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
@@ -365,11 +341,11 @@ func TestAddProfileRepairsDanglingCurrent(t *testing.T) {
 	cfg := Config{
 		CurrentProfile: "gone",
 		Profiles: map[string]Profile{
-			"dev": {ServiceKey: "dev-key"},
+			"dev": {APIKey: "dev-key"},
 		},
 	}
 
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 	if cfg.CurrentProfile != "prod" {
@@ -380,18 +356,18 @@ func TestAddProfileRepairsDanglingCurrent(t *testing.T) {
 func TestUpdateProfileRequiresExisting(t *testing.T) {
 	var cfg Config
 
-	err := cfg.UpdateProfile("prod", Profile{ServiceKey: "a"})
+	err := cfg.UpdateProfile("prod", Profile{APIKey: "a"})
 	if !errors.Is(err, ErrProfileNotFound) {
 		t.Fatalf("expected ErrProfileNotFound, got %v", err)
 	}
 
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
-	if err := cfg.UpdateProfile("prod", Profile{APIURL: "https://new.example.com", ServiceKey: "b"}); err != nil {
+	if err := cfg.UpdateProfile("prod", Profile{APIURL: "https://new.example.com", APIKey: "b"}); err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
-	if got := cfg.Profiles["prod"]; got.ServiceKey != "b" || got.APIURL != "https://new.example.com" {
+	if got := cfg.Profiles["prod"]; got.APIKey != "b" || got.APIURL != "https://new.example.com" {
 		t.Fatalf("unexpected profile after update: %#v", got)
 	}
 }
@@ -399,7 +375,7 @@ func TestUpdateProfileRequiresExisting(t *testing.T) {
 func TestRemoveProfileClearsCurrent(t *testing.T) {
 	t.Run("last profile clears current", func(t *testing.T) {
 		var cfg Config
-		if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+		if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 			t.Fatalf("add failed: %v", err)
 		}
 		if err := cfg.RemoveProfile("prod"); err != nil {
@@ -412,10 +388,10 @@ func TestRemoveProfileClearsCurrent(t *testing.T) {
 
 	t.Run("single survivor is not auto-selected", func(t *testing.T) {
 		var cfg Config
-		if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+		if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 			t.Fatalf("add prod failed: %v", err)
 		}
-		if err := cfg.AddProfile("dev", Profile{ServiceKey: "b"}); err != nil {
+		if err := cfg.AddProfile("dev", Profile{APIKey: "b"}); err != nil {
 			t.Fatalf("add dev failed: %v", err)
 		}
 		if err := cfg.RemoveProfile("prod"); err != nil {
@@ -429,7 +405,7 @@ func TestRemoveProfileClearsCurrent(t *testing.T) {
 	t.Run("removing a non-current profile keeps the selection", func(t *testing.T) {
 		var cfg Config
 		for _, name := range []string{"prod", "dev", "qa"} {
-			if err := cfg.AddProfile(name, Profile{ServiceKey: "k"}); err != nil {
+			if err := cfg.AddProfile(name, Profile{APIKey: "k"}); err != nil {
 				t.Fatalf("add %s failed: %v", name, err)
 			}
 		}
@@ -451,10 +427,10 @@ func TestRemoveProfileClearsCurrent(t *testing.T) {
 
 func TestUseProfile(t *testing.T) {
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", Profile{ServiceKey: "b"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIKey: "b"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
@@ -472,7 +448,7 @@ func TestUseProfile(t *testing.T) {
 func TestProfileNamesAreSorted(t *testing.T) {
 	var cfg Config
 	for _, name := range []string{"zeta", "alpha", "m1"} {
-		if err := cfg.AddProfile(name, Profile{ServiceKey: "k"}); err != nil {
+		if err := cfg.AddProfile(name, Profile{APIKey: "k"}); err != nil {
 			t.Fatalf("add %s failed: %v", name, err)
 		}
 	}
@@ -507,20 +483,20 @@ func TestValidateProfileName(t *testing.T) {
 	}
 }
 
-// The file holds every stored service key, so a failed write must not be able
+// The file holds every stored API key, so a failed write must not be able
 // to leave a truncated or half-written config behind.
 func TestSaveReplacesFileAtomically(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
 	if err := Save(cfg); err != nil {
 		t.Fatalf("save failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", ServiceKey: "dev-key"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 	if err := Save(cfg); err != nil {
@@ -553,13 +529,13 @@ func TestSaveReplacesFileAtomically(t *testing.T) {
 func TestResolveExplicitProfileIgnoresEnvironment(t *testing.T) {
 	clearEnv(t)
 	t.Setenv(EnvAPIURL, "https://env.example.com")
-	t.Setenv(EnvServiceKey, "env-key")
+	t.Setenv(EnvAPIKey, "env-key")
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", ServiceKey: "dev-key"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
@@ -571,10 +547,10 @@ func TestResolveExplicitProfileIgnoresEnvironment(t *testing.T) {
 	if resolved.Profile != "dev" {
 		t.Fatalf("unexpected profile: %q", resolved.Profile)
 	}
-	if resolved.APIURL != "https://dev.example.com" || resolved.ServiceKey != "dev-key" {
+	if resolved.APIURL != "https://dev.example.com" || resolved.APIKey != "dev-key" {
 		t.Fatalf("environment leaked into an explicit profile: %#v", resolved)
 	}
-	if resolved.APIURLSource != SourceProfile || resolved.ServiceKeySource != SourceProfile {
+	if resolved.APIURLSource != SourceProfile || resolved.APIKeySource != SourceProfile {
 		t.Fatalf("unexpected sources: %#v", resolved)
 	}
 	if len(resolved.EnvIgnored) != 2 {
@@ -585,13 +561,13 @@ func TestResolveExplicitProfileIgnoresEnvironment(t *testing.T) {
 func TestResolveEnvProfileSelectsProfile(t *testing.T) {
 	clearEnv(t)
 	t.Setenv(EnvProfile, "dev")
-	t.Setenv(EnvServiceKey, "env-key")
+	t.Setenv(EnvAPIKey, "env-key")
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", ServiceKey: "dev-key"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
@@ -599,7 +575,7 @@ func TestResolveEnvProfileSelectsProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve failed: %v", err)
 	}
-	if resolved.Profile != "dev" || resolved.ServiceKey != "dev-key" {
+	if resolved.Profile != "dev" || resolved.APIKey != "dev-key" {
 		t.Fatalf("unexpected resolution: %#v", resolved)
 	}
 }
@@ -609,10 +585,10 @@ func TestResolveFlagBeatsEnvProfile(t *testing.T) {
 	t.Setenv(EnvProfile, "dev")
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", ServiceKey: "dev-key"}); err != nil {
+	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
@@ -627,10 +603,10 @@ func TestResolveFlagBeatsEnvProfile(t *testing.T) {
 
 func TestResolveCurrentProfileWithEnvOverlay(t *testing.T) {
 	clearEnv(t)
-	t.Setenv(EnvServiceKey, "env-key")
+	t.Setenv(EnvAPIKey, "env-key")
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
 
@@ -645,7 +621,7 @@ func TestResolveCurrentProfileWithEnvOverlay(t *testing.T) {
 	if resolved.APIURL != "https://prod.example.com" || resolved.APIURLSource != SourceProfile {
 		t.Fatalf("expected the profile URL to survive: %#v", resolved)
 	}
-	if resolved.ServiceKey != "env-key" || resolved.ServiceKeySource != SourceEnvironment {
+	if resolved.APIKey != "env-key" || resolved.APIKeySource != SourceEnvironment {
 		t.Fatalf("expected the environment key to win: %#v", resolved)
 	}
 	if len(resolved.EnvIgnored) != 0 {
@@ -655,7 +631,7 @@ func TestResolveCurrentProfileWithEnvOverlay(t *testing.T) {
 
 func TestResolveEnvironmentOnly(t *testing.T) {
 	clearEnv(t)
-	t.Setenv(EnvServiceKey, "env-key")
+	t.Setenv(EnvAPIKey, "env-key")
 
 	resolved, err := Config{}.Resolve("")
 	if err != nil {
@@ -665,7 +641,7 @@ func TestResolveEnvironmentOnly(t *testing.T) {
 	if resolved.Profile != "" {
 		t.Fatalf("expected no profile, got %q", resolved.Profile)
 	}
-	if resolved.ServiceKey != "env-key" || resolved.ServiceKeySource != SourceEnvironment {
+	if resolved.APIKey != "env-key" || resolved.APIKeySource != SourceEnvironment {
 		t.Fatalf("unexpected key: %#v", resolved)
 	}
 	if resolved.APIURL != DefaultAPIURL || resolved.APIURLSource != SourceDefault {
@@ -680,8 +656,8 @@ func TestResolveWithoutAnythingConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve failed: %v", err)
 	}
-	if resolved.ServiceKey != "" {
-		t.Fatalf("expected no service key, got %q", resolved.ServiceKey)
+	if resolved.APIKey != "" {
+		t.Fatalf("expected no API key, got %q", resolved.APIKey)
 	}
 	if resolved.APIURL != DefaultAPIURL {
 		t.Fatalf("expected the default API URL, got %q", resolved.APIURL)
@@ -692,7 +668,7 @@ func TestResolveUnknownProfileFails(t *testing.T) {
 	clearEnv(t)
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{ServiceKey: "a"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIKey: "a"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 
@@ -701,12 +677,112 @@ func TestResolveUnknownProfileFails(t *testing.T) {
 	}
 }
 
-func TestResolveDanglingCurrentProfileFails(t *testing.T) {
+// A selection left behind in the file must not fail the command: nobody named
+// that profile, and failing takes down `auth status` too.
+func TestResolveDanglingCurrentProfileReportsInsteadOfFailing(t *testing.T) {
 	clearEnv(t)
 
 	cfg := Config{CurrentProfile: "gone"}
-	if _, err := cfg.Resolve(""); !errors.Is(err, ErrProfileNotFound) {
+	resolved, err := cfg.Resolve("")
+	if err != nil {
+		t.Fatalf("resolve failed: %v", err)
+	}
+	if resolved.MissingCurrentProfile != "gone" {
+		t.Fatalf("expected MissingCurrentProfile %q, got %q", "gone", resolved.MissingCurrentProfile)
+	}
+	if resolved.Profile != "" {
+		t.Fatalf("expected no resolved profile, got %q", resolved.Profile)
+	}
+	if resolved.APIKey != "" {
+		t.Fatalf("expected no API key, got %q", resolved.APIKey)
+	}
+}
+
+func TestResolveDanglingCurrentProfileFallsBackToEnvironment(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(EnvAPIKey, "env-key")
+	t.Setenv(EnvAPIURL, "https://env.example.com")
+
+	cfg := Config{CurrentProfile: "gone"}
+	resolved, err := cfg.Resolve("")
+	if err != nil {
+		t.Fatalf("resolve failed: %v", err)
+	}
+	if resolved.MissingCurrentProfile != "gone" {
+		t.Fatalf("expected MissingCurrentProfile %q, got %q", "gone", resolved.MissingCurrentProfile)
+	}
+	if resolved.APIKey != "env-key" || resolved.APIKeySource != SourceEnvironment {
+		t.Fatalf("expected the environment key, got %q from %q", resolved.APIKey, resolved.APIKeySource)
+	}
+	if resolved.APIURL != "https://env.example.com" || resolved.APIURLSource != SourceEnvironment {
+		t.Fatalf("expected the environment URL, got %q from %q", resolved.APIURL, resolved.APIURLSource)
+	}
+}
+
+// An explicitly named profile still fails — the user named it, so silently
+// using something else is the wrong recovery.
+func TestResolveExplicitMissingProfileStillFails(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(EnvAPIKey, "env-key")
+
+	cfg := Config{CurrentProfile: "gone"}
+	if _, err := cfg.Resolve("nope"); !errors.Is(err, ErrProfileNotFound) {
 		t.Fatalf("expected ErrProfileNotFound, got %v", err)
+	}
+}
+
+// A corrupt file with a usable environment resolves, but must say so: it is
+// otherwise indistinguishable from having no config at all.
+func TestResolveReportsUnreadableConfigWhenEnvironmentSucceeds(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(EnvAPIKey, "env-key")
+
+	path, err := Path()
+	if err != nil {
+		t.Fatalf("path failed: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
+		t.Fatalf("mkdir failed: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("profiles: [\n"), fileMode); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+
+	resolved, err := Resolve("")
+	if err != nil {
+		t.Fatalf("resolve failed: %v", err)
+	}
+	if resolved.ConfigError == nil {
+		t.Fatal("expected the config read error to be reported")
+	}
+	if !strings.Contains(resolved.ConfigError.Error(), "read config") {
+		t.Fatalf("expected a read config error, got %v", resolved.ConfigError)
+	}
+	if resolved.APIKey != "env-key" {
+		t.Fatalf("expected the environment key, got %q", resolved.APIKey)
+	}
+}
+
+// Without an environment key there is nothing to fall back to, so the read
+// failure must stay a failure rather than become an empty credential set.
+func TestResolveUnreadableConfigFailsWithoutEnvironmentKey(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("HOME", t.TempDir())
+
+	path, err := Path()
+	if err != nil {
+		t.Fatalf("path failed: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
+		t.Fatalf("mkdir failed: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("profiles: [\n"), fileMode); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+
+	if _, err := Resolve(""); err == nil {
+		t.Fatal("expected an error for an unreadable config")
 	}
 }
 
@@ -715,7 +791,7 @@ func TestResolveLoadsFromDisk(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
 	if err := Save(cfg); err != nil {
@@ -726,7 +802,7 @@ func TestResolveLoadsFromDisk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve failed: %v", err)
 	}
-	if resolved.ServiceKey != "prod-key" {
-		t.Fatalf("unexpected key: %q", resolved.ServiceKey)
+	if resolved.APIKey != "prod-key" {
+		t.Fatalf("unexpected key: %q", resolved.APIKey)
 	}
 }

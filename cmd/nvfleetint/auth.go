@@ -31,20 +31,24 @@ const (
 )
 
 type authStatusOutput struct {
-	Profile              string `json:"profile"`
-	APIURL               string `json:"apiUrl"`
-	APIURLSource         string `json:"apiUrlSource"`
-	ServiceKeyConfigured bool   `json:"serviceKeyConfigured"`
-	ServiceKeySource     string `json:"serviceKeySource"`
-	EnvironmentIgnored   bool   `json:"environmentIgnored"`
-	Connection           string `json:"connection"`
+	Profile            string `json:"profile"`
+	APIURL             string `json:"apiUrl"`
+	APIURLSource       string `json:"apiUrlSource"`
+	APIKeyConfigured   bool   `json:"apiKeyConfigured"`
+	APIKeySource       string `json:"apiKeySource"`
+	EnvironmentIgnored bool   `json:"environmentIgnored"`
+	Connection         string `json:"connection"`
+	// Warnings carries the conditions that credential resolution recovered
+	// from. They are part of the answer to "which credentials would a command
+	// use", so a script reading this output needs them as much as a person.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 type authProfileOutput struct {
-	Name                 string `json:"name"`
-	APIURL               string `json:"apiUrl"`
-	ServiceKeyConfigured bool   `json:"serviceKeyConfigured"`
-	Current              bool   `json:"current"`
+	Name             string `json:"name"`
+	APIURL           string `json:"apiUrl"`
+	APIKeyConfigured bool   `json:"apiKeyConfigured"`
+	Current          bool   `json:"current"`
 }
 
 type authListOutput struct {
@@ -58,10 +62,10 @@ func newAuthCmd() *cobra.Command {
 		Short: "Manage credential profiles",
 		Long: `Manage the credential profiles nvfleetint uses to reach the API.
 
-Each profile pairs an NGC service key with an API URL, so one installation can
+Each profile pairs an NGC API key with an API URL, so one installation can
 work against several tenants or endpoints. "add" both creates and changes a
 profile, so it is also how a key is rotated, and its name is optional — with one
-tenant, "nvfleetint auth add --key <ngc-service-key>" is the whole setup.
+tenant, "nvfleetint auth add --api-key <ngc-api-key>" is the whole setup.
 
 The profile is the object of these commands, so add/remove/use name it
 positionally. Commands that call the API instead select a profile with
@@ -99,13 +103,13 @@ func requireProfileNameArg() cobra.PositionalArgs {
 }
 
 func newAuthAddCmd() *cobra.Command {
-	var serviceKey, apiURL string
+	var apiKey, apiURL string
 	var skipConfirm bool
 
 	cmd := &cobra.Command{
 		Use:   "add [<name>]",
 		Short: "Add a credential profile, or change an existing one",
-		Long: `Store an NGC service key and API URL under a profile name.
+		Long: `Store an NGC API key and API URL under a profile name.
 
 The name is optional: omitting it targets the profile named "` + config.DefaultProfileName + `",
 so a single-tenant setup never has to invent one.
@@ -114,14 +118,14 @@ An existing profile is changed in place, so this is also the key-rotation path.
 The change is partial: an omitted flag leaves that value alone, and rotating a
 key therefore preserves a custom API URL.
 
-Replacing a stored service key destroys it, so that prompts for confirmation;
+Replacing a stored API key destroys it, so that prompts for confirmation;
 pass --yes to skip the prompt in a script. Creating a profile, changing only its
 API URL, or supplying the first key for a profile that has none replaces nothing
 recoverable and never prompts.`,
-		Example: `  nvfleetint auth add --key <ngc-service-key>
-  nvfleetint auth add prod --key <ngc-service-key>
-  nvfleetint auth add dev --key <ngc-service-key> --api-url https://dev.example.com
-  nvfleetint auth add prod --key <rotated-key> --yes
+		Example: `  nvfleetint auth add --api-key <ngc-api-key>
+  nvfleetint auth add prod --api-key <ngc-api-key>
+  nvfleetint auth add dev --api-key <ngc-api-key> --api-url https://dev.example.com
+  nvfleetint auth add prod --api-key <rotated-key> --yes
   nvfleetint auth add dev --api-url https://other.example.com`,
 		Args: optionalSingleArg("profile name"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -139,14 +143,14 @@ recoverable and never prompts.`,
 			// Changed() rather than a non-empty check, so an omitted flag is
 			// distinguishable from one supplied as empty — which is rejected
 			// below rather than treated as "clear this credential", since
-			// `--key "$KEY"` with KEY unset would otherwise wipe the key.
+			// `--api-key "$KEY"` with KEY unset would otherwise wipe the key.
 			inputs := authAddInputs{
-				keySet:     cmd.Flags().Changed("key"),
-				apiURLSet:  cmd.Flags().Changed("api-url"),
-				serviceKey: strings.TrimSpace(serviceKey),
+				apiKeySet: cmd.Flags().Changed("api-key"),
+				apiURLSet: cmd.Flags().Changed("api-url"),
+				apiKey:    strings.TrimSpace(apiKey),
 			}
-			if inputs.keySet && inputs.serviceKey == "" {
-				return errors.New("--key cannot be empty")
+			if inputs.apiKeySet && inputs.apiKey == "" {
+				return errors.New("--api-key cannot be empty")
 			}
 			if inputs.apiURLSet && strings.TrimSpace(apiURL) == "" {
 				return errors.New("--api-url cannot be empty")
@@ -193,7 +197,7 @@ recoverable and never prompts.`,
 				// without the confirmation this command promises.
 				if !confirmed && destroysStoredKey(cfg.Profiles[name], inputs) {
 					return fmt.Errorf(
-						"profile %q gained a service key while this command was waiting; re-run to confirm replacing it",
+						"profile %q gained an API key while this command was waiting; re-run to confirm replacing it",
 						name,
 					)
 				}
@@ -228,7 +232,7 @@ recoverable and never prompts.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&serviceKey, "key", "", "NGC service key")
+	cmd.Flags().StringVar(&apiKey, "api-key", "", "NGC API key")
 	cmd.Flags().StringVar(&apiURL, "api-url", "", "Fleet Intelligence API URL")
 	cmd.Flags().BoolVar(&skipConfirm, "yes", false,
 		"Skip the confirmation prompt shown when a profile is overwritten")
@@ -240,10 +244,10 @@ recoverable and never prompts.`,
 // whether a flag was supplied at all, which is what separates "leave this
 // alone" from "set it to this".
 type authAddInputs struct {
-	keySet     bool
-	apiURLSet  bool
-	serviceKey string
-	apiURL     string
+	apiKeySet bool
+	apiURLSet bool
+	apiKey    string
+	apiURL    string
 }
 
 // resolveAuthAddProfile decides what `auth add` writes for one snapshot of the
@@ -256,18 +260,18 @@ func resolveAuthAddProfile(cfg config.Config, name string, in authAddInputs) (co
 	existed := lookupErr == nil
 
 	switch {
-	case !existed && !in.keySet:
+	case !existed && !in.apiKeySet:
 		// A profile with no key cannot authenticate anything.
-		return config.Profile{}, false, errors.New("service key is required")
-	case existed && !in.keySet && !in.apiURLSet:
+		return config.Profile{}, false, errors.New("API key is required")
+	case existed && !in.apiKeySet && !in.apiURLSet:
 		return config.Profile{}, true, fmt.Errorf(
-			"profile %q already exists and nothing was supplied to change; pass --key, --api-url, or both",
+			"profile %q already exists and nothing was supplied to change; pass --api-key, --api-url, or both",
 			name,
 		)
 	}
 
-	if in.keySet {
-		profile.ServiceKey = in.serviceKey
+	if in.apiKeySet {
+		profile.APIKey = in.apiKey
 	}
 	// On an existing profile an omitted --api-url keeps the stored endpoint; on
 	// a new one it takes the default.
@@ -284,10 +288,10 @@ func resolveAuthAddProfile(cfg config.Config, name string, in authAddInputs) (co
 // URL, or supplying the first key for a profile that has none all take nothing
 // away, and a prompt that fires when nothing is at stake is one people learn to
 // answer without reading. It also has to stay this narrow because the CLI's own
-// remediation hints (missingServiceKeyError, fixAPIURLHint) name an existing
+// remediation hints (missingAPIKeyError, fixAPIURLHint) name an existing
 // profile: were those to prompt, the printed fix would be unusable in CI.
 func destroysStoredKey(current config.Profile, in authAddInputs) bool {
-	return in.keySet && strings.TrimSpace(current.ServiceKey) != ""
+	return in.apiKeySet && strings.TrimSpace(current.APIKey) != ""
 }
 
 // overwriteProfileSummary describes the credentials `auth add` is about to
@@ -296,8 +300,8 @@ func destroysStoredKey(current config.Profile, in authAddInputs) bool {
 // never prints a key, only the endpoint it is paired with.
 func overwriteProfileSummary(name string, current config.Profile, in authAddInputs) string {
 	var replacing []string
-	if in.keySet {
-		replacing = append(replacing, "service key")
+	if in.apiKeySet {
+		replacing = append(replacing, "API key")
 	}
 	if in.apiURLSet {
 		replacing = append(replacing, "API URL")
@@ -341,7 +345,7 @@ func newAuthRemoveCmd() *cobra.Command {
 				return withProfileListHint(err)
 			}
 			if !skipConfirm {
-				summary := fmt.Sprintf("This deletes profile %q and the service key stored in it.", name)
+				summary := fmt.Sprintf("This deletes profile %q and the API key stored in it.", name)
 				if err := clihelpers.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), summary); err != nil {
 					return err
 				}
@@ -365,7 +369,7 @@ func newAuthRemoveCmd() *cobra.Command {
 			case len(cfg.Profiles) > 0:
 				fmt.Fprintln(out, "No current profile; run `nvfleetint auth use <name>`.")
 			default:
-				fmt.Fprintln(out, "No profiles remain; run `nvfleetint auth add <name> --key <service-key>`.")
+				fmt.Fprintln(out, "No profiles remain; run `nvfleetint auth add <name> --api-key <api-key>`.")
 			}
 
 			return nil
@@ -394,7 +398,7 @@ func newAuthUseCmd() *cobra.Command {
 				// "that name is wrong", and needs a different remedy.
 				if len(cfg.Profiles) == 0 {
 					return fmt.Errorf(
-						"%w; run `nvfleetint auth add %s --key <service-key>` first",
+						"%w; run `nvfleetint auth add %s --api-key <api-key>` first",
 						config.ErrNoProfile, name,
 					)
 				}
@@ -443,9 +447,9 @@ func newAuthListCmd() *cobra.Command {
 				listOutput.Profiles = append(listOutput.Profiles, authProfileOutput{
 					Name:   name,
 					APIURL: profile.APIURL,
-					// Service keys are never printed, only reported as present.
-					ServiceKeyConfigured: strings.TrimSpace(profile.ServiceKey) != "",
-					Current:              name == effectiveProfile,
+					// API keys are never printed, only reported as present.
+					APIKeyConfigured: strings.TrimSpace(profile.APIKey) != "",
+					Current:          name == effectiveProfile,
 				})
 			}
 
@@ -454,7 +458,7 @@ func newAuthListCmd() *cobra.Command {
 				return clioutput.WriteJSON(out, listOutput)
 			}
 			if len(listOutput.Profiles) == 0 {
-				fmt.Fprintln(out, "No profiles configured. Run `nvfleetint auth add <name> --key <service-key>`.")
+				fmt.Fprintln(out, "No profiles configured. Run `nvfleetint auth add <name> --api-key <api-key>`.")
 				return nil
 			}
 
@@ -463,12 +467,12 @@ func newAuthListCmd() *cobra.Command {
 				rows = append(rows, []string{
 					profile.Name,
 					clioutput.DisplayString(profile.APIURL),
-					serviceKeyDisplay(profile.ServiceKeyConfigured),
+					apiKeyDisplay(profile.APIKeyConfigured),
 					currentDisplay(profile.Current),
 				})
 			}
 
-			if err := clioutput.WriteTable(out, []string{"NAME", "API URL", "SERVICE KEY", "ACTIVE"}, rows); err != nil {
+			if err := clioutput.WriteTable(out, []string{"NAME", "API URL", "API KEY", "ACTIVE"}, rows); err != nil {
 				return err
 			}
 			if listNote != "" {
@@ -488,6 +492,8 @@ func authListEffectiveProfile(cfg config.Config) (string, string) {
 	envProfile := strings.TrimSpace(os.Getenv(config.EnvProfile))
 	resolved, err := cfg.Resolve("")
 	if err != nil {
+		// Only an explicit selection still fails; a dangling current_profile
+		// resolves and comes back as MissingCurrentProfile below.
 		if envProfile != "" {
 			return envProfile, fmt.Sprintf(
 				"Warning: %s names profile %q, but it is not configured; unset it or choose an existing profile.",
@@ -495,13 +501,14 @@ func authListEffectiveProfile(cfg config.Config) (string, string) {
 				envProfile,
 			)
 		}
-		if current := strings.TrimSpace(cfg.CurrentProfile); current != "" {
-			return current, fmt.Sprintf(
-				"Warning: current profile %q is not configured; run `nvfleetint auth use <name>`.",
-				current,
-			)
-		}
 		return "", ""
+	}
+
+	if resolved.MissingCurrentProfile != "" {
+		return resolved.MissingCurrentProfile, fmt.Sprintf(
+			"Warning: current profile %q is not configured; run `nvfleetint auth use <name>`.",
+			resolved.MissingCurrentProfile,
+		)
 	}
 
 	if envProfile != "" {
@@ -512,8 +519,8 @@ func authListEffectiveProfile(cfg config.Config) (string, string) {
 	if resolved.APIURLSource == config.SourceEnvironment {
 		overrides = append(overrides, config.EnvAPIURL)
 	}
-	if resolved.ServiceKeySource == config.SourceEnvironment {
-		overrides = append(overrides, config.EnvServiceKey)
+	if resolved.APIKeySource == config.SourceEnvironment {
+		overrides = append(overrides, config.EnvAPIKey)
 	}
 	if len(overrides) > 0 && resolved.Profile != "" {
 		return resolved.Profile, fmt.Sprintf(
@@ -548,32 +555,36 @@ func newAuthStatusCmd() *cobra.Command {
 			}
 
 			status := authStatusOutput{
-				Profile:              resolved.Profile,
-				APIURL:               resolved.APIURL,
-				APIURLSource:         string(resolved.APIURLSource),
-				ServiceKeyConfigured: strings.TrimSpace(resolved.ServiceKey) != "",
-				ServiceKeySource:     string(resolved.ServiceKeySource),
-				EnvironmentIgnored:   len(resolved.EnvIgnored) > 0,
-				Connection:           connectionNotChecked,
+				Profile:            resolved.Profile,
+				APIURL:             resolved.APIURL,
+				APIURLSource:       string(resolved.APIURLSource),
+				APIKeyConfigured:   strings.TrimSpace(resolved.APIKey) != "",
+				APIKeySource:       string(resolved.APIKeySource),
+				EnvironmentIgnored: len(resolved.EnvIgnored) > 0,
+				Connection:         connectionNotChecked,
+				Warnings:           credentialWarnings(resolved),
 			}
 			// Only reach out to the backend when we have both a key and a URL;
 			// otherwise the request can't be authenticated.
-			if status.ServiceKeyConfigured && strings.TrimSpace(resolved.APIURL) != "" {
+			if status.APIKeyConfigured && strings.TrimSpace(resolved.APIURL) != "" {
 				status.Connection = checkConnection(cmd.Context(), resolved, commonFlags)
 			}
 			if commonFlags.output == clioutput.FormatJSON {
 				return clioutput.WriteJSON(cmd.OutOrStdout(), status)
 			}
 
-			serviceKeyStatus := "not configured"
-			if status.ServiceKeyConfigured {
-				serviceKeyStatus = "configured (from " + status.ServiceKeySource + ")"
+			apiKeyStatus := "not configured"
+			if status.APIKeyConfigured {
+				apiKeyStatus = "configured (from " + status.APIKeySource + ")"
 			}
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Profile: %s\n", profileDisplay(status.Profile))
 			fmt.Fprintf(out, "API URL: %s (from %s)\n", status.APIURL, status.APIURLSource)
-			fmt.Fprintf(out, "Service key: %s\n", serviceKeyStatus)
+			fmt.Fprintf(out, "API key: %s\n", apiKeyStatus)
 			fmt.Fprintf(out, "Connection: %s\n", status.Connection)
+			for _, warning := range status.Warnings {
+				fmt.Fprintf(out, "Warning: %s\n", warning)
+			}
 			if len(resolved.EnvIgnored) > 0 {
 				fmt.Fprintf(out, "Note: %s %s set but ignored because a profile was selected explicitly.\n",
 					strings.Join(resolved.EnvIgnored, " / "), isAre(len(resolved.EnvIgnored)))
@@ -664,8 +675,8 @@ func shadowedProfileNote(resolved config.Resolved) string {
 	if resolved.APIURLSource == config.SourceEnvironment {
 		shadowing = append(shadowing, config.EnvAPIURL)
 	}
-	if resolved.ServiceKeySource == config.SourceEnvironment {
-		shadowing = append(shadowing, config.EnvServiceKey)
+	if resolved.APIKeySource == config.SourceEnvironment {
+		shadowing = append(shadowing, config.EnvAPIKey)
 	}
 	if len(shadowing) == 0 {
 		return ""
@@ -698,8 +709,8 @@ func profileDisplay(name string) string {
 	return name
 }
 
-// serviceKeyDisplay renders key presence without ever printing the key
-func serviceKeyDisplay(configured bool) string {
+// apiKeyDisplay renders key presence without ever printing the key
+func apiKeyDisplay(configured bool) string {
 	if configured {
 		return "configured"
 	}

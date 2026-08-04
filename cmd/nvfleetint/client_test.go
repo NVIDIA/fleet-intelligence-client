@@ -37,8 +37,8 @@ func TestNewConfiguredClientBuildsSDKClient(t *testing.T) {
 	if client.BaseURL() != "https://fleet.example.com" {
 		t.Fatalf("unexpected base URL: %q", client.BaseURL())
 	}
-	if !client.ServiceKeyConfigured() {
-		t.Fatal("expected service key to be configured")
+	if !client.APIKeyConfigured() {
+		t.Fatal("expected API key to be configured")
 	}
 }
 
@@ -52,7 +52,7 @@ func TestNewConfiguredClientUsesNamedProfile(t *testing.T) {
 		"prod": "https://prod.example.com",
 		"dev":  "https://dev.example.com",
 	} {
-		if err := cfg.AddProfile(name, config.Profile{APIURL: url, ServiceKey: name + "-key"}); err != nil {
+		if err := cfg.AddProfile(name, config.Profile{APIURL: url, APIKey: name + "-key"}); err != nil {
 			t.Fatalf("add %s failed: %v", name, err)
 		}
 	}
@@ -87,15 +87,15 @@ func TestNewConfiguredClientRejectsUnknownProfile(t *testing.T) {
 }
 
 // Verifies a keyless profile fails clearly
-func TestNewConfiguredClientRequiresServiceKey(t *testing.T) {
+func TestNewConfiguredClientRequiresAPIKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	saveTestConfig(t, "https://fleet.example.com", "")
 
 	_, err := newConfiguredClient(testCommonFlags(""))
 	if err == nil {
-		t.Fatal("expected service key error")
+		t.Fatal("expected API key error")
 	}
-	if !strings.Contains(err.Error(), "has no service key") {
+	if !strings.Contains(err.Error(), "has no API key") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !strings.Contains(err.Error(), "auth add "+testProfile) {
@@ -123,8 +123,8 @@ func TestNewConfiguredClientSuggestsUseWhenProfilesExist(t *testing.T) {
 
 	cfg := config.Config{
 		Profiles: map[string]config.Profile{
-			"dev":  {ServiceKey: "dev-key"},
-			"prod": {ServiceKey: "prod-key"},
+			"dev":  {APIKey: "dev-key"},
+			"prod": {APIKey: "prod-key"},
 		},
 	}
 	if err := config.Save(cfg); err != nil {
@@ -143,11 +143,17 @@ func TestNewConfiguredClientSuggestsUseWhenProfilesExist(t *testing.T) {
 	}
 }
 
-func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
+// A current_profile whose profile was removed must not lock the user out when
+// the environment carries a working key.
+func TestNewConfiguredClientFallsBackWhenCurrentProfileIsGone(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv(config.EnvProfile, "")
+	clearCredentialEnv(t)
+
+	if err := config.Save(config.Config{CurrentProfile: "gone"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
-	t.Setenv(config.EnvServiceKey, "env-test-key")
+	t.Setenv(config.EnvAPIKey, "env-test-key")
 
 	client, err := newConfiguredClient(testCommonFlags(""))
 	if err != nil {
@@ -156,8 +162,87 @@ func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
 	if client.BaseURL() != "https://env-fleet.example.com" {
 		t.Fatalf("unexpected base URL: %q", client.BaseURL())
 	}
-	if !client.ServiceKeyConfigured() {
-		t.Fatal("expected service key to be configured")
+}
+
+// Without an environment key there is nothing to fall back to, so the error
+// has to name the stale selection and the command that clears it.
+func TestNewConfiguredClientNamesGoneCurrentProfile(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+
+	if err := config.Save(config.Config{CurrentProfile: "gone"}); err != nil {
+		t.Fatalf("save config failed: %v", err)
+	}
+
+	_, err := newConfiguredClient(testCommonFlags(""))
+	if !errors.Is(err, config.ErrNoProfile) {
+		t.Fatalf("expected ErrNoProfile, got %v", err)
+	}
+	if !strings.Contains(err.Error(), `"gone"`) {
+		t.Fatalf("expected the error to name the stale profile, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "auth use <name>") {
+		t.Fatalf("expected the error to point at `auth use`, got %v", err)
+	}
+}
+
+// NVFLEETINT_SERVICE_KEY was renamed; a job that still exports it otherwise
+// fails as if it had set no credentials at all.
+func TestNewConfiguredClientNamesRenamedEnvironmentVariable(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	t.Setenv(config.EnvLegacyAPIKey, "legacy-key")
+
+	_, err := newConfiguredClient(testCommonFlags(""))
+	if !errors.Is(err, config.ErrNoProfile) {
+		t.Fatalf("expected ErrNoProfile, got %v", err)
+	}
+	if !strings.Contains(err.Error(), config.EnvLegacyAPIKey) {
+		t.Fatalf("expected the error to name %s, got %v", config.EnvLegacyAPIKey, err)
+	}
+	if !strings.Contains(err.Error(), config.EnvAPIKey) {
+		t.Fatalf("expected the error to name the new variable, got %v", err)
+	}
+}
+
+// Once the new variable is set the old one is leftovers, not the cause.
+func TestNewConfiguredClientOmitsRenameHintWhenNewVariableIsSet(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	saveTestConfig(t, "https://fleet.example.com", "")
+	t.Setenv(config.EnvLegacyAPIKey, "legacy-key")
+	t.Setenv(config.EnvAPIKey, "")
+
+	// A profile with no key, so the error path runs while the legacy note
+	// stays suppressed by the profile's own remedy.
+	_, err := newConfiguredClient(testCommonFlags(""))
+	if err == nil {
+		t.Fatal("expected API key error")
+	}
+	if !strings.Contains(err.Error(), config.EnvLegacyAPIKey) {
+		t.Fatalf("expected the rename hint while %s is unset, got %v", config.EnvAPIKey, err)
+	}
+
+	t.Setenv(config.EnvAPIKey, "env-test-key")
+	if note := legacyAPIKeyEnvNote(); note != "" {
+		t.Fatalf("expected no rename note once %s is set, got %q", config.EnvAPIKey, note)
+	}
+}
+
+func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvProfile, "")
+	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
+	t.Setenv(config.EnvAPIKey, "env-test-key")
+
+	client, err := newConfiguredClient(testCommonFlags(""))
+	if err != nil {
+		t.Fatalf("new configured client failed: %v", err)
+	}
+	if client.BaseURL() != "https://env-fleet.example.com" {
+		t.Fatalf("unexpected base URL: %q", client.BaseURL())
+	}
+	if !client.APIKeyConfigured() {
+		t.Fatal("expected API key to be configured")
 	}
 }
 
@@ -165,7 +250,7 @@ func TestNewConfiguredClientEnvOverridesCurrentProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	saveTestConfig(t, "https://file-fleet.example.com", "file-test-key")
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
-	t.Setenv(config.EnvServiceKey, "env-test-key")
+	t.Setenv(config.EnvAPIKey, "env-test-key")
 
 	client, err := newConfiguredClient(testCommonFlags(""))
 	if err != nil {
@@ -182,7 +267,7 @@ func TestNewConfiguredClientIgnoresEnvForNamedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	saveTestConfig(t, "https://file-fleet.example.com", "file-test-key")
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
-	t.Setenv(config.EnvServiceKey, "env-test-key")
+	t.Setenv(config.EnvAPIKey, "env-test-key")
 
 	client, err := newConfiguredClient(testCommonFlags(testProfile))
 	if err != nil {
@@ -199,10 +284,10 @@ func TestNewConfiguredClientHonorsEnvProfile(t *testing.T) {
 	clearCredentialEnv(t)
 
 	var cfg config.Config
-	if err := cfg.AddProfile("prod", config.Profile{APIURL: "https://prod.example.com", ServiceKey: "prod-key"}); err != nil {
+	if err := cfg.AddProfile("prod", config.Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
 		t.Fatalf("add prod failed: %v", err)
 	}
-	if err := cfg.AddProfile("dev", config.Profile{APIURL: "https://dev.example.com", ServiceKey: "dev-key"}); err != nil {
+	if err := cfg.AddProfile("dev", config.Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
 		t.Fatalf("add dev failed: %v", err)
 	}
 	if err := config.Save(cfg); err != nil {
@@ -225,7 +310,7 @@ func TestNewConfiguredClientRejectsInsecureEnvAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv(config.EnvProfile, "")
 	t.Setenv(config.EnvAPIURL, "http://evil.example.com")
-	t.Setenv(config.EnvServiceKey, "env-test-key")
+	t.Setenv(config.EnvAPIKey, "env-test-key")
 
 	_, err := newConfiguredClient(testCommonFlags(""))
 	if err == nil {

@@ -29,14 +29,14 @@ const signingKeyPath = "/.well-known/signing-key.pub"
 const signingKeyAcceptHeader = "application/x-pem-file, text/plain, */*"
 
 var (
-	ErrMissingBaseURL    = errors.New("base URL is required")
-	ErrMissingServiceKey = errors.New("service key is required")
+	ErrMissingBaseURL = errors.New("base URL is required")
+	ErrMissingAPIKey  = errors.New("API key is required")
 )
 
 // Calls the Fleet Intelligence customer API
 type Client struct {
 	baseURL    *url.URL
-	serviceKey string
+	apiKey     string
 	httpClient *http.Client
 	timeout    time.Duration
 	api        *fleetapi.ClientWithResponses
@@ -68,14 +68,14 @@ func WithTimeout(timeout time.Duration) Option {
 }
 
 // Creates a Fleet Intelligence API client
-func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
+func NewClient(baseURL, apiKey string, opts ...Option) (*Client, error) {
 	baseURL = strings.TrimSpace(baseURL)
 	if baseURL == "" {
 		return nil, ErrMissingBaseURL
 	}
 
 	// Reject plaintext endpoints before any request is built: every call
-	// carries the service key in an Authorization header.
+	// carries the API key in an Authorization header.
 	if err := ValidateBaseURL(baseURL); err != nil {
 		return nil, err
 	}
@@ -85,14 +85,14 @@ func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
 		return nil, err
 	}
 
-	serviceKey = strings.TrimSpace(serviceKey)
-	if serviceKey == "" {
-		return nil, ErrMissingServiceKey
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		return nil, ErrMissingAPIKey
 	}
 
 	client := &Client{
 		baseURL:    parsedBaseURL,
-		serviceKey: serviceKey,
+		apiKey:     apiKey,
 		httpClient: defaultHTTPClient(),
 		timeout:    DefaultTimeout,
 	}
@@ -189,7 +189,7 @@ func (c *Client) requestContext(ctx context.Context) (context.Context, context.C
 
 // Attaches authentication and response format headers
 func (c *Client) authorizeRequest(_ context.Context, req *http.Request) error {
-	req.Header.Set("Authorization", "Bearer "+c.serviceKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "application/json")
 	return nil
 }
@@ -241,7 +241,7 @@ func (c *Client) BaseURL() string {
 	return c.baseURL.String()
 }
 
-// Reports whether a non-empty service key is configured
-func (c *Client) ServiceKeyConfigured() bool {
-	return c != nil && strings.TrimSpace(c.serviceKey) != ""
+// Reports whether a non-empty API key is configured
+func (c *Client) APIKeyConfigured() bool {
+	return c != nil && strings.TrimSpace(c.apiKey) != ""
 }

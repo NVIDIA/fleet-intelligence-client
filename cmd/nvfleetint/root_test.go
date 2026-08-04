@@ -75,7 +75,7 @@ func TestCommandsRejectUnsupportedCommonFlags(t *testing.T) {
 		want string
 	}{
 		{name: "root output", args: []string{"--output", "json"}, want: "unknown flag: --output"},
-		{name: "auth pagination", args: []string{"auth", "add", "p", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
+		{name: "auth pagination", args: []string{"auth", "add", "p", "--api-key", "test-key", "--all"}, want: "unknown flag: --all"},
 		{name: "version pagination", args: []string{"version", "--page", "1"}, want: "unknown flag: --page"},
 		{name: "read pagination", args: []string{"node", "describe", "node-1", "--page-size", "10"}, want: "unknown flag: --page-size"},
 	}

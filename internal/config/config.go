@@ -25,8 +25,13 @@ const (
 	DefaultProfileName = "default"
 	// EnvAPIURL overrides the resolved API URL for the current process.
 	EnvAPIURL = "NVFLEETINT_API_URL"
-	// EnvServiceKey overrides the resolved service key for the current process.
-	EnvServiceKey = "NVFLEETINT_SERVICE_KEY"
+	// EnvAPIKey overrides the resolved API key for the current process.
+	EnvAPIKey = "NVFLEETINT_API_KEY"
+	// EnvLegacyAPIKey is the pre-rename name of EnvAPIKey. It is deliberately
+	// not read — it exists so a command that finds no credentials can point at
+	// the variable the user actually exported instead of failing with an error
+	// that never mentions it.
+	EnvLegacyAPIKey = "NVFLEETINT_SERVICE_KEY"
 	// EnvProfile selects a stored profile for the current process.
 	EnvProfile = "NVFLEETINT_PROFILE"
 
@@ -64,8 +69,8 @@ const ReservedProfileName = "none"
 
 // Profile is one named set of Fleet Intelligence credentials.
 type Profile struct {
-	APIURL     string `yaml:"api_url"`
-	ServiceKey string `yaml:"service_key"`
+	APIURL string `yaml:"api_url"`
+	APIKey string `yaml:"api_key"`
 }
 
 // Config is the on-disk configuration file.
@@ -91,15 +96,25 @@ const (
 type Resolved struct {
 	Profile            string
 	APIURL             string
-	ServiceKey         string
+	APIKey             string
 	APIURLSource       Source
-	ServiceKeySource   Source
+	APIKeySource       Source
 	ProfilesConfigured bool
 	// EnvIgnored names the credential environment variables that were set but
 	// skipped because a profile was selected explicitly. Only the variables
 	// actually set are listed, so a note built from it cannot claim more than
 	// what is really in the environment.
 	EnvIgnored []string
+	// MissingCurrentProfile names the profile current_profile points at when
+	// that profile is no longer stored. Resolution continues instead of
+	// failing, so callers must treat this as the reason a resolved set has no
+	// profile in it rather than as an aside.
+	MissingCurrentProfile string
+	// ConfigError reports a configuration file that could not be read or
+	// parsed while the environment still supplied a complete credential set.
+	// Resolution succeeded, so this is a warning to surface, not a failure —
+	// without it the stored profiles simply appear not to exist.
+	ConfigError error
 }
 
 // Path returns the location of the configuration file.
@@ -203,7 +218,7 @@ func Edit(mutate func(*Config) error) (Config, error) {
 }
 
 // writeFileAtomic writes to a temporary file in the same directory and renames
-// it over the target. The file holds every stored service key, so a torn write
+// it over the target. The file holds every stored API key, so a torn write
 // would destroy credentials rather than just lose the newest change.
 func writeFileAtomic(path string, data []byte) error {
 	writePath, err := resolveWritePath(path)
@@ -320,10 +335,20 @@ func acquireLock(lockPath string) (*os.File, error) {
 func Resolve(profileName string) (Resolved, error) {
 	cfg, err := Load()
 	if err != nil {
-		if canResolveFromEnvironmentOnly(profileName) {
-			return Config{}.Resolve("")
+		if !canResolveFromEnvironmentOnly(profileName) {
+			return Resolved{}, err
 		}
-		return Resolved{}, err
+		// The environment holds a complete credential set, so an unreadable
+		// config must not stop the command. It is still reported: a corrupt
+		// file otherwise looks exactly like an absent one, and `auth status`
+		// would claim no profiles are configured while `auth list` fails.
+		resolved, resolveErr := Config{}.Resolve("")
+		if resolveErr != nil {
+			return Resolved{}, resolveErr
+		}
+		resolved.ConfigError = err
+
+		return resolved, nil
 	}
 
 	return cfg.Resolve(profileName)
@@ -332,7 +357,7 @@ func Resolve(profileName string) (Resolved, error) {
 func canResolveFromEnvironmentOnly(profileName string) bool {
 	return strings.TrimSpace(profileName) == "" &&
 		strings.TrimSpace(os.Getenv(EnvProfile)) == "" &&
-		strings.TrimSpace(os.Getenv(EnvServiceKey)) != ""
+		strings.TrimSpace(os.Getenv(EnvAPIKey)) != ""
 }
 
 // Resolve returns the credentials a command should use.
@@ -341,12 +366,17 @@ func canResolveFromEnvironmentOnly(profileName string) bool {
 //
 //  1. an explicitly named profile (--profile), whose values are used verbatim;
 //  2. NVFLEETINT_PROFILE, treated the same way;
-//  3. the current profile, with NVFLEETINT_SERVICE_KEY / NVFLEETINT_API_URL
+//  3. the current profile, with NVFLEETINT_API_KEY / NVFLEETINT_API_URL
 //     overlaid field by field.
 //
 // An explicit selection deliberately ignores the credential environment
-// variables: with several tenants configured, a stale NVFLEETINT_SERVICE_KEY
+// variables: with several tenants configured, a stale NVFLEETINT_API_KEY
 // would otherwise send one tenant's key to another tenant's endpoint.
+//
+// A current profile that is no longer stored is reported in
+// Resolved.MissingCurrentProfile rather than returned as an error, so the
+// environment overlay still applies. Only an explicit selection — the two
+// higher-precedence cases, where the user named the profile — fails outright.
 func (c Config) Resolve(profileName string) (Resolved, error) {
 	profilesConfigured := len(c.Profiles) > 0
 	explicit := strings.TrimSpace(profileName)
@@ -357,7 +387,7 @@ func (c Config) Resolve(profileName string) (Resolved, error) {
 	}
 
 	envAPIURL := strings.TrimSpace(os.Getenv(EnvAPIURL))
-	envServiceKey := strings.TrimSpace(os.Getenv(EnvServiceKey))
+	envAPIKey := strings.TrimSpace(os.Getenv(EnvAPIKey))
 
 	if explicit != "" {
 		profile, apiURLSource, err := c.profileForResolve(explicit)
@@ -368,8 +398,8 @@ func (c Config) Resolve(profileName string) (Resolved, error) {
 			return Resolved{}, err
 		}
 		var ignored []string
-		if envServiceKey != "" {
-			ignored = append(ignored, EnvServiceKey)
+		if envAPIKey != "" {
+			ignored = append(ignored, EnvAPIKey)
 		}
 		if envAPIURL != "" {
 			ignored = append(ignored, EnvAPIURL)
@@ -377,9 +407,9 @@ func (c Config) Resolve(profileName string) (Resolved, error) {
 		return Resolved{
 			Profile:            explicit,
 			APIURL:             profile.APIURL,
-			ServiceKey:         profile.ServiceKey,
+			APIKey:             profile.APIKey,
 			APIURLSource:       apiURLSource,
-			ServiceKeySource:   SourceProfile,
+			APIKeySource:       SourceProfile,
 			ProfilesConfigured: profilesConfigured,
 			EnvIgnored:         ignored,
 		}, nil
@@ -388,28 +418,36 @@ func (c Config) Resolve(profileName string) (Resolved, error) {
 	resolved := Resolved{
 		APIURL:             DefaultAPIURL,
 		APIURLSource:       SourceDefault,
-		ServiceKeySource:   SourceDefault,
+		APIKeySource:       SourceDefault,
 		ProfilesConfigured: profilesConfigured,
 	}
 	if current := strings.TrimSpace(c.CurrentProfile); current != "" {
 		profile, apiURLSource, err := c.profileForResolve(current)
-		if err != nil {
+		switch {
+		case errors.Is(err, ErrProfileNotFound):
+			// Nobody asked for this profile by name — it is a selection left
+			// behind in the file. Failing here would take down every command
+			// including `auth status`, the one that explains what happened,
+			// even when the environment below carries working credentials.
+			resolved.MissingCurrentProfile = current
+		case err != nil:
 			return Resolved{}, fmt.Errorf("%w from current_profile", err)
+		default:
+			resolved.Profile = current
+			resolved.APIURL = profile.APIURL
+			resolved.APIKey = profile.APIKey
+			resolved.APIURLSource = apiURLSource
+			resolved.APIKeySource = SourceProfile
 		}
-		resolved.Profile = current
-		resolved.APIURL = profile.APIURL
-		resolved.ServiceKey = profile.ServiceKey
-		resolved.APIURLSource = apiURLSource
-		resolved.ServiceKeySource = SourceProfile
 	}
 
 	if envAPIURL != "" {
 		resolved.APIURL = envAPIURL
 		resolved.APIURLSource = SourceEnvironment
 	}
-	if envServiceKey != "" {
-		resolved.ServiceKey = envServiceKey
-		resolved.ServiceKeySource = SourceEnvironment
+	if envAPIKey != "" {
+		resolved.APIKey = envAPIKey
+		resolved.APIKeySource = SourceEnvironment
 	}
 
 	return resolved, nil
@@ -575,7 +613,7 @@ func (c Config) normalized(defaultAPIURL bool) Config {
 
 func (p Profile) normalized(defaultAPIURL bool) Profile {
 	p.APIURL = strings.TrimSpace(p.APIURL)
-	p.ServiceKey = strings.TrimSpace(p.ServiceKey)
+	p.APIKey = strings.TrimSpace(p.APIKey)
 	if defaultAPIURL && p.APIURL == "" {
 		p.APIURL = DefaultAPIURL
 	}

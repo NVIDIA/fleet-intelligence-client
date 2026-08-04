@@ -16,12 +16,12 @@ const testProfile = "default"
 // saveTestConfig points the CLI at a test server by storing a single profile.
 // It also clears the credential environment variables, so a developer's shell
 // cannot bleed into a test run.
-func saveTestConfig(t *testing.T, apiURL, serviceKey string) {
+func saveTestConfig(t *testing.T, apiURL, apiKey string) {
 	t.Helper()
 	clearCredentialEnv(t)
 
 	var cfg config.Config
-	if err := cfg.AddProfile(testProfile, config.Profile{APIURL: apiURL, ServiceKey: serviceKey}); err != nil {
+	if err := cfg.AddProfile(testProfile, config.Profile{APIURL: apiURL, APIKey: apiKey}); err != nil {
 		t.Fatalf("add profile failed: %v", err)
 	}
 	if err := config.Save(cfg); err != nil {
@@ -34,6 +34,6 @@ func saveTestConfig(t *testing.T, apiURL, serviceKey string) {
 func clearCredentialEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv(config.EnvAPIURL, "")
-	t.Setenv(config.EnvServiceKey, "")
+	t.Setenv(config.EnvAPIKey, "")
 	t.Setenv(config.EnvProfile, "")
 }

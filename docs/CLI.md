@@ -10,7 +10,7 @@ or [service key](https://org.ngc.nvidia.com/identity-access/service-keys), then
 store it:
 
 ```bash
-nvfleetint auth add --key <your-ngc-api-key>
+nvfleetint auth add --api-key <your-ngc-api-key>
 nvfleetint auth status
 ```
 
@@ -25,15 +25,15 @@ ACLs, and the Go file mode controls only whether the file is writable.
 
 ### Profiles
 
-A profile pairs a service key with an API URL, so one installation can work
+A profile pairs an API key with an API URL, so one installation can work
 against several tenants or endpoints:
 
 ```bash
-nvfleetint auth add prod --key <ngc-service-key>
-nvfleetint auth add dev --key <ngc-service-key> --api-url https://dev.example.com
+nvfleetint auth add prod --api-key <ngc-api-key>
+nvfleetint auth add dev --api-key <ngc-api-key> --api-url https://dev.example.com
 nvfleetint auth list
 nvfleetint auth use prod            # pick the default
-nvfleetint auth add dev --key <rotated-key>   # existing name: rotate the key (prompts)
+nvfleetint auth add dev --api-key <rotated-key>   # existing name: rotate the key (prompts)
 nvfleetint auth remove dev
 ```
 
@@ -48,7 +48,7 @@ nvfleetint auth status --profile dev
 ```
 
 Without `--profile`, commands use the current profile — the one marked `*` by
-`nvfleetint auth list`. Service keys are never printed: `auth list` and
+`nvfleetint auth list`. API keys are never printed: `auth list` and
 `auth status` only report whether a key is configured.
 
 `auth add` creates a profile or changes an existing one — there is no separate
@@ -56,7 +56,7 @@ update command, so re-running it with the same name is how a key is rotated. On
 an existing name the change is partial: an omitted flag leaves that value
 untouched, so rotating a key preserves a custom API URL and vice versa. The
 output says `added` or `updated`, which is how you notice a name collision;
-`auth list` shows what is already taken. A new profile still requires `--key`,
+`auth list` shows what is already taken. A new profile still requires `--api-key`,
 and re-running `auth add <name>` with no flags at all is an error rather than a
 reset to defaults.
 
@@ -65,10 +65,10 @@ profile. `auth remove` and `auth use` always require one: defaulting a deletion
 or a switch would act on a profile you never named.
 
 An empty value is rejected rather than treated as "clear this field", so
-`--key "$KEY"` with `KEY` unset fails instead of silently wiping the stored key.
+`--api-key "$KEY"` with `KEY` unset fails instead of silently wiping the stored key.
 
-Because replacing a stored service key destroys a value that cannot be
-recovered, `--key` on a profile that already has one asks for confirmation
+Because replacing a stored API key destroys a value that cannot be
+recovered, `--api-key` on a profile that already has one asks for confirmation
 before writing — the prompt names the fields being replaced, goes to stderr, and
 defaults to No. Nothing else prompts: creating a profile, changing only its API
 URL, and supplying the first key for a profile that has none all take nothing
@@ -77,10 +77,10 @@ a terminal, the command refuses to prompt and tells you to use `--yes` rather
 than hanging:
 
 ```bash
-nvfleetint auth add prod --key <rotated-key> --yes
+nvfleetint auth add prod --api-key <rotated-key> --yes
 ```
 
-`auth remove` deletes a service key that cannot be recovered, so it asks for
+`auth remove` deletes an API key that cannot be recovered, so it asks for
 confirmation. The prompt is written to stderr (stdout stays parseable) and
 defaults to No. Pass `--yes` to skip it; in a script or CI job, where stdin is
 not a terminal, the command refuses to prompt and tells you to use `--yes`
@@ -147,7 +147,7 @@ Use `--key signing-key.pub` with `report verify` to supply a local public key.
 For scripts and CI jobs, authenticate without writing a configuration file:
 
 ```bash
-export NVFLEETINT_SERVICE_KEY="<ngc-service-key>"
+export NVFLEETINT_API_KEY="<ngc-api-key>"
 export NVFLEETINT_API_URL="https://api.fleet-intelligence.nvidia.com"
 ```
 
@@ -158,15 +158,26 @@ Credentials resolve in this order, highest first:
 
 1. `--profile <name>` — the profile's key and URL are used exactly as stored.
 2. `NVFLEETINT_PROFILE` — the same, for a whole shell session or CI job.
-3. The current profile, with `NVFLEETINT_SERVICE_KEY` and `NVFLEETINT_API_URL`
+3. The current profile, with `NVFLEETINT_API_KEY` and `NVFLEETINT_API_URL`
    overlaid on top of it. With neither a profile nor those variables set,
    commands fail and tell you to run `nvfleetint auth add`.
 
 Selecting a profile explicitly (either of the first two) deliberately ignores
-`NVFLEETINT_SERVICE_KEY` and `NVFLEETINT_API_URL`: with several tenants
+`NVFLEETINT_API_KEY` and `NVFLEETINT_API_URL`: with several tenants
 configured, a stale variable would otherwise send one tenant's key to another
 tenant's endpoint. `nvfleetint auth status` prints the source of each value and
 notes when environment credentials were set but ignored.
+
+An explicitly named profile that is not stored is an error — you named it, so
+using something else instead would be wrong. A *current* profile that is no
+longer stored is not: the environment overlay still applies, and
+`nvfleetint auth status` reports the stale selection as a warning. The same
+holds for a configuration file that cannot be read: if the environment supplies
+a key, commands run and `auth status` warns rather than reporting no profiles.
+
+`NVFLEETINT_SERVICE_KEY` was renamed to `NVFLEETINT_API_KEY` and is no longer
+read. When it is set and `NVFLEETINT_API_KEY` is not, the "no credentials"
+error and `auth status` both say so.
 
 Use `--output json` or `-o json` for machine-readable output. API-backed
 commands preserve the API response shape for a single page. With `--all`, list
