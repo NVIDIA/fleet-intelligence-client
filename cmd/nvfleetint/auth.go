@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
@@ -172,7 +173,7 @@ recoverable and never prompts.`,
 			}
 			confirmed := skipConfirm
 			if !confirmed && destroysStoredKey(cfg.Profiles[name], inputs) {
-				if err := confirm(cmd, overwriteProfileSummary(name, cfg.Profiles[name], inputs)); err != nil {
+				if err := clihelpers.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), overwriteProfileSummary(name, cfg.Profiles[name], inputs)); err != nil {
 					return err
 				}
 				confirmed = true
@@ -341,7 +342,7 @@ func newAuthRemoveCmd() *cobra.Command {
 			}
 			if !skipConfirm {
 				summary := fmt.Sprintf("This deletes profile %q and the service key stored in it.", name)
-				if err := confirm(cmd, summary); err != nil {
+				if err := clihelpers.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), summary); err != nil {
 					return err
 				}
 			}

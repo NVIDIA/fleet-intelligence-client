@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package clihelpers
 
 // This file implements the confirmation prompt shared by destructive commands.
 
@@ -13,28 +13,26 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
-// errAborted reports a confirmation prompt the user declined. It exits 1
+// ErrAborted reports a confirmation prompt the user declined. It exits 1
 // through main.go like any other command error.
-var errAborted = errors.New("aborted")
+var ErrAborted = errors.New("aborted")
 
-// confirm prints summary and an "Are you sure? [y/N]" prompt and waits for an
-// answer. Both go to stderr so `-o json` keeps stdout parseable. Anything other
-// than an explicit yes returns errAborted, so the default is No.
+// Confirm prints summary and an "Are you sure? [y/N]" prompt to out and waits
+// for an answer on in. Callers pass the command's stderr as out so `-o json`
+// keeps stdout parseable. Anything other than an explicit yes returns
+// ErrAborted, so the default is No.
 //
-// It refuses to prompt when stdin is a non-terminal file, so a cron or CI run
-// gets a clear "re-run with --yes" error instead of blocking forever or
-// silently aborting on EOF.
-func confirm(cmd *cobra.Command, summary string) error {
-	in := cmd.InOrStdin()
+// It refuses to prompt when in is a non-terminal file, so a cron or CI run gets
+// a clear "re-run with --yes" error instead of blocking forever or silently
+// aborting on EOF.
+func Confirm(in io.Reader, out io.Writer, summary string) error {
 	if !isAnswerable(in) {
 		return errors.New("cannot prompt for confirmation: stdin is not a terminal; re-run with --yes")
 	}
 
-	out := cmd.ErrOrStderr()
 	fmt.Fprintln(out, summary)
 	fmt.Fprint(out, "Are you sure? [y/N]: ")
 
@@ -47,7 +45,7 @@ func confirm(cmd *cobra.Command, summary string) error {
 	case "y", "yes":
 		return nil
 	default:
-		return errAborted
+		return ErrAborted
 	}
 }
 

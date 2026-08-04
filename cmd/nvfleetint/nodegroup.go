@@ -9,7 +9,7 @@ import (
 	"io"
 	"strings"
 
-	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetint/helpers"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 

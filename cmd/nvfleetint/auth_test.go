@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
@@ -282,8 +283,8 @@ func TestAuthAddPromptsBeforeOverwritingProfile(t *testing.T) {
 				}
 				return
 			}
-			if !errors.Is(err, errAborted) {
-				t.Fatalf("expected errAborted, got %v", err)
+			if !errors.Is(err, clihelpers.ErrAborted) {
+				t.Fatalf("expected ErrAborted, got %v", err)
 			}
 			if stored != serviceKey {
 				t.Fatalf("a declined prompt must leave the key alone, got %q", stored)
@@ -851,8 +852,8 @@ func TestAuthRemovePromptsForConfirmation(t *testing.T) {
 				}
 				return
 			}
-			if !errors.Is(err, errAborted) {
-				t.Fatalf("expected errAborted, got %v", err)
+			if !errors.Is(err, clihelpers.ErrAborted) {
+				t.Fatalf("expected ErrAborted, got %v", err)
 			}
 			if !stillThere {
 				t.Fatal("a declined prompt must leave the profile alone")
