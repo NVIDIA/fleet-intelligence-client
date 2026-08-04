@@ -20,7 +20,6 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv(EnvAPIURL, "")
 	t.Setenv(EnvAPIKey, "")
-	t.Setenv(EnvProfile, "")
 }
 
 func TestLoadMissingConfigReturnsEmpty(t *testing.T) {
@@ -558,10 +557,9 @@ func TestResolveExplicitProfileIgnoresEnvironment(t *testing.T) {
 	}
 }
 
-func TestResolveEnvProfileSelectsProfile(t *testing.T) {
+// The profile flag selects a profile other than the stored current one.
+func TestResolveFlagBeatsCurrentProfile(t *testing.T) {
 	clearEnv(t)
-	t.Setenv(EnvProfile, "dev")
-	t.Setenv(EnvAPIKey, "env-key")
 
 	var cfg Config
 	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
@@ -571,33 +569,13 @@ func TestResolveEnvProfileSelectsProfile(t *testing.T) {
 		t.Fatalf("add dev failed: %v", err)
 	}
 
-	resolved, err := cfg.Resolve("")
+	// AddProfile selected "prod" as current; the flag must override that.
+	resolved, err := cfg.Resolve("dev")
 	if err != nil {
 		t.Fatalf("resolve failed: %v", err)
 	}
 	if resolved.Profile != "dev" || resolved.APIKey != "dev-key" {
-		t.Fatalf("unexpected resolution: %#v", resolved)
-	}
-}
-
-func TestResolveFlagBeatsEnvProfile(t *testing.T) {
-	clearEnv(t)
-	t.Setenv(EnvProfile, "dev")
-
-	var cfg Config
-	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
-		t.Fatalf("add prod failed: %v", err)
-	}
-	if err := cfg.AddProfile("dev", Profile{APIURL: "https://dev.example.com", APIKey: "dev-key"}); err != nil {
-		t.Fatalf("add dev failed: %v", err)
-	}
-
-	resolved, err := cfg.Resolve("prod")
-	if err != nil {
-		t.Fatalf("resolve failed: %v", err)
-	}
-	if resolved.Profile != "prod" {
-		t.Fatalf("expected the flag to win, got %q", resolved.Profile)
+		t.Fatalf("expected the flag to win, got %#v", resolved)
 	}
 }
 

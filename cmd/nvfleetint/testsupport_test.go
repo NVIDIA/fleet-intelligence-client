@@ -35,5 +35,4 @@ func clearCredentialEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv(config.EnvAPIURL, "")
 	t.Setenv(config.EnvAPIKey, "")
-	t.Setenv(config.EnvProfile, "")
 }

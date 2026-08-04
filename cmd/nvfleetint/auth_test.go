@@ -1057,13 +1057,13 @@ func TestAuthListJSON(t *testing.T) {
 	}
 }
 
-func TestAuthListMarksEnvSelectedProfile(t *testing.T) {
+func TestAuthListMarksSelectedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
 	mustRunAuth(t, "add", "prod", "--api-key", "prod-key")
 	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
-	t.Setenv(config.EnvProfile, "dev")
+	mustRunAuth(t, "use", "dev")
 
 	out := mustRunAuth(t, "list", "--output", "json")
 	var got authListOutput
@@ -1071,7 +1071,7 @@ func TestAuthListMarksEnvSelectedProfile(t *testing.T) {
 		t.Fatalf("decode list JSON failed: %v", err)
 	}
 	if got.CurrentProfile != "dev" {
-		t.Fatalf("expected env-selected profile, got %#v", got)
+		t.Fatalf("expected the selected profile, got %#v", got)
 	}
 	for _, profile := range got.Profiles {
 		if profile.Name == "dev" && !profile.Current {

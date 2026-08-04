@@ -152,17 +152,16 @@ export NVFLEETINT_API_URL="https://api.fleet-intelligence.nvidia.com"
 ```
 
 `NVFLEETINT_API_URL` is optional when using the production API. To pick a stored
-profile instead, set `NVFLEETINT_PROFILE=<name>`.
+profile instead, pass `--profile <name>`.
 
 Credentials resolve in this order, highest first:
 
 1. `--profile <name>` — the profile's key and URL are used exactly as stored.
-2. `NVFLEETINT_PROFILE` — the same, for a whole shell session or CI job.
-3. The current profile, with `NVFLEETINT_API_KEY` and `NVFLEETINT_API_URL`
+2. The current profile, with `NVFLEETINT_API_KEY` and `NVFLEETINT_API_URL`
    overlaid on top of it. With neither a profile nor those variables set,
    commands fail and tell you to run `nvfleetint auth add`.
 
-Selecting a profile explicitly (either of the first two) deliberately ignores
+Selecting a profile explicitly with `--profile` deliberately ignores
 `NVFLEETINT_API_KEY` and `NVFLEETINT_API_URL`: with several tenants
 configured, a stale variable would otherwise send one tenant's key to another
 tenant's endpoint. `nvfleetint auth status` prints the source of each value and

@@ -32,8 +32,6 @@ const (
 	// the variable the user actually exported instead of failing with an error
 	// that never mentions it.
 	EnvLegacyAPIKey = "NVFLEETINT_SERVICE_KEY"
-	// EnvProfile selects a stored profile for the current process.
-	EnvProfile = "NVFLEETINT_PROFILE"
 
 	dirName  = "nvfleetint"
 	fileName = "config.yaml"
@@ -356,7 +354,6 @@ func Resolve(profileName string) (Resolved, error) {
 
 func canResolveFromEnvironmentOnly(profileName string) bool {
 	return strings.TrimSpace(profileName) == "" &&
-		strings.TrimSpace(os.Getenv(EnvProfile)) == "" &&
 		strings.TrimSpace(os.Getenv(EnvAPIKey)) != ""
 }
 
@@ -365,8 +362,7 @@ func canResolveFromEnvironmentOnly(profileName string) bool {
 // Precedence, highest first:
 //
 //  1. an explicitly named profile (--profile), whose values are used verbatim;
-//  2. NVFLEETINT_PROFILE, treated the same way;
-//  3. the current profile, with NVFLEETINT_API_KEY / NVFLEETINT_API_URL
+//  2. the current profile, with NVFLEETINT_API_KEY / NVFLEETINT_API_URL
 //     overlaid field by field.
 //
 // An explicit selection deliberately ignores the credential environment
@@ -375,16 +371,11 @@ func canResolveFromEnvironmentOnly(profileName string) bool {
 //
 // A current profile that is no longer stored is reported in
 // Resolved.MissingCurrentProfile rather than returned as an error, so the
-// environment overlay still applies. Only an explicit selection — the two
-// higher-precedence cases, where the user named the profile — fails outright.
+// environment overlay still applies. Only an explicit selection — where the
+// user named the profile — fails outright.
 func (c Config) Resolve(profileName string) (Resolved, error) {
 	profilesConfigured := len(c.Profiles) > 0
 	explicit := strings.TrimSpace(profileName)
-	explicitFromEnv := false
-	if explicit == "" {
-		explicit = strings.TrimSpace(os.Getenv(EnvProfile))
-		explicitFromEnv = explicit != ""
-	}
 
 	envAPIURL := strings.TrimSpace(os.Getenv(EnvAPIURL))
 	envAPIKey := strings.TrimSpace(os.Getenv(EnvAPIKey))
@@ -392,9 +383,6 @@ func (c Config) Resolve(profileName string) (Resolved, error) {
 	if explicit != "" {
 		profile, apiURLSource, err := c.profileForResolve(explicit)
 		if err != nil {
-			if explicitFromEnv {
-				return Resolved{}, fmt.Errorf("%w from %s", err, EnvProfile)
-			}
 			return Resolved{}, err
 		}
 		var ignored []string

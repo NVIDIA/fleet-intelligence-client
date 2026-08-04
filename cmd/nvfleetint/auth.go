@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
@@ -489,18 +488,10 @@ func newAuthListCmd() *cobra.Command {
 }
 
 func authListEffectiveProfile(cfg config.Config) (string, string) {
-	envProfile := strings.TrimSpace(os.Getenv(config.EnvProfile))
 	resolved, err := cfg.Resolve("")
 	if err != nil {
-		// Only an explicit selection still fails; a dangling current_profile
+		// Only an explicit --profile still fails; a dangling current_profile
 		// resolves and comes back as MissingCurrentProfile below.
-		if envProfile != "" {
-			return envProfile, fmt.Sprintf(
-				"Warning: %s names profile %q, but it is not configured; unset it or choose an existing profile.",
-				config.EnvProfile,
-				envProfile,
-			)
-		}
 		return "", ""
 	}
 
@@ -509,10 +500,6 @@ func authListEffectiveProfile(cfg config.Config) (string, string) {
 			"Warning: current profile %q is not configured; run `nvfleetint auth use <name>`.",
 			resolved.MissingCurrentProfile,
 		)
-	}
-
-	if envProfile != "" {
-		return resolved.Profile, fmt.Sprintf("%s selects profile %q for unqualified commands.", config.EnvProfile, resolved.Profile)
 	}
 
 	var overrides []string

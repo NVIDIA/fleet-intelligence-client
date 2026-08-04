@@ -230,7 +230,6 @@ func TestNewConfiguredClientOmitsRenameHintWhenNewVariableIsSet(t *testing.T) {
 
 func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv(config.EnvProfile, "")
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
 	t.Setenv(config.EnvAPIKey, "env-test-key")
 
@@ -278,8 +277,8 @@ func TestNewConfiguredClientIgnoresEnvForNamedProfile(t *testing.T) {
 	}
 }
 
-// NVFLEETINT_PROFILE selects a profile the same way --profile does.
-func TestNewConfiguredClientHonorsEnvProfile(t *testing.T) {
+// --profile selects a profile other than the stored current one.
+func TestNewConfiguredClientHonorsProfileFlag(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
@@ -293,9 +292,9 @@ func TestNewConfiguredClientHonorsEnvProfile(t *testing.T) {
 	if err := config.Save(cfg); err != nil {
 		t.Fatalf("save config failed: %v", err)
 	}
-	t.Setenv(config.EnvProfile, "dev")
 
-	client, err := newConfiguredClient(testCommonFlags(""))
+	// AddProfile selected "prod" as current; the flag must override that.
+	client, err := newConfiguredClient(testCommonFlags("dev"))
 	if err != nil {
 		t.Fatalf("new configured client failed: %v", err)
 	}
@@ -308,7 +307,6 @@ func TestNewConfiguredClientHonorsEnvProfile(t *testing.T) {
 // would otherwise smuggle a plaintext endpoint past validation.
 func TestNewConfiguredClientRejectsInsecureEnvAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv(config.EnvProfile, "")
 	t.Setenv(config.EnvAPIURL, "http://evil.example.com")
 	t.Setenv(config.EnvAPIKey, "env-test-key")
 
