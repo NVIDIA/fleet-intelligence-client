@@ -75,7 +75,7 @@ func TestCommandsRejectUnsupportedCommonFlags(t *testing.T) {
 		want string
 	}{
 		{name: "root output", args: []string{"--output", "json"}, want: "unknown flag: --output"},
-		{name: "auth pagination", args: []string{"auth", "add", "--profile", "p", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
+		{name: "auth pagination", args: []string{"auth", "add", "p", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
 		{name: "version pagination", args: []string{"version", "--page", "1"}, want: "unknown flag: --page"},
 		{name: "read pagination", args: []string{"node", "describe", "node-1", "--page-size", "10"}, want: "unknown flag: --page-size"},
 	}
@@ -135,7 +135,6 @@ func TestClientCommandsAcceptProfileFlag(t *testing.T) {
 		"nvfleetint version":     true,
 		"nvfleetint auth list":   true,
 		"nvfleetint auth add":    true,
-		"nvfleetint auth update": true,
 		"nvfleetint auth remove": true,
 		"nvfleetint auth use":    true,
 	}
@@ -157,6 +156,28 @@ func TestClientCommandsAcceptProfileFlag(t *testing.T) {
 		}
 	}
 	walk(newRootCmd())
+}
+
+// The mirror image of the above: on the auth CRUD commands the profile is the
+// object of the command and is named positionally, so --profile must not exist
+// there. Registering it would give one flag two meanings — "which profile do I
+// change" and "whose credentials do I use" — which is the confusion the
+// positional argument removes.
+func TestAuthProfileCommandsRejectProfileFlag(t *testing.T) {
+	for _, name := range []string{"add", "remove", "use"} {
+		t.Run(name, func(t *testing.T) {
+			cmd, _, err := newRootCmd().Find([]string{"auth", name})
+			if err != nil {
+				t.Fatalf("find auth %s failed: %v", name, err)
+			}
+			if cmd.Flags().Lookup("profile") != nil {
+				t.Errorf("auth %s must take the profile name positionally, not as --profile", name)
+			}
+			if !strings.Contains(cmd.Use, "<name>") {
+				t.Errorf("auth %s should document its positional name, got Use %q", name, cmd.Use)
+			}
+		})
+	}
 }
 
 // Verifies the top-level execute helper

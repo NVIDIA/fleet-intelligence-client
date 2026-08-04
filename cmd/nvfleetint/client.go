@@ -58,18 +58,18 @@ func missingServiceKeyError(resolved config.Resolved) error {
 	if resolved.Profile == "" {
 		if resolved.ProfilesConfigured {
 			return fmt.Errorf(
-				"%w; run `nvfleetint auth use --profile <name>`, or pass --profile <name>",
+				"%w; run `nvfleetint auth use <name>`, or pass --profile <name>",
 				config.ErrNoProfile,
 			)
 		}
 		return fmt.Errorf(
-			"%w; run `nvfleetint auth add --profile <name> --key <service-key>`, or set %s",
+			"%w; run `nvfleetint auth add <name> --key <service-key>`, or set %s",
 			config.ErrNoProfile, config.EnvServiceKey,
 		)
 	}
 
 	return fmt.Errorf(
-		"profile %q has no service key; run `nvfleetint auth update --profile %s --key <service-key>`",
+		"profile %q has no service key; run `nvfleetint auth add %s --key <service-key>`",
 		resolved.Profile, resolved.Profile,
 	)
 }
@@ -80,10 +80,10 @@ func fixAPIURLHint(resolved config.Resolved) string {
 		return "update " + config.EnvAPIURL
 	}
 	if resolved.Profile != "" {
-		return fmt.Sprintf("run `nvfleetint auth update --profile %s --api-url <https-url>`", resolved.Profile)
+		return fmt.Sprintf("run `nvfleetint auth add %s --api-url <https-url>`", resolved.Profile)
 	}
 
-	return "run `nvfleetint auth add --profile <name> --key <service-key> --api-url <https-url>`"
+	return "run `nvfleetint auth add <name> --key <service-key> --api-url <https-url>`"
 }
 
 // Builds the SDK options implied by resolved common flags

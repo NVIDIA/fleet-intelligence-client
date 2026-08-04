@@ -213,14 +213,19 @@ Credentials live in named **profiles** in `~/.config/nvfleetint/config.yaml` (mo
 ```bash
 nvfleetint auth status                   # check before querying if unsure
 nvfleetint auth list                     # which profiles exist, and which is current
-nvfleetint auth add --profile <name> --key <ngc-service-key>
-nvfleetint auth add --profile <name> --key <ngc-service-key> --api-url https://api.fleet-intelligence.nvidia.com
-nvfleetint auth use --profile <name>     # change the default
-nvfleetint auth update --profile <name> --key <rotated-key>
-nvfleetint auth remove --profile <name>
+nvfleetint auth add --key <ngc-service-key>         # no name: the "default" profile
+nvfleetint auth add <name> --key <ngc-service-key>
+nvfleetint auth add <name> --key <ngc-service-key> --api-url https://api.fleet-intelligence.nvidia.com
+nvfleetint auth use <name>     # change the default
+nvfleetint auth add <name> --key <rotated-key> --yes   # existing name: rotate the key
+nvfleetint auth remove <name>
 ```
 
-Every API-backed command accepts `--profile <name>` to use one profile for a single invocation (`nvfleetint node list --profile dev`). Without it, commands use the current profile — the one marked `*` in `auth list`. If the user mentions more than one environment, tenant, or org, run `auth list` first and ask which profile they mean rather than guessing.
+`auth add/remove/use` take the profile as a **positional** `<name>` — it is the thing being changed. Don't pass `--profile` to them; they don't accept it. On `auth add` the name is optional and means the profile called `default`; prefer that form when the user hasn't mentioned multiple tenants, rather than inventing a name for them. `auth remove` and `auth use` always require the name.
+
+There is no `auth update`: `auth add` on an existing name changes that profile in place (partial — an omitted flag keeps the stored value), which is also the key-rotation path. Replacing a key a profile already has prompts for confirmation, and **you cannot answer that prompt** — you have no terminal, so the command fails with "cannot prompt for confirmation". Pass `--yes` only when the user has actually asked to replace that profile's key; otherwise report the prompt back and let them decide. Nothing else prompts, so the fixes the CLI suggests in its own error messages (`auth add <name> --key ...` for a profile with no key, `auth add <name> --api-url ...` for a rejected endpoint) are safe to run as printed. **Check `auth list` before adding**, or a mistyped name that happens to exist will overwrite a working key. The output says `added` vs `updated` — read it back to the user.
+
+Every API-backed command, plus `auth status`, instead accepts `--profile <name>` to use one profile for a single invocation (`nvfleetint node list --profile dev`). Without it, commands use the current profile — the one marked `*` in `auth list`. If the user mentions more than one environment, tenant, or org, run `auth list` first and ask which profile they mean rather than guessing.
 
 The API URL must be `https` (plain `http` is only allowed for `localhost`), so never suggest an `http://` endpoint.
 
@@ -228,7 +233,7 @@ The API URL must be `https` (plain `http` is only allowed for `localhost`), so n
 
 Credentials resolve highest-first: `--profile`, then `NVFLEETINT_PROFILE`, then the current profile with `NVFLEETINT_SERVICE_KEY` / `NVFLEETINT_API_URL` overlaid on top. **Selecting a profile explicitly ignores those two env vars entirely** — that is deliberate, so a stale variable can't send one tenant's key to another tenant's endpoint. So a bad env override only affects commands that *don't* pass `--profile`. If `auth status` (without `--profile`) reports a wrong `API URL:` or a `Service key:` sourced from the environment, have the user `unset NVFLEETINT_SERVICE_KEY NVFLEETINT_API_URL` in their shell (and remove them from any shell profile that exports them), then re-run `auth status`. Check whether the vars are *set*, not what they contain — never print the value of `NVFLEETINT_SERVICE_KEY`.
 
-If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetint auth status` to confirm, then tell the user to generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetint auth add --profile <name> --key <key>` (or `auth update` if the profile already exists). Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret. `auth list` and `auth status` never print keys, only whether one is configured.
+If a query fails with **exit code 77** or a 401/403, the user isn't authenticated (or the key lacks permission). Don't report this as "no nodes found." Instead, run `nvfleetint auth status` to confirm, then tell the user to generate an NGC service key at <https://org.ngc.nvidia.com/identity-access/service-keys> and run `nvfleetint auth add --key <key>` (add a `<name>` before `--key` only if they use more than one tenant; the same command rotates the key of a profile that already exists). Never ask the user to paste a service key into the chat, and never echo a key you happen to see — it's a secret. `auth list` and `auth status` never print keys, only whether one is configured.
 
 ## Worked example
 

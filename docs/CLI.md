@@ -7,12 +7,16 @@ reports. Run `nvfleetint <command> --help` for every available flag.
 
 Create an NGC [personal API key](https://docs.nvidia.com/ngc/latest/ngc-user-guide.html#generating-a-personal-api-key)
 or [service key](https://org.ngc.nvidia.com/identity-access/service-keys), then
-store it in a named profile:
+store it:
 
 ```bash
-nvfleetint auth add --profile default --key <your-ngc-api-key>
+nvfleetint auth add --key <your-ngc-api-key>
 nvfleetint auth status
 ```
+
+With no name, that stores the key in a profile called `default`. If you only
+work against one tenant, that is the whole of it — the rest of this section is
+about running against several.
 
 On Linux and macOS, credentials are stored in
 `~/.config/nvfleetint/config.yaml` with file mode `0600`. On Windows, they are
@@ -25,16 +29,18 @@ A profile pairs a service key with an API URL, so one installation can work
 against several tenants or endpoints:
 
 ```bash
-nvfleetint auth add --profile prod --key <ngc-service-key>
-nvfleetint auth add --profile dev --key <ngc-service-key> --api-url https://dev.example.com
+nvfleetint auth add prod --key <ngc-service-key>
+nvfleetint auth add dev --key <ngc-service-key> --api-url https://dev.example.com
 nvfleetint auth list
-nvfleetint auth use --profile prod            # pick the default
-nvfleetint auth update --profile dev --key <rotated-key>
-nvfleetint auth remove --profile dev
+nvfleetint auth use prod            # pick the default
+nvfleetint auth add dev --key <rotated-key>   # existing name: rotate the key (prompts)
+nvfleetint auth remove dev
 ```
 
-Every command that calls the API accepts `--profile` to choose credentials for
-that one invocation:
+Note the two different roles a profile name plays. On `auth add/remove/use` the
+profile is what the command acts on, so it is a positional `<name>`. On every
+command that calls the API, `--profile` instead chooses the credentials for that
+one invocation:
 
 ```bash
 nvfleetint node list --profile dev
@@ -45,10 +51,34 @@ Without `--profile`, commands use the current profile — the one marked `*` by
 `nvfleetint auth list`. Service keys are never printed: `auth list` and
 `auth status` only report whether a key is configured.
 
-`auth update` is a partial update: an omitted flag leaves that value untouched,
-so rotating a key preserves a custom API URL and vice versa. An empty value is
-rejected rather than treated as "clear this field", so `--key "$KEY"` with `KEY`
-unset fails instead of silently wiping the stored key.
+`auth add` creates a profile or changes an existing one — there is no separate
+update command, so re-running it with the same name is how a key is rotated. On
+an existing name the change is partial: an omitted flag leaves that value
+untouched, so rotating a key preserves a custom API URL and vice versa. The
+output says `added` or `updated`, which is how you notice a name collision;
+`auth list` shows what is already taken. A new profile still requires `--key`,
+and re-running `auth add <name>` with no flags at all is an error rather than a
+reset to defaults.
+
+The name is optional only on `auth add`, where omitting it means the `default`
+profile. `auth remove` and `auth use` always require one: defaulting a deletion
+or a switch would act on a profile you never named.
+
+An empty value is rejected rather than treated as "clear this field", so
+`--key "$KEY"` with `KEY` unset fails instead of silently wiping the stored key.
+
+Because replacing a stored service key destroys a value that cannot be
+recovered, `--key` on a profile that already has one asks for confirmation
+before writing — the prompt names the fields being replaced, goes to stderr, and
+defaults to No. Nothing else prompts: creating a profile, changing only its API
+URL, and supplying the first key for a profile that has none all take nothing
+away. Pass `--yes` to skip the prompt; in a script or CI job, where stdin is not
+a terminal, the command refuses to prompt and tells you to use `--yes` rather
+than hanging:
+
+```bash
+nvfleetint auth add prod --key <rotated-key> --yes
+```
 
 `auth remove` deletes a service key that cannot be recovered, so it asks for
 confirmation. The prompt is written to stderr (stdout stays parseable) and
@@ -57,9 +87,9 @@ not a terminal, the command refuses to prompt and tells you to use `--yes`
 rather than hanging.
 
 Removing the current profile always clears the selection — no other profile is
-promoted in its place. Pick the next one explicitly with `auth use --profile
-<name>`. Removing any other profile leaves the current selection untouched. The
-command prints the resulting current profile either way.
+promoted in its place. Pick the next one explicitly with `auth use <name>`.
+Removing any other profile leaves the current selection untouched. The command
+prints the resulting current profile either way.
 
 ## Common commands
 
@@ -177,5 +207,5 @@ it reports those responses as `connection: "unauthorized"` and exits `0`.
 Prefer `error.code` over the exit code when handling JSON errors.
 
 Commands that stream CSV do not accept `--output`. The profile-mutating
-commands (`auth add`, `auth update`, `auth remove`, `auth use`) do not provide
+commands (`auth add`, `auth remove`, `auth use`) do not provide
 JSON output; `auth list` and `auth status` do.

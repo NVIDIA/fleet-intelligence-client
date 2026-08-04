@@ -20,6 +20,9 @@ import (
 const (
 	// DefaultAPIURL is the production Fleet Intelligence API root.
 	DefaultAPIURL = "https://api.fleet-intelligence.nvidia.com"
+	// DefaultProfileName is the profile `auth add` targets when no name is
+	// given, so single-tenant setup never has to invent one.
+	DefaultProfileName = "default"
 	// EnvAPIURL overrides the resolved API URL for the current process.
 	EnvAPIURL = "NVFLEETINT_API_URL"
 	// EnvServiceKey overrides the resolved service key for the current process.

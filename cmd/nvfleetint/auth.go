@@ -58,12 +58,24 @@ func newAuthCmd() *cobra.Command {
 		Long: `Manage the credential profiles nvfleetint uses to reach the API.
 
 Each profile pairs an NGC service key with an API URL, so one installation can
-work against several tenants or endpoints. Commands that call the API select a
-profile with --profile; without it they use the current profile.`,
+work against several tenants or endpoints. "add" both creates and changes a
+profile, so it is also how a key is rotated, and its name is optional — with one
+tenant, "nvfleetint auth add --key <ngc-service-key>" is the whole setup.
+
+The profile is the object of these commands, so add/remove/use name it
+positionally. Commands that call the API instead select a profile with
+--profile; without it they use the current profile.`,
+		// Without these an unrecognized subcommand — `auth update`, which used to
+		// exist — prints the help text and exits 0, so a key-rotation script
+		// would report success having changed nothing. Cobra skips Args
+		// validation on a command with no RunE, hence both.
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
 	}
 
 	cmd.AddCommand(newAuthAddCmd())
-	cmd.AddCommand(newAuthUpdateCmd())
 	cmd.AddCommand(newAuthRemoveCmd())
 	cmd.AddCommand(newAuthUseCmd())
 	cmd.AddCommand(newAuthListCmd())
@@ -72,74 +84,53 @@ profile with --profile; without it they use the current profile.`,
 	return cmd
 }
 
-// Registers --profile as the name of the profile being changed. On API-backed
-// commands the same flag instead selects credentials (registerProfileFlag).
-func registerProfileNameFlag(cmd *cobra.Command, name *string) {
-	cmd.Flags().StringVar(name, "profile", "", "Profile name")
+// requireProfileNameArg validates the positional <name> these commands act on.
+// The profile is what add/remove/use operate on, so it is an argument rather
+// than a flag; on API-backed commands --profile means something else entirely
+// — which credentials to use (registerProfileFlag).
+//
+// remove and use require the name: defaulting "delete a profile" or "switch
+// profiles" to whichever one happens to be called "default" would act on
+// something the user never named. Only add, which is creating the thing, can
+// safely supply the name itself.
+func requireProfileNameArg() cobra.PositionalArgs {
+	return requireSingleArg("profile name")
 }
 
 func newAuthAddCmd() *cobra.Command {
-	var profileName, serviceKey, apiURL string
+	var serviceKey, apiURL string
+	var skipConfirm bool
 
 	cmd := &cobra.Command{
-		Use:   "add",
-		Short: "Add a credential profile",
-		Example: `  nvfleetint auth add --profile prod --key <ngc-service-key>
-  nvfleetint auth add --profile dev --key <ngc-service-key> --api-url https://dev.example.com`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			name, err := validateProfileName(profileName)
-			if err != nil {
-				return err
+		Use:   "add [<name>]",
+		Short: "Add a credential profile, or change an existing one",
+		Long: `Store an NGC service key and API URL under a profile name.
+
+The name is optional: omitting it targets the profile named "` + config.DefaultProfileName + `",
+so a single-tenant setup never has to invent one.
+
+An existing profile is changed in place, so this is also the key-rotation path.
+The change is partial: an omitted flag leaves that value alone, and rotating a
+key therefore preserves a custom API URL.
+
+Replacing a stored service key destroys it, so that prompts for confirmation;
+pass --yes to skip the prompt in a script. Creating a profile, changing only its
+API URL, or supplying the first key for a profile that has none replaces nothing
+recoverable and never prompts.`,
+		Example: `  nvfleetint auth add --key <ngc-service-key>
+  nvfleetint auth add prod --key <ngc-service-key>
+  nvfleetint auth add dev --key <ngc-service-key> --api-url https://dev.example.com
+  nvfleetint auth add prod --key <rotated-key> --yes
+  nvfleetint auth add dev --api-url https://other.example.com`,
+		Args: optionalSingleArg("profile name"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// No name means the default profile, so first-time setup is a single
+			// command with nothing to name.
+			profileArg := config.DefaultProfileName
+			if len(args) == 1 {
+				profileArg = args[0]
 			}
-
-			serviceKey = strings.TrimSpace(serviceKey)
-			if serviceKey == "" {
-				return errors.New("service key is required")
-			}
-			apiURL, err = resolveNewAPIURL(apiURL)
-			if err != nil {
-				return err
-			}
-
-			cfg, err := config.Edit(func(cfg *config.Config) error {
-				return cfg.AddProfile(name, config.Profile{APIURL: apiURL, ServiceKey: serviceKey})
-			})
-			if err != nil {
-				if errors.Is(err, config.ErrProfileExists) {
-					return fmt.Errorf("%w; run `nvfleetint auth update --profile %s` to change it", err, name)
-				}
-				return err
-			}
-
-			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "Profile %q added.\n", name)
-			if cfg.CurrentProfile == name {
-				fmt.Fprintf(out, "Profile %q is now the current profile.\n", name)
-			}
-
-			return nil
-		},
-	}
-
-	registerProfileNameFlag(cmd, &profileName)
-	cmd.Flags().StringVar(&serviceKey, "key", "", "NGC service key")
-	cmd.Flags().StringVar(&apiURL, "api-url", "", "Fleet Intelligence API URL")
-
-	return cmd
-}
-
-func newAuthUpdateCmd() *cobra.Command {
-	var profileName, serviceKey, apiURL string
-
-	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Change the credentials stored in a profile",
-		Example: `  nvfleetint auth update --profile prod --key <ngc-service-key>
-  nvfleetint auth update --profile dev --api-url https://dev.example.com`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			name, err := validateProfileName(profileName)
+			name, err := validateProfileName(profileArg)
 			if err != nil {
 				return err
 			}
@@ -148,63 +139,193 @@ func newAuthUpdateCmd() *cobra.Command {
 			// distinguishable from one supplied as empty — which is rejected
 			// below rather than treated as "clear this credential", since
 			// `--key "$KEY"` with KEY unset would otherwise wipe the key.
-			keySet := cmd.Flags().Changed("key")
-			apiURLSet := cmd.Flags().Changed("api-url")
-			if !keySet && !apiURLSet {
-				return errors.New("nothing to update: pass --key, --api-url, or both")
+			inputs := authAddInputs{
+				keySet:     cmd.Flags().Changed("key"),
+				apiURLSet:  cmd.Flags().Changed("api-url"),
+				serviceKey: strings.TrimSpace(serviceKey),
 			}
-			if keySet && strings.TrimSpace(serviceKey) == "" {
+			if inputs.keySet && inputs.serviceKey == "" {
 				return errors.New("--key cannot be empty")
 			}
-			if apiURLSet && strings.TrimSpace(apiURL) == "" {
+			if inputs.apiURLSet && strings.TrimSpace(apiURL) == "" {
 				return errors.New("--api-url cannot be empty")
 			}
-
-			if _, err := config.Edit(func(cfg *config.Config) error {
-				profile, err := cfg.Profile(name)
-				if err != nil {
-					return withProfileListHint(err)
-				}
-
-				if keySet {
-					profile.ServiceKey = strings.TrimSpace(serviceKey)
-				}
-				if apiURLSet {
-					if profile.APIURL, err = resolveNewAPIURL(apiURL); err != nil {
-						return err
-					}
-				}
-
-				return cfg.UpdateProfile(name, profile)
-			}); err != nil {
+			// Validated before the config file is read or written, so bad input
+			// can never leave stored credentials disturbed. Whether a key is
+			// *required* depends on the profile existing, so that check has to
+			// wait until the config is read.
+			if inputs.apiURL, err = resolveNewAPIURL(apiURL); err != nil {
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Profile %q updated.\n", name)
+			// Read once outside the lock to decide whether this overwrites a
+			// stored key, so the prompt never blocks other processes on the
+			// config lock while it waits for an answer. Any error the plan
+			// raises is reported before prompting, so we never ask about a
+			// command that was going to fail anyway.
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			if _, _, err := resolveAuthAddProfile(cfg, name, inputs); err != nil {
+				return err
+			}
+			confirmed := skipConfirm
+			if !confirmed && destroysStoredKey(cfg.Profiles[name], inputs) {
+				if err := confirm(cmd, overwriteProfileSummary(name, cfg.Profiles[name], inputs)); err != nil {
+					return err
+				}
+				confirmed = true
+			}
+
+			var wroteOver, becameCurrent bool
+			cfg, err = config.Edit(func(cfg *config.Config) error {
+				// Re-planned under the lock: the snapshot the prompt was based
+				// on is now stale, and the write has to be correct, not merely
+				// consistent with what we showed.
+				profile, existedNow, err := resolveAuthAddProfile(*cfg, name, inputs)
+				if err != nil {
+					return err
+				}
+				// A key stored since the read — by another process creating the
+				// profile, or filling in one that had none — would be destroyed
+				// without the confirmation this command promises.
+				if !confirmed && destroysStoredKey(cfg.Profiles[name], inputs) {
+					return fmt.Errorf(
+						"profile %q gained a service key while this command was waiting; re-run to confirm replacing it",
+						name,
+					)
+				}
+				wroteOver = existedNow
+				wasCurrent := cfg.CurrentProfile == name
+
+				if existedNow {
+					if err := cfg.UpdateProfile(name, profile); err != nil {
+						return err
+					}
+				} else if err := cfg.AddProfile(name, profile); err != nil {
+					return err
+				}
+				becameCurrent = cfg.CurrentProfile == name && !wasCurrent
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			if wroteOver {
+				fmt.Fprintf(out, "Profile %q updated.\n", name)
+			} else {
+				fmt.Fprintf(out, "Profile %q added.\n", name)
+			}
+			if becameCurrent && cfg.CurrentProfile == name {
+				fmt.Fprintf(out, "Profile %q is now the current profile.\n", name)
+			}
 
 			return nil
 		},
 	}
 
-	registerProfileNameFlag(cmd, &profileName)
 	cmd.Flags().StringVar(&serviceKey, "key", "", "NGC service key")
 	cmd.Flags().StringVar(&apiURL, "api-url", "", "Fleet Intelligence API URL")
+	cmd.Flags().BoolVar(&skipConfirm, "yes", false,
+		"Skip the confirmation prompt shown when a profile is overwritten")
 
 	return cmd
 }
 
+// authAddInputs is what `auth add` was told to store. The *Set fields record
+// whether a flag was supplied at all, which is what separates "leave this
+// alone" from "set it to this".
+type authAddInputs struct {
+	keySet     bool
+	apiURLSet  bool
+	serviceKey string
+	apiURL     string
+}
+
+// resolveAuthAddProfile decides what `auth add` writes for one snapshot of the
+// config, and reports whether the profile already existed. It runs twice per
+// command — once on a loaded copy to decide whether to confirm an overwrite,
+// then again inside config.Edit so the write is planned against the config as
+// it actually is under the lock.
+func resolveAuthAddProfile(cfg config.Config, name string, in authAddInputs) (config.Profile, bool, error) {
+	profile, lookupErr := cfg.Profile(name)
+	existed := lookupErr == nil
+
+	switch {
+	case !existed && !in.keySet:
+		// A profile with no key cannot authenticate anything.
+		return config.Profile{}, false, errors.New("service key is required")
+	case existed && !in.keySet && !in.apiURLSet:
+		return config.Profile{}, true, fmt.Errorf(
+			"profile %q already exists and nothing was supplied to change; pass --key, --api-url, or both",
+			name,
+		)
+	}
+
+	if in.keySet {
+		profile.ServiceKey = in.serviceKey
+	}
+	// On an existing profile an omitted --api-url keeps the stored endpoint; on
+	// a new one it takes the default.
+	if in.apiURLSet || !existed {
+		profile.APIURL = in.apiURL
+	}
+
+	return profile, existed, nil
+}
+
+// destroysStoredKey reports whether `auth add` is about to replace a service
+// key that cannot be recovered — the only thing this command destroys, and so
+// the only thing worth prompting about. Creating a profile, changing an API
+// URL, or supplying the first key for a profile that has none all take nothing
+// away, and a prompt that fires when nothing is at stake is one people learn to
+// answer without reading. It also has to stay this narrow because the CLI's own
+// remediation hints (missingServiceKeyError, fixAPIURLHint) name an existing
+// profile: were those to prompt, the printed fix would be unusable in CI.
+func destroysStoredKey(current config.Profile, in authAddInputs) bool {
+	return in.keySet && strings.TrimSpace(current.ServiceKey) != ""
+}
+
+// overwriteProfileSummary describes the credentials `auth add` is about to
+// replace. It names only the fields actually being overwritten — warning about
+// an API URL that is not changing would train people to ignore the prompt — and
+// never prints a key, only the endpoint it is paired with.
+func overwriteProfileSummary(name string, current config.Profile, in authAddInputs) string {
+	var replacing []string
+	if in.keySet {
+		replacing = append(replacing, "service key")
+	}
+	if in.apiURLSet {
+		replacing = append(replacing, "API URL")
+	}
+
+	summary := fmt.Sprintf("Profile %q already exists. This replaces its %s.",
+		name, strings.Join(replacing, " and "))
+	if destroysStoredKey(current, in) {
+		if url := strings.TrimSpace(current.APIURL); url != "" {
+			summary += fmt.Sprintf("\nThe stored key for %s cannot be recovered.", url)
+		} else {
+			summary += "\nThe stored key cannot be recovered."
+		}
+	}
+
+	return summary
+}
+
 func newAuthRemoveCmd() *cobra.Command {
-	var profileName string
 	var skipConfirm bool
 
 	cmd := &cobra.Command{
-		Use:   "remove",
+		Use:   "remove <name>",
 		Short: "Remove a credential profile",
-		Example: `  nvfleetint auth remove --profile dev
-  nvfleetint auth remove --profile dev --yes`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			name, err := validateProfileName(profileName)
+		Example: `  nvfleetint auth remove dev
+  nvfleetint auth remove dev --yes`,
+		Args: requireProfileNameArg(),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, err := validateProfileName(args[0])
 			if err != nil {
 				return err
 			}
@@ -241,31 +362,28 @@ func newAuthRemoveCmd() *cobra.Command {
 			case cfg.CurrentProfile != "":
 				fmt.Fprintf(out, "Current profile: %s\n", cfg.CurrentProfile)
 			case len(cfg.Profiles) > 0:
-				fmt.Fprintln(out, "No current profile; run `nvfleetint auth use --profile <name>`.")
+				fmt.Fprintln(out, "No current profile; run `nvfleetint auth use <name>`.")
 			default:
-				fmt.Fprintln(out, "No profiles remain; run `nvfleetint auth add --profile <name> --key <service-key>`.")
+				fmt.Fprintln(out, "No profiles remain; run `nvfleetint auth add <name> --key <service-key>`.")
 			}
 
 			return nil
 		},
 	}
 
-	registerProfileNameFlag(cmd, &profileName)
 	cmd.Flags().BoolVar(&skipConfirm, "yes", false, "Skip the confirmation prompt")
 
 	return cmd
 }
 
 func newAuthUseCmd() *cobra.Command {
-	var profileName string
-
 	cmd := &cobra.Command{
-		Use:     "use",
+		Use:     "use <name>",
 		Short:   "Select the profile used when --profile is omitted",
-		Example: `  nvfleetint auth use --profile prod`,
-		Args:    cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			name, err := validateProfileName(profileName)
+		Example: `  nvfleetint auth use prod`,
+		Args:    requireProfileNameArg(),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, err := validateProfileName(args[0])
 			if err != nil {
 				return err
 			}
@@ -275,7 +393,7 @@ func newAuthUseCmd() *cobra.Command {
 				// "that name is wrong", and needs a different remedy.
 				if len(cfg.Profiles) == 0 {
 					return fmt.Errorf(
-						"%w; run `nvfleetint auth add --profile %s --key <service-key>` first",
+						"%w; run `nvfleetint auth add %s --key <service-key>` first",
 						config.ErrNoProfile, name,
 					)
 				}
@@ -292,8 +410,6 @@ func newAuthUseCmd() *cobra.Command {
 			return nil
 		},
 	}
-
-	registerProfileNameFlag(cmd, &profileName)
 
 	return cmd
 }
@@ -337,7 +453,7 @@ func newAuthListCmd() *cobra.Command {
 				return clioutput.WriteJSON(out, listOutput)
 			}
 			if len(listOutput.Profiles) == 0 {
-				fmt.Fprintln(out, "No profiles configured. Run `nvfleetint auth add --profile <name> --key <service-key>`.")
+				fmt.Fprintln(out, "No profiles configured. Run `nvfleetint auth add <name> --key <service-key>`.")
 				return nil
 			}
 
@@ -380,7 +496,7 @@ func authListEffectiveProfile(cfg config.Config) (string, string) {
 		}
 		if current := strings.TrimSpace(cfg.CurrentProfile); current != "" {
 			return current, fmt.Sprintf(
-				"Warning: current profile %q is not configured; run `nvfleetint auth use --profile <name>`.",
+				"Warning: current profile %q is not configured; run `nvfleetint auth use <name>`.",
 				current,
 			)
 		}
@@ -500,7 +616,7 @@ func checkConnection(ctx context.Context, resolved config.Resolved, common resol
 	return connectionOK
 }
 
-// validateProfileName trims and checks the --profile value of an auth command
+// validateProfileName trims and checks the <name> argument of an auth command
 func validateProfileName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if err := config.ValidateProfileName(name); err != nil {

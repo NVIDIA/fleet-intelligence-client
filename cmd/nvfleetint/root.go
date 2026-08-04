@@ -108,9 +108,9 @@ func registerTimeoutFlag(cmd *cobra.Command, flags *commonFlags) {
 	cmd.Flags().DurationVar(&flags.timeout, "timeout", flags.timeout, "Request timeout (e.g. 30s, 2m); must be greater than 0")
 }
 
-// Registers the credential profile selector on an API-backed command. On the
-// `auth` CRUD commands `--profile` instead names the profile being changed;
-// those register their own flag (see registerProfileNameFlag).
+// Registers the credential profile selector on an API-backed command. The
+// `auth` CRUD commands take the profile they change as a positional argument
+// instead, so `--profile` only ever means "credentials for this invocation".
 func registerProfileFlag(cmd *cobra.Command, flags *commonFlags) {
 	cmd.Flags().StringVar(&flags.profile, "profile", "", "Credential profile to use; defaults to the current profile")
 }
@@ -137,6 +137,18 @@ func requireSingleArg(name string) cobra.PositionalArgs {
 		case len(args) == 0:
 			return fmt.Errorf("%s is required", name)
 		case len(args) > 1:
+			return fmt.Errorf("only one %s may be given, got %d", name, len(args))
+		}
+		return nil
+	}
+}
+
+// Validates that at most one positional argument was given. The caller supplies
+// the meaning of an omitted argument; only the too-many case is an error here,
+// and it is worded exactly as in requireSingleArg.
+func optionalSingleArg(name string) cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		if len(args) > 1 {
 			return fmt.Errorf("only one %s may be given, got %d", name, len(args))
 		}
 		return nil

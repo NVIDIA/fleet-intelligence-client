@@ -98,7 +98,7 @@ func TestNewConfiguredClientRequiresServiceKey(t *testing.T) {
 	if !strings.Contains(err.Error(), "has no service key") {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "auth update --profile "+testProfile) {
+	if !strings.Contains(err.Error(), "auth add "+testProfile) {
 		t.Fatalf("expected the error to name the profile to fix, got %v", err)
 	}
 }
@@ -112,7 +112,7 @@ func TestNewConfiguredClientRequiresAProfile(t *testing.T) {
 	if !errors.Is(err, config.ErrNoProfile) {
 		t.Fatalf("expected ErrNoProfile, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "auth add --profile") {
+	if !strings.Contains(err.Error(), "auth add <name>") {
 		t.Fatalf("expected the error to point at `auth add`, got %v", err)
 	}
 }
@@ -135,7 +135,7 @@ func TestNewConfiguredClientSuggestsUseWhenProfilesExist(t *testing.T) {
 	if !errors.Is(err, config.ErrNoProfile) {
 		t.Fatalf("expected ErrNoProfile, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "auth use --profile") {
+	if !strings.Contains(err.Error(), "auth use <name>") {
 		t.Fatalf("expected the error to point at `auth use`, got %v", err)
 	}
 	if strings.Contains(err.Error(), "auth add") {
@@ -249,7 +249,7 @@ func TestNewConfiguredClientRejectsInsecureProfileAPIURL(t *testing.T) {
 	if !errors.Is(err, nvfleetint.ErrInsecureBaseURL) {
 		t.Fatalf("expected ErrInsecureBaseURL, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "auth update --profile "+testProfile) {
+	if !strings.Contains(err.Error(), "auth add "+testProfile) {
 		t.Fatalf("expected the error to name the profile to fix, got %v", err)
 	}
 }
