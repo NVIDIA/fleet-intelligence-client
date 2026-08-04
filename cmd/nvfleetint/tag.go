@@ -73,7 +73,7 @@ func runTagList(cmd *cobra.Command, flags tagListFlags, common resolvedCommonFla
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

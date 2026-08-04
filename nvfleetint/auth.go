@@ -20,7 +20,7 @@ type AuthStatus struct {
 	RawJSON       []byte `json:"-"`
 }
 
-// GetAuthStatus verifies the configured service key against the API by calling
+// GetAuthStatus verifies the configured API key against the API by calling
 // GET /v1/auth/status. A non-2xx response is returned as an *APIError so
 // callers can distinguish rejected credentials (401/403) from other failures.
 func (c *Client) GetAuthStatus(ctx context.Context) (AuthStatus, error) {

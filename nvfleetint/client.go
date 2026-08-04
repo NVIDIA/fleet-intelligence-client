@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,14 +30,14 @@ const signingKeyPath = "/.well-known/signing-key.pub"
 const signingKeyAcceptHeader = "application/x-pem-file, text/plain, */*"
 
 var (
-	ErrMissingBaseURL    = errors.New("base URL is required")
-	ErrMissingServiceKey = errors.New("service key is required")
+	ErrMissingBaseURL = errors.New("base URL is required")
+	ErrMissingAPIKey  = errors.New("API key is required")
 )
 
 // Calls the Fleet Intelligence customer API
 type Client struct {
 	baseURL    *url.URL
-	serviceKey string
+	apiKey     string
 	httpClient *http.Client
 	timeout    time.Duration
 	api        *fleetapi.ClientWithResponses
@@ -45,11 +46,14 @@ type Client struct {
 // Customizes client construction behavior
 type Option func(*Client)
 
-// Configures the HTTP client used for API requests
+// Configures the HTTP client used for API requests. The client is used through
+// a shallow copy carrying the redirect guard (see guardRedirect), so a client
+// shared across callers is never mutated and its transport, cookie jar, and
+// timeout are preserved.
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) {
 		if httpClient != nil {
-			c.httpClient = httpClient
+			c.httpClient = withRedirectGuard(httpClient)
 		}
 	}
 }
@@ -68,14 +72,14 @@ func WithTimeout(timeout time.Duration) Option {
 }
 
 // Creates a Fleet Intelligence API client
-func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
+func NewClient(baseURL, apiKey string, opts ...Option) (*Client, error) {
 	baseURL = strings.TrimSpace(baseURL)
 	if baseURL == "" {
 		return nil, ErrMissingBaseURL
 	}
 
 	// Reject plaintext endpoints before any request is built: every call
-	// carries the service key in an Authorization header.
+	// carries the API key in an Authorization header.
 	if err := ValidateBaseURL(baseURL); err != nil {
 		return nil, err
 	}
@@ -85,14 +89,14 @@ func NewClient(baseURL, serviceKey string, opts ...Option) (*Client, error) {
 		return nil, err
 	}
 
-	serviceKey = strings.TrimSpace(serviceKey)
-	if serviceKey == "" {
-		return nil, ErrMissingServiceKey
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		return nil, ErrMissingAPIKey
 	}
 
 	client := &Client{
 		baseURL:    parsedBaseURL,
-		serviceKey: serviceKey,
+		apiKey:     apiKey,
 		httpClient: defaultHTTPClient(),
 		timeout:    DefaultTimeout,
 	}
@@ -132,10 +136,87 @@ func defaultHTTPClient() *http.Client {
 		sharedTransport = hardenedTransport(http.DefaultTransport)
 	})
 	if sharedTransport == nil {
-		return &http.Client{}
+		return withRedirectGuard(&http.Client{})
 	}
 
-	return &http.Client{Transport: sharedTransport}
+	return withRedirectGuard(&http.Client{Transport: sharedTransport})
+}
+
+// maxRedirects mirrors net/http's own default. Installing a CheckRedirect
+// replaces that default, so the cap has to be restated here.
+const maxRedirects = 10
+
+// Returns a shallow copy of client with the redirect guard installed, leaving
+// the caller's client untouched — it may be shared across clients. A
+// CheckRedirect the caller already set still runs, after the guard, so their
+// own policy (including a different redirect cap) is preserved.
+func withRedirectGuard(client *http.Client) *http.Client {
+	guarded := *client
+	inner := client.CheckRedirect
+	guarded.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if err := guardRedirect(req, via); err != nil {
+			return err
+		}
+		if inner != nil {
+			return inner(req, via)
+		}
+		if len(via) >= maxRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxRedirects)
+		}
+		return nil
+	}
+
+	return &guarded
+}
+
+// Refuses to follow a redirect that downgrades https to plaintext, and drops
+// the Authorization header before any cross-origin hop.
+//
+// net/http already withholds Authorization when a redirect leaves the original
+// domain, but that check compares hosts only: it ignores the scheme and port,
+// so an https://api -> http://api redirect would hand the bearer token to a
+// cleartext connection, and it forwards the token to subdomains and to other
+// ports on the same host. Same-origin https redirects are unaffected.
+func guardRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+
+	previous := via[len(via)-1].URL
+	if strings.EqualFold(previous.Scheme, "https") && !strings.EqualFold(req.URL.Scheme, "https") {
+		// Report the scheme and host only; the path and query may carry
+		// identifiers that do not belong in an error string.
+		return fmt.Errorf(
+			"refusing redirect from https to %s://%s: %w",
+			req.URL.Scheme, req.URL.Host, ErrInsecureBaseURL,
+		)
+	}
+	if !sameOrigin(via[0].URL, req.URL) {
+		req.Header.Del("Authorization")
+	}
+
+	return nil
+}
+
+// Reports whether two URLs share a scheme, host, and port
+func sameOrigin(a, b *url.URL) bool {
+	return strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(originHostPort(a), originHostPort(b))
+}
+
+// Renders the host and port of u, filling in the scheme's default port so that
+// https://host and https://host:443 compare equal.
+func originHostPort(u *url.URL) string {
+	port := u.Port()
+	if port == "" {
+		switch strings.ToLower(u.Scheme) {
+		case "https":
+			port = "443"
+		case "http":
+			port = "80"
+		}
+	}
+
+	return net.JoinHostPort(u.Hostname(), port)
 }
 
 // Clones base (preserving proxy, keep-alive, and HTTP/2 defaults) and pins at
@@ -189,7 +270,7 @@ func (c *Client) requestContext(ctx context.Context) (context.Context, context.C
 
 // Attaches authentication and response format headers
 func (c *Client) authorizeRequest(_ context.Context, req *http.Request) error {
-	req.Header.Set("Authorization", "Bearer "+c.serviceKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "application/json")
 	return nil
 }
@@ -241,7 +322,7 @@ func (c *Client) BaseURL() string {
 	return c.baseURL.String()
 }
 
-// Reports whether a non-empty service key is configured
-func (c *Client) ServiceKeyConfigured() bool {
-	return c != nil && strings.TrimSpace(c.serviceKey) != ""
+// Reports whether a non-empty API key is configured
+func (c *Client) APIKeyConfigured() bool {
+	return c != nil && strings.TrimSpace(c.apiKey) != ""
 }

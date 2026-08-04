@@ -45,7 +45,7 @@ func runOverview(cmd *cobra.Command, flags overviewFlags, common resolvedCommonF
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

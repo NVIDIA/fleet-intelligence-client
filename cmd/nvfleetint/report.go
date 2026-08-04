@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetint/helpers"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
@@ -217,6 +217,9 @@ offline with a previously downloaded public key.`,
 	cmd.Flags().StringVar(&flags.key, "key", "", "Path to a PEM public key for offline verification; defaults to the key fetched from the API")
 	registerOutputFlag(cmd, common)
 	registerTimeoutFlag(cmd, common)
+	// This command registers its flags by hand rather than through
+	// registerReadCommonFlags, so --profile has to be added explicitly.
+	registerProfileFlag(cmd, common)
 
 	return cmd
 }
@@ -290,7 +293,7 @@ func reportVerifyKey(cmd *cobra.Command, flags reportVerifyFlags, common resolve
 		return readVerifyFile("--key", flags.key)
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +320,7 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}
@@ -406,7 +409,7 @@ func runReportError(cmd *cobra.Command, flags reportErrorFlags, common resolvedC
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

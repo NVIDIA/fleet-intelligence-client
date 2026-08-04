@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
@@ -35,9 +34,7 @@ func TestNodeListLocalJSONAndSort(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -67,9 +64,7 @@ func TestNodeListDetailSortFields(t *testing.T) {
 			}))
 			defer server.Close()
 
-			if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-				t.Fatalf("save config failed: %v", err)
-			}
+			saveTestConfig(t, server.URL, "test-key")
 
 			var out bytes.Buffer
 			cmd := newRootCmd()
@@ -96,9 +91,7 @@ func TestNodeListSortIntegrityCheck(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -182,9 +175,7 @@ func TestNodeListTableFiltersAndSort(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -233,9 +224,7 @@ func TestNodeListAllJSONMergesRawItems(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -286,9 +275,7 @@ func TestNodeListAllDefaultsPageSize(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -313,9 +300,7 @@ func TestNodeDescribeTable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()

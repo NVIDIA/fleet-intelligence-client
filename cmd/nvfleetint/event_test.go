@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
@@ -36,9 +35,7 @@ func TestEventListTableAbsolute(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -85,9 +82,7 @@ func TestEventListJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -146,9 +141,7 @@ func TestEventListRequiresTimeRange(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	cmd := newRootCmd()
 	cmd.SetOut(new(bytes.Buffer))
@@ -174,9 +167,7 @@ func TestEventBucketsTable(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	var out bytes.Buffer
 	cmd := newRootCmd()
@@ -204,9 +195,7 @@ func TestEventBucketsMaxBucketsValidation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := config.Save(config.Config{APIURL: server.URL, ServiceKey: "test-key"}); err != nil {
-		t.Fatalf("save config failed: %v", err)
-	}
+	saveTestConfig(t, server.URL, "test-key")
 
 	for _, value := range []string{"0", "2000"} {
 		cmd := newRootCmd()

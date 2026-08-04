@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetint/helpers"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
@@ -179,7 +179,7 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonF
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func runNodeDescribe(cmd *cobra.Command, nodeUUID string, common resolvedCommonF
 		return errors.New("node UUID is required")
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

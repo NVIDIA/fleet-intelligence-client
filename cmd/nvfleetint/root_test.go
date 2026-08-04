@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
+
+	"github.com/spf13/cobra"
 )
 
 func TestVersionCommand(t *testing.T) {
@@ -73,7 +75,7 @@ func TestCommandsRejectUnsupportedCommonFlags(t *testing.T) {
 		want string
 	}{
 		{name: "root output", args: []string{"--output", "json"}, want: "unknown flag: --output"},
-		{name: "auth pagination", args: []string{"auth", "login", "--key", "test-key", "--all"}, want: "unknown flag: --all"},
+		{name: "auth pagination", args: []string{"auth", "add", "p", "--api-key", "test-key", "--all"}, want: "unknown flag: --all"},
 		{name: "version pagination", args: []string{"version", "--page", "1"}, want: "unknown flag: --page"},
 		{name: "read pagination", args: []string{"node", "describe", "node-1", "--page-size", "10"}, want: "unknown flag: --page-size"},
 	}
@@ -118,6 +120,61 @@ func TestCommandsRejectNonPositiveTimeout(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), "--timeout must be greater than 0") {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies every command that talks to the API can pick its credentials.
+// The shared helpers (registerListCommonFlags / registerReadCommonFlags) cover
+// most commands, but any command that registers its flags by hand — as
+// `report verify` does — has to opt in explicitly, and this is what catches it.
+func TestClientCommandsAcceptProfileFlag(t *testing.T) {
+	// Commands that run entirely locally and so need no credentials.
+	exempt := map[string]bool{
+		"nvfleetint version":     true,
+		"nvfleetint auth list":   true,
+		"nvfleetint auth add":    true,
+		"nvfleetint auth remove": true,
+		"nvfleetint auth use":    true,
+	}
+
+	var walk func(cmd *cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		if len(cmd.Commands()) > 0 {
+			for _, child := range cmd.Commands() {
+				walk(child)
+			}
+			return
+		}
+		path := cmd.CommandPath()
+		if exempt[path] {
+			return
+		}
+		if cmd.Flags().Lookup("profile") == nil {
+			t.Errorf("%s does not accept --profile", path)
+		}
+	}
+	walk(newRootCmd())
+}
+
+// The mirror image of the above: on the auth CRUD commands the profile is the
+// object of the command and is named positionally, so --profile must not exist
+// there. Registering it would give one flag two meanings — "which profile do I
+// change" and "whose credentials do I use" — which is the confusion the
+// positional argument removes.
+func TestAuthProfileCommandsRejectProfileFlag(t *testing.T) {
+	for _, name := range []string{"add", "remove", "use"} {
+		t.Run(name, func(t *testing.T) {
+			cmd, _, err := newRootCmd().Find([]string{"auth", name})
+			if err != nil {
+				t.Fatalf("find auth %s failed: %v", name, err)
+			}
+			if cmd.Flags().Lookup("profile") != nil {
+				t.Errorf("auth %s must take the profile name positionally, not as --profile", name)
+			}
+			if !strings.Contains(cmd.Use, "<name>") {
+				t.Errorf("auth %s should document its positional name, got Use %q", name, cmd.Use)
 			}
 		})
 	}

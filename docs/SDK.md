@@ -28,7 +28,7 @@ import (
 func main() {
 	client, err := nvfleetint.NewClient(
 		"https://api.fleet-intelligence.nvidia.com",
-		os.Getenv("NVFLEETINT_SERVICE_KEY"),
+		os.Getenv("NVFLEETINT_API_KEY"),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +45,7 @@ func main() {
 }
 ```
 
-`NewClient` requires an HTTPS API URL and a service key. Plain HTTP is accepted
+`NewClient` requires an HTTPS API URL and an API key. Plain HTTP is accepted
 only for loopback addresses used during local development.
 
 The default per-request timeout is two minutes. Override it when constructing
@@ -54,7 +54,7 @@ the client:
 ```go
 client, err := nvfleetint.NewClient(
 	apiURL,
-	serviceKey,
+	apiKey,
 	nvfleetint.WithTimeout(30*time.Second),
 )
 ```

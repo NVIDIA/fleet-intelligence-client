@@ -4,7 +4,7 @@
 package nvfleetint
 
 // This file owns the rules for what counts as an acceptable API base URL.
-// Every request carries the NGC service key in an Authorization header, so a
+// Every request carries the NGC API key in an Authorization header, so a
 // plaintext endpoint would put a long-lived credential on the wire. The
 // validation lives here (rather than in the CLI) so it applies uniformly to
 // the CLI, environment overrides, the on-disk config, and SDK embedders.
@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-// ErrInsecureBaseURL indicates the base URL would send the service key over an
+// ErrInsecureBaseURL indicates the base URL would send the API key over an
 // unencrypted connection. Plain http is accepted only for loopback hosts.
 var ErrInsecureBaseURL = errors.New("insecure base URL: https is required")
 

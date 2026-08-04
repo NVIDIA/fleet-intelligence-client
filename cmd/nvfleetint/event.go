@@ -9,7 +9,7 @@ import (
 	"io"
 	"strings"
 
-	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetint/helpers"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
@@ -129,7 +129,7 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common resolvedCommo
 		return err
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func runEventBuckets(cmd *cobra.Command, flags eventBucketsFlags, common resolve
 		return fmt.Errorf("--max-buckets must be between 1 and %d", nvfleetint.MaxEventBuckets)
 	}
 
-	client, err := newConfiguredClient(commonClientOptions(common)...)
+	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}

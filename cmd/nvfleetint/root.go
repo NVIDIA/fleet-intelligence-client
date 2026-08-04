@@ -10,7 +10,8 @@ import (
 	"io"
 	"time"
 
-	clihelpers "github.com/NVIDIA/fleet-intelligence-client/cmd/nvfleetint/helpers"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
@@ -23,13 +24,14 @@ var (
 	buildDate = "unknown"
 )
 
-// Stores shared output and pagination flag values
+// Stores shared output, pagination, and credential flag values
 type commonFlags struct {
 	output   string
 	all      bool
 	page     int
 	pageSize int
 	timeout  time.Duration
+	profile  string
 }
 
 // Stores common flag values plus explicit-set state
@@ -39,11 +41,13 @@ type resolvedCommonFlags struct {
 	page        int
 	pageSize    int
 	timeout     time.Duration
+	profile     string
 	outputSet   bool
 	allSet      bool
 	pageSet     bool
 	pageSizeSet bool
 	timeoutSet  bool
+	profileSet  bool
 }
 
 // Runs the CLI with the provided context and arguments
@@ -104,17 +108,26 @@ func registerTimeoutFlag(cmd *cobra.Command, flags *commonFlags) {
 	cmd.Flags().DurationVar(&flags.timeout, "timeout", flags.timeout, "Request timeout (e.g. 30s, 2m); must be greater than 0")
 }
 
-// Registers output and pagination flags on a list command
+// Registers the credential profile selector on an API-backed command. The
+// `auth` CRUD commands take the profile they change as a positional argument
+// instead, so `--profile` only ever means "credentials for this invocation".
+func registerProfileFlag(cmd *cobra.Command, flags *commonFlags) {
+	cmd.Flags().StringVar(&flags.profile, "profile", "", "Credential profile to use; defaults to the current profile")
+}
+
+// Registers output, pagination, and credential flags on a list command
 func registerListCommonFlags(cmd *cobra.Command, flags *commonFlags) {
 	registerOutputFlag(cmd, flags)
 	registerPaginationFlags(cmd, flags)
 	registerTimeoutFlag(cmd, flags)
+	registerProfileFlag(cmd, flags)
 }
 
-// Registers output flags on a read command
+// Registers output and credential flags on a read command
 func registerReadCommonFlags(cmd *cobra.Command, flags *commonFlags) {
 	registerOutputFlag(cmd, flags)
 	registerTimeoutFlag(cmd, flags)
+	registerProfileFlag(cmd, flags)
 }
 
 // Validates that exactly one positional argument was given, naming it in errors
@@ -130,6 +143,18 @@ func requireSingleArg(name string) cobra.PositionalArgs {
 	}
 }
 
+// Validates that at most one positional argument was given. The caller supplies
+// the meaning of an omitted argument; only the too-many case is an error here,
+// and it is worded exactly as in requireSingleArg.
+func optionalSingleArg(name string) cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		if len(args) > 1 {
+			return fmt.Errorf("only one %s may be given, got %d", name, len(args))
+		}
+		return nil
+	}
+}
+
 // Returns common flag values and whether pagination flags were supplied
 func resolveCommonFlags(cmd *cobra.Command, flags *commonFlags) resolvedCommonFlags {
 	return resolvedCommonFlags{
@@ -138,11 +163,13 @@ func resolveCommonFlags(cmd *cobra.Command, flags *commonFlags) resolvedCommonFl
 		page:        flags.page,
 		pageSize:    flags.pageSize,
 		timeout:     flags.timeout,
+		profile:     flags.profile,
 		outputSet:   cmd.Flags().Changed("output"),
 		allSet:      cmd.Flags().Changed("all"),
 		pageSet:     cmd.Flags().Changed("page"),
 		pageSizeSet: cmd.Flags().Changed("page-size"),
 		timeoutSet:  cmd.Flags().Changed("timeout"),
+		profileSet:  cmd.Flags().Changed("profile"),
 	}
 }
 
@@ -160,10 +187,7 @@ func validateListCommonFlags(flags resolvedCommonFlags) error {
 	if flags.pageSizeSet && (flags.pageSize < clihelpers.MinPageSize || flags.pageSize > clihelpers.MaxPageSize) {
 		return fmt.Errorf("--page-size must be between %d and %d", clihelpers.MinPageSize, clihelpers.MaxPageSize)
 	}
-	if flags.timeout <= 0 {
-		return errors.New("--timeout must be greater than 0")
-	}
-	return nil
+	return validateReadCommonFlags(flags)
 }
 
 // Checks common flags for non-paginated read commands
@@ -173,6 +197,9 @@ func validateReadCommonFlags(flags resolvedCommonFlags) error {
 	}
 	if flags.timeout <= 0 {
 		return errors.New("--timeout must be greater than 0")
+	}
+	if flags.profileSet {
+		return config.ValidateProfileName(flags.profile)
 	}
 	return nil
 }
