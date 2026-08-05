@@ -29,6 +29,7 @@ const (
 	defaultRequestAttempts = 3
 	initialRetryDelay      = 200 * time.Millisecond
 	maximumRetryDelay      = 5 * time.Second
+	maximumRetryAfterSecs  = int64(1<<63-1) / int64(time.Second)
 )
 
 // signingKeyPath is the well-known location of the report signing public key.
@@ -385,7 +386,8 @@ func responseRetryAfter(response *http.Response, now time.Time) (time.Duration, 
 	if raw == "" {
 		return 0, false
 	}
-	if seconds, err := strconv.Atoi(raw); err == nil && seconds >= 0 {
+	if seconds, err := strconv.ParseInt(raw, 10, 64); err == nil &&
+		seconds >= 0 && seconds <= maximumRetryAfterSecs {
 		return time.Duration(seconds) * time.Second, true
 	}
 	retryAt, err := http.ParseTime(raw)

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -209,6 +210,7 @@ func TestRetryingDoerDoesNotRetryPermanentStatus(t *testing.T) {
 // Verifies Retry-After supports both seconds and HTTP-date forms.
 func TestResponseRetryAfter(t *testing.T) {
 	now := time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
+	maximumDelay := time.Duration(maximumRetryAfterSecs) * time.Second
 	tests := []struct {
 		name string
 		raw  string
@@ -216,6 +218,8 @@ func TestResponseRetryAfter(t *testing.T) {
 		ok   bool
 	}{
 		{name: "seconds", raw: "7", want: 7 * time.Second, ok: true},
+		{name: "maximum seconds", raw: strconv.FormatInt(maximumRetryAfterSecs, 10), want: maximumDelay, ok: true},
+		{name: "overflowing seconds", raw: strconv.FormatInt(maximumRetryAfterSecs+1, 10), ok: false},
 		{name: "date", raw: now.Add(11 * time.Second).Format(http.TimeFormat), want: 11 * time.Second, ok: true},
 		{name: "past date", raw: now.Add(-time.Second).Format(http.TimeFormat), want: 0, ok: true},
 		{name: "invalid", raw: "later", ok: false},
@@ -229,6 +233,24 @@ func TestResponseRetryAfter(t *testing.T) {
 				t.Fatalf("unexpected retry delay: got %v/%t want %v/%t", got, ok, tt.want, tt.ok)
 			}
 		})
+	}
+}
+
+// Verifies an oversized Retry-After value falls back to a positive bounded
+// delay, so the retry wait cannot be bypassed by duration overflow.
+func TestOversizedRetryAfterUsesBackoff(t *testing.T) {
+	response := &http.Response{Header: http.Header{
+		"Retry-After": []string{strconv.FormatInt(maximumRetryAfterSecs+1, 10)},
+	}}
+	delay := defaultRetryDelay(1, response)
+	if delay <= 0 {
+		t.Fatalf("expected positive fallback delay, got %v", delay)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := waitForRetry(ctx, delay); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected retry wait to honor cancellation, got %v", err)
 	}
 }
 

@@ -325,7 +325,9 @@ func TestNodeListAllRetriesFailedPage(t *testing.T) {
 	}
 
 	var got struct {
-		Items      []json.RawMessage `json:"items"`
+		Items []struct {
+			NodeUUID string `json:"nodeUUID"`
+		} `json:"items"`
 		Pagination struct {
 			PagesFetched int `json:"pagesFetched"`
 		} `json:"pagination"`
@@ -333,7 +335,10 @@ func TestNodeListAllRetriesFailedPage(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 		t.Fatalf("decode output: %v", err)
 	}
-	if len(got.Items) != 2 || got.Pagination.PagesFetched != 2 {
+	if len(got.Items) != 2 ||
+		got.Items[0].NodeUUID != "node-1" ||
+		got.Items[1].NodeUUID != "node-2" ||
+		got.Pagination.PagesFetched != 2 {
 		t.Fatalf("unexpected merged output: %#v", got)
 	}
 	if firstPageCalls.Load() != 1 || secondPageCalls.Load() != 2 {
