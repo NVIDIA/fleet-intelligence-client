@@ -111,9 +111,14 @@ jobs:
             --skip-old-files -xf "$RUNNER_TEMP/go-mod-cache/go-mod-cache.tar"
           rm -rf "$RUNNER_TEMP/go-mod-cache"
           go mod verify
-          git status --porcelain
+          # GoReleaser refuses to build from a dirty git state, so fail here
+          # with the offending paths rather than mid-release.
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Working tree is dirty before GoReleaser runs:" >&2
+            git status --porcelain >&2
+            exit 1
+          fi
         env:
-          GOFLAGS: -mod=mod
           GOPROXY: "off"
 
       - name: Run GoReleaser
@@ -124,8 +129,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Fail fast and loudly on a cache miss instead of hanging on a TLS
-          # handshake the runner's network will never complete.
-          GOFLAGS: -mod=mod
+          # handshake the runner's network will never complete. Module mode
+          # stays at the default -mod=readonly so the build can never rewrite
+          # go.mod/go.sum and dirty the tree GoReleaser is tagging.
           GOPROXY: "off"
           SIGN_MACOS_BINARIES: "true"
           SIGN_WINDOWS_BINARIES: "true"
@@ -301,14 +307,25 @@ jobs:
 
           # api/storage needs only read permission on the repo; api/repositories
           # requires admin, which a deploy-scoped service account will not have.
+          # A transport failure (DNS, refused connection, TLS, timeout) exits
+          # non-zero with no HTTP status, so capture curl's exit code rather
+          # than letting set -e abort ahead of the diagnostics below.
+          curl_status=0
           code="$(curl -sS -o "${RUNNER_TEMP}/repo.json" -w '%{http_code}' \
             --config "${RUNNER_TEMP}/artifactory.curlrc" \
-            "${BASE}/api/storage/sw-dgxc-gpuhealth-generic-local/")"
-          if [[ "$code" != "200" ]]; then
-            echo "Repository sw-dgxc-gpuhealth-generic-local is not available at ${BASE} (HTTP ${code})." >&2
+            "${BASE}/api/storage/sw-dgxc-gpuhealth-generic-local/")" || curl_status=$?
+          if [[ "$curl_status" != "0" || "$code" != "200" ]]; then
+            if [[ "$curl_status" != "0" ]]; then
+              echo "Could not reach ${BASE} (curl exit ${curl_status}: DNS, connection, TLS, or timeout failure)." >&2
+            else
+              echo "Repository sw-dgxc-gpuhealth-generic-local is not available at ${BASE} (HTTP ${code})." >&2
+            fi
             echo "Check that the ARTIFACTORY_URL secret points at the JFrog instance hosting" >&2
             echo "this repo, and that ARTIFACTORY_USER can read it." >&2
-            cat "${RUNNER_TEMP}/repo.json" >&2 || true
+            # Absent when curl failed before it got a response body.
+            if [[ -s "${RUNNER_TEMP}/repo.json" ]]; then
+              cat "${RUNNER_TEMP}/repo.json" >&2
+            fi
             exit 1
           fi
         env:
@@ -323,6 +340,22 @@ jobs:
           BASE="${ARTIFACTORY_URL%/}"
           BASE="${BASE%/artifactory}/artifactory"
           REPO_PATH="sw-dgxc-gpuhealth-generic-local/fleetint-client"
+
+          # Matrix parameter values live in the URL path, so an unescaped `/`
+          # in the source URL would silently deploy the archive under a nested
+          # path instead of tagging it. The other props are [A-Za-z0-9._-] only.
+          urlencode() {
+            local s="$1" out="" c i
+            for (( i = 0; i < ${#s}; i++ )); do
+              c="${s:i:1}"
+              case "$c" in
+                [A-Za-z0-9.~_-]) out+="$c" ;;
+                *) printf -v c '%%%02X' "'$c"; out+="$c" ;;
+              esac
+            done
+            printf '%s' "$out"
+          }
+          SOURCE_ENCODED="$(urlencode "$SOURCE")"
 
           # archive suffix | KITMAKER platform | os | arch
           TARGETS=(
@@ -346,16 +379,24 @@ jobs:
             # `jf rt upload --target-props`. They need the `annotate` permission.
             props="component_name=fleetint-client;branch=release;os=${os};arch=${arch}"
             props="${props};platform=${platform};version=${VERSION};changelist=${COMMIT}"
-            props="${props};source=${SOURCE};category=toolkit"
+            props="${props};source=${SOURCE_ENCODED};category=toolkit"
             sha256="$(sha256sum "$archive" | cut -d' ' -f1)"
             dest="${BASE}/${REPO_PATH}/${platform}/${VERSION}/$(basename "$archive");${props}"
 
             echo "Uploading $(basename "$archive") -> ${REPO_PATH}/${platform}/${VERSION}/"
+            # As in the reachability check, a transport failure exits non-zero;
+            # capture it so set -e cannot abort before the diagnostics. curl
+            # still reports %{http_code} as 000 in that case.
+            curl_status=0
             code="$(curl -sS -o "${RUNNER_TEMP}/upload.json" -w '%{http_code}' \
               --config "${RUNNER_TEMP}/artifactory.curlrc" \
               -H "X-Checksum-Sha256: ${sha256}" \
               -T "$archive" \
-              "$dest")"
+              "$dest")" || curl_status=$?
+            if [[ "$curl_status" != "0" ]]; then
+              echo "Upload failed for ${archive} (curl exit ${curl_status}: DNS, connection, TLS, or timeout failure; HTTP ${code})" >&2
+              exit 1
+            fi
             if [[ "$code" != "201" && "$code" != "200" ]]; then
               echo "Upload failed for ${archive} (HTTP ${code})" >&2
               cat "${RUNNER_TEMP}/upload.json" >&2 || true
