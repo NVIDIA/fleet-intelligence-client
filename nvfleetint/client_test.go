@@ -100,6 +100,7 @@ func TestHardenedTransportPreservesStricterTLSMinVersion(t *testing.T) {
 
 	if hardened == nil {
 		t.Fatal("expected a hardened transport")
+		return
 	}
 	if hardened.TLSClientConfig.MinVersion != tls.VersionTLS13 {
 		t.Fatalf("expected TLS 1.3 MinVersion to be preserved, got %d", hardened.TLSClientConfig.MinVersion)
@@ -112,9 +113,11 @@ func TestHardenedTransportAddsMissingTLSConfig(t *testing.T) {
 
 	if hardened == nil {
 		t.Fatal("expected a hardened transport")
+		return
 	}
 	if hardened.TLSClientConfig == nil {
 		t.Fatal("expected a TLS config to be added")
+		return
 	}
 	if hardened.TLSClientConfig.MinVersion != tls.VersionTLS12 {
 		t.Fatalf("unexpected TLS MinVersion: %d", hardened.TLSClientConfig.MinVersion)
