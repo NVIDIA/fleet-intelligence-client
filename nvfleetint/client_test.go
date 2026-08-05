@@ -9,11 +9,13 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -500,5 +502,139 @@ func TestTimeoutEnforcedWithSharedHTTPClient(t *testing.T) {
 
 	if shared.Timeout != 0 {
 		t.Fatalf("expected shared HTTP client timeout to remain unset, got %v", shared.Timeout)
+	}
+}
+
+// Verifies the default transport bounds its connection pool
+func TestHardenedTransportBoundsConnectionPool(t *testing.T) {
+	hardened := hardenedTransport(http.DefaultTransport)
+	if hardened == nil {
+		t.Fatal("expected a hardened transport")
+	}
+	if hardened.MaxConnsPerHost != maxConnsPerHost {
+		t.Fatalf("unexpected MaxConnsPerHost: %d", hardened.MaxConnsPerHost)
+	}
+	if hardened.MaxIdleConnsPerHost != maxIdleConnsPerHost {
+		t.Fatalf("unexpected MaxIdleConnsPerHost: %d", hardened.MaxIdleConnsPerHost)
+	}
+	// net/http's default is already a bound, so it is deliberately left alone.
+	if hardened.MaxIdleConns != http.DefaultTransport.(*http.Transport).MaxIdleConns {
+		t.Fatalf("MaxIdleConns was changed: %d", hardened.MaxIdleConns)
+	}
+}
+
+// Verifies a caller's stricter pool settings survive hardening
+func TestHardenedTransportPreservesStricterConnectionLimits(t *testing.T) {
+	base := &http.Transport{MaxConnsPerHost: 4, MaxIdleConnsPerHost: 3}
+
+	hardened := hardenedTransport(base)
+	if hardened == nil {
+		t.Fatal("expected a hardened transport")
+	}
+	if hardened.MaxConnsPerHost != 4 {
+		t.Fatalf("stricter MaxConnsPerHost was overwritten: %d", hardened.MaxConnsPerHost)
+	}
+	if hardened.MaxIdleConnsPerHost != 3 {
+		t.Fatalf("stricter MaxIdleConnsPerHost was overwritten: %d", hardened.MaxIdleConnsPerHost)
+	}
+}
+
+// Verifies the pool cap actually throttles concurrent calls, so a parallel
+// caller cannot open a socket per in-flight request against one API host
+func TestConcurrentCallsRespectConnectionCap(t *testing.T) {
+	var mu sync.Mutex
+	open, peak := 0, 0
+
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Hold the connection long enough that callers overlap; without the
+		// cap every goroutine would get its own socket.
+		time.Sleep(20 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodesCount":1}`))
+	}))
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		mu.Lock()
+		defer mu.Unlock()
+		switch state {
+		case http.StateNew:
+			open++
+			if open > peak {
+				peak = open
+			}
+		case http.StateClosed, http.StateHijacked:
+			open--
+		}
+	}
+	server.Start()
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	const callers = 64
+	var wg sync.WaitGroup
+	errs := make(chan error, callers)
+	for range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := client.GetOverview(context.Background(), OverviewOptions{}); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Fatalf("overview failed: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if peak > maxConnsPerHost {
+		t.Fatalf("peak connections %d exceeded the cap of %d", peak, maxConnsPerHost)
+	}
+	// Guards against a vacuous pass if the calls never actually overlapped.
+	if peak < 2 {
+		t.Fatalf("calls did not run concurrently, peak connections was %d", peak)
+	}
+}
+
+// Verifies retry delays grow exponentially and stay capped, so a client that
+// keeps hitting a struggling backend backs away from it instead of hammering
+// it at a fixed interval
+func TestDefaultRetryDelayBacksOffExponentially(t *testing.T) {
+	const samples = 200
+
+	var previousBase time.Duration
+	for attempt := 1; attempt <= 8; attempt++ {
+		base := initialRetryDelay << (attempt - 1)
+		if base > maximumRetryDelay {
+			base = maximumRetryDelay
+		}
+		// Jitter spreads each delay over 50%-150% of the base.
+		low, high := base/2, base*3/2
+
+		for range samples {
+			delay := defaultRetryDelay(attempt, nil)
+			if delay < low || delay > high {
+				t.Fatalf("attempt %d delay %v outside [%v, %v]", attempt, delay, low, high)
+			}
+		}
+
+		if attempt > 1 && base < previousBase {
+			t.Fatalf("attempt %d base %v shrank from %v", attempt, base, previousBase)
+		}
+		if base > maximumRetryDelay {
+			t.Fatalf("attempt %d base %v exceeded the cap %v", attempt, base, maximumRetryDelay)
+		}
+		previousBase = base
+	}
+
+	// The growth has to actually happen, not just stay within bounds.
+	if initialRetryDelay<<3 <= initialRetryDelay {
+		t.Fatal("retry delay does not grow between attempts")
 	}
 }

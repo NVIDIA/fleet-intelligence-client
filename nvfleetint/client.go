@@ -248,10 +248,26 @@ func originHostPort(u *url.URL) string {
 	return net.JoinHostPort(u.Hostname(), port)
 }
 
-// Clones base (preserving proxy, keep-alive, and HTTP/2 defaults) and pins at
-// least a TLS 1.2 floor, since Go's default has none. An existing stricter
-// floor is left alone. Returns nil when base is not an *http.Transport, leaving
-// the caller to fall back to net/http's own default.
+const (
+	// maxConnsPerHost caps how many connections this process opens to any one
+	// API host at a time. Go's default is unlimited, so a concurrent embedder
+	// could otherwise open a socket per in-flight call and turn one misbehaving
+	// program into a load spike on a shared backend. Requests past the cap wait
+	// for a free connection rather than failing.
+	maxConnsPerHost = 16
+	// maxIdleConnsPerHost matches the cap so connections earned under it stay
+	// warm and get reused. Go's default of 2 would otherwise close and reopen
+	// the rest, making the throttle cost the backend extra TLS handshakes.
+	// MaxIdleConns is left at net/http's default of 100, which is already
+	// bounded and is a process-wide total across hosts.
+	maxIdleConnsPerHost = maxConnsPerHost
+)
+
+// Clones base (preserving proxy, keep-alive, and HTTP/2 defaults), pins at
+// least a TLS 1.2 floor since Go's default has none, and bounds the connection
+// pool. Existing stricter settings are left alone. Returns nil when base is not
+// an *http.Transport, leaving the caller to fall back to net/http's own
+// default.
 func hardenedTransport(base http.RoundTripper) *http.Transport {
 	transport, ok := base.(*http.Transport)
 	if !ok {
@@ -264,6 +280,19 @@ func hardenedTransport(base http.RoundTripper) *http.Transport {
 	}
 	if cloned.TLSClientConfig.MinVersion < tls.VersionTLS12 {
 		cloned.TLSClientConfig.MinVersion = tls.VersionTLS12
+	}
+	// Zero means unlimited for MaxConnsPerHost, so it has to be treated as
+	// looser than any cap rather than as "already strict".
+	if cloned.MaxConnsPerHost <= 0 || cloned.MaxConnsPerHost > maxConnsPerHost {
+		cloned.MaxConnsPerHost = maxConnsPerHost
+	}
+	// Zero here means net/http's default of 2, which is stricter than the cap
+	// but only in the sense of holding fewer idle sockets; raise it so reuse
+	// tracks MaxConnsPerHost. A caller who deliberately set a higher number
+	// keeps it only up to the cap, since more idle connections than the
+	// per-host limit cannot be used anyway.
+	if cloned.MaxIdleConnsPerHost <= 0 || cloned.MaxIdleConnsPerHost > maxIdleConnsPerHost {
+		cloned.MaxIdleConnsPerHost = maxIdleConnsPerHost
 	}
 
 	return cloned
