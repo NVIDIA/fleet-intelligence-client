@@ -7,10 +7,10 @@ version: 2
 
 project_name: nvfleetint
 
-before:
-  hooks:
-    - go mod tidy
-
+# No `go mod tidy` hook: the release runner has no egress to proxy.golang.org
+# and builds with GOPROXY=off against a module cache seeded by the validate
+# job, whereas tidy needs network access to resolve the full module graph.
+# The validate job runs the tidiness check instead, where network is available.
 builds:
   - id: nvfleetint
     main: ./cmd/nvfleetint
