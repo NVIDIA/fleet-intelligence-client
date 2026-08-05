@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
@@ -284,6 +285,64 @@ func TestNodeListAllDefaultsPageSize(t *testing.T) {
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
+	}
+}
+
+// Verifies --all retries only a transiently failing page instead of restarting
+// pagination and duplicating already collected nodes.
+func TestNodeListAllRetriesFailedPage(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var firstPageCalls atomic.Int32
+	var secondPageCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Query().Get("page") {
+		case "0":
+			firstPageCalls.Add(1)
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1"}],"hasMore":true,"page":0,"pageSize":100,"total":2}`))
+		case "1":
+			if secondPageCalls.Add(1) == 1 {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"error":"temporarily unavailable"}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-2"}],"hasMore":false,"page":1,"pageSize":100,"total":2}`))
+		default:
+			t.Fatalf("unexpected page: %q", r.URL.Query().Get("page"))
+		}
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"node", "list", "--all", "--output", "json", "--timeout", "5s"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v", err)
+	}
+
+	var got struct {
+		Items []struct {
+			NodeUUID string `json:"nodeUUID"`
+		} `json:"items"`
+		Pagination struct {
+			PagesFetched int `json:"pagesFetched"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode output: %v", err)
+	}
+	if len(got.Items) != 2 ||
+		got.Items[0].NodeUUID != "node-1" ||
+		got.Items[1].NodeUUID != "node-2" ||
+		got.Pagination.PagesFetched != 2 {
+		t.Fatalf("unexpected merged output: %#v", got)
+	}
+	if firstPageCalls.Load() != 1 || secondPageCalls.Load() != 2 {
+		t.Fatalf("unexpected page calls: first=%d second=%d", firstPageCalls.Load(), secondPageCalls.Load())
 	}
 }
 

@@ -9,11 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
@@ -21,6 +24,13 @@ import (
 
 // DefaultTimeout is the per-request timeout applied when none is configured.
 const DefaultTimeout = 2 * time.Minute
+
+const (
+	defaultRequestAttempts = 3
+	initialRetryDelay      = 200 * time.Millisecond
+	maximumRetryDelay      = 5 * time.Second
+	maximumRetryAfterSecs  = int64(1<<63-1) / int64(time.Second)
+)
 
 // signingKeyPath is the well-known location of the report signing public key.
 const signingKeyPath = "/.well-known/signing-key.pub"
@@ -36,11 +46,12 @@ var (
 
 // Calls the Fleet Intelligence customer API
 type Client struct {
-	baseURL    *url.URL
-	apiKey     string
-	httpClient *http.Client
-	timeout    time.Duration
-	api        *fleetapi.ClientWithResponses
+	baseURL     *url.URL
+	apiKey      string
+	httpClient  *http.Client
+	requestDoer fleetapi.HttpRequestDoer
+	timeout     time.Duration
+	api         *fleetapi.ClientWithResponses
 }
 
 // Customizes client construction behavior
@@ -104,10 +115,17 @@ func NewClient(baseURL, apiKey string, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(client)
 	}
+	client.requestDoer = &retryingDoer{
+		inner:       client.httpClient,
+		maxAttempts: defaultRequestAttempts,
+	}
 
 	api, err := fleetapi.NewClientWithResponses(
 		client.baseURL.String(),
-		fleetapi.WithHTTPClient(&timeoutDoer{inner: client.httpClient, timeout: client.timeout}),
+		fleetapi.WithHTTPClient(&timeoutDoer{
+			inner:   client.requestDoer,
+			timeout: client.timeout,
+		}),
 		fleetapi.WithRequestEditorFn(client.authorizeRequest),
 	)
 	if err != nil {
@@ -248,6 +266,156 @@ type timeoutDoer struct {
 	timeout time.Duration
 }
 
+// Retries idempotent reads when a transient transport or backend failure makes
+// an individual request fail. Paginated callers therefore retry only the page
+// that failed; successfully returned pages are not requested again.
+type retryingDoer struct {
+	inner       fleetapi.HttpRequestDoer
+	maxAttempts int
+	delay       func(attempt int, response *http.Response) time.Duration
+	wait        func(context.Context, time.Duration) error
+}
+
+// Performs one request, retrying bounded transient failures within the request
+// context's existing timeout.
+func (d *retryingDoer) Do(req *http.Request) (*http.Response, error) {
+	maxAttempts := d.maxAttempts
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		response, err := d.inner.Do(req)
+		if !canRetryRequest(req, response, err) || attempt == maxAttempts {
+			return response, err
+		}
+
+		if response != nil && response.Body != nil {
+			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4<<10))
+			_ = response.Body.Close()
+		}
+
+		delay := defaultRetryDelay(attempt, response)
+		if d.delay != nil {
+			delay = d.delay(attempt, response)
+		}
+		wait := waitForRetry
+		if d.wait != nil {
+			wait = d.wait
+		}
+		if err := wait(req.Context(), delay); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, errors.New("retry attempts exhausted")
+}
+
+// Reports whether retrying this request is safe and potentially useful.
+func canRetryRequest(req *http.Request, response *http.Response, err error) bool {
+	if req == nil || (req.Method != http.MethodGet && req.Method != http.MethodHead) {
+		return false
+	}
+	// The generated read requests have no body. Avoid replaying an unusual GET
+	// body because net/http may already have consumed or closed it.
+	if req.Body != nil {
+		return false
+	}
+	if req.Context().Err() != nil {
+		return false
+	}
+	if err != nil {
+		return isRetryableNetworkError(err)
+	}
+	if response == nil {
+		return false
+	}
+
+	switch response.StatusCode {
+	case http.StatusRequestTimeout,
+		http.StatusTooManyRequests,
+		http.StatusInternalServerError,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		return true
+	default:
+		return false
+	}
+}
+
+// Identifies transport failures that commonly succeed when retried.
+func isRetryableNetworkError(err error) bool {
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+
+	return errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF) ||
+		errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.EPIPE)
+}
+
+// Computes Retry-After or an exponential delay with bounded jitter.
+func defaultRetryDelay(attempt int, response *http.Response) time.Duration {
+	if delay, ok := responseRetryAfter(response, time.Now()); ok {
+		return delay
+	}
+
+	delay := initialRetryDelay << (attempt - 1)
+	if delay > maximumRetryDelay {
+		delay = maximumRetryDelay
+	}
+	// Randomize to 50%-150% so many clients do not retry in lockstep.
+	half := delay / 2
+	return half + time.Duration(rand.Int64N(int64(delay)+1))
+}
+
+// Parses Retry-After as either seconds or an HTTP date.
+func responseRetryAfter(response *http.Response, now time.Time) (time.Duration, bool) {
+	if response == nil {
+		return 0, false
+	}
+	raw := strings.TrimSpace(response.Header.Get("Retry-After"))
+	if raw == "" {
+		return 0, false
+	}
+	if seconds, err := strconv.ParseInt(raw, 10, 64); err == nil &&
+		seconds >= 0 && seconds <= maximumRetryAfterSecs {
+		return time.Duration(seconds) * time.Second, true
+	}
+	retryAt, err := http.ParseTime(raw)
+	if err != nil {
+		return 0, false
+	}
+	if !retryAt.After(now) {
+		return 0, true
+	}
+	return retryAt.Sub(now), true
+}
+
+// Waits for a retry delay without ignoring request cancellation.
+func waitForRetry(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // Performs the request and rewrites timeout errors into a friendly message
 func (d *timeoutDoer) Do(req *http.Request) (*http.Response, error) {
 	resp, err := d.inner.Do(req)
@@ -293,7 +461,7 @@ func (c *Client) FetchSigningKey(ctx context.Context) ([]byte, error) {
 	}
 	req.Header.Set("Accept", signingKeyAcceptHeader)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.requestDoer.Do(req)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, fmt.Errorf("request timed out after %s", c.timeout)
