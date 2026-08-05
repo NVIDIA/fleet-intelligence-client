@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -127,6 +129,38 @@ func TestFetchSigningKey(t *testing.T) {
 	}
 	if !strings.Contains(string(key), "BEGIN PUBLIC KEY") {
 		t.Fatalf("unexpected key contents: %q", string(key))
+	}
+}
+
+// Verifies direct SDK requests use the same central retry behavior as generated
+// API calls.
+func TestFetchSigningKeyRetriesTransientFailure(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if calls.Add(1) == 1 {
+			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = w.Write([]byte("public key"))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	retryer, ok := client.requestDoer.(*retryingDoer)
+	if !ok {
+		t.Fatalf("unexpected request doer: %T", client.requestDoer)
+	}
+	retryer.delay = func(int, *http.Response) time.Duration { return 0 }
+
+	key, err := client.FetchSigningKey(context.Background())
+	if err != nil {
+		t.Fatalf("fetch signing key failed: %v", err)
+	}
+	if string(key) != "public key" || calls.Load() != 2 {
+		t.Fatalf("unexpected key/calls: %q/%d", key, calls.Load())
 	}
 }
 

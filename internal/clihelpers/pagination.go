@@ -53,7 +53,10 @@ func FetchAllRawPages(itemKey string, startPage int, fetch func(page int) (RawPa
 
 		page, err := fetch(startPage + offset)
 		if err != nil {
-			return MergedJSONResult{}, err
+			return MergedJSONResult{}, fmt.Errorf(
+				"fetch %s API page %d after %d completed pages: %w",
+				itemKey, startPage+offset, result.Pagination.PagesFetched, err,
+			)
 		}
 		items, err := ExtractRawItems(page.RawJSON, itemKey)
 		if err != nil {
