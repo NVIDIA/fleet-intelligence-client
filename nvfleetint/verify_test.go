@@ -149,9 +149,14 @@ func TestFetchSigningKeyRetriesTransientFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
-	retryer, ok := client.requestDoer.(*retryingDoer)
+	// The retry layer sits inside the response size and depth guard.
+	limiter, ok := client.requestDoer.(*limitingDoer)
 	if !ok {
 		t.Fatalf("unexpected request doer: %T", client.requestDoer)
+	}
+	retryer, ok := limiter.inner.(*retryingDoer)
+	if !ok {
+		t.Fatalf("unexpected inner doer: %T", limiter.inner)
 	}
 	retryer.delay = func(int, *http.Response) time.Duration { return 0 }
 

@@ -46,12 +46,14 @@ var (
 
 // Calls the Fleet Intelligence customer API
 type Client struct {
-	baseURL     *url.URL
-	apiKey      string
-	httpClient  *http.Client
-	requestDoer fleetapi.HttpRequestDoer
-	timeout     time.Duration
-	api         *fleetapi.ClientWithResponses
+	baseURL          *url.URL
+	apiKey           string
+	httpClient       *http.Client
+	requestDoer      fleetapi.HttpRequestDoer
+	timeout          time.Duration
+	maxResponseBytes int64
+	maxJSONDepth     int
+	api              *fleetapi.ClientWithResponses
 }
 
 // Customizes client construction behavior
@@ -106,18 +108,27 @@ func NewClient(baseURL, apiKey string, opts ...Option) (*Client, error) {
 	}
 
 	client := &Client{
-		baseURL:    parsedBaseURL,
-		apiKey:     apiKey,
-		httpClient: defaultHTTPClient(),
-		timeout:    DefaultTimeout,
+		baseURL:          parsedBaseURL,
+		apiKey:           apiKey,
+		httpClient:       defaultHTTPClient(),
+		timeout:          DefaultTimeout,
+		maxResponseBytes: DefaultMaxResponseBytes,
+		maxJSONDepth:     DefaultMaxJSONDepth,
 	}
 
 	for _, opt := range opts {
 		opt(client)
 	}
-	client.requestDoer = &retryingDoer{
-		inner:       client.httpClient,
-		maxAttempts: defaultRequestAttempts,
+	// The size and depth guard sits outside the retry loop so it bounds the one
+	// response that is actually handed back for parsing; bodies discarded
+	// between retries are already drained through a small bounded reader.
+	client.requestDoer = &limitingDoer{
+		inner: &retryingDoer{
+			inner:       client.httpClient,
+			maxAttempts: defaultRequestAttempts,
+		},
+		maxBytes: client.maxResponseBytes,
+		maxDepth: client.maxJSONDepth,
 	}
 
 	api, err := fleetapi.NewClientWithResponses(
