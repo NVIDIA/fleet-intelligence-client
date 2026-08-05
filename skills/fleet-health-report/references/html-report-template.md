@@ -112,7 +112,8 @@ label's actual value so a `Healthy` node never renders red:
 
 - `Healthy`, `Online`, `Resolved`, `Verified`, `Passed`: green
   (`--status-healthy`).
-- `Needs attention`, `Warning`, `Degraded`, `Detected`, `Pending`, `Unsupported`:
+- `Needs attention`, `Warning`, `Degraded`, `Detected`, `Pending`,
+  `Unsupported`, `Unverified`:
   amber (`--status-warning`).
 - `Critical`, `Unhealthy`, `Offline`, `Failed`, `Triggered`: red
   (`--status-critical`).
@@ -123,6 +124,9 @@ label's actual value so a `Healthy` node never renders red:
 
 Copy and adapt this skeleton. Replace bracketed placeholders with report content,
 and add charts and tables sized to the actual dataset within the visual system.
+Replace `[backend_health_badge]` with the backend-health badge only for an
+entire-fleet report with a returned value; replace it with an empty string for a
+scoped report or missing value.
 
 ```html
 <!doctype html>
@@ -272,7 +276,7 @@ and add charts and tables sized to the actual dataset within the visual system.
     <div class="meta">
       <span class="badge [status_class]">Status: [status]</span>
       <span class="badge info">Node health score: [health_score]%</span>
-      <span class="badge info">Backend health: [backend_health_percentage]%</span>
+      [backend_health_badge]
       <span class="badge info">Generated: [timestamp]</span>
     </div>
   </div>

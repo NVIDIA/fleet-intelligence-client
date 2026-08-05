@@ -72,7 +72,8 @@ value — never leave a hardcoded class, so a `Healthy` node never renders red a
 
 - `Confirmed`, `Healthy`, `Online`, `Resolved`, `Verified`, `Passed`: green
   (`--status-healthy`).
-- `Likely`, `Warning`, `Degraded`, `Detected`, `Pending`, `Unsupported`: amber
+- `Likely`, `Warning`, `Degraded`, `Detected`, `Pending`, `Unsupported`,
+  `Unverified`: amber
   (`--status-warning`).
 - `Not confirmed`, `Critical`, `Unhealthy`, `Offline`, `Failed`, `Triggered`:
   red (`--status-critical`).
