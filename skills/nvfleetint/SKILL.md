@@ -95,7 +95,7 @@ Filter vocabularies (case-sensitive, comma-separate multiple values):
 - **agent-status**: `Online`, `Offline`, `Unknown`
 - **verification-check**: `Verified`, `Unverified`, `Degraded`, `Pending`, `Unsupported`, `Unknown`
 - **firmware-check**: `Passed`, `Failed`, `Unknown`
-- **node sort-by**: `hostname`, `nodeUUID`, `health`, `nodeGroup`, `computeZone`, `gpuType`, `gpuCount`, `integrityCheck`, `agentStatus` (+ `--order asc|desc`) — the `integrityCheck` sort key keeps the backend field name and corresponds to the `verification-check` filter
+- **node sort-by**: `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions` (+ `--order asc|desc`) — `verificationCheck` sorts on the same data as the `verification-check` filter (the backend spelling `integrityCheck` is still accepted)
 
 `--output json` returns the raw backend field names, not the display terms: verification state is `integrityCheck` (with `integrityCheckReason`, `lastIntegrityCheckTS`) and location is `geoLocation`. The `verification-check`/"location" naming applies only to the CLI flag and table output.
 
