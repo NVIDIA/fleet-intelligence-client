@@ -380,6 +380,9 @@ func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, e
 	if err := validateErrorReportTime(opts); err != nil {
 		return ErrorReportOptions{}, err
 	}
+	if err := validatePagination(opts.Page, opts.PageSize); err != nil {
+		return ErrorReportOptions{}, err
+	}
 
 	return opts, nil
 }
@@ -452,7 +455,7 @@ func validateInventoryReportOptions(opts InventoryReportOptions) error {
 	if opts.Order != "" && !opts.Order.Valid() {
 		return fmt.Errorf("invalid inventory report order %q: expected asc or desc", opts.Order)
 	}
-	return nil
+	return validatePagination(opts.Page, opts.PageSize)
 }
 
 // Builds generated inventory report query parameters

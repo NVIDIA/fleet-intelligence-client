@@ -207,6 +207,10 @@ func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimel
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
+	if err := validatePagination(opts.Page, opts.PageSize); err != nil {
+		return AlertTimelineNodesPage{}, err
+	}
+
 	params := fleetapi.GetV1AlertTimelineNodesParams{}
 	if opts.Active {
 		params.Active = boolPointer(opts.Active)
@@ -234,8 +238,12 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	if opts.NodeUUID == "" {
-		return NodeAlertTimelinePage{}, fmt.Errorf("node UUID is required")
+	nodeUUID, err := ValidateResourceID("node UUID", opts.NodeUUID)
+	if err != nil {
+		return NodeAlertTimelinePage{}, err
+	}
+	if err := validatePagination(opts.Page, opts.PageSize); err != nil {
+		return NodeAlertTimelinePage{}, err
 	}
 
 	params := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParams{}
@@ -249,7 +257,7 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 		params.PageSize = cloneInt(opts.PageSize)
 	}
 
-	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsWithResponse(ctx, opts.NodeUUID, &params)
+	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsWithResponse(ctx, nodeUUID, &params)
 	if err != nil {
 		return NodeAlertTimelinePage{}, err
 	}
@@ -265,11 +273,13 @@ func (c *Client) DescribeAlertTimeline(ctx context.Context, nodeUUID, alertUUID 
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	if nodeUUID == "" {
-		return AlertTimelineDetails{}, fmt.Errorf("node UUID is required")
+	nodeUUID, err := ValidateResourceID("node UUID", nodeUUID)
+	if err != nil {
+		return AlertTimelineDetails{}, err
 	}
-	if alertUUID == "" {
-		return AlertTimelineDetails{}, fmt.Errorf("alert UUID is required")
+	alertUUID, err = ValidateResourceID("alert UUID", alertUUID)
+	if err != nil {
+		return AlertTimelineDetails{}, err
 	}
 
 	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx, nodeUUID, alertUUID, &fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams{})
@@ -298,7 +308,7 @@ func validateAlertOptions(opts ListAlertsOptions) error {
 	if opts.State != "" && !opts.State.Valid() {
 		return fmt.Errorf("invalid alert state %q: expected Detected, Triggered, or Resolved", opts.State)
 	}
-	return nil
+	return validatePagination(opts.Page, opts.PageSize)
 }
 
 // alertsAPIPageOffset bridges the /v1/alerts endpoint's 1-indexed paging to the

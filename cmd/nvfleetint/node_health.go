@@ -53,9 +53,9 @@ func runNodeHealth(cmd *cobra.Command, nodeUUID string, flags nodeHealthFlags, c
 		return err
 	}
 
-	nodeUUID = strings.TrimSpace(nodeUUID)
-	if nodeUUID == "" {
-		return errors.New("node UUID is required")
+	nodeUUID, err := nvfleetint.ValidateResourceID("node UUID", nodeUUID)
+	if err != nil {
+		return err
 	}
 
 	start := strings.TrimSpace(flags.start)

@@ -191,7 +191,7 @@ func validateNodeGroupOptions(view NodeGroupView, opts ListNodeGroupsOptions) er
 		return fmt.Errorf("basic node group view is incompatible with sort order %q", opts.Order)
 	}
 
-	return nil
+	return validatePagination(opts.Page, opts.PageSize)
 }
 
 // Converts a normalized view into the generated parameter type

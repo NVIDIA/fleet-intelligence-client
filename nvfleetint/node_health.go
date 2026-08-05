@@ -52,12 +52,12 @@ func (c *Client) NodeHealthHistory(ctx context.Context, nodeUUID string, opts No
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	nodeUUID = strings.TrimSpace(nodeUUID)
 	opts.StartTime = strings.TrimSpace(opts.StartTime)
 	opts.EndTime = strings.TrimSpace(opts.EndTime)
 
-	if nodeUUID == "" {
-		return NodeHealthHistory{}, fmt.Errorf("node UUID is required")
+	nodeUUID, err := ValidateResourceID("node UUID", nodeUUID)
+	if err != nil {
+		return NodeHealthHistory{}, err
 	}
 	if opts.StartTime == "" || opts.EndTime == "" {
 		return NodeHealthHistory{}, fmt.Errorf("start and end times are required")

@@ -61,6 +61,9 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 	if err != nil {
 		return ComputeZonesPage{}, err
 	}
+	if err := validatePagination(opts.Page, opts.PageSize); err != nil {
+		return ComputeZonesPage{}, err
+	}
 
 	params := fleetapi.GetV1ComputezonesParams{
 		View: computeZoneViewParam(view),

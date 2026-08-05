@@ -9,9 +9,12 @@ import (
 )
 
 const (
-	// MinPageSize is the smallest page size accepted by list commands
+	// MinPageSize is the smallest page size accepted by list commands.
+	// Kept in step with nvfleetint.MinPageSize, which enforces the same bound
+	// for callers who use the SDK directly.
 	MinPageSize = 1
-	// MaxPageSize is the largest page size accepted by list commands
+	// MaxPageSize is the largest page size accepted by list commands.
+	// Kept in step with nvfleetint.MaxPageSize.
 	MaxPageSize = 100
 	// MaxPages bounds all-page pagination when the API keeps reporting more data
 	MaxPages = 10000

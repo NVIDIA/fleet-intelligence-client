@@ -4,7 +4,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -212,8 +211,13 @@ func runAlertTimeline(cmd *cobra.Command, flags alertTimelineFlags, common resol
 		return err
 	}
 
-	nodeUUID := strings.TrimSpace(flags.node)
-	if nodeUUID != "" {
+	// An omitted --node lists every node with timeline history, so only a
+	// supplied value is validated as a path identifier.
+	if strings.TrimSpace(flags.node) != "" {
+		nodeUUID, err := nvfleetint.ValidateResourceID("--node", flags.node)
+		if err != nil {
+			return err
+		}
 		return runNodeAlertTimeline(cmd, client, flags, nodeUUID, common)
 	}
 	return runAlertTimelineNodes(cmd, client, flags, common)
@@ -330,13 +334,14 @@ func runAlertDescribe(cmd *cobra.Command, alertUUID string, flags alertDescribeF
 		return err
 	}
 
-	nodeUUID := strings.TrimSpace(flags.node)
-	alertUUID = strings.TrimSpace(alertUUID)
-	if nodeUUID == "" {
-		return errors.New("--node is required")
+	// Named for the flag so an omitted value reports "--node is required".
+	nodeUUID, err := nvfleetint.ValidateResourceID("--node", flags.node)
+	if err != nil {
+		return err
 	}
-	if alertUUID == "" {
-		return errors.New("alert UUID is required")
+	alertUUID, err = nvfleetint.ValidateResourceID("alert UUID", alertUUID)
+	if err != nil {
+		return err
 	}
 
 	client, err := newConfiguredClient(common)

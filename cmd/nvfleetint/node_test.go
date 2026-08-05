@@ -446,3 +446,52 @@ func TestListAllRejectsPage(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// Verifies the CLI rejects an identifier that would re-target the request
+// before any call reaches the API. The SDK enforces this too; the check is
+// duplicated here so a hostile argument never reaches a configured client.
+func TestResourceIDArgsRejectedBeforeRequest(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	invocations := [][]string{
+		{"node", "describe", ".."},
+		{"node", "describe", "../../v1/tags"},
+		{"node", "health", "..", "--start", "2026-04-07T00:00:00Z", "--end", "2026-04-14T00:00:00Z"},
+		{"alert", "describe", "alert-1", "--node", ".."},
+		{"alert", "describe", "..", "--node", "node-1"},
+		{"alert", "timeline", "--node", ".."},
+	}
+
+	for _, args := range invocations {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatalf("expected an error, got output %q", out.String())
+			}
+			if !strings.Contains(err.Error(), "different API path") &&
+				!strings.Contains(err.Error(), "single path segment") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+
+	if requests.Load() != 0 {
+		t.Fatalf("expected no requests to be issued, server saw %d", requests.Load())
+	}
+}

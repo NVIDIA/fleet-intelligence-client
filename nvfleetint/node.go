@@ -394,8 +394,9 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	if nodeUUID == "" {
-		return NodeDetails{}, fmt.Errorf("node UUID is required")
+	nodeUUID, err := ValidateResourceID("node UUID", nodeUUID)
+	if err != nil {
+		return NodeDetails{}, err
 	}
 
 	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID)
@@ -470,7 +471,7 @@ func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
 		}
 	}
 
-	return nil
+	return validatePagination(opts.Page, opts.PageSize)
 }
 
 // Reports whether a sort field works with basic view

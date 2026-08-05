@@ -94,6 +94,9 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 	if err != nil {
 		return EventsPage{}, err
 	}
+	if err := validatePagination(opts.Page, opts.PageSize); err != nil {
+		return EventsPage{}, err
+	}
 
 	mode := fleetapi.GetV1EventsParamsTimeMode(timeRange.timeMode)
 	params := fleetapi.GetV1EventsParams{TimeMode: &mode}

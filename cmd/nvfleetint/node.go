@@ -256,9 +256,9 @@ func runNodeDescribe(cmd *cobra.Command, nodeUUID string, common resolvedCommonF
 		return err
 	}
 
-	nodeUUID = strings.TrimSpace(nodeUUID)
-	if nodeUUID == "" {
-		return errors.New("node UUID is required")
+	nodeUUID, err := nvfleetint.ValidateResourceID("node UUID", nodeUUID)
+	if err != nil {
+		return err
 	}
 
 	client, err := newConfiguredClient(common)
