@@ -381,6 +381,9 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if resp.StatusCode() != http.StatusOK {
 		return NodesPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return NodesPage{}, err
+	}
 
 	if view == NodeViewBasic {
 		return decodeBasicNodes(resp.Body)
@@ -405,6 +408,10 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return NodeDetails{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
+	}
+
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return NodeDetails{}, err
 	}
 
 	var data fleetapi.ModelsNodeDetailsResponse

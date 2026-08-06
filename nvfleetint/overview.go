@@ -64,6 +64,10 @@ func (c *Client) GetOverview(ctx context.Context, opts OverviewOptions) (Overvie
 		return Overview{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return Overview{}, err
+	}
+
 	var data fleetapi.ModelsOverviewResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return Overview{}, err

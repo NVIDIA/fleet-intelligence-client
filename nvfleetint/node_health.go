@@ -82,6 +82,10 @@ func (c *Client) NodeHealthHistory(ctx context.Context, nodeUUID string, opts No
 		return NodeHealthHistory{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return NodeHealthHistory{}, err
+	}
+
 	var data fleetapi.ModelsNodeHealthHistoryResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return NodeHealthHistory{}, err

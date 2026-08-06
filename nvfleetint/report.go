@@ -294,6 +294,9 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 		return InventoryReport{RawCSV: append([]byte(nil), resp.Body...)}, nil
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return InventoryReport{}, err
+	}
 	return decodeInventoryReport(resp.Body)
 }
 
@@ -323,6 +326,9 @@ func (c *Client) GetErrorReport(ctx context.Context, opts ErrorReportOptions) (E
 		}, nil
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return ErrorReport{}, err
+	}
 	return decodeErrorReport(resp.Body, normalized.View, normalized.GroupBy)
 }
 

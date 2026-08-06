@@ -66,6 +66,10 @@ func (c *Client) ListTags(ctx context.Context, opts TagListOptions) (TagList, er
 		return TagList{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return TagList{}, err
+	}
+
 	var data fleetapi.ModelsListTagsResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return TagList{}, err

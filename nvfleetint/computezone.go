@@ -87,6 +87,10 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 		return ComputeZonesPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return ComputeZonesPage{}, err
+	}
+
 	if view == ComputeZoneViewBasic {
 		return decodeBasicComputeZones(resp.Body)
 	}

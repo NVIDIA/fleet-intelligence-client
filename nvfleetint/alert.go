@@ -199,6 +199,9 @@ func (c *Client) ListAlerts(ctx context.Context, opts ListAlertsOptions) (Alerts
 		return AlertsPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return AlertsPage{}, err
+	}
 	return decodeAlerts(resp.Body)
 }
 
@@ -230,6 +233,9 @@ func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimel
 		return AlertTimelineNodesPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return AlertTimelineNodesPage{}, err
+	}
 	return decodeAlertTimelineNodes(resp.Body)
 }
 
@@ -265,6 +271,9 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 		return NodeAlertTimelinePage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return NodeAlertTimelinePage{}, err
+	}
 	return decodeNodeAlertTimeline(resp.Body)
 }
 
@@ -288,6 +297,10 @@ func (c *Client) DescribeAlertTimeline(ctx context.Context, nodeUUID, alertUUID 
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return AlertTimelineDetails{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
+	}
+
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return AlertTimelineDetails{}, err
 	}
 
 	var data fleetapi.ModelsAlertTimelineDetailResponse

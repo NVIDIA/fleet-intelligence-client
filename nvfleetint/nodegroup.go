@@ -148,6 +148,9 @@ func (c *Client) ListNodeGroups(ctx context.Context, opts ListNodeGroupsOptions)
 	if resp.StatusCode() != http.StatusOK {
 		return NodeGroupsPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return NodeGroupsPage{}, err
+	}
 
 	if view == NodeGroupViewBasic {
 		return decodeBasicNodeGroups(resp.Body)

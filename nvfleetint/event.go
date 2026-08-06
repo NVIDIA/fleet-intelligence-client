@@ -133,6 +133,10 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 		return EventsPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return EventsPage{}, err
+	}
+
 	var data fleetapi.ModelsEventsResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return EventsPage{}, err
@@ -197,6 +201,10 @@ func (c *Client) GetEventBuckets(ctx context.Context, opts EventBucketsOptions) 
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return EventBuckets{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
+	}
+
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return EventBuckets{}, err
 	}
 
 	var data fleetapi.ModelsEventBucketsResponse

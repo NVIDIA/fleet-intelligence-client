@@ -35,6 +35,10 @@ func (c *Client) GetAuthStatus(ctx context.Context) (AuthStatus, error) {
 		return AuthStatus{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
+	if err := validateResponsePayload(resp.Body); err != nil {
+		return AuthStatus{}, err
+	}
+
 	var data fleetapi.ModelsAuthStatusResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return AuthStatus{}, err
