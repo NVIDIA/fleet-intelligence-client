@@ -17,6 +17,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// User-facing spelling of the backend "integrityCheck" node sort field
+const nodeSortByVerificationCheck = "verificationCheck"
+
+// Lists the sort fields accepted by node list, using the user-facing
+// "verificationCheck" spelling instead of the backend "integrityCheck"
+const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, " +
+	nodeSortByVerificationCheck + ", agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions"
+
 // Stores local flag values for node list
 type nodeListFlags struct {
 	view             string
@@ -92,7 +100,7 @@ func newNodeListCmd() *cobra.Command {
 	// User-facing "verification check" maps to the backend "integrity check" API field.
 	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+nodeSortByList)
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	registerListCommonFlags(cmd, common)
 
@@ -301,7 +309,7 @@ func validateNodeListFlags(flags nodeListFlags, sortBy nvfleetint.NodeSortBy, co
 		return err
 	}
 	if sortBy != "" && !sortBy.Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions", flags.sortBy)
+		return fmt.Errorf("invalid sort-by %q: expected %s", flags.sortBy, nodeSortByList)
 	}
 	if flags.order != "" && !nvfleetint.NodeSortOrder(flags.order).Valid() {
 		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
@@ -327,9 +335,16 @@ func basicNodeSortCompatible(sortBy nvfleetint.NodeSortBy) bool {
 	}
 }
 
-// Normalizes the raw sort-by flag into an API sort field
+// Normalizes the raw sort-by flag into an API sort field.
+// "verificationCheck" is the user-facing name for the backend "integrityCheck"
+// sort field; the backend name stays accepted so existing scripts keep working.
 func normalizeNodeSortBy(raw string) (nvfleetint.NodeSortBy, error) {
-	return nvfleetint.NodeSortBy(strings.TrimSpace(raw)), nil
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == nodeSortByVerificationCheck {
+		return nvfleetint.NodeSortByIntegrityCheck, nil
+	}
+
+	return nvfleetint.NodeSortBy(trimmed), nil
 }
 
 // Converts comma-separated health filters into API values

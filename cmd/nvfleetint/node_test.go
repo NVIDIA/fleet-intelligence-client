@@ -79,28 +79,55 @@ func TestNodeListDetailSortFields(t *testing.T) {
 	}
 }
 
-// Verifies the "integrityCheck" sort field passes through to the API unchanged
-func TestNodeListSortIntegrityCheck(t *testing.T) {
+// Verifies both the user-facing "verificationCheck" sort field and the legacy
+// backend "integrityCheck" spelling reach the API as "integrityCheck"
+func TestNodeListSortVerificationCheck(t *testing.T) {
+	for _, sortBy := range []string{"verificationCheck", "integrityCheck"} {
+		t.Run(sortBy, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got := r.URL.Query().Get("sortBy"); got != "integrityCheck" {
+					t.Fatalf("unexpected sortBy: got %q want %q", got, "integrityCheck")
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
+			}))
+			defer server.Close()
+
+			saveTestConfig(t, server.URL, "test-key")
+
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", sortBy})
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("command failed: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies node list help and sort errors use the user-facing "verificationCheck"
+func TestNodeListSortHelpUsesVerificationCheck(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("sortBy"); got != "integrityCheck" {
-			t.Fatalf("unexpected sortBy: got %q want %q", got, "integrityCheck")
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
-	}))
-	defer server.Close()
+	usage := newNodeListCmd().Flags().Lookup("sort-by").Usage
+	if !strings.Contains(usage, "verificationCheck") {
+		t.Fatalf("sort-by usage missing verificationCheck: %q", usage)
+	}
+	if strings.Contains(usage, "integrityCheck") {
+		t.Fatalf("sort-by usage still mentions integrityCheck: %q", usage)
+	}
 
-	saveTestConfig(t, server.URL, "test-key")
-
-	var out bytes.Buffer
-	cmd := newRootCmd()
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "integrityCheck"})
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("command failed: %v", err)
+	common := resolvedCommonFlags{output: "table", pageSize: 20, timeout: nvfleetint.DefaultTimeout}
+	err := validateNodeListFlags(nodeListFlags{view: "detail", sortBy: "bogus"}, "bogus", common)
+	if err == nil {
+		t.Fatal("expected invalid sort-by error")
+	}
+	if !strings.Contains(err.Error(), "verificationCheck") || strings.Contains(err.Error(), "integrityCheck") {
+		t.Fatalf("unexpected sort-by error: %v", err)
 	}
 }
 
