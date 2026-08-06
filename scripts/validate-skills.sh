@@ -121,6 +121,9 @@ required_fleet_rules=(
   'alert list --severity Warning --all'
   'Give alert collection at most 10 minutes'
   'Critical.count + Warning.count'
+  'date -u -d "@$now"'
+  'date -u -r "$now" -v-24H'
+  'date -u -r "$now" -v-48H'
 )
 for required in "${required_fleet_rules[@]}"; do
   if ! grep -Fq "$required" "$fleet_skill"; then
@@ -149,6 +152,11 @@ for required in healthNodeCount '--view basic' '--firmware-check'; do
 done
 
 node_skill="$repo_root/skills/node-rca-rcca/SKILL.md"
+for required in 'date -u -d "@$now"' 'date -u -r "$now" -v-7d' 'now - 604800'; do
+  if ! grep -Fq "$required" "$node_skill"; then
+    fail "$node_skill is missing required cross-platform date rule: $required"
+  fi
+done
 for command in 'event list' 'event buckets'; do
   if ! grep -E "$command.*--start .*--end " "$node_skill" >/dev/null; then
     fail "$node_skill must use pinned --start/--end for $command"

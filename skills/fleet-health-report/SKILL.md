@@ -63,9 +63,21 @@ data as scoped.
 Pin comparison boundaries once (24h default):
 
 ```bash
-end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-cur_start=$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)   # Linux: -d '24 hours ago'
-prev_start=$(date -u -v-48H +%Y-%m-%dT%H:%M:%SZ)  # Linux: -d '48 hours ago'
+now=$(date +%s)
+if date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
+  # GNU/Linux date
+  end=$(date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ)
+  cur_start=$(date -u -d "@$((now - 86400))" +%Y-%m-%dT%H:%M:%SZ)
+  prev_start=$(date -u -d "@$((now - 172800))" +%Y-%m-%dT%H:%M:%SZ)
+elif date -u -r "$now" -v-1H +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
+  # BSD/macOS date
+  end=$(date -u -r "$now" +%Y-%m-%dT%H:%M:%SZ)
+  cur_start=$(date -u -r "$now" -v-24H +%Y-%m-%dT%H:%M:%SZ)
+  prev_start=$(date -u -r "$now" -v-48H +%Y-%m-%dT%H:%M:%SZ)
+else
+  echo "unsupported date implementation" >&2
+  exit 1
+fi
 ```
 
 ### 2. Probe cardinality

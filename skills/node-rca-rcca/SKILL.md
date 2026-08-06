@@ -31,8 +31,19 @@ Default to seven days. Pin absolute boundaries for every node/event query; keep
 the relative duration only for optional APIs that lack suitable scoped use:
 
 ```bash
-end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-start=$(date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)  # Linux: -d '7 days ago'
+now=$(date +%s)
+if date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
+  # GNU/Linux date
+  end=$(date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ)
+  start=$(date -u -d "@$((now - 604800))" +%Y-%m-%dT%H:%M:%SZ)
+elif date -u -r "$now" -v-1d +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
+  # BSD/macOS date
+  end=$(date -u -r "$now" +%Y-%m-%dT%H:%M:%SZ)
+  start=$(date -u -r "$now" -v-7d +%Y-%m-%dT%H:%M:%SZ)
+else
+  echo "unsupported date implementation" >&2
+  exit 1
+fi
 window=168h  # optional blast-radius query only
 ```
 
