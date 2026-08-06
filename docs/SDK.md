@@ -61,3 +61,11 @@ client, err := nvfleetint.NewClient(
 
 Public SDK types and methods are documented in the package source under
 [`nvfleetint`](../nvfleetint).
+
+Alert timeline filter values and sorting choices are available through
+`GetAlertTimelineFilterOptions`. Pass `true` for the active-alert view or
+`false` for the historical view:
+
+```go
+options, err := client.GetAlertTimelineFilterOptions(ctx, true)
+```

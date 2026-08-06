@@ -1164,12 +1164,12 @@ type ModelsAlertTimelineDetailResponse struct {
 	// Page Pagination metadata for the timeline events. These fields are populated only when the caller
 	// opts into pagination by supplying the pageSize query parameter; they are omitted entirely
 	// otherwise, so existing clients that expect the full, unpaginated timeline are unaffected.
-	// When present, Timeline holds only the requested page (still ordered oldest→newest) and Total
+	// When present, Timeline holds only the requested page (order controlled by query param) and Total
 	// is the count of all timeline events for the alert.
 	Page     *int `json:"page,omitempty"`
 	PageSize *int `json:"pageSize,omitempty"`
 
-	// Timeline Sorted by eventTimestamp ASC (oldest to newest)
+	// Timeline Sorted by eventTimestamp (default DESC = newest-first; query param order=asc reverses)
 	Timeline *[]ModelsAlertTimelineEvent `json:"timeline,omitempty"`
 	Total    *int                        `json:"total,omitempty"`
 }
@@ -1363,6 +1363,26 @@ type ModelsCertChainStatus struct {
 	XNvidiaCertStatus            *string `json:"x-nvidia-cert-status,omitempty"`
 }
 
+// ModelsCommand defines model for models.Command.
+type ModelsCommand struct {
+	Flavors      *[]ModelsSingleCommand `json:"flavors,omitempty"`
+	Link         *string                `json:"link,omitempty"`
+	Name         *string                `json:"name,omitempty"`
+	Placeholders *[]string              `json:"placeholders,omitempty"`
+	Template     *string                `json:"template,omitempty"`
+}
+
+// ModelsCommandsResponse defines model for models.CommandsResponse.
+type ModelsCommandsResponse struct {
+	Commands *[]ModelsCommand `json:"commands,omitempty"`
+}
+
+// ModelsComponentInfo defines model for models.ComponentInfo.
+type ModelsComponentInfo struct {
+	Build   *string `json:"build,omitempty"`
+	Version *string `json:"version,omitempty"`
+}
+
 // ModelsComponentMetricList defines model for models.ComponentMetricList.
 type ModelsComponentMetricList struct {
 	DisplayName        *string             `json:"displayName,omitempty"`
@@ -1372,6 +1392,12 @@ type ModelsComponentMetricList struct {
 
 	// SubComponents Dynamic children (e.g., active PSIRT CVEs)
 	SubComponents *[]string `json:"subComponents,omitempty"`
+}
+
+// ModelsComponentsInfo defines model for models.ComponentsInfo.
+type ModelsComponentsInfo struct {
+	AgentBackend *ModelsComponentInfo `json:"agentBackend,omitempty"`
+	ApiBackend   *ModelsComponentInfo `json:"apiBackend,omitempty"`
 }
 
 // ModelsComputeZoneOverview defines model for models.ComputeZoneOverview.
@@ -1636,6 +1662,12 @@ type ModelsHealthSummary struct {
 	HealthyPercentage        *float32 `json:"healthyPercentage,omitempty"`
 	UnhealthyDurationSeconds *float32 `json:"unhealthyDurationSeconds,omitempty"`
 	UnhealthyPercentage      *float32 `json:"unhealthyPercentage,omitempty"`
+}
+
+// ModelsInfoResponse defines model for models.InfoResponse.
+type ModelsInfoResponse struct {
+	Components *ModelsComponentsInfo `json:"components,omitempty"`
+	SigningKey *ModelsSigningKeyInfo `json:"signingKey,omitempty"`
 }
 
 // ModelsIntegrityCheck defines model for models.IntegrityCheck.
@@ -2033,6 +2065,20 @@ type ModelsNodeHistoryResponse struct {
 	Total    *int                      `json:"total,omitempty"`
 }
 
+// ModelsNodeRemovalPolicy defines model for models.NodeRemovalPolicy.
+type ModelsNodeRemovalPolicy struct {
+	CreatedAt *string `json:"createdAt,omitempty"`
+	Enabled   *bool   `json:"enabled,omitempty"`
+
+	// LastCheckedAt LastCheckedAt is the most recent time the node reaper evaluated this customer.
+	// Zero until the reaper first runs against the customer (DB column is NULL), and
+	// omitted from the response until then.
+	LastCheckedAt        *string `json:"lastCheckedAt,omitempty"`
+	OfflineThresholdDays *int    `json:"offlineThresholdDays,omitempty"`
+	UpdatedAt            *string `json:"updatedAt,omitempty"`
+	UpdatedBy            *string `json:"updatedBy,omitempty"`
+}
+
 // ModelsNodeResources defines model for models.NodeResources.
 type ModelsNodeResources struct {
 	CpuInfo    *ModelsCPUInfo    `json:"cpuInfo,omitempty"`
@@ -2166,6 +2212,12 @@ type ModelsSetNodeTagsResponse struct {
 	Tags     *[]string `json:"tags,omitempty"`
 }
 
+// ModelsSigningKeyInfo defines model for models.SigningKeyInfo.
+type ModelsSigningKeyInfo struct {
+	IsRecentlyRotated *bool   `json:"isRecentlyRotated,omitempty"`
+	LastRotatedAt     *string `json:"lastRotatedAt,omitempty"`
+}
+
 // ModelsSimpleComputeZone defines model for models.SimpleComputeZone.
 type ModelsSimpleComputeZone struct {
 	Contact     *ModelsContact         `json:"contact,omitempty"`
@@ -2189,6 +2241,14 @@ type ModelsSimpleNodeGroup struct {
 	ComputeZoneName *string `json:"computeZoneName,omitempty"`
 	Id              *string `json:"id,omitempty"`
 	Name            *string `json:"name,omitempty"`
+}
+
+// ModelsSingleCommand defines model for models.SingleCommand.
+type ModelsSingleCommand struct {
+	Link         *string   `json:"link,omitempty"`
+	Name         *string   `json:"name,omitempty"`
+	Placeholders *[]string `json:"placeholders,omitempty"`
+	Template     *string   `json:"template,omitempty"`
 }
 
 // ModelsSortingDefaults defines model for models.SortingDefaults.
@@ -2259,6 +2319,12 @@ type ModelsUpdateMuteRuleRequest struct {
 	Component  string    `json:"component"`
 	Reason     *string   `json:"reason,omitempty"`
 	Severities *[]string `json:"severities,omitempty"`
+}
+
+// ModelsUpdateNodeRemovalPolicyRequest defines model for models.UpdateNodeRemovalPolicyRequest.
+type ModelsUpdateNodeRemovalPolicyRequest struct {
+	Enabled              bool `json:"enabled"`
+	OfflineThresholdDays *int `json:"offlineThresholdDays,omitempty"`
 }
 
 // ModelsUpdateRetentionPolicyRequest defines model for models.UpdateRetentionPolicyRequest.
@@ -2948,6 +3014,9 @@ type PutV1AlertMuteRulesJSONRequestBody = ModelsUpdateMuteRuleRequest
 // PutV1ComputezonesJSONRequestBody defines body for PutV1Computezones for application/json ContentType.
 type PutV1ComputezonesJSONRequestBody = ModelsUpdateComputeZoneRequest
 
+// PutV1NodeRemovalPolicyJSONRequestBody defines body for PutV1NodeRemovalPolicy for application/json ContentType.
+type PutV1NodeRemovalPolicyJSONRequestBody = ModelsUpdateNodeRemovalPolicyRequest
+
 // DeleteV1NodesJSONRequestBody defines body for DeleteV1Nodes for application/json ContentType.
 type DeleteV1NodesJSONRequestBody = ModelsDeleteNodesRequest
 
@@ -3478,6 +3547,9 @@ type ClientInterface interface {
 	// GetV1EventsBuckets request
 	GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetV1Info request
+	GetV1Info(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetV1Metrics request
 	GetV1Metrics(ctx context.Context, params *GetV1MetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3486,6 +3558,14 @@ type ClientInterface interface {
 
 	// GetV1NodeGroupMemberships request
 	GetV1NodeGroupMemberships(ctx context.Context, params *GetV1NodeGroupMembershipsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1NodeRemovalPolicy request
+	GetV1NodeRemovalPolicy(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutV1NodeRemovalPolicyWithBody request with any body
+	PutV1NodeRemovalPolicyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutV1NodeRemovalPolicy(ctx context.Context, body PutV1NodeRemovalPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1Nodegroups request
 	GetV1Nodegroups(ctx context.Context, params *GetV1NodegroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3567,6 +3647,9 @@ type ClientInterface interface {
 	PatchV1TagsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PatchV1Tags(ctx context.Context, body PatchV1TagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV2Commands request
+	GetV2Commands(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV2Metrics request
 	GetV2Metrics(ctx context.Context, params *GetV2MetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3788,6 +3871,18 @@ func (c *Client) GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBuck
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetV1Info(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1InfoRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetV1Metrics(ctx context.Context, params *GetV1MetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1MetricsRequest(c.Server, params)
 	if err != nil {
@@ -3814,6 +3909,42 @@ func (c *Client) GetV1MetricsQueryRange(ctx context.Context, params *GetV1Metric
 
 func (c *Client) GetV1NodeGroupMemberships(ctx context.Context, params *GetV1NodeGroupMembershipsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1NodeGroupMembershipsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV1NodeRemovalPolicy(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1NodeRemovalPolicyRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutV1NodeRemovalPolicyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutV1NodeRemovalPolicyRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutV1NodeRemovalPolicy(ctx context.Context, body PutV1NodeRemovalPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutV1NodeRemovalPolicyRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4162,6 +4293,18 @@ func (c *Client) PatchV1TagsWithBody(ctx context.Context, contentType string, bo
 
 func (c *Client) PatchV1Tags(ctx context.Context, body PatchV1TagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPatchV1TagsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetV2Commands(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV2CommandsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -5475,6 +5618,33 @@ func NewGetV1EventsBucketsRequest(server string, params *GetV1EventsBucketsParam
 	return req, nil
 }
 
+// NewGetV1InfoRequest generates requests for GetV1Info
+func NewGetV1InfoRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/info")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV1MetricsRequest generates requests for GetV1Metrics
 func NewGetV1MetricsRequest(server string, params *GetV1MetricsParams) (*http.Request, error) {
 	var err error
@@ -5805,6 +5975,73 @@ func NewGetV1NodeGroupMembershipsRequest(server string, params *GetV1NodeGroupMe
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewGetV1NodeRemovalPolicyRequest generates requests for GetV1NodeRemovalPolicy
+func NewGetV1NodeRemovalPolicyRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/node_removal_policy")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutV1NodeRemovalPolicyRequest calls the generic PutV1NodeRemovalPolicy builder with application/json body
+func NewPutV1NodeRemovalPolicyRequest(server string, body PutV1NodeRemovalPolicyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutV1NodeRemovalPolicyRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewPutV1NodeRemovalPolicyRequestWithBody generates requests for PutV1NodeRemovalPolicy with any type of body
+func NewPutV1NodeRemovalPolicyRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/node_removal_policy")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -7580,6 +7817,33 @@ func NewPatchV1TagsRequestWithBody(server string, contentType string, body io.Re
 	return req, nil
 }
 
+// NewGetV2CommandsRequest generates requests for GetV2Commands
+func NewGetV2CommandsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/commands")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV2MetricsRequest generates requests for GetV2Metrics
 func NewGetV2MetricsRequest(server string, params *GetV2MetricsParams) (*http.Request, error) {
 	var err error
@@ -7804,6 +8068,9 @@ type ClientWithResponsesInterface interface {
 	// GetV1EventsBucketsWithResponse request
 	GetV1EventsBucketsWithResponse(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*GetV1EventsBucketsResponse, error)
 
+	// GetV1InfoWithResponse request
+	GetV1InfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1InfoResponse, error)
+
 	// GetV1MetricsWithResponse request
 	GetV1MetricsWithResponse(ctx context.Context, params *GetV1MetricsParams, reqEditors ...RequestEditorFn) (*GetV1MetricsResponse, error)
 
@@ -7812,6 +8079,14 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1NodeGroupMembershipsWithResponse request
 	GetV1NodeGroupMembershipsWithResponse(ctx context.Context, params *GetV1NodeGroupMembershipsParams, reqEditors ...RequestEditorFn) (*GetV1NodeGroupMembershipsResponse, error)
+
+	// GetV1NodeRemovalPolicyWithResponse request
+	GetV1NodeRemovalPolicyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1NodeRemovalPolicyResponse, error)
+
+	// PutV1NodeRemovalPolicyWithBodyWithResponse request with any body
+	PutV1NodeRemovalPolicyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutV1NodeRemovalPolicyResponse, error)
+
+	PutV1NodeRemovalPolicyWithResponse(ctx context.Context, body PutV1NodeRemovalPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*PutV1NodeRemovalPolicyResponse, error)
 
 	// GetV1NodegroupsWithResponse request
 	GetV1NodegroupsWithResponse(ctx context.Context, params *GetV1NodegroupsParams, reqEditors ...RequestEditorFn) (*GetV1NodegroupsResponse, error)
@@ -7894,6 +8169,9 @@ type ClientWithResponsesInterface interface {
 
 	PatchV1TagsWithResponse(ctx context.Context, body PatchV1TagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchV1TagsResponse, error)
 
+	// GetV2CommandsWithResponse request
+	GetV2CommandsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV2CommandsResponse, error)
+
 	// GetV2MetricsWithResponse request
 	GetV2MetricsWithResponse(ctx context.Context, params *GetV2MetricsParams, reqEditors ...RequestEditorFn) (*GetV2MetricsResponse, error)
 }
@@ -7901,6 +8179,8 @@ type ClientWithResponsesInterface interface {
 type GetWellKnownSigningKeyPubResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON499      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -8410,6 +8690,39 @@ func (r GetV1EventsBucketsResponse) ContentType() string {
 	return ""
 }
 
+type GetV1InfoResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelsInfoResponse
+	JSON400      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1InfoResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1InfoResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1InfoResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV1MetricsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -8511,6 +8824,74 @@ func (r GetV1NodeGroupMembershipsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetV1NodeGroupMembershipsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1NodeRemovalPolicyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelsNodeRemovalPolicy
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1NodeRemovalPolicyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1NodeRemovalPolicyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1NodeRemovalPolicyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PutV1NodeRemovalPolicyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *ModelsErrorResponse
+	JSON401      *ModelsErrorResponse
+	JSON403      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+	JSON503      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutV1NodeRemovalPolicyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutV1NodeRemovalPolicyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PutV1NodeRemovalPolicyResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9335,6 +9716,39 @@ func (r PatchV1TagsResponse) ContentType() string {
 	return ""
 }
 
+type GetV2CommandsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelsCommandsResponse
+	JSON400      *ModelsErrorResponse
+	JSON499      *ModelsErrorResponse
+	JSON500      *ModelsErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV2CommandsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV2CommandsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV2CommandsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV2MetricsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -9525,6 +9939,15 @@ func (c *ClientWithResponses) GetV1EventsBucketsWithResponse(ctx context.Context
 	return ParseGetV1EventsBucketsResponse(rsp)
 }
 
+// GetV1InfoWithResponse request returning *GetV1InfoResponse
+func (c *ClientWithResponses) GetV1InfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1InfoResponse, error) {
+	rsp, err := c.GetV1Info(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1InfoResponse(rsp)
+}
+
 // GetV1MetricsWithResponse request returning *GetV1MetricsResponse
 func (c *ClientWithResponses) GetV1MetricsWithResponse(ctx context.Context, params *GetV1MetricsParams, reqEditors ...RequestEditorFn) (*GetV1MetricsResponse, error) {
 	rsp, err := c.GetV1Metrics(ctx, params, reqEditors...)
@@ -9550,6 +9973,32 @@ func (c *ClientWithResponses) GetV1NodeGroupMembershipsWithResponse(ctx context.
 		return nil, err
 	}
 	return ParseGetV1NodeGroupMembershipsResponse(rsp)
+}
+
+// GetV1NodeRemovalPolicyWithResponse request returning *GetV1NodeRemovalPolicyResponse
+func (c *ClientWithResponses) GetV1NodeRemovalPolicyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1NodeRemovalPolicyResponse, error) {
+	rsp, err := c.GetV1NodeRemovalPolicy(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1NodeRemovalPolicyResponse(rsp)
+}
+
+// PutV1NodeRemovalPolicyWithBodyWithResponse request with arbitrary body returning *PutV1NodeRemovalPolicyResponse
+func (c *ClientWithResponses) PutV1NodeRemovalPolicyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutV1NodeRemovalPolicyResponse, error) {
+	rsp, err := c.PutV1NodeRemovalPolicyWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutV1NodeRemovalPolicyResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutV1NodeRemovalPolicyWithResponse(ctx context.Context, body PutV1NodeRemovalPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*PutV1NodeRemovalPolicyResponse, error) {
+	rsp, err := c.PutV1NodeRemovalPolicy(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutV1NodeRemovalPolicyResponse(rsp)
 }
 
 // GetV1NodegroupsWithResponse request returning *GetV1NodegroupsResponse
@@ -9807,6 +10256,15 @@ func (c *ClientWithResponses) PatchV1TagsWithResponse(ctx context.Context, body 
 	return ParsePatchV1TagsResponse(rsp)
 }
 
+// GetV2CommandsWithResponse request returning *GetV2CommandsResponse
+func (c *ClientWithResponses) GetV2CommandsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV2CommandsResponse, error) {
+	rsp, err := c.GetV2Commands(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV2CommandsResponse(rsp)
+}
+
 // GetV2MetricsWithResponse request returning *GetV2MetricsResponse
 func (c *ClientWithResponses) GetV2MetricsWithResponse(ctx context.Context, params *GetV2MetricsParams, reqEditors ...RequestEditorFn) (*GetV2MetricsResponse, error) {
 	rsp, err := c.GetV2Metrics(ctx, params, reqEditors...)
@@ -9827,6 +10285,23 @@ func ParseGetWellKnownSigningKeyPubResponse(rsp *http.Response) (*GetWellKnownSi
 	response := &GetWellKnownSigningKeyPubResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -10637,6 +11112,53 @@ func ParseGetV1EventsBucketsResponse(rsp *http.Response) (*GetV1EventsBucketsRes
 	return response, nil
 }
 
+// ParseGetV1InfoResponse parses an HTTP response from a GetV1InfoWithResponse call
+func ParseGetV1InfoResponse(rsp *http.Response) (*GetV1InfoResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1InfoResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsInfoResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetV1MetricsResponse parses an HTTP response from a GetV1MetricsWithResponse call
 func ParseGetV1MetricsResponse(rsp *http.Response) (*GetV1MetricsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -10814,6 +11336,114 @@ func ParseGetV1NodeGroupMembershipsResponse(rsp *http.Response) (*GetV1NodeGroup
 			return nil, err
 		}
 		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1NodeRemovalPolicyResponse parses an HTTP response from a GetV1NodeRemovalPolicyWithResponse call
+func ParseGetV1NodeRemovalPolicyResponse(rsp *http.Response) (*GetV1NodeRemovalPolicyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1NodeRemovalPolicyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsNodeRemovalPolicy
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutV1NodeRemovalPolicyResponse parses an HTTP response from a PutV1NodeRemovalPolicyWithResponse call
+func ParsePutV1NodeRemovalPolicyResponse(rsp *http.Response) (*PutV1NodeRemovalPolicyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutV1NodeRemovalPolicyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -12332,6 +12962,53 @@ func ParsePatchV1TagsResponse(rsp *http.Response) (*PatchV1TagsResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV2CommandsResponse parses an HTTP response from a GetV2CommandsWithResponse call
+func ParseGetV2CommandsResponse(rsp *http.Response) (*GetV2CommandsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV2CommandsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsCommandsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
 		var dest ModelsErrorResponse
