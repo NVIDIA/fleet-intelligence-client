@@ -132,12 +132,27 @@ func TestAlertTimelineTables(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/v1/alert_timeline/nodes":
-			if got := r.URL.Query().Get("active"); got != "true" {
+			query := r.URL.Query()
+			if got := query.Get("active"); got != "true" {
 				t.Fatalf("unexpected active: %q", got)
 			}
-			_, _ = w.Write([]byte(`{"nodes":[{"nodeUuid":"node-1","hostname":"gpu-001","hostStatus":"Active","lastAlertTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1}`))
+			for name, want := range map[string]string{"hostname": "gpu", "sortBy": "alert", "order": "desc"} {
+				if got := query.Get(name); got != want {
+					t.Fatalf("unexpected %s: %q", name, got)
+				}
+			}
+			if got := query["componentTypes"]; len(got) != 2 || got[0] != "gpu" || got[1] != "memory" {
+				t.Fatalf("unexpected componentTypes: %#v", got)
+			}
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUuid":"node-1","hostname":"gpu-001","criticalCount":2,"warningCount":1,"gpuType":"H100","nodeGroup":"Training","computeZone":"East","lastAlertTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1,"totalCritical":2,"totalWarning":1}`))
 		case "/v1/alert_timeline/nodes/node-1/alerts":
-			_, _ = w.Write([]byte(`{"nodeUuid":"node-1","alerts":[{"alertUuid":"alert-1","component":"gpu","alertStatus":"Resolved","lastEventTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1}`))
+			query := r.URL.Query()
+			for name, want := range map[string]string{"withoutPsirt": "true", "sortBy": "startTime", "order": "asc"} {
+				if got := query.Get(name); got != want {
+					t.Fatalf("unexpected %s: %q", name, got)
+				}
+			}
+			_, _ = w.Write([]byte(`{"nodeUuid":"node-1","alerts":[{"alertUuid":"alert-1","component":"gpu","alertStatus":"Resolved","startTime":"2026-04-30T00:00:00Z","lastEventTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -149,23 +164,62 @@ func TestAlertTimelineTables(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "timeline", "--active"})
+	cmd.SetArgs([]string{"alert", "timeline", "--active", "--hostname", "gpu", "--sort-by", "alert", "--order", "desc", "--component-type", "gpu,memory"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("timeline command failed: %v", err)
 	}
-	if got := out.String(); !strings.Contains(got, "NODE UUID") || !strings.Contains(got, "NODE STATUS") || !strings.Contains(got, "node-1") || !strings.Contains(got, "Active") {
+	if got := out.String(); !strings.Contains(got, "NODE UUID") || !strings.Contains(got, "CRITICAL") || !strings.Contains(got, "WARNING") || !strings.Contains(got, "H100") || !strings.Contains(got, "Training") || !strings.Contains(got, "East") || !strings.Contains(got, "node-1") {
 		t.Fatalf("timeline node output missing fields: %q", got)
 	}
 
 	out.Reset()
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "timeline", "--node", "node-1"})
+	cmd.SetArgs([]string{"alert", "timeline", "--node", "node-1", "--without-psirt", "--sort-by", "startTime", "--order", "asc"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("node timeline command failed: %v", err)
 	}
-	if got := out.String(); !strings.Contains(got, "ALERT UUID") || !strings.Contains(got, "STATUS") || strings.Contains(got, "SEVERITY") || !strings.Contains(got, "alert-1") || !strings.Contains(got, "Resolved") {
+	if got := out.String(); !strings.Contains(got, "ALERT UUID") || !strings.Contains(got, "STATUS") || !strings.Contains(got, "START TIME") || strings.Contains(got, "SEVERITY") || !strings.Contains(got, "alert-1") || !strings.Contains(got, "Resolved") || !strings.Contains(got, "2026-04-30T00:00:00Z") {
 		t.Fatalf("timeline alert output missing fields: %q", got)
+	}
+}
+
+// Verifies level-1 --all JSON preserves backend cross-page aggregates
+func TestAlertTimelineAllJSONPreservesAggregates(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/alert_timeline/nodes" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUuid":"node-1","criticalCount":2,"warningCount":1}],"hasMore":false,"page":0,"pageSize":100,"total":1,"totalCritical":2,"totalWarning":1,"totalResolved":0,"distinctGpuTypeCount":1,"distinctNodeGroupCount":1,"distinctComputeZoneCount":1}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"alert", "timeline", "--active", "--all", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("timeline command failed: %v", err)
+	}
+
+	var got struct {
+		Items                    []map[string]any `json:"items"`
+		TotalCritical            int              `json:"totalCritical"`
+		TotalWarning             int              `json:"totalWarning"`
+		DistinctComputeZoneCount int              `json:"distinctComputeZoneCount"`
+		Pagination               struct {
+			Page int `json:"page"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("invalid JSON output: %v\n%s", err, out.String())
+	}
+	if len(got.Items) != 1 || got.TotalCritical != 2 || got.TotalWarning != 1 || got.DistinctComputeZoneCount != 1 || got.Pagination.Page != 1 {
+		t.Fatalf("unexpected timeline JSON: %#v", got)
 	}
 }
 
@@ -177,8 +231,12 @@ func TestAlertDescribeTable(t *testing.T) {
 		if r.URL.Path != "/v1/alert_timeline/nodes/node-1/alerts/alert-1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
+		query := r.URL.Query()
+		if query.Get("order") != "asc" || query.Get("page") != "1" || query.Get("pageSize") != "1" {
+			t.Fatalf("unexpected query: %v", query)
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"alertUuid":"alert-1","nodeUuid":"node-1","component":"gpu","timeline":[{"eventType":"triggered","alertStatus":"Critical","eventTimestamp":"2026-05-01T00:00:00Z","message":"GPU critical"}]}`))
+		_, _ = w.Write([]byte(`{"alertUuid":"alert-1","nodeUuid":"node-1","component":"gpu","page":1,"pageSize":1,"total":3,"hasMore":true,"timeline":[{"eventType":"triggered","alertStatus":"Critical","eventTimestamp":"2026-05-01T00:00:00Z","message":"GPU critical"}]}`))
 	}))
 	defer server.Close()
 
@@ -187,12 +245,12 @@ func TestAlertDescribeTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "describe", "alert-1", "--node", "node-1"})
+	cmd.SetArgs([]string{"alert", "describe", "alert-1", "--node", "node-1", "--order", "asc", "--page", "2", "--page-size", "1"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got := out.String(); !strings.Contains(got, "TIMESTAMP") || !strings.Contains(got, "triggered") || !strings.Contains(got, "GPU critical") {
+	if got := out.String(); !strings.Contains(got, "TIMESTAMP") || !strings.Contains(got, "triggered") || !strings.Contains(got, "GPU critical") || !strings.Contains(got, "Page: 2  Total Pages: 3") {
 		t.Fatalf("describe output missing fields: %q", got)
 	}
 }
@@ -294,5 +352,32 @@ func TestAlertListRejectsNegativePage(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "--page must be greater than or equal to 1") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies mode-specific timeline flags are rejected before a request
+func TestAlertTimelineRejectsInvalidFlags(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "node sort", args: []string{"alert", "timeline", "--sort-by", "startTime"}, want: "invalid sort-by"},
+		{name: "alert sort", args: []string{"alert", "timeline", "--node", "node-1", "--sort-by", "alert"}, want: "invalid sort-by"},
+		{name: "without psirt", args: []string{"alert", "timeline", "--without-psirt"}, want: "requires --node"},
+		{name: "hostname", args: []string{"alert", "timeline", "--node", "node-1", "--hostname", "gpu"}, want: "cannot be used with --node"},
+		{name: "state", args: []string{"alert", "timeline", "--alert-state", "Triggered"}, want: "invalid alert-state"},
+		{name: "describe page", args: []string{"alert", "describe", "alert-1", "--node", "node-1", "--page", "2"}, want: "requires --page-size"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("expected %q, got %v", test.want, err)
+			}
+		})
 	}
 }

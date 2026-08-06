@@ -1128,6 +1128,39 @@ paths:
       summary: Get event counts bucketed by time
       tags:
         - events
+  /v1/info:
+    get:
+      description: Get version and build information for API backend and agent backend
+        components, plus the current inventory-report signing key's rotation freshness.
+      operationId: getV1Info
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.InfoResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get application info
+      tags:
+        - info
   /v1/metrics:
     get:
       description: 'Get a list of all available metrics, organized by component. Supports
@@ -1403,6 +1436,106 @@ paths:
       summary: Get node group memberships
       tags:
         - node-memberships
+  /v1/node_removal_policy:
+    get:
+      description: 'Returns the customer''s "Auto remove machines" settings. Customers
+        that never
+
+        configured the policy get the defaults (disabled, offlineThreshold omitted).'
+      operationId: getV1NodeRemovalPolicy
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.NodeRemovalPolicy'
+          description: Current auto node removal policy
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Database temporarily unavailable
+      summary: Get auto node removal policy
+      tags:
+        - node_removal_policy
+    put:
+      description: 'Updates the customer''s "Auto remove machines" settings. When
+        offlineThreshold
+
+        is omitted the stored threshold is kept (disabling never clears it), so it
+        is
+
+        required only when enabling for the first time. The equivalent duration must
+        be
+
+        at least 1 day (whole numbers). An omitted enabled binds as false.
+
+        Returns 204 No Content on success.'
+      operationId: putV1NodeRemovalPolicy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/models.UpdateNodeRemovalPolicyRequest'
+              summary: request
+              description: Auto node removal policy update request
+        description: Auto node removal policy update request
+        required: true
+      responses:
+        '204':
+          description: No Content - Node removal policy updated
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request - Invalid body or threshold out of range
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable - Database temporarily unavailable
+      summary: Update auto node removal policy
+      tags:
+        - node_removal_policy
   /v1/nodegroups:
     get:
       description: 'Get list of node groups with optional filtering and different
@@ -3359,6 +3492,38 @@ paths:
       summary: Batch update tags for multiple nodes
       tags:
         - tags
+  /v2/commands:
+    get:
+      description: Get list of commands (v2)
+      operationId: getV2Commands
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.CommandsResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get commands (v2)
+      tags:
+        - commands
   /v2/metrics:
     get:
       description: Returns historical chart data for customer, node group, compute

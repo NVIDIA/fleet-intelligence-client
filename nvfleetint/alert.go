@@ -19,6 +19,24 @@ const (
 	AlertStateDetected  AlertState = "Detected"
 	AlertStateTriggered AlertState = "Triggered"
 	AlertStateResolved  AlertState = "Resolved"
+
+	AlertTimelineStateCritical AlertTimelineState = "Critical"
+	AlertTimelineStateWarning  AlertTimelineState = "Warning"
+	AlertTimelineStateResolved AlertTimelineState = "Resolved"
+
+	AlertTimelineNodeSortByHostname    AlertTimelineNodeSortBy = "hostname"
+	AlertTimelineNodeSortByAlert       AlertTimelineNodeSortBy = "alert"
+	AlertTimelineNodeSortByGPUType     AlertTimelineNodeSortBy = "gpuType"
+	AlertTimelineNodeSortByNodeGroup   AlertTimelineNodeSortBy = "nodeGroup"
+	AlertTimelineNodeSortByComputeZone AlertTimelineNodeSortBy = "computeZone"
+	AlertTimelineNodeSortByLastUpdate  AlertTimelineNodeSortBy = "lastUpdate"
+
+	AlertTimelineAlertSortByComponent  AlertTimelineAlertSortBy = "component"
+	AlertTimelineAlertSortByStartTime  AlertTimelineAlertSortBy = "startTime"
+	AlertTimelineAlertSortByLastUpdate AlertTimelineAlertSortBy = "lastUpdate"
+
+	AlertTimelineOrderAsc  AlertTimelineSortOrder = "asc"
+	AlertTimelineOrderDesc AlertTimelineSortOrder = "desc"
 )
 
 // Represents supported alert severity filters
@@ -35,6 +53,43 @@ type AlertState string
 // Reports whether the alert state is accepted by the API
 func (state AlertState) Valid() bool {
 	return fleetapi.ModelsAlertState(state).Valid()
+}
+
+// Represents alert states accepted by alert timeline filters
+type AlertTimelineState string
+
+// Reports whether the alert timeline state is accepted by the API
+func (state AlertTimelineState) Valid() bool {
+	return fleetapi.GetV1AlertTimelineNodesParamsAlertStates(state).Valid()
+}
+
+// Represents supported sort fields for alert timeline nodes
+type AlertTimelineNodeSortBy string
+
+// Reports whether the node sort field is accepted by the API
+func (sortBy AlertTimelineNodeSortBy) Valid() bool {
+	return fleetapi.GetV1AlertTimelineNodesParamsSortBy(sortBy).Valid()
+}
+
+// Represents supported sort fields for alerts within one node
+type AlertTimelineAlertSortBy string
+
+// Reports whether the alert sort field is accepted by the API
+func (sortBy AlertTimelineAlertSortBy) Valid() bool {
+	return fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy(sortBy).Valid()
+}
+
+// Represents supported sort orders for alert timeline endpoints
+type AlertTimelineSortOrder string
+
+// Reports whether the sort order is accepted by alert timeline endpoints
+func (order AlertTimelineSortOrder) Valid() bool {
+	switch order {
+	case AlertTimelineOrderAsc, AlertTimelineOrderDesc:
+		return true
+	default:
+		return false
+	}
 }
 
 // Represents request options for listing alerts
@@ -76,35 +131,63 @@ type Alert struct {
 
 // Represents request options for listing alert timeline nodes
 type ListAlertTimelineNodesOptions struct {
-	Active   bool
-	Page     *int
-	PageSize *int
+	Active         bool
+	Hostname       string
+	SortBy         AlertTimelineNodeSortBy
+	Order          AlertTimelineSortOrder
+	GPUTypes       []string
+	NodeGroupIDs   []string
+	ComputeZoneIDs []string
+	AlertStates    []AlertTimelineState
+	ComponentTypes []string
+	Page           *int
+	PageSize       *int
 }
 
 // Represents a paginated alert timeline node response
 type AlertTimelineNodesPage struct {
-	Nodes    []AlertTimelineNode `json:"nodes"`
-	HasMore  bool                `json:"hasMore"`
-	Page     int                 `json:"page"`
-	PageSize int                 `json:"pageSize"`
-	Total    int                 `json:"total"`
-	RawJSON  []byte              `json:"-"`
+	Nodes                    []AlertTimelineNode `json:"nodes"`
+	HasMore                  bool                `json:"hasMore"`
+	Page                     int                 `json:"page"`
+	PageSize                 int                 `json:"pageSize"`
+	Total                    int                 `json:"total"`
+	TotalCritical            int                 `json:"totalCritical"`
+	TotalWarning             int                 `json:"totalWarning"`
+	TotalResolved            int                 `json:"totalResolved"`
+	DistinctGPUTypeCount     int                 `json:"distinctGpuTypeCount"`
+	DistinctNodeGroupCount   int                 `json:"distinctNodeGroupCount"`
+	DistinctComputeZoneCount int                 `json:"distinctComputeZoneCount"`
+	RawJSON                  []byte              `json:"-"`
 }
 
 // Represents a node that has alert timeline history
 type AlertTimelineNode struct {
 	NodeUUID      string `json:"nodeUuid"`
 	Hostname      string `json:"hostname,omitempty"`
+	ComputeZone   string `json:"computeZone,omitempty"`
+	NodeGroup     string `json:"nodeGroup,omitempty"`
+	GPUType       string `json:"gpuType,omitempty"`
+	CriticalCount int    `json:"criticalCount,omitempty"`
+	WarningCount  int    `json:"warningCount,omitempty"`
+	ResolvedCount int    `json:"resolvedCount,omitempty"`
 	HostStatus    string `json:"hostStatus,omitempty"`
 	LastAlertTime string `json:"lastAlertTime,omitempty"`
 }
 
 // Represents request options for listing alert history for one node
 type ListNodeAlertTimelineOptions struct {
-	NodeUUID string
-	Active   bool
-	Page     *int
-	PageSize *int
+	NodeUUID       string
+	Active         bool
+	WithoutPSIRT   bool
+	SortBy         AlertTimelineAlertSortBy
+	Order          AlertTimelineSortOrder
+	AlertStates    []AlertTimelineState
+	ComponentTypes []string
+	GPUTypes       []string
+	NodeGroupIDs   []string
+	ComputeZoneIDs []string
+	Page           *int
+	PageSize       *int
 }
 
 // Represents a paginated alert history response for one node
@@ -125,7 +208,15 @@ type AlertTimelineNodeAlert struct {
 	Component            string `json:"component,omitempty"`
 	ComponentDisplayName string `json:"componentDisplayName,omitempty"`
 	AlertStatus          string `json:"alertStatus,omitempty"`
+	StartTime            string `json:"startTime,omitempty"`
 	LastEventTime        string `json:"lastEventTime,omitempty"`
+}
+
+// Represents request options for retrieving one alert's event timeline
+type DescribeAlertTimelineOptions struct {
+	Order    AlertTimelineSortOrder
+	Page     *int
+	PageSize *int
 }
 
 // Represents the full timeline for one alert
@@ -134,6 +225,15 @@ type AlertTimelineDetails struct {
 	NodeUUID             string               `json:"nodeUuid,omitempty"`
 	Component            string               `json:"component,omitempty"`
 	ComponentDisplayName string               `json:"componentDisplayName,omitempty"`
+	AlertStatus          string               `json:"alertStatus,omitempty"`
+	NodeGroup            string               `json:"nodeGroup,omitempty"`
+	ComputeZone          string               `json:"computeZone,omitempty"`
+	CustomerID           string               `json:"customerID,omitempty"`
+	IsBackendComponent   bool                 `json:"isBackendComponent,omitempty"`
+	HasMore              bool                 `json:"hasMore,omitempty"`
+	Page                 int                  `json:"page,omitempty"`
+	PageSize             int                  `json:"pageSize,omitempty"`
+	Total                int                  `json:"total,omitempty"`
 	Timeline             []AlertTimelineEvent `json:"timeline"`
 	RawJSON              []byte               `json:"-"`
 }
@@ -146,6 +246,7 @@ type AlertTimelineEvent struct {
 	Message        string            `json:"message,omitempty"`
 	Error          string            `json:"error,omitempty"`
 	ExtraInfo      map[string]any    `json:"extraInfo,omitempty"`
+	Incidents      []any             `json:"incidents,omitempty"`
 	Actions        []SuggestedAction `json:"suggestedActions,omitempty"`
 }
 
@@ -206,6 +307,9 @@ func (c *Client) ListAlerts(ctx context.Context, opts ListAlertsOptions) (Alerts
 func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimelineNodesOptions) (AlertTimelineNodesPage, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
+	if err := validateAlertTimelineNodeOptions(opts); err != nil {
+		return AlertTimelineNodesPage{}, err
+	}
 
 	params := fleetapi.GetV1AlertTimelineNodesParams{}
 	if opts.Active {
@@ -216,6 +320,40 @@ func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimel
 	}
 	if opts.PageSize != nil {
 		params.PageSize = cloneInt(opts.PageSize)
+	}
+	if opts.Hostname != "" {
+		params.Hostname = &opts.Hostname
+	}
+	if opts.SortBy != "" {
+		sortBy := fleetapi.GetV1AlertTimelineNodesParamsSortBy(opts.SortBy)
+		params.SortBy = &sortBy
+	}
+	if opts.Order != "" {
+		order := fleetapi.GetV1AlertTimelineNodesParamsOrder(opts.Order)
+		params.Order = &order
+	}
+	if len(opts.GPUTypes) > 0 {
+		values := append([]string(nil), opts.GPUTypes...)
+		params.GpuTypes = &values
+	}
+	if len(opts.NodeGroupIDs) > 0 {
+		values := append([]string(nil), opts.NodeGroupIDs...)
+		params.NodeGroupIds = &values
+	}
+	if len(opts.ComputeZoneIDs) > 0 {
+		values := append([]string(nil), opts.ComputeZoneIDs...)
+		params.ComputeZoneIds = &values
+	}
+	if len(opts.AlertStates) > 0 {
+		values := make([]fleetapi.GetV1AlertTimelineNodesParamsAlertStates, 0, len(opts.AlertStates))
+		for _, state := range opts.AlertStates {
+			values = append(values, fleetapi.GetV1AlertTimelineNodesParamsAlertStates(state))
+		}
+		params.AlertStates = &values
+	}
+	if len(opts.ComponentTypes) > 0 {
+		values := append([]string(nil), opts.ComponentTypes...)
+		params.ComponentTypes = &values
 	}
 
 	resp, err := c.api.GetV1AlertTimelineNodesWithResponse(ctx, &params)
@@ -237,10 +375,47 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 	if opts.NodeUUID == "" {
 		return NodeAlertTimelinePage{}, fmt.Errorf("node UUID is required")
 	}
+	if err := validateNodeAlertTimelineOptions(opts); err != nil {
+		return NodeAlertTimelinePage{}, err
+	}
 
 	params := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParams{}
 	if opts.Active {
 		params.Active = boolPointer(opts.Active)
+	}
+	if opts.WithoutPSIRT {
+		params.WithoutPsirt = boolPointer(opts.WithoutPSIRT)
+	}
+	if opts.SortBy != "" {
+		sortBy := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy(opts.SortBy)
+		params.SortBy = &sortBy
+	}
+	if opts.Order != "" {
+		order := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder(opts.Order)
+		params.Order = &order
+	}
+	if len(opts.AlertStates) > 0 {
+		values := make([]fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates, 0, len(opts.AlertStates))
+		for _, state := range opts.AlertStates {
+			values = append(values, fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates(state))
+		}
+		params.AlertStates = &values
+	}
+	if len(opts.ComponentTypes) > 0 {
+		values := append([]string(nil), opts.ComponentTypes...)
+		params.ComponentTypes = &values
+	}
+	if len(opts.GPUTypes) > 0 {
+		values := append([]string(nil), opts.GPUTypes...)
+		params.GpuTypes = &values
+	}
+	if len(opts.NodeGroupIDs) > 0 {
+		values := append([]string(nil), opts.NodeGroupIDs...)
+		params.NodeGroupIds = &values
+	}
+	if len(opts.ComputeZoneIDs) > 0 {
+		values := append([]string(nil), opts.ComputeZoneIDs...)
+		params.ComputeZoneIds = &values
 	}
 	if opts.Page != nil {
 		params.Page = cloneInt(opts.Page)
@@ -262,6 +437,11 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 
 // Retrieves the full event timeline for one alert
 func (c *Client) DescribeAlertTimeline(ctx context.Context, nodeUUID, alertUUID string) (AlertTimelineDetails, error) {
+	return c.DescribeAlertTimelineWithOptions(ctx, nodeUUID, alertUUID, DescribeAlertTimelineOptions{})
+}
+
+// Retrieves one alert's event timeline with optional sorting and pagination
+func (c *Client) DescribeAlertTimelineWithOptions(ctx context.Context, nodeUUID, alertUUID string, opts DescribeAlertTimelineOptions) (AlertTimelineDetails, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
@@ -271,8 +451,23 @@ func (c *Client) DescribeAlertTimeline(ctx context.Context, nodeUUID, alertUUID 
 	if alertUUID == "" {
 		return AlertTimelineDetails{}, fmt.Errorf("alert UUID is required")
 	}
+	if err := validateDescribeAlertTimelineOptions(opts); err != nil {
+		return AlertTimelineDetails{}, err
+	}
 
-	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx, nodeUUID, alertUUID, &fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams{})
+	params := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams{}
+	if opts.Order != "" {
+		order := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder(opts.Order)
+		params.Order = &order
+	}
+	if opts.Page != nil {
+		params.Page = cloneInt(opts.Page)
+	}
+	if opts.PageSize != nil {
+		params.PageSize = cloneInt(opts.PageSize)
+	}
+
+	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidWithResponse(ctx, nodeUUID, alertUUID, &params)
 	if err != nil {
 		return AlertTimelineDetails{}, err
 	}
@@ -297,6 +492,49 @@ func validateAlertOptions(opts ListAlertsOptions) error {
 	}
 	if opts.State != "" && !opts.State.Valid() {
 		return fmt.Errorf("invalid alert state %q: expected Detected, Triggered, or Resolved", opts.State)
+	}
+	return nil
+}
+
+// Checks level-1 alert timeline options before making the request
+func validateAlertTimelineNodeOptions(opts ListAlertTimelineNodesOptions) error {
+	if opts.SortBy != "" && !opts.SortBy.Valid() {
+		return fmt.Errorf("invalid alert timeline node sort %q", opts.SortBy)
+	}
+	if opts.Order != "" && !opts.Order.Valid() {
+		return fmt.Errorf("invalid alert timeline order %q: expected asc or desc", opts.Order)
+	}
+	return validateAlertTimelineStates(opts.AlertStates)
+}
+
+// Checks level-2 alert timeline options before making the request
+func validateNodeAlertTimelineOptions(opts ListNodeAlertTimelineOptions) error {
+	if opts.SortBy != "" && !opts.SortBy.Valid() {
+		return fmt.Errorf("invalid node alert timeline sort %q", opts.SortBy)
+	}
+	if opts.Order != "" && !opts.Order.Valid() {
+		return fmt.Errorf("invalid alert timeline order %q: expected asc or desc", opts.Order)
+	}
+	return validateAlertTimelineStates(opts.AlertStates)
+}
+
+// Checks level-3 alert timeline options before making the request
+func validateDescribeAlertTimelineOptions(opts DescribeAlertTimelineOptions) error {
+	if opts.Order != "" && !opts.Order.Valid() {
+		return fmt.Errorf("invalid alert timeline order %q: expected asc or desc", opts.Order)
+	}
+	if opts.Page != nil && opts.PageSize == nil {
+		return fmt.Errorf("alert timeline page requires page size")
+	}
+	return nil
+}
+
+// Checks alert states shared by the level-1 and level-2 timeline endpoints
+func validateAlertTimelineStates(states []AlertTimelineState) error {
+	for _, state := range states {
+		if !state.Valid() {
+			return fmt.Errorf("invalid alert timeline state %q: expected Critical, Warning, or Resolved", state)
+		}
 	}
 	return nil
 }
@@ -379,11 +617,17 @@ func decodeAlertTimelineNodes(data []byte) (AlertTimelineNodesPage, error) {
 	}
 
 	page := AlertTimelineNodesPage{
-		HasMore:  boolValue(resp.HasMore),
-		Page:     intValue(resp.Page),
-		PageSize: intValue(resp.PageSize),
-		Total:    intValue(resp.Total),
-		RawJSON:  append([]byte(nil), data...),
+		HasMore:                  boolValue(resp.HasMore),
+		Page:                     intValue(resp.Page),
+		PageSize:                 intValue(resp.PageSize),
+		Total:                    intValue(resp.Total),
+		TotalCritical:            intValue(resp.TotalCritical),
+		TotalWarning:             intValue(resp.TotalWarning),
+		TotalResolved:            intValue(resp.TotalResolved),
+		DistinctGPUTypeCount:     intValue(resp.DistinctGpuTypeCount),
+		DistinctNodeGroupCount:   intValue(resp.DistinctNodeGroupCount),
+		DistinctComputeZoneCount: intValue(resp.DistinctComputeZoneCount),
+		RawJSON:                  append([]byte(nil), data...),
 	}
 	if resp.Nodes != nil {
 		page.Nodes = make([]AlertTimelineNode, 0, len(*resp.Nodes))
@@ -448,6 +692,12 @@ func alertTimelineNodeFromGenerated(node fleetapi.ModelsAlertTimelineNode) Alert
 	return AlertTimelineNode{
 		NodeUUID:      stringValue(node.NodeUuid),
 		Hostname:      stringValue(node.Hostname),
+		ComputeZone:   stringValue(node.ComputeZone),
+		NodeGroup:     stringValue(node.NodeGroup),
+		GPUType:       stringValue(node.GpuType),
+		CriticalCount: intValue(node.CriticalCount),
+		WarningCount:  intValue(node.WarningCount),
+		ResolvedCount: intValue(node.ResolvedCount),
 		HostStatus:    stringValue(node.HostStatus),
 		LastAlertTime: stringValue(node.LastAlertTime),
 	}
@@ -460,6 +710,7 @@ func alertTimelineNodeAlertFromGenerated(alert fleetapi.ModelsAlertTimelineNodeA
 		Component:            stringValue(alert.Component),
 		ComponentDisplayName: stringValue(alert.ComponentDisplayName),
 		AlertStatus:          stringValue(alert.AlertStatus),
+		StartTime:            stringValue(alert.StartTime),
 		LastEventTime:        stringValue(alert.LastEventTime),
 	}
 }
@@ -471,6 +722,15 @@ func alertTimelineDetailsFromGenerated(details fleetapi.ModelsAlertTimelineDetai
 		NodeUUID:             stringValue(details.NodeUuid),
 		Component:            stringValue(details.Component),
 		ComponentDisplayName: stringValue(details.ComponentDisplayName),
+		AlertStatus:          stringValue(details.AlertStatus),
+		NodeGroup:            stringValue(details.NodeGroup),
+		ComputeZone:          stringValue(details.ComputeZone),
+		CustomerID:           stringValue(details.CustomerID),
+		IsBackendComponent:   boolValue(details.IsBackendComponent),
+		HasMore:              boolValue(details.HasMore),
+		Page:                 intValue(details.Page),
+		PageSize:             intValue(details.PageSize),
+		Total:                intValue(details.Total),
 	}
 	if details.Timeline != nil {
 		out.Timeline = make([]AlertTimelineEvent, 0, len(*details.Timeline))
@@ -490,6 +750,7 @@ func alertTimelineEventFromGenerated(event fleetapi.ModelsAlertTimelineEvent) Al
 		Message:        stringValue(event.Message),
 		Error:          stringValue(event.Error),
 		ExtraInfo:      mapValue(event.ExtraInfo),
+		Incidents:      interfaceSliceValue(event.Incidents),
 		Actions:        suggestedActionsFromGenerated(event.SuggestedActions),
 	}
 }
@@ -521,6 +782,14 @@ func mapValue(value *map[string]any) map[string]any {
 		out[key] = item
 	}
 	return out
+}
+
+// Copies optional untyped slices without sharing backing storage
+func interfaceSliceValue(value *[]any) []any {
+	if value == nil {
+		return nil
+	}
+	return append([]any(nil), (*value)...)
 }
 
 // Returns the first non-empty value in order

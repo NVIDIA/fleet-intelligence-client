@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -82,14 +83,64 @@ func TestAlertTimelineMethodsDecode(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/v1/alert_timeline/nodes":
-			if got := r.URL.Query().Get("active"); got != "true" {
+			query := r.URL.Query()
+			if got := query.Get("active"); got != "true" {
 				t.Fatalf("unexpected active: %q", got)
 			}
-			_, _ = w.Write([]byte(`{"nodes":[{"nodeUuid":"node-1","hostname":"gpu-001","hostStatus":"Active","lastAlertTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1}`))
+			if got := query.Get("hostname"); got != "gpu" {
+				t.Fatalf("unexpected hostname: %q", got)
+			}
+			if got := query.Get("sortBy"); got != "alert" {
+				t.Fatalf("unexpected sortBy: %q", got)
+			}
+			if got := query.Get("order"); got != "desc" {
+				t.Fatalf("unexpected order: %q", got)
+			}
+			if got := query["gpuTypes"]; !slices.Equal(got, []string{"H100", "B200"}) {
+				t.Fatalf("unexpected gpuTypes: %#v", got)
+			}
+			if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+				t.Fatalf("unexpected nodeGroupIds: %#v", got)
+			}
+			if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1"}) {
+				t.Fatalf("unexpected computeZoneIds: %#v", got)
+			}
+			if got := query["alertStates"]; !slices.Equal(got, []string{"Critical", "Warning"}) {
+				t.Fatalf("unexpected alertStates: %#v", got)
+			}
+			if got := query["componentTypes"]; !slices.Equal(got, []string{"gpu", "memory"}) {
+				t.Fatalf("unexpected componentTypes: %#v", got)
+			}
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUuid":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","gpuType":"H100","criticalCount":4,"warningCount":2,"resolvedCount":1,"hostStatus":"Active","lastAlertTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1,"totalCritical":4,"totalWarning":2,"totalResolved":1,"distinctGpuTypeCount":1,"distinctNodeGroupCount":1,"distinctComputeZoneCount":1}`))
 		case "/v1/alert_timeline/nodes/node-1/alerts":
-			_, _ = w.Write([]byte(`{"nodeUuid":"node-1","alerts":[{"alertUuid":"alert-1","component":"gpu","alertStatus":"Critical","lastEventTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1}`))
+			query := r.URL.Query()
+			for name, want := range map[string]string{"active": "true", "withoutPsirt": "true", "sortBy": "startTime", "order": "asc"} {
+				if got := query.Get(name); got != want {
+					t.Fatalf("unexpected %s: %q", name, got)
+				}
+			}
+			if got := query["alertStates"]; !slices.Equal(got, []string{"Critical"}) {
+				t.Fatalf("unexpected alertStates: %#v", got)
+			}
+			if got := query["componentTypes"]; !slices.Equal(got, []string{"gpu"}) {
+				t.Fatalf("unexpected componentTypes: %#v", got)
+			}
+			if got := query["gpuTypes"]; !slices.Equal(got, []string{"H100"}) {
+				t.Fatalf("unexpected gpuTypes: %#v", got)
+			}
+			if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+				t.Fatalf("unexpected nodeGroupIds: %#v", got)
+			}
+			if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1"}) {
+				t.Fatalf("unexpected computeZoneIds: %#v", got)
+			}
+			_, _ = w.Write([]byte(`{"nodeUuid":"node-1","alerts":[{"alertUuid":"alert-1","component":"gpu","alertStatus":"Critical","startTime":"2026-04-30T00:00:00Z","lastEventTime":"2026-05-01T00:00:00Z"}],"hasMore":false,"page":0,"pageSize":50,"total":1}`))
 		case "/v1/alert_timeline/nodes/node-1/alerts/alert-1":
-			_, _ = w.Write([]byte(`{"alertUuid":"alert-1","nodeUuid":"node-1","component":"gpu","timeline":[{"eventType":"triggered","alertStatus":"Critical","eventTimestamp":"2026-05-01T00:00:00Z","message":"GPU critical","extraInfo":{"gpu":"0"},"suggestedActions":[{"action":"Drain node","code":"DRAIN","persona":"dc_admin","type":"immediate"}]}]}`))
+			query := r.URL.Query()
+			if query.Get("order") != "asc" || query.Get("page") != "1" || query.Get("pageSize") != "10" {
+				t.Fatalf("unexpected detail query: %v", query)
+			}
+			_, _ = w.Write([]byte(`{"alertUuid":"alert-1","nodeUuid":"node-1","component":"gpu","alertStatus":"Critical","nodeGroup":"Training","computeZone":"East","customerID":"customer-1","isBackendComponent":true,"hasMore":false,"page":1,"pageSize":10,"total":1,"timeline":[{"eventType":"triggered","alertStatus":"Critical","eventTimestamp":"2026-05-01T00:00:00Z","message":"GPU critical","extraInfo":{"gpu":"0"},"incidents":[{"id":"incident-1"}],"suggestedActions":[{"action":"Drain node","code":"DRAIN","persona":"dc_admin","type":"immediate"}]}]}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -101,30 +152,45 @@ func TestAlertTimelineMethodsDecode(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 
-	nodes, err := client.ListAlertTimelineNodes(context.Background(), ListAlertTimelineNodesOptions{Active: true})
+	nodes, err := client.ListAlertTimelineNodes(context.Background(), ListAlertTimelineNodesOptions{
+		Active: true, Hostname: "gpu", SortBy: AlertTimelineNodeSortByAlert, Order: AlertTimelineOrderDesc,
+		GPUTypes: []string{"H100", "B200"}, NodeGroupIDs: []string{"ng-1"}, ComputeZoneIDs: []string{"cz-1"},
+		AlertStates: []AlertTimelineState{AlertTimelineStateCritical, AlertTimelineStateWarning}, ComponentTypes: []string{"gpu", "memory"},
+	})
 	if err != nil {
 		t.Fatalf("timeline nodes failed: %v", err)
 	}
-	if len(nodes.Nodes) != 1 || nodes.Nodes[0].NodeUUID != "node-1" || nodes.Nodes[0].HostStatus != "Active" {
+	if len(nodes.Nodes) != 1 || nodes.Nodes[0].NodeUUID != "node-1" || nodes.Nodes[0].CriticalCount != 4 || nodes.Nodes[0].ComputeZone != "East" {
 		t.Fatalf("unexpected timeline nodes: %#v", nodes.Nodes)
 	}
+	if nodes.TotalCritical != 4 || nodes.TotalWarning != 2 || nodes.TotalResolved != 1 || nodes.DistinctGPUTypeCount != 1 || nodes.DistinctNodeGroupCount != 1 || nodes.DistinctComputeZoneCount != 1 {
+		t.Fatalf("unexpected timeline aggregates: %#v", nodes)
+	}
 
-	alerts, err := client.ListNodeAlertTimeline(context.Background(), ListNodeAlertTimelineOptions{NodeUUID: "node-1"})
+	alerts, err := client.ListNodeAlertTimeline(context.Background(), ListNodeAlertTimelineOptions{
+		NodeUUID: "node-1", Active: true, WithoutPSIRT: true, SortBy: AlertTimelineAlertSortByStartTime, Order: AlertTimelineOrderAsc,
+		AlertStates: []AlertTimelineState{AlertTimelineStateCritical}, ComponentTypes: []string{"gpu"}, GPUTypes: []string{"H100"},
+		NodeGroupIDs: []string{"ng-1"}, ComputeZoneIDs: []string{"cz-1"},
+	})
 	if err != nil {
 		t.Fatalf("node alert timeline failed: %v", err)
 	}
-	if len(alerts.Alerts) != 1 || alerts.Alerts[0].AlertUUID != "alert-1" {
+	if len(alerts.Alerts) != 1 || alerts.Alerts[0].AlertUUID != "alert-1" || alerts.Alerts[0].StartTime != "2026-04-30T00:00:00Z" {
 		t.Fatalf("unexpected timeline alerts: %#v", alerts.Alerts)
 	}
 
-	details, err := client.DescribeAlertTimeline(context.Background(), "node-1", "alert-1")
+	page := 1
+	pageSize := 10
+	details, err := client.DescribeAlertTimelineWithOptions(context.Background(), "node-1", "alert-1", DescribeAlertTimelineOptions{
+		Order: AlertTimelineOrderAsc, Page: &page, PageSize: &pageSize,
+	})
 	if err != nil {
 		t.Fatalf("describe alert timeline failed: %v", err)
 	}
-	if details.AlertUUID != "alert-1" || len(details.Timeline) != 1 || details.Timeline[0].EventType != "triggered" {
+	if details.AlertUUID != "alert-1" || details.AlertStatus != "Critical" || details.NodeGroup != "Training" || details.ComputeZone != "East" || !details.IsBackendComponent || details.Page != 1 || details.PageSize != 10 || details.Total != 1 || len(details.Timeline) != 1 || details.Timeline[0].EventType != "triggered" {
 		t.Fatalf("unexpected details: %#v", details)
 	}
-	if details.Timeline[0].ExtraInfo["gpu"] != "0" || len(details.Timeline[0].Actions) != 1 || details.Timeline[0].Actions[0].Code != "DRAIN" {
+	if details.Timeline[0].ExtraInfo["gpu"] != "0" || len(details.Timeline[0].Incidents) != 1 || len(details.Timeline[0].Actions) != 1 || details.Timeline[0].Actions[0].Code != "DRAIN" {
 		t.Fatalf("unexpected timeline action details: %#v", details.Timeline[0])
 	}
 }
@@ -152,5 +218,24 @@ func TestListAlertsRejectsInvalidSeverity(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid alert severity") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies alert timeline options are validated before requests
+func TestAlertTimelineRejectsInvalidOptions(t *testing.T) {
+	client, err := NewClient("https://fleet.example.com", "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	if _, err := client.ListAlertTimelineNodes(context.Background(), ListAlertTimelineNodesOptions{SortBy: "bad"}); err == nil || !strings.Contains(err.Error(), "invalid alert timeline node sort") {
+		t.Fatalf("unexpected node sort error: %v", err)
+	}
+	if _, err := client.ListNodeAlertTimeline(context.Background(), ListNodeAlertTimelineOptions{NodeUUID: "node-1", AlertStates: []AlertTimelineState{"Triggered"}}); err == nil || !strings.Contains(err.Error(), "invalid alert timeline state") {
+		t.Fatalf("unexpected timeline state error: %v", err)
+	}
+	page := 1
+	if _, err := client.DescribeAlertTimelineWithOptions(context.Background(), "node-1", "alert-1", DescribeAlertTimelineOptions{Page: &page}); err == nil || !strings.Contains(err.Error(), "page requires page size") {
+		t.Fatalf("unexpected detail pagination error: %v", err)
 	}
 }
