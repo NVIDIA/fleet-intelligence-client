@@ -31,6 +31,41 @@ jobs:
       - name: Run tests
         run: make test-coverage
 
+      # GoReleaser no longer runs `go mod tidy`, so assert tidiness here, where
+      # the runner actually has network access to resolve the module graph.
+      - name: Verify go.mod and go.sum are tidy
+        run: |
+          set -euo pipefail
+          cp go.mod go.mod.orig
+          cp go.sum go.sum.orig
+          go mod tidy
+          if ! diff -q go.mod go.mod.orig >/dev/null || ! diff -q go.sum go.sum.orig >/dev/null; then
+            echo "go.mod/go.sum are not tidy; run 'go mod tidy' and commit the result" >&2
+            diff -u go.mod.orig go.mod || true
+            diff -u go.sum.orig go.sum || true
+            exit 1
+          fi
+          rm -f go.mod.orig go.sum.orig
+
+      # The self-hosted release runner has no egress to proxy.golang.org, so it
+      # cannot populate its own module cache — a dependency bump that lands
+      # after its cache was last warm fails the release. Seed it from here,
+      # where the modules have just been downloaded to run the tests.
+      - name: Package module cache for the release runner
+        run: |
+          set -euo pipefail
+          go mod download
+          tar -C "$(go env GOMODCACHE)/cache" -cf go-mod-cache.tar download
+          ls -lh go-mod-cache.tar
+
+      - name: Upload module cache
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-module-cache
+          path: go-mod-cache.tar
+          if-no-files-found: error
+          retention-days: 1
+
   goreleaser:
     name: Build, sign, and create draft release
     needs: validate
@@ -58,6 +93,34 @@ jobs:
             exit 1
           }
 
+      # Staged under runner.temp, not the working tree: GoReleaser refuses to
+      # build from a dirty git state, and an untracked directory counts.
+      - name: Download module cache
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: go-module-cache
+          path: ${{ runner.temp }}/go-mod-cache
+
+      # --skip-old-files: only add modules this runner is missing. Cached module
+      # files are mode 0444, so overwriting them in place would fail.
+      - name: Seed Go module cache
+        run: |
+          set -euo pipefail
+          mkdir -p "$(go env GOMODCACHE)/cache"
+          tar -C "$(go env GOMODCACHE)/cache" \
+            --skip-old-files -xf "$RUNNER_TEMP/go-mod-cache/go-mod-cache.tar"
+          rm -rf "$RUNNER_TEMP/go-mod-cache"
+          go mod verify
+          # GoReleaser refuses to build from a dirty git state, so fail here
+          # with the offending paths rather than mid-release.
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Working tree is dirty before GoReleaser runs:" >&2
+            git status --porcelain >&2
+            exit 1
+          fi
+        env:
+          GOPROXY: "off"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
@@ -65,6 +128,11 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Fail fast and loudly on a cache miss instead of hanging on a TLS
+          # handshake the runner's network will never complete. Module mode
+          # stays at the default -mod=readonly so the build can never rewrite
+          # go.mod/go.sum and dirty the tree GoReleaser is tagging.
+          GOPROXY: "off"
           SIGN_MACOS_BINARIES: "true"
           SIGN_WINDOWS_BINARIES: "true"
           NVSEC_SSA_CLIENT_ID: ${{ secrets.NVSEC_SSA_CLIENT_ID }}
@@ -107,6 +175,18 @@ jobs:
         with:
           name: signed-macos-archives
           path: dist/nvfleetint_*_darwin_*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      # macOS archives are excluded here: the notarized copies produced by
+      # macos-notarize are the ones that ship to Artifactory.
+      - name: Upload Linux and Windows archives for Artifactory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-windows-archives
+          path: |
+            dist/nvfleetctl_*_linux_*.tar.gz
+            dist/nvfleetctl_*_windows_*.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -174,3 +254,173 @@ jobs:
             --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  artifactory:
+    name: Publish to Artifactory
+    needs: publish
+    # Stable tags (v1.2.3) and release candidates (v1.2.3-rc.4) are promoted to
+    # KITMAKER. This is intentionally broader than the plain hyphen test used by
+    # fleet-intelligence-agent, which promotes stable tags only.
+    #
+    # Other pre-release forms — v0.0.0-test.*, -beta, -poc — stay out, so CI
+    # experiments can never reach the KITMAKER release path.
+    if: ${{ !contains(github.ref_name, '-') || contains(github.ref_name, '-rc.') }}
+    # NVIDIA Artifactory is not reachable from GitHub-hosted runners.
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - name: Download notarized macOS archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: notarized-macos-archives
+          path: artifactory-upload
+
+      - name: Download Linux and Windows archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: linux-windows-archives
+          path: artifactory-upload
+
+      # This job runs on a self-hosted runner with no outbound internet egress,
+      # so jfrog/setup-jfrog-cli cannot be used: it downloads the `jf` binary
+      # from releases.jfrog.io and hangs until the TLS connect times out.
+      # Artifactory's REST API does everything `jf rt upload` did here, using
+      # only curl and intranet-reachable hosts.
+      - name: Write curl credentials
+        run: |
+          set -euo pipefail
+          # Keep the token out of the process table on a shared runner.
+          umask 077
+          printf 'user = "%s:%s"\n' "$ARTIFACTORY_USER" "$ARTIFACTORY_TOKEN" \
+            > "${RUNNER_TEMP}/artifactory.curlrc"
+        env:
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Verify Artifactory repository is reachable
+        run: |
+          set -euo pipefail
+          # ARTIFACTORY_URL is the JFrog platform root; the REST API lives under
+          # /artifactory. Tolerate a trailing slash or an already-suffixed value.
+          BASE="${ARTIFACTORY_URL%/}"
+          BASE="${BASE%/artifactory}/artifactory"
+          echo "Artifactory base: ${BASE}"
+
+          # api/storage needs only read permission on the repo; api/repositories
+          # requires admin, which a deploy-scoped service account will not have.
+          # A transport failure (DNS, refused connection, TLS, timeout) exits
+          # non-zero with no HTTP status, so capture curl's exit code rather
+          # than letting set -e abort ahead of the diagnostics below.
+          curl_status=0
+          code="$(curl -sS -o "${RUNNER_TEMP}/repo.json" -w '%{http_code}' \
+            --config "${RUNNER_TEMP}/artifactory.curlrc" \
+            "${BASE}/api/storage/sw-dgxc-gpuhealth-generic-local/")" || curl_status=$?
+          if [[ "$curl_status" != "0" || "$code" != "200" ]]; then
+            if [[ "$curl_status" != "0" ]]; then
+              echo "Could not reach ${BASE} (curl exit ${curl_status}: DNS, connection, TLS, or timeout failure)." >&2
+            else
+              echo "Repository sw-dgxc-gpuhealth-generic-local is not available at ${BASE} (HTTP ${code})." >&2
+            fi
+            echo "Check that the ARTIFACTORY_URL secret points at the JFrog instance hosting" >&2
+            echo "this repo, and that ARTIFACTORY_USER can read it." >&2
+            # Absent when curl failed before it got a response body.
+            if [[ -s "${RUNNER_TEMP}/repo.json" ]]; then
+              cat "${RUNNER_TEMP}/repo.json" >&2
+            fi
+            exit 1
+          fi
+        env:
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
+
+      - name: Upload archives to Artifactory
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          COMMIT="${GITHUB_SHA::7}"
+          SOURCE="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          BASE="${ARTIFACTORY_URL%/}"
+          BASE="${BASE%/artifactory}/artifactory"
+          REPO_PATH="sw-dgxc-gpuhealth-generic-local/fleetint-client"
+
+          # Matrix parameter values live in the URL path, so an unescaped `/`
+          # in the source URL would silently deploy the archive under a nested
+          # path instead of tagging it. The other props are [A-Za-z0-9._-] only.
+          urlencode() {
+            local s="$1" out="" c i
+            for (( i = 0; i < ${#s}; i++ )); do
+              c="${s:i:1}"
+              case "$c" in
+                [A-Za-z0-9.~_-]) out+="$c" ;;
+                *) printf -v c '%%%02X' "'$c"; out+="$c" ;;
+              esac
+            done
+            printf '%s' "$out"
+          }
+          SOURCE_ENCODED="$(urlencode "$SOURCE")"
+
+          # archive suffix | KITMAKER platform | os | arch
+          TARGETS=(
+            "linux_amd64.tar.gz linux-x86_64 linux x86_64"
+            "linux_arm64.tar.gz linux-sbsa linux sbsa"
+            "darwin_amd64.zip darwin-x86_64 darwin x86_64"
+            "darwin_arm64.zip darwin-arm64 darwin arm64"
+            "windows_amd64.zip windows-x86_64 windows x86_64"
+            "windows_arm64.zip windows-arm64 windows arm64"
+          )
+
+          for target in "${TARGETS[@]}"; do
+            read -r suffix platform os arch <<<"$target"
+            archive="artifactory-upload/nvfleetctl_${VERSION}_${suffix}"
+            if [[ ! -f "$archive" ]]; then
+              echo "Expected release archive not found: $archive" >&2
+              exit 1
+            fi
+
+            # Matrix parameters on the deploy URL are the REST equivalent of
+            # `jf rt upload --target-props`. They need the `annotate` permission.
+            props="component_name=fleetint-client;branch=release;os=${os};arch=${arch}"
+            props="${props};platform=${platform};version=${VERSION};changelist=${COMMIT}"
+            props="${props};source=${SOURCE_ENCODED};category=toolkit"
+            sha256="$(sha256sum "$archive" | cut -d' ' -f1)"
+            dest="${BASE}/${REPO_PATH}/${platform}/${VERSION}/$(basename "$archive");${props}"
+
+            echo "Uploading $(basename "$archive") -> ${REPO_PATH}/${platform}/${VERSION}/"
+            # As in the reachability check, a transport failure exits non-zero;
+            # capture it so set -e cannot abort before the diagnostics. curl
+            # still reports %{http_code} as 000 in that case.
+            curl_status=0
+            code="$(curl -sS -o "${RUNNER_TEMP}/upload.json" -w '%{http_code}' \
+              --config "${RUNNER_TEMP}/artifactory.curlrc" \
+              -H "X-Checksum-Sha256: ${sha256}" \
+              -T "$archive" \
+              "$dest")" || curl_status=$?
+            if [[ "$curl_status" != "0" ]]; then
+              echo "Upload failed for ${archive} (curl exit ${curl_status}: DNS, connection, TLS, or timeout failure; HTTP ${code})" >&2
+              exit 1
+            fi
+            if [[ "$code" != "201" && "$code" != "200" ]]; then
+              echo "Upload failed for ${archive} (HTTP ${code})" >&2
+              cat "${RUNNER_TEMP}/upload.json" >&2 || true
+              exit 1
+            fi
+          done
+        env:
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
+
+      - name: Summary
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          {
+            echo "### Artifactory upload complete"
+            echo ""
+            echo "**Version:** ${VERSION}"
+            echo ""
+            echo "Uploaded to \`sw-dgxc-gpuhealth-generic-local/fleetint-client/\`:"
+            for platform in linux-x86_64 linux-sbsa darwin-x86_64 darwin-arm64 windows-x86_64 windows-arm64; do
+              echo "- \`${platform}/${VERSION}/\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove curl credentials
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/artifactory.curlrc"

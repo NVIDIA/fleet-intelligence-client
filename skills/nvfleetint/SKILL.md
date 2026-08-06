@@ -76,9 +76,11 @@ Filter values:
 | `--firmware-check` | Passed, Failed, Unknown |
 
 Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`,
-`computezone`, `gpuType`, `gpuCount`, `integrityCheck`, `agentStatus`,
+`computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`,
 `agentVersion`, `kernelVersion`, `gpuDriverVersion`, and
-`gpuFirmwareVersions`. Node-group sort keys are `health` and `nodes`.
+`gpuFirmwareVersions`. The backend spelling `integrityCheck` remains accepted
+as an alias for `verificationCheck`. Node-group sort keys are `health` and
+`nodes`.
 
 ### Alerts and events
 
