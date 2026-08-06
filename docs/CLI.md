@@ -104,9 +104,11 @@ nvfleetint node describe <node-uuid>
 # Health, alerts, and events
 nvfleetint node health <node-uuid> \
   --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z
+nvfleetint alert summary
+nvfleetint alert node <node-uuid>
 nvfleetint alert list --severity Critical
-nvfleetint alert timeline --node <node-uuid>
-nvfleetint alert timeline options --active
+nvfleetint alert describe <alert-uuid> --node <node-uuid>
+nvfleetint alert options --view historical
 nvfleetint event list --window 24h
 nvfleetint event buckets --window 24h
 
@@ -119,8 +121,11 @@ nvfleetint report error --window 24h
 List commands support shared flags including `--all`, `--page`, `--page-size`,
 `--timeout`, and `--output json`.
 
-`alert timeline options` lists filter values and sorting choices available for
-the historical alert view. Pass `--active` to retrieve the active-view options.
+The investigative alert workflow is `summary → node → describe`: start with
+impacted-node counts, inspect one node's alerts, then retrieve one alert's
+complete event timeline. `alert list` separately provides the fleet-wide flat
+alert records. `alert summary`, `alert node`, and `alert options` default to the
+active view; pass `--view historical` for history.
 
 ## CSV reports
 

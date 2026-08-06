@@ -28,6 +28,7 @@ type alertListFlags struct {
 // Stores local flag values for alert timeline
 type alertTimelineFlags struct {
 	active         bool
+	view           string
 	node           string
 	hostname       string
 	sortBy         string
@@ -42,7 +43,7 @@ type alertTimelineFlags struct {
 
 // Stores local flag values for alert timeline options.
 type alertTimelineOptionsFlags struct {
-	active bool
+	view string
 }
 
 // Stores local flag values for alert describe
@@ -92,12 +93,27 @@ const (
 func newAlertCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "alert",
-		Short: "Inspect alerts and alert timelines",
+		Short: "Inspect and investigate fleet alerts",
+		Long: "Inspect fleet alerts from aggregate impact through individual event history.\n\n" +
+			"Workflow: summary → node → describe. Start with fleet impact, inspect one node's alerts, " +
+			"then describe an alert for its complete event timeline.",
+		Example: "  nvfleetint alert summary\n" +
+			"  nvfleetint alert node <node-uuid>\n" +
+			"  nvfleetint alert describe <alert-uuid> --node <node-uuid>\n" +
+			"  nvfleetint alert list --severity Critical",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
+			}
+			return cmd.Help()
+		},
 	}
 
 	cmd.AddCommand(newAlertListCmd())
-	cmd.AddCommand(newAlertTimelineCmd())
+	cmd.AddCommand(newAlertSummaryCmd())
+	cmd.AddCommand(newAlertNodeCmd())
 	cmd.AddCommand(newAlertDescribeCmd())
+	cmd.AddCommand(newAlertOptionsCmd())
 
 	return cmd
 }
@@ -123,48 +139,72 @@ func newAlertListCmd() *cobra.Command {
 	return cmd
 }
 
-// Creates the alert timeline command
-func newAlertTimelineCmd() *cobra.Command {
+// Creates the canonical impacted-node summary command.
+func newAlertSummaryCmd() *cobra.Command {
 	flags := alertTimelineFlags{}
 	common := newCommonFlags()
 	cmd := &cobra.Command{
-		Use:   "timeline",
-		Short: "List alert timelines",
+		Use:   "summary",
+		Short: "Summarize impacted nodes and their alert counts",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runAlertTimeline(cmd, flags, resolveCommonFlags(cmd, common))
+			return runAlertSummary(cmd, flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
-	cmd.Flags().BoolVar(&flags.active, "active", false, "Show only currently active alerts")
-	cmd.Flags().StringVar(&flags.node, "node", "", "Node UUID whose alert history should be listed")
-	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match (impacted-node view only)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field; available values depend on whether --node is used")
+	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
+	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, alert, gpuType, nodeGroup, computeZone, or lastUpdate")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
 	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states: Critical, Warning, or Resolved")
 	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
-	cmd.Flags().BoolVar(&flags.withoutPSIRT, "without-psirt", false, "Exclude PSIRT alerts (requires --node)")
 	registerListCommonFlags(cmd, common)
-	cmd.AddCommand(newAlertTimelineOptionsCmd())
 
 	return cmd
 }
 
-// Creates the alert timeline filter-options command.
-func newAlertTimelineOptionsCmd() *cobra.Command {
+// Creates the command that lists timeline alerts for one node.
+func newAlertNodeCmd() *cobra.Command {
+	flags := alertTimelineFlags{}
+	common := newCommonFlags()
+	cmd := &cobra.Command{
+		Use:   "node <nodeUUID>",
+		Short: "List alerts for one node",
+		Args:  requireSingleArg("node UUID"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAlertNode(cmd, args[0], flags, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: component, startTime, or lastUpdate")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
+	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states: Critical, Warning, or Resolved")
+	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
+	cmd.Flags().BoolVar(&flags.withoutPSIRT, "without-psirt", false, "Exclude PSIRT alerts")
+	registerListCommonFlags(cmd, common)
+
+	return cmd
+}
+
+// Creates the top-level alert filter-options command.
+func newAlertOptionsCmd() *cobra.Command {
 	flags := alertTimelineOptionsFlags{}
 	common := newCommonFlags()
 	cmd := &cobra.Command{
 		Use:   "options",
-		Short: "List available alert timeline filters and sorting options",
+		Short: "List available alert filters and sorting options",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertTimelineOptions(cmd, flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
-	cmd.Flags().BoolVar(&flags.active, "active", false, "Show options for currently active alerts")
+	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
 	registerReadCommonFlags(cmd, common)
 	return cmd
 }
@@ -261,8 +301,13 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 	})
 }
 
-// Validates flags, calls the SDK, and writes output
-func runAlertTimeline(cmd *cobra.Command, flags alertTimelineFlags, common resolvedCommonFlags) error {
+// Validates summary flags, calls timeline level 1, and writes output.
+func runAlertSummary(cmd *cobra.Command, flags alertTimelineFlags, common resolvedCommonFlags) error {
+	active, err := resolveAlertView(flags.view)
+	if err != nil {
+		return err
+	}
+	flags.active = active
 	if err := validateAlertTimelineFlags(flags, common); err != nil {
 		return err
 	}
@@ -272,16 +317,18 @@ func runAlertTimeline(cmd *cobra.Command, flags alertTimelineFlags, common resol
 		return err
 	}
 
-	nodeUUID := strings.TrimSpace(flags.node)
-	if nodeUUID != "" {
-		return runNodeAlertTimeline(cmd, client, flags, nodeUUID, common)
-	}
 	return runAlertTimelineNodes(cmd, client, flags, common)
 }
 
-// Gets and renders the filters and sorting choices available for an alert timeline view.
-func runAlertTimelineOptions(cmd *cobra.Command, flags alertTimelineOptionsFlags, common resolvedCommonFlags) error {
-	if err := validateReadCommonFlags(common); err != nil {
+// Validates node flags, calls timeline level 2, and writes output.
+func runAlertNode(cmd *cobra.Command, nodeUUID string, flags alertTimelineFlags, common resolvedCommonFlags) error {
+	active, err := resolveAlertView(flags.view)
+	if err != nil {
+		return err
+	}
+	flags.active = active
+	flags.node = strings.TrimSpace(nodeUUID)
+	if err := validateAlertTimelineFlags(flags, common); err != nil {
 		return err
 	}
 
@@ -289,7 +336,24 @@ func runAlertTimelineOptions(cmd *cobra.Command, flags alertTimelineOptionsFlags
 	if err != nil {
 		return err
 	}
-	options, err := client.GetAlertTimelineFilterOptions(cmd.Context(), flags.active)
+	return runNodeAlertTimeline(cmd, client, flags, flags.node, common)
+}
+
+// Gets and renders the filters and sorting choices available for an alert timeline view.
+func runAlertTimelineOptions(cmd *cobra.Command, flags alertTimelineOptionsFlags, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+	active, err := resolveAlertView(flags.view)
+	if err != nil {
+		return err
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+	options, err := client.GetAlertTimelineFilterOptions(cmd.Context(), active)
 	if err != nil {
 		return err
 	}
@@ -297,6 +361,20 @@ func runAlertTimelineOptions(cmd *cobra.Command, flags alertTimelineOptionsFlags
 		return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
 	}
 	return writeAlertTimelineOptionsTable(cmd.OutOrStdout(), options)
+}
+
+// Resolves an alert view, defaulting operational commands to active alerts.
+func resolveAlertView(view string) (bool, error) {
+	switch normalized := strings.ToLower(strings.TrimSpace(view)); normalized {
+	case "":
+		return true, nil
+	case "active":
+		return true, nil
+	case "historical":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid view %q: expected active or historical", view)
+	}
 }
 
 // Lists nodes with alert timeline history

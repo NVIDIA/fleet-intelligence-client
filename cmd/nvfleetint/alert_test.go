@@ -164,7 +164,7 @@ func TestAlertTimelineTables(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "timeline", "--active", "--hostname", "gpu", "--sort-by", "alert", "--order", "desc", "--component-type", "gpu,memory"})
+	cmd.SetArgs([]string{"alert", "summary", "--hostname", "gpu", "--sort-by", "alert", "--order", "desc", "--component-type", "gpu,memory"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("timeline command failed: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestAlertTimelineTables(t *testing.T) {
 	out.Reset()
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "timeline", "--node", "node-1", "--without-psirt", "--sort-by", "startTime", "--order", "asc"})
+	cmd.SetArgs([]string{"alert", "node", "node-1", "--without-psirt", "--sort-by", "startTime", "--order", "asc"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("node timeline command failed: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestAlertTimelineAllJSONPreservesAggregates(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "timeline", "--active", "--all", "--output", "json"})
+	cmd.SetArgs([]string{"alert", "summary", "--all", "--output", "json"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("timeline command failed: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestNodeAlertTimelineAllJSONNormalizesPagination(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"alert", "timeline", "--node", "node-1", "--active", "--all", "--output", "json"})
+	cmd.SetArgs([]string{"alert", "node", "node-1", "--all", "--output", "json"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("timeline command failed: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestNodeAlertTimelineAllJSONNormalizesPagination(t *testing.T) {
 	}
 }
 
-// Verifies the CLI exposes alert timeline filter options in JSON and table formats.
+// Verifies the CLI exposes alert options in JSON and table formats.
 func TestAlertTimelineOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -282,9 +282,9 @@ func TestAlertTimelineOptionsOutput(t *testing.T) {
 	var jsonOut bytes.Buffer
 	jsonCmd := newRootCmd()
 	jsonCmd.SetOut(&jsonOut)
-	jsonCmd.SetArgs([]string{"alert", "timeline", "options", "--active", "--output", "json"})
+	jsonCmd.SetArgs([]string{"alert", "options", "--output", "json"})
 	if err := jsonCmd.Execute(); err != nil {
-		t.Fatalf("timeline options JSON command failed: %v", err)
+		t.Fatalf("alert options JSON command failed: %v", err)
 	}
 	var got map[string]any
 	if err := json.Unmarshal(jsonOut.Bytes(), &got); err != nil {
@@ -297,14 +297,88 @@ func TestAlertTimelineOptionsOutput(t *testing.T) {
 	var tableOut bytes.Buffer
 	tableCmd := newRootCmd()
 	tableCmd.SetOut(&tableOut)
-	tableCmd.SetArgs([]string{"alert", "timeline", "options"})
+	tableCmd.SetArgs([]string{"alert", "options", "--view", "historical"})
 	if err := tableCmd.Execute(); err != nil {
-		t.Fatalf("timeline options table command failed: %v", err)
+		t.Fatalf("alert options table command failed: %v", err)
 	}
 	for _, want := range []string{"FILTER", "gpuTypes", "H100", "nodeGroups", "ng-1", "Training", "SORTING", "DEFAULT FIELD", "alert"} {
 		if !strings.Contains(tableOut.String(), want) {
 			t.Fatalf("table output missing %q:\n%s", want, tableOut.String())
 		}
+	}
+}
+
+// Verifies the visible alert workflow starts from the active summary view.
+func TestAlertSummaryUX(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/alert_timeline/nodes" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("active"); got != "true" {
+			t.Fatalf("summary should default to active view, got %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":50,"total":0,"totalCritical":0,"totalWarning":0,"totalResolved":0,"distinctGpuTypeCount":0,"distinctNodeGroupCount":0,"distinctComputeZoneCount":0}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"alert", "summary", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("alert summary failed: %v", err)
+	}
+
+	var help bytes.Buffer
+	helpCmd := newRootCmd()
+	helpCmd.SetOut(&help)
+	helpCmd.SetArgs([]string{"alert", "--help"})
+	if err := helpCmd.Execute(); err != nil {
+		t.Fatalf("alert help failed: %v", err)
+	}
+	for _, want := range []string{"summary", "node", "list", "describe", "options", "summary → node → describe"} {
+		if !strings.Contains(help.String(), want) {
+			t.Fatalf("alert help missing %q:\n%s", want, help.String())
+		}
+	}
+	if strings.Contains(help.String(), "  timeline ") {
+		t.Fatalf("removed timeline command should not be listed:\n%s", help.String())
+	}
+}
+
+// Verifies the unreleased timeline command was removed instead of retained as an alias.
+func TestAlertTimelineCommandRemoved(t *testing.T) {
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"alert", "timeline"})
+	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("expected removed-command error, got %v", err)
+	}
+}
+
+// Verifies alert views default to active and accept explicit historical selection.
+func TestResolveAlertView(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		view    string
+		want    bool
+		wantErr bool
+	}{
+		{name: "default", want: true},
+		{name: "explicit active", view: "active", want: true},
+		{name: "explicit historical", view: "historical", want: false},
+		{name: "invalid", view: "recent", wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := resolveAlertView(test.view)
+			if (err != nil) != test.wantErr || got != test.want {
+				t.Fatalf("resolveAlertView() = %v, %v; want %v, error=%v", got, err, test.want, test.wantErr)
+			}
+		})
 	}
 }
 
@@ -440,18 +514,17 @@ func TestAlertListRejectsNegativePage(t *testing.T) {
 	}
 }
 
-// Verifies mode-specific timeline flags are rejected before a request
+// Verifies mode-specific alert flags are rejected before a request
 func TestAlertTimelineRejectsInvalidFlags(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string
 		want string
 	}{
-		{name: "node sort", args: []string{"alert", "timeline", "--sort-by", "startTime"}, want: "invalid sort-by"},
-		{name: "alert sort", args: []string{"alert", "timeline", "--node", "node-1", "--sort-by", "alert"}, want: "invalid sort-by"},
-		{name: "without psirt", args: []string{"alert", "timeline", "--without-psirt"}, want: "requires --node"},
-		{name: "hostname", args: []string{"alert", "timeline", "--node", "node-1", "--hostname", "gpu"}, want: "cannot be used with --node"},
-		{name: "state", args: []string{"alert", "timeline", "--alert-state", "Triggered"}, want: "invalid alert-state"},
+		{name: "summary sort", args: []string{"alert", "summary", "--sort-by", "startTime"}, want: "invalid sort-by"},
+		{name: "node sort", args: []string{"alert", "node", "node-1", "--sort-by", "alert"}, want: "invalid sort-by"},
+		{name: "missing node", args: []string{"alert", "node"}, want: "node UUID is required"},
+		{name: "state", args: []string{"alert", "summary", "--alert-state", "Triggered"}, want: "invalid alert-state"},
 		{name: "describe page", args: []string{"alert", "describe", "alert-1", "--node", "node-1", "--page", "2"}, want: "requires --page-size"},
 	}
 	for _, test := range tests {
