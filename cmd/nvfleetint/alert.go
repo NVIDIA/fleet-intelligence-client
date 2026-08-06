@@ -40,6 +40,11 @@ type alertTimelineFlags struct {
 	withoutPSIRT   bool
 }
 
+// Stores local flag values for alert timeline options.
+type alertTimelineOptionsFlags struct {
+	active bool
+}
+
 // Stores local flag values for alert describe
 type alertDescribeFlags struct {
 	node     string
@@ -142,7 +147,25 @@ func newAlertTimelineCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
 	cmd.Flags().BoolVar(&flags.withoutPSIRT, "without-psirt", false, "Exclude PSIRT alerts (requires --node)")
 	registerListCommonFlags(cmd, common)
+	cmd.AddCommand(newAlertTimelineOptionsCmd())
 
+	return cmd
+}
+
+// Creates the alert timeline filter-options command.
+func newAlertTimelineOptionsCmd() *cobra.Command {
+	flags := alertTimelineOptionsFlags{}
+	common := newCommonFlags()
+	cmd := &cobra.Command{
+		Use:   "options",
+		Short: "List available alert timeline filters and sorting options",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runAlertTimelineOptions(cmd, flags, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	cmd.Flags().BoolVar(&flags.active, "active", false, "Show options for currently active alerts")
+	registerReadCommonFlags(cmd, common)
 	return cmd
 }
 
@@ -254,6 +277,26 @@ func runAlertTimeline(cmd *cobra.Command, flags alertTimelineFlags, common resol
 		return runNodeAlertTimeline(cmd, client, flags, nodeUUID, common)
 	}
 	return runAlertTimelineNodes(cmd, client, flags, common)
+}
+
+// Gets and renders the filters and sorting choices available for an alert timeline view.
+func runAlertTimelineOptions(cmd *cobra.Command, flags alertTimelineOptionsFlags, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+	options, err := client.GetAlertTimelineFilterOptions(cmd.Context(), flags.active)
+	if err != nil {
+		return err
+	}
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
+	}
+	return writeAlertTimelineOptionsTable(cmd.OutOrStdout(), options)
 }
 
 // Lists nodes with alert timeline history
@@ -639,6 +682,28 @@ func writeAlertTimelineOutput(w io.Writer, common resolvedCommonFlags, result al
 		return nil
 	}
 	return clioutput.WritePaginationFooter(w, *result.Page)
+}
+
+// Writes alert timeline filter values and sorting metadata as readable tables.
+func writeAlertTimelineOptionsTable(w io.Writer, options nvfleetint.AlertTimelineFilterOptions) error {
+	rows := make([][]string, 0)
+	for _, field := range options.Filters.Fields {
+		for _, option := range field.Options {
+			rows = append(rows, []string{field.Name, option.ID, option.Value})
+		}
+	}
+	if err := clioutput.WriteTable(w, []string{"FILTER", "ID", "VALUE"}, rows); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(w); err != nil {
+		return err
+	}
+	return clioutput.WriteTable(w, []string{"SORTING", "VALUE"}, [][]string{
+		{"FIELDS", strings.Join(options.Sorting.Fields, ", ")},
+		{"ORDERS", strings.Join(options.Sorting.Orders, ", ")},
+		{"DEFAULT FIELD", options.Sorting.Defaults.Field},
+		{"DEFAULT ORDER", options.Sorting.Defaults.Order},
+	})
 }
 
 // Renders alert timeline events as a table

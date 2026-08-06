@@ -259,6 +259,55 @@ func TestNodeAlertTimelineAllJSONNormalizesPagination(t *testing.T) {
 	}
 }
 
+// Verifies the CLI exposes alert timeline filter options in JSON and table formats.
+func TestAlertTimelineOptionsOutput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/alert_timeline/filter_options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		requests++
+		wantActive := requests == 1
+		if got := r.URL.Query().Get("active"); got != map[bool]string{true: "true", false: "false"}[wantActive] {
+			t.Fatalf("unexpected active value on request %d: %q", requests, got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"filters":{"fields":[{"name":"gpuTypes","options":["H100"]},{"name":"nodeGroups","options":[{"id":"ng-1","value":"Training"}]}]},"sorting":{"fields":["alert","hostname"],"orders":["asc","desc"],"defaults":{"field":"alert","order":"desc"}}}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+	var jsonOut bytes.Buffer
+	jsonCmd := newRootCmd()
+	jsonCmd.SetOut(&jsonOut)
+	jsonCmd.SetArgs([]string{"alert", "timeline", "options", "--active", "--output", "json"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatalf("timeline options JSON command failed: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(jsonOut.Bytes(), &got); err != nil {
+		t.Fatalf("invalid JSON output: %v\n%s", err, jsonOut.String())
+	}
+	if got["filters"] == nil || got["sorting"] == nil {
+		t.Fatalf("unexpected options JSON: %#v", got)
+	}
+
+	var tableOut bytes.Buffer
+	tableCmd := newRootCmd()
+	tableCmd.SetOut(&tableOut)
+	tableCmd.SetArgs([]string{"alert", "timeline", "options"})
+	if err := tableCmd.Execute(); err != nil {
+		t.Fatalf("timeline options table command failed: %v", err)
+	}
+	for _, want := range []string{"FILTER", "gpuTypes", "H100", "nodeGroups", "ng-1", "Training", "SORTING", "DEFAULT FIELD", "alert"} {
+		if !strings.Contains(tableOut.String(), want) {
+			t.Fatalf("table output missing %q:\n%s", want, tableOut.String())
+		}
+	}
+}
+
 // Verifies alert describe timeline output
 func TestAlertDescribeTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())

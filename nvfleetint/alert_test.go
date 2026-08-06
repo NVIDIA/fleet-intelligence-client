@@ -195,6 +195,43 @@ func TestAlertTimelineMethodsDecode(t *testing.T) {
 	}
 }
 
+// Verifies alert timeline filter options support both simple and object values.
+func TestGetAlertTimelineFilterOptions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/alert_timeline/filter_options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("active"); got != "true" {
+			t.Fatalf("unexpected active value: %q", got)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+			t.Fatalf("unexpected auth header: %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"filters":{"fields":[{"name":"gpuTypes","options":["H100"]},{"name":"nodeGroups","options":[{"id":"ng-1","value":"Training"}]}]},"sorting":{"fields":["alert","hostname"],"orders":["asc","desc"],"defaults":{"field":"alert","order":"desc"}}}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	options, err := client.GetAlertTimelineFilterOptions(context.Background(), true)
+	if err != nil {
+		t.Fatalf("get filter options failed: %v", err)
+	}
+	if len(options.Filters.Fields) != 2 || options.Filters.Fields[0].Options[0].Value != "H100" {
+		t.Fatalf("unexpected simple options: %#v", options.Filters.Fields)
+	}
+	nodeGroup := options.Filters.Fields[1].Options[0]
+	if nodeGroup.ID != "ng-1" || nodeGroup.Value != "Training" {
+		t.Fatalf("unexpected object option: %#v", nodeGroup)
+	}
+	if options.Sorting.Defaults.Field != "alert" || len(options.RawJSON) == 0 {
+		t.Fatalf("unexpected sorting or raw JSON: %#v", options)
+	}
+}
+
 // Verifies alert state enum validation
 func TestAlertStateValidation(t *testing.T) {
 	if !AlertStateTriggered.Valid() {
