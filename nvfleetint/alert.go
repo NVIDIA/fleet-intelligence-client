@@ -13,6 +13,9 @@ import (
 )
 
 const (
+	alertTimelineMinPageSize = 1
+	alertTimelineMaxPageSize = 100
+
 	AlertSeverityCritical AlertSeverity = "Critical"
 	AlertSeverityWarning  AlertSeverity = "Warning"
 
@@ -525,6 +528,16 @@ func validateDescribeAlertTimelineOptions(opts DescribeAlertTimelineOptions) err
 	}
 	if opts.Page != nil && opts.PageSize == nil {
 		return fmt.Errorf("alert timeline page requires page size")
+	}
+	if opts.Page != nil && *opts.Page < 0 {
+		return fmt.Errorf("alert timeline page must be non-negative")
+	}
+	if opts.PageSize != nil && (*opts.PageSize < alertTimelineMinPageSize || *opts.PageSize > alertTimelineMaxPageSize) {
+		return fmt.Errorf(
+			"alert timeline page size must be between %d and %d",
+			alertTimelineMinPageSize,
+			alertTimelineMaxPageSize,
+		)
 	}
 	return nil
 }

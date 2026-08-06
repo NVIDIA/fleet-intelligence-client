@@ -223,6 +223,42 @@ func TestAlertTimelineAllJSONPreservesAggregates(t *testing.T) {
 	}
 }
 
+// Verifies node-alert --all JSON uses the CLI's 1-based pagination contract.
+func TestNodeAlertTimelineAllJSONNormalizesPagination(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/alert_timeline/nodes/node-1/alerts" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodeUuid":"node-1","alerts":[{"alertUuid":"alert-1","component":"gpu","alertStatus":"Critical"}],"hasMore":false,"page":0,"pageSize":100,"total":1}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"alert", "timeline", "--node", "node-1", "--active", "--all", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("timeline command failed: %v", err)
+	}
+
+	var got struct {
+		Items      []map[string]any `json:"items"`
+		Pagination struct {
+			Page int `json:"page"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("invalid JSON output: %v\n%s", err, out.String())
+	}
+	if len(got.Items) != 1 || got.Items[0]["alertUuid"] != "alert-1" || got.Pagination.Page != 1 {
+		t.Fatalf("unexpected timeline JSON: %#v", got)
+	}
+}
+
 // Verifies alert describe timeline output
 func TestAlertDescribeTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())

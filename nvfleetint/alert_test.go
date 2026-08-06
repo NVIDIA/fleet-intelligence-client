@@ -238,4 +238,16 @@ func TestAlertTimelineRejectsInvalidOptions(t *testing.T) {
 	if _, err := client.DescribeAlertTimelineWithOptions(context.Background(), "node-1", "alert-1", DescribeAlertTimelineOptions{Page: &page}); err == nil || !strings.Contains(err.Error(), "page requires page size") {
 		t.Fatalf("unexpected detail pagination error: %v", err)
 	}
+
+	pageSize := 10
+	negativePage := -1
+	if _, err := client.DescribeAlertTimelineWithOptions(context.Background(), "node-1", "alert-1", DescribeAlertTimelineOptions{Page: &negativePage, PageSize: &pageSize}); err == nil || !strings.Contains(err.Error(), "page must be non-negative") {
+		t.Fatalf("unexpected negative page error: %v", err)
+	}
+
+	for _, invalidPageSize := range []int{0, 101} {
+		if _, err := client.DescribeAlertTimelineWithOptions(context.Background(), "node-1", "alert-1", DescribeAlertTimelineOptions{PageSize: &invalidPageSize}); err == nil || !strings.Contains(err.Error(), "page size must be between 1 and 100") {
+			t.Fatalf("unexpected page size error for %d: %v", invalidPageSize, err)
+		}
+	}
 }
