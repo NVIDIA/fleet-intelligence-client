@@ -5,16 +5,13 @@ description: Query NVIDIA Fleet Intelligence with the nvfleetint CLI. Use for ad
 
 # Query Fleet Intelligence
 
-Use live `nvfleetint` JSON; never answer fleet-state questions from memory.
-Read [`references/cli-contract.md`](references/cli-contract.md) before querying.
-Read [`references/auth.md`](references/auth.md) only for setup/profile work.
+Use live `nvfleetint` JSON; never answer fleet-state questions from memory. Read [`references/cli-contract.md`](references/cli-contract.md) before querying. Read [`references/auth.md`](references/auth.md) only for setup/profile work.
 
 ## Method
 
 1. Run the smallest server-filtered query that answers the question.
 2. Use `--output json`; give the user prose, not command dumps.
-3. For counts, use `--page-size 1` and read `.total`. For identities, add
-   `--view basic`. Use `--all` only when every row is required.
+3. For counts, use `--page-size 1` and read `.total`. For identities, add `--view basic`. Use `--all` only when every row is required.
 4. Lead with the answer; add a small table only for comparisons/listings.
 5. Never infer absent fields or mistake auth failure for no results.
 
@@ -26,7 +23,8 @@ Read [`references/auth.md`](references/auth.md) only for setup/profile work.
 | Zones or node groups | `computezone list`, `nodegroup list` |
 | Nodes/current detail | `node list`, `node describe <uuid>` |
 | Node health history | `node health <uuid>` |
-| Active/history alerts | `alert list`, `alert timeline`, `alert describe` |
+| Fleet alert records | `alert list` |
+| Alert impact/investigation | `alert summary`, `alert node`, `alert describe`, `alert options` |
 | Raw events/histogram | `event list`, `event buckets` |
 | Customer tags | `tag list` |
 | Inventory/error reports | `report inventory`, `report error` |
@@ -56,15 +54,9 @@ nvfleetint node describe <node-uuid> --output json
 nvfleetint node health <node-uuid> --start <rfc3339> --end <rfc3339> --output json
 ```
 
-Ask users for human-readable zone/group names, never IDs. Name filters are
-comma-separated partial matches. For exact scope, resolve with
-`computezone list --view basic` or `nodegroup list --view basic`, clarify
-ambiguous names with recognizable detail metadata, then use IDs internally.
-Accept an ID already supplied by the user.
+Ask users for human-readable zone/group names, never IDs. Name filters are comma-separated partial matches. For exact scope, resolve with `computezone list --view basic` or `nodegroup list --view basic`, clarify ambiguous names with recognizable detail metadata, then use IDs internally. Accept an ID already supplied by the user.
 
-Node basic rejects health, agent, verification, and firmware filters and
-supports sorting only by `hostname` or `nodeUUID`. `node health` requires
-both absolute boundaries. It does not support `--window`.
+Node basic rejects health, agent, verification, and firmware filters and supports sorting only by `hostname` or `nodeUUID`. `node health` requires both absolute boundaries. It does not support `--window`.
 
 Filter values:
 
@@ -75,33 +67,26 @@ Filter values:
 | `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
-Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`,
-`computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`,
-`agentVersion`, `kernelVersion`, `gpuDriverVersion`, and
-`gpuFirmwareVersions`. The backend spelling `integrityCheck` remains accepted
-as an alias for `verificationCheck`. Node-group sort keys are `health` and
-`nodes`.
+Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, and `gpuFirmwareVersions`. The backend spelling `integrityCheck` remains accepted as an alias for `verificationCheck`. Node-group sort keys are `health` and `nodes`.
 
 ### Alerts and events
 
 ```bash
 nvfleetint alert list --severity Critical --output json
 nvfleetint alert list --node <node-uuid> --state Triggered --output json
-nvfleetint alert timeline --active --output json
-nvfleetint alert timeline --node <node-uuid> --output json
+nvfleetint alert summary --output json
+nvfleetint alert summary --view historical --output json
+nvfleetint alert node <node-uuid> --output json
+nvfleetint alert node <node-uuid> --view historical --output json
 nvfleetint alert describe <alert-uuid> --node <node-uuid> --output json
+nvfleetint alert options --output json
 nvfleetint event list --window 24h --output json
 nvfleetint event buckets --window 168h --max-buckets 50 --output json
 ```
 
-Alert severity is Critical/Warning; state is Detected/Triggered/Resolved.
-`alert timeline --active` returns currently firing alerts; the full timeline
-includes inactive history. Timeline Critical/Warning values are active severity;
-Detected/Resolved are inactive audit values. Don't count every non-Resolved row
-as active.
+Alert severity is Critical/Warning; state is Detected/Triggered/Resolved. `alert summary`, `alert node`, and `alert options` default to the active view; use `--view historical` for history. Summary returns impacted nodes plus fleet-wide alert aggregates. Node returns alerts for one node. Describe returns one alert's event history. In node-alert results, Critical/Warning values are active severity; Detected/Resolved are inactive audit values. Don't count every non-Resolved row as active.
 
-Events require `--window` or both `--start`/`--end`. Durations use Go units
-through hours—no `d`. Event list paginates; buckets do not.
+Events require `--window` or both `--start`/`--end`. Durations use Go units through hours—no `d`. Event list paginates; buckets do not.
 
 ### Tags and reports
 
@@ -115,15 +100,8 @@ nvfleetint report error --view graph --window 24h --output json
 nvfleetint report verify --csv report.csv --bundle report.sig.bundle
 ```
 
-Use at most one tag scope flag: `--node`, `--nodegroup`, or
-`--computezone`; tag list has no pagination. Report-error list requires
-`--group-by error|node`; only list supports `--all` and CSV. Signed inventory
-requires CSV.
+Use at most one tag scope flag: `--node`, `--nodegroup`, or `--computezone`; tag list has no pagination. Report-error list requires `--group-by error|node`; only list supports `--all` and CSV. Signed inventory requires CSV.
 
 ## Example
 
-For “Are any H100 nodes having problems?”, query H100 nodes filtered to
-Degraded/Unhealthy/Unknown. Include Unknown, read the filtered total, list only
-returned problem nodes, and do not claim the remaining H100 fleet is healthy
-without a separate query. Drill into requested UUIDs with `node describe` and
-node-scoped alerts.
+For “Are any H100 nodes having problems?”, query H100 nodes filtered to Degraded/Unhealthy/Unknown. Include Unknown, read the filtered total, list only returned problem nodes, and do not claim the remaining H100 fleet is healthy without a separate query. Drill into requested UUIDs with `node describe` and node-scoped alerts.

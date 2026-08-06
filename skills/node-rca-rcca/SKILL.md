@@ -1,192 +1,86 @@
 ---
 name: node-rca-rcca
-description: Investigate one degraded or unhealthy NVIDIA Fleet Intelligence node and generate an evidence-backed HTML RCA/RCCA from live nvfleetint data. Use for node incident analysis, health-transition explanations, root-cause analysis, corrective actions, or post-incident reports. Do not use for fleet-wide status reporting.
+description: Investigate one NVIDIA Fleet Intelligence node and generate an evidence-backed HTML RCA/RCCA from live current and historical alerts plus authoritative corrective-action research. Use for node incident analysis, root-cause analysis, corrective actions, or post-incident reports.
 ---
 
 # Node RCA/RCCA
 
-Investigate one node and produce an evidence-backed offline HTML RCA/RCCA. Use
-`fleet-health-report` for fleet-wide status.
+Investigate one node and produce an evidence-backed offline HTML RCA/RCCA. Read the [CLI contract](references/cli-contract.md), [HTML theme](references/html-theme.md), and [workspace guide](references/workspace.md) before collecting data.
 
-Read [`references/cli-contract.md`](references/cli-contract.md) before querying,
-[`references/report-writing.md`](references/report-writing.md) before creating
-scratch files, and
-[`references/html-report-template.md`](references/html-report-template.md)
-before writing the report.
+## Workflow
 
-## Rules
+### 1. Resolve the inputs and profile
 
-- Read only. Use fresh JSON evidence from this invocation.
-- Separate observed facts from inference. Use confidence `Confirmed`, `Likely`,
-  or `Not confirmed`; never invent causes, impact, timestamps, or remediation.
-- Preserve timestamps/zones; mark unavailable fields `N/A`.
-- Keep full payloads in a private temp directory, but only concise projections in
-  context. Fetch once, parse the saved file repeatedly.
-- Leave only the final report. On auth/API/evidence failure, publish nothing and
-  name the failed command.
-
-## Collect evidence
-
-Default to seven days. Pin absolute boundaries for every node/event query; keep
-the relative duration only for optional APIs that lack suitable scoped use:
+Require a hostname or node UUID and a profile. Ask a concise clarification when either is missing or ambiguous.
 
 ```bash
-now=$(date +%s)
-if date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
-  # GNU/Linux date
-  end=$(date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ)
-  start=$(date -u -d "@$((now - 604800))" +%Y-%m-%dT%H:%M:%SZ)
-elif date -u -r "$now" -v-1d +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
-  # BSD/macOS date
-  end=$(date -u -r "$now" +%Y-%m-%dT%H:%M:%SZ)
-  start=$(date -u -r "$now" -v-7d +%Y-%m-%dT%H:%M:%SZ)
-else
-  echo "unsupported date implementation" >&2
-  exit 1
-fi
-window=168h  # optional blast-radius query only
+nvfleetint auth list --output json
+nvfleetint auth status --profile <profile> --output json
 ```
 
-Go durations end at `h`; convert days to hours. `7d` is invalid.
+Require `connection` equal to `ok`. Pass the same explicit `--profile <profile>` to every API-backed command.
 
-Batching:
+### 2. Resolve exactly one node
 
-1. Resolve UUID serially.
-2. In parallel collect node describe, health, events/buckets, and active/full
-   alert timelines.
-3. Apply the fast-path gate.
-4. Describe the selected alerts in parallel.
-
-### 1. Resolve the node
-
-For a hostname/partial hostname, search every page with the identity view:
+For a hostname, search all identity pages and require one exact match. Ask the user to choose when a partial name returns multiple candidates.
 
 ```bash
-nvfleetint node list --hostname <hostname> --view basic --all --output json
+nvfleetint node list --hostname <hostname> --view basic --all \
+  --profile <profile> --output json
 ```
 
-Confirm multiple matches. Use detail view only when metadata is needed to
-disambiguate.
-
-### 2. Capture current state
+For a UUID, or after resolving a hostname, verify and capture the node once:
 
 ```bash
-nvfleetint node describe <node_uuid> --output json > "$work/node-describe.json"
-jq '{nodeUUID, hostname, healthStatus, nodeGroup, computeZone, gpuType, gpuCount,
-     agentStatus, agentVersion, gpuDriverVersion, kernelVersion,
-     integrityCheck, integrityCheckReason, firmwareCheck,
-     healthyComponentCount, degradedComponentCount, unhealthyComponentCount,
-     lastIntegrityCheckTS, lastUpdatedTS, tags}' "$work/node-describe.json"
+nvfleetint node describe <node_uuid> --profile <profile> --output json
 ```
 
-Widen the projection against that file for suspected hardware
-(`.resources.nicInfo`, `.resources.gpuInfo`, `gpuFirmwareVersions`); never
-refetch describe.
+Use the saved description for hostname, health, placement, GPU, agent, integrity, firmware, and component context.
 
-### 3. Capture health transitions
+### 3. Collect current and historical alerts
+
+Fetch current alerts and complete historical alerts:
 
 ```bash
-nvfleetint node health <node_uuid> --start "$start" --end "$end" --output json
+nvfleetint alert node <node_uuid> --without-psirt --all \
+  --profile <profile> --output json
+nvfleetint alert node <node_uuid> --view historical --without-psirt --all \
+  --profile <profile> --output json
 ```
 
-Read intervals from `machineStatus` and summary from `healthSummary`. Derive
-last normal, first bad interval, current state, and flapping. This command is a
-non-paginated single object: it accepts neither `--all` nor `--window`.
+Treat the default view as current active alerts. Aggregate current and historical alerts by component ID/display name and status, deduplicating the same `alertUuid` across both sets. For each current alert, count prior historical rows with the same component ID after excluding its own `alertUuid`, and record the most recent prior occurrence. Empty alert sets are valid evidence.
 
-### 4. Capture events
+### 4. Determine the root cause
 
-```bash
-nvfleetint event list --node <node_uuid> --start "$start" --end "$end" --all --output json
-nvfleetint event buckets --node <node_uuid> --start "$start" --end "$end" --output json
-```
+Validate every response with the CLI contract before analysis. Correlate node state, current alerts, and historical alerts by component and time. State:
 
-Use list for event/component counts and buckets for recurrence/bursts. Add
-`--component` only when narrowing a supported hypothesis. Never replace the
-pinned boundaries with `--window`; relative windows drift as collection runs.
+- observed symptoms and impact;
+- the most specific supported root cause;
+- confidence as `Confirmed`, `Likely`, or `Not confirmed`;
+- competing explanations and missing evidence when they affect the conclusion.
 
-### 5. Capture alert history
+Do not promote correlation to causation. If evidence is insufficient, report the root cause as not confirmed and identify the next evidence needed.
 
-```bash
-nvfleetint alert timeline --node <node_uuid> --active --all --output json
-nvfleetint alert timeline --node <node_uuid> --all --output json
-```
+### 5. Research corrective actions
 
-The active query is authoritative for active count. On timeline rows,
-Critical/Warning means active severity; Detected/Resolved means inactive audit
-history. Never use `alertStatus != "Resolved"` as active.
+After forming the evidence-based RCA, search the web using only observed generic component names, error codes, firmware/driver versions, and root-cause terms. Never include hostname, node UUID, profile, tenant, or customer data in a query.
 
-Use a narrow node-scoped alert list only when timeline fields are insufficient:
+Prefer official NVIDIA documentation, release notes, support articles, and knowledge-base material. Use other primary vendor documentation only when no relevant NVIDIA source exists. Cite the source title and URL beside each supported recommendation.
 
-```bash
-nvfleetint alert list --node <node_uuid> --state Triggered --output json
-```
+Turn the research into containment, corrective, preventive, and validation actions. Keep sourced guidance distinct from fleet evidence and mark any environment-dependent recommendation for operator confirmation.
 
-### Fast path
+### 6. Build and deliver
 
-Skip multi-alert selection when all are true:
+Apply the shared HTML theme and workspace workflow. Summarize saved JSON rather than embedding raw payloads. Use these sections:
 
-- at most one active alert;
-- zero events/buckets;
-- one health segment with no transition.
+1. Executive Summary: node, collection time, impact, root cause, and confidence.
+2. Node Details: relevant node metadata.
+3. Alert Evidence: first show aggregate current and historical counts grouped by component and status, then show a collapsed `<details>` breakdown for every current alert with its status, component, timing, prior occurrence count, and most recent prior occurrence.
+4. Root Cause Analysis: reasoning, competing explanations, and evidence gaps.
+5. Corrective Action Plan: containment, corrective, preventive, and validation actions.
+6. References: cited corrective-action sources.
+7. Assumptions and Unknowns: assumptions and information still required.
 
-Describe the single active alert, if any, then analyze. With no active alert,
-skip alert describe. Otherwise continue.
+Use section IDs `summary`, `node-details`, `evidence`, `root-cause`, `corrective-actions`, `references`, and `unknowns`, respectively.
 
-### 6. Describe decisive alerts
-
-Select only alerts that change the conclusion: earliest relevant, each active,
-and most repeated on the suspected component; cap at 3–5. Record summarized
-omissions.
-
-```bash
-nvfleetint alert describe <alert_uuid> --node <node_uuid> --output json   > "$work/alert-<alert_uuid>.json"
-```
-
-Run independent describes in parallel and parse saved files.
-
-### 7. Optional blast radius
-
-Only when requested:
-
-```bash
-nvfleetint report error --view list --group-by node   --window "$window" --all --output json
-```
-
-## Validate and analyze
-
-Apply shared completeness rules. Empty alerts/events are valid; a missing node
-describe is an error.
-
-Build:
-
-- Timeline: last normal, first symptom, current state, active/resolved status.
-- Impact: only observed health, component, zone/group, GPU, agent,
-  integrity/firmware, and severity evidence.
-- Root cause: most specific supported cause and confidence.
-- Contributing factors: only repeated/flapping/stale/check-failure evidence.
-- RCCA: containment, corrective, preventive, and validation actions. Use
-  owner/due date `TBD` unless supplied.
-- Read-only validation commands with expected healthy outcomes.
-
-### Optional code enrichment
-
-Only translate raw generic codes/reasons already observed (for example XID 79).
-Never send fleet identifiers externally. Prefer official NVIDIA documentation,
-attribute source/title/URL, and confine enrichment to RCCA actions plus an
-optional Reference section. It cannot change evidence, root cause, or confidence;
-omit it when uncertain.
-
-## Build and deliver
-
-Follow the HTML template and the single-write/validation/cleanup sequence in the
-report-writing reference. Inline all CSS; use no external assets; HTML-escape
-backend strings and summarize rather than dump JSON.
-
-Required order: executive summary, node details, impact, timeline, root cause,
-contributing factors, actions, validation, optional Reference, evidence appendix,
-assumptions/unknowns.
-
-Cross-check health, active-alert count (from `--active`), root cause, and
-confidence against validated JSON. Return the report path, node, collection
-time, and window. For a compact example, read
-[`references/example.md`](references/example.md).
+Cross-check every headline claim against validated JSON or a cited source, then return the report path, resolved node, profile, and collection time.

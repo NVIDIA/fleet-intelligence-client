@@ -114,20 +114,70 @@ fi
 
 fleet_skill="$repo_root/skills/fleet-health-report/SKILL.md"
 required_fleet_rules=(
-  'Probe before `--all`'
-  'Never ask the user for IDs'
-  'Use **5,000 alerts** as the fixed threshold'
-  'alert list --severity Critical --all'
-  'alert list --severity Warning --all'
-  'Give alert collection at most 10 minutes'
-  'Critical.count + Warning.count'
+  'nvfleetint auth list --output json'
+  'nvfleetint auth status --profile <profile> --output json'
+  'same explicit `--profile <profile>`'
+  'Probe each list with the same filters, `--view basic` where supported'
+  'Resolve supplied names to IDs'
+  'alert options --view active'
+  'alert summary <scope>'
+  '--sort-by alert --order desc --page-size 10'
+  '--component-type <component-types> --all'
+  'agent_liveness'
+  'comma-separated list of component IDs excluding exact IDs `psirt` and `agent_liveness`'
+  'at most 12 calls'
+  'Do not fetch every affected node merely to count or rank them.'
+  'Nodes with Active Alerts'
+  'Machines Needing Immediate Attention (up to 10)'
+  '1. Fleet Summary:'
+  '2. Fleet Distribution:'
+  '3. Active Alerts:'
+  '4. Error Distribution:'
+  'Fleet Health Percentage'
+  'Do not show both or repeat the percentage'
+  'report error --view list --group-by error'
+  'without an aggregate fleet severity badge'
   'date -u -d "@$now"'
   'date -u -r "$now" -v-24H'
-  'date -u -r "$now" -v-48H'
 )
 for required in "${required_fleet_rules[@]}"; do
-  if ! grep -Fq "$required" "$fleet_skill"; then
-    fail "$fleet_skill is missing required large-fleet rule: $required"
+  if ! grep -Fq -- "$required" "$fleet_skill"; then
+    fail "$fleet_skill is missing required collection rule: $required"
+  fi
+done
+
+collection_order=(
+  'nvfleetint auth list --output json'
+  'nvfleetint auth status --profile <profile> --output json'
+  'nvfleetint overview --profile <profile> --output json'
+  'nvfleetint computezone list'
+  'nvfleetint nodegroup list'
+  'nvfleetint node list <scope>'
+  'nvfleetint report error'
+  'nvfleetint alert options'
+  'nvfleetint alert summary'
+  'nvfleetint alert node'
+)
+previous_line=0
+for command in "${collection_order[@]}"; do
+  line=$(awk -v needle="$command" 'index($0, needle) { print NR; exit }' "$fleet_skill")
+  if [ -z "$line" ]; then
+    fail "$fleet_skill is missing ordered workflow command: $command"
+  fi
+  if [ "$line" -le "$previous_line" ]; then
+    fail "$fleet_skill has workflow command out of order: $command"
+  fi
+  previous_line=$line
+done
+
+for obsolete in '5,000 alerts' 'alert list --severity Critical --all' \
+  'alert list --severity Warning --all' 'Critical.count + Warning.count' \
+  'alert list --all --output json' 'prev_start' 'id="trend"' 'Overall status:' \
+  'alert node <node_uuid> --view active --without-psirt' 'server-ranked top 10' \
+  'only the top 10' 'top-10 summary nodes' 'top-10 drill-down' \
+  'top 10 machines' 'top machines needing attention'; do
+  if grep -Fq "$obsolete" "$fleet_skill"; then
+    fail "$fleet_skill contains obsolete fleet-report guidance: $obsolete"
   fi
 done
 
@@ -136,7 +186,8 @@ required_nvfleet_rules=(
   '--compute-zone-names'
   '--nodegroup-names'
   'supports sorting only by `hostname` or `nodeUUID`'
-  'alert timeline --active'
+  'alert summary --output json'
+  'alert node <node-uuid> --output json'
   'It does not support'
 )
 for required in "${required_nvfleet_rules[@]}"; do
@@ -152,60 +203,147 @@ for required in healthNodeCount '--view basic' '--firmware-check'; do
 done
 
 node_skill="$repo_root/skills/node-rca-rcca/SKILL.md"
-for required in 'date -u -d "@$now"' 'date -u -r "$now" -v-7d' 'now - 604800'; do
+for required in 'nvfleetint auth list --output json' \
+  'nvfleetint auth status --profile <profile> --output json' \
+  'node list --hostname <hostname> --view basic --all' \
+  'node describe <node_uuid> --profile <profile> --output json' \
+  'Fetch current alerts and complete historical alerts' \
+  'Aggregate current and historical alerts by component ID/display name and status' \
+  'deduplicating the same `alertUuid` across both sets' \
+  'count prior historical rows with the same component ID after excluding its own `alertUuid`' \
+  'collapsed `<details>` breakdown for every current alert' \
+  'Prefer official NVIDIA documentation' \
+  'Never include hostname, node UUID, profile, tenant, or customer data in a query'; do
   if ! grep -Fq "$required" "$node_skill"; then
-    fail "$node_skill is missing required cross-platform date rule: $required"
+    fail "$node_skill is missing required RCA workflow guidance: $required"
   fi
 done
-for command in 'event list' 'event buckets'; do
-  if ! grep -E "$command.*--start .*--end " "$node_skill" >/dev/null; then
-    fail "$node_skill must use pinned --start/--end for $command"
-  fi
-  if grep -E "$command.*--window" "$node_skill" >/dev/null; then
-    fail "$node_skill must not use a drifting relative window for $command"
+for required in 'alert node <node_uuid> --without-psirt --all' \
+  'alert node <node_uuid> --view historical --without-psirt --all'; do
+  if ! grep -Fq "$required" "$node_skill"; then
+    fail "$node_skill is missing required alert command: $required"
   fi
 done
-node_rca_dir="$repo_root/skills/node-rca-rcca"
-if grep -R -nE --include='*.md' 'event (list|buckets).*--window' "$node_rca_dir" >/dev/null; then
-  fail "node-rca-rcca contains a drifting relative event window"
+
+node_collection_order=(
+  'nvfleetint auth list'
+  'nvfleetint auth status'
+  'nvfleetint node list'
+  'nvfleetint node describe'
+  'nvfleetint alert node <node_uuid> --without-psirt'
+  'nvfleetint alert node <node_uuid> --view historical'
+)
+previous_line=0
+for command in "${node_collection_order[@]}"; do
+  line=$(awk -v needle="$command" 'index($0, needle) { print NR; exit }' "$node_skill")
+  if [ -z "$line" ]; then
+    fail "$node_skill is missing ordered workflow command: $command"
+  fi
+  if [ "$line" -le "$previous_line" ]; then
+    fail "$node_skill has workflow command out of order: $command"
+  fi
+  previous_line=$line
+done
+
+if grep -R -n --include='*.md' 'nvfleetint alert timeline' "$repo_root/skills" >/dev/null; then
+  fail "skills reference the removed alert timeline command"
+fi
+if grep -niE '\bevents?\b|nvfleetint event (list|buckets)' "$node_skill" >/dev/null; then
+  fail "node-rca-rcca must use alert evidence without event API calls"
+fi
+if grep -niE '48-hour|172800|date -u|alert window' "$node_skill" >/dev/null; then
+  fail "node-rca-rcca must use the complete historical alert response without a local time cutoff"
 fi
 
-fleet_template="$repo_root/skills/fleet-health-report/references/html-report-template.md"
-node_template="$repo_root/skills/node-rca-rcca/references/html-report-template.md"
-extract_root_tokens() {
-  awk '
-    /^    :root \{$/ { active = 1 }
-    active { print }
-    active && /^    \}$/ { exit }
-  ' "$1"
-}
-fleet_root_tokens=$(extract_root_tokens "$fleet_template")
-node_root_tokens=$(extract_root_tokens "$node_template")
-if [ "$fleet_root_tokens" != "$node_root_tokens" ]; then
-  fail "HTML template :root token blocks differ"
-fi
-for template in "$fleet_template" "$node_template"; do
-  if ! grep -Fq 'Unverified' "$template"; then
-    fail "$template must map Unverified to a status style"
+fleet_theme="$repo_root/skills/fleet-health-report/references/html-theme.md"
+node_theme="$repo_root/skills/node-rca-rcca/references/html-theme.md"
+fleet_workspace="$repo_root/skills/fleet-health-report/references/workspace.md"
+node_workspace="$repo_root/skills/node-rca-rcca/references/workspace.md"
+
+for report_skill in fleet-health-report node-rca-rcca; do
+  references="$repo_root/skills/$report_skill/references"
+  for reference in cli-contract.md html-theme.md workspace.md; do
+    if [ ! -f "$references/$reference" ]; then
+      fail "$report_skill is missing shared reference $reference"
+    fi
+  done
+  reference_count=$(find "$references" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')
+  if [ "$reference_count" -ne 3 ]; then
+    fail "$report_skill must contain exactly the three shared references"
   fi
 done
-if ! grep -Fq '[backend_health_badge]' "$fleet_template"; then
-  fail "$fleet_template must make the backend-health badge conditional"
+
+if ! cmp -s "$fleet_theme" "$node_theme"; then
+  fail "report HTML theme references differ; run scripts/sync-skill-cli-contract.sh"
 fi
-if grep -Fq '[backend_health_percentage]' "$fleet_template"; then
-  fail "$fleet_template contains the obsolete unconditional backend-health placeholder"
+if ! cmp -s "$fleet_workspace" "$node_workspace"; then
+  fail "report workspace references differ; run scripts/sync-skill-cli-contract.sh"
 fi
-for section_id in at-a-glance distribution trend concentration attention; do
+
+for theme in "$fleet_theme" "$node_theme"; do
+  for theme_rule in '--surface-canvas: #f7f7f7' 'html[data-theme="dark"]' \
+    'maximum width 1180px' '16px corners' '<details>' 'Unverified' 'For print'; do
+    if ! grep -Fq -- "$theme_rule" "$theme"; then
+      fail "$theme is missing shared theme guidance: $theme_rule"
+    fi
+  done
+  for report_section in at-a-glance distribution errors alerts summary node-details root-cause; do
+    if grep -Fq "id=\"$report_section\"" "$theme"; then
+      fail "$theme must not define report-specific section $report_section"
+    fi
+  done
+done
+
+for workspace in "$fleet_workspace" "$node_workspace"; do
+  for workspace_rule in 'mktemp -d "/tmp/nvfleet-report.XXXXXXXX"' \
+    'Write the final HTML outside the scratch directory' \
+    'find "$work" -mindepth 1 -maxdepth 1' 'rmdir -- "$work"'; do
+    if ! grep -Fq -- "$workspace_rule" "$workspace"; then
+      fail "$workspace is missing shared workspace guidance: $workspace_rule"
+    fi
+  done
+done
+
+for section_id in at-a-glance distribution errors alerts; do
   if ! grep -Fq "$section_id" "$fleet_skill"; then
     fail "$fleet_skill is missing required section check $section_id"
   fi
 done
-
-report_writing="$repo_root/skills/node-rca-rcca/references/report-writing.md"
-for section_id in summary node-details impact timeline root-cause contributing-factors actions validation evidence unknowns; do
-  if ! grep -Fq "$section_id" "$report_writing"; then
-    fail "$report_writing is missing required section id $section_id"
+fleet_section_order=(
+  '1. Fleet Summary:'
+  '2. Fleet Distribution:'
+  '3. Active Alerts:'
+  '4. Error Distribution:'
+)
+previous_line=0
+for section in "${fleet_section_order[@]}"; do
+  line=$(awk -v needle="$section" 'index($0, needle) { print NR; exit }' "$fleet_skill")
+  if [ -z "$line" ] || [ "$line" -le "$previous_line" ]; then
+    fail "$fleet_skill has a missing or out-of-order report section: $section"
   fi
+  previous_line=$line
+done
+for section_id in summary node-details evidence root-cause corrective-actions references unknowns; do
+  if ! grep -Fq "$section_id" "$node_skill"; then
+    fail "$node_skill is missing required section id $section_id"
+  fi
+done
+node_section_order=(
+  '1. Executive Summary:'
+  '2. Node Details:'
+  '3. Alert Evidence:'
+  '4. Root Cause Analysis:'
+  '5. Corrective Action Plan:'
+  '6. References:'
+  '7. Assumptions and Unknowns:'
+)
+previous_line=0
+for section in "${node_section_order[@]}"; do
+  line=$(awk -v needle="$section" 'index($0, needle) { print NR; exit }' "$node_skill")
+  if [ -z "$line" ] || [ "$line" -le "$previous_line" ]; then
+    fail "$node_skill has a missing or out-of-order report section: $section"
+  fi
+  previous_line=$line
 done
 
 echo "All agent skills are valid."

@@ -1,207 +1,117 @@
 ---
 name: fleet-health-report
-description: Generate a standalone fleet-wide HTML health snapshot from live nvfleetint data, including node health, capacity, alerts, error trends, and machines needing attention. Use for fleet dashboards, executive summaries, recurring issue analysis, or fleet-wide reports. Do not use for a single-node root-cause investigation.
+description: Generate a standalone fleet-wide HTML health snapshot from live nvfleetint data, including node health, capacity, active-alert impact, recent errors, and machines needing immediate attention. Use for fleet dashboards, executive summaries, or scoped fleet reports. Do not use for a single-node root-cause investigation.
 ---
 
 # Fleet Health Report
 
-Generate one offline HTML snapshot from fresh `nvfleetint` evidence. Use
-`node-rca-rcca` for one-node investigations.
-
-Read [`references/cli-contract.md`](references/cli-contract.md) before querying
-and [`references/html-report-template.md`](references/html-report-template.md)
-before writing. Read [`references/workspace.md`](references/workspace.md)
-before capturing full lists.
-
-## Rules
-
-- Read only; never mutate fleet state.
-- Use live JSON evidence from this invocation. Record command, exit status, and
-  collection time; never invent missing values.
-- Preserve timestamps/zones and mark unavailable values `N/A`.
-- **Resolve scope first.** Ask for the entire fleet, compute-zone names, or
-  node-group names when omitted. Never ask the user for IDs; accept one only if
-  volunteered. Keep resolved IDs internal.
-- **Probe before `--all`.**
-- Use one alert strategy at a time and one capture file per pull. The client
-  retries failed pages; never retry the whole command in a loop.
-- Give alert collection at most 10 minutes and one strategy transition. On
-  required-data failure, publish nothing and return probe totals plus the failed
-  command/partition.
-- Leave only the final HTML; follow the workspace reference for capture isolation
-  and cleanup.
+Generate one offline HTML snapshot from fresh `nvfleetint` JSON. Read the [CLI contract](references/cli-contract.md), [HTML theme](references/html-theme.md), and [workspace guide](references/workspace.md) before collecting data.
 
 ## Workflow
 
-### 1. Resolve profile, scope, and window
+### 1. Resolve and verify the profile
 
-Follow the contract's profile rules and pass one profile consistently.
-
-Name filters are partial matches. For exact report scope, enumerate lightweight
-identities, match names locally, and confirm ambiguous matches using recognizable
-detail metadata—not raw IDs:
+Resolve credentials before any report query:
 
 ```bash
-nvfleetint computezone list --view basic --all --output json
-nvfleetint nodegroup list --view basic --all --output json
+nvfleetint auth list --output json
+nvfleetint auth status --profile <profile> --output json
 ```
 
-In normalized `--all` output, match `.items[].name` and retain its `.id`.
+Use the user-named profile or the sole configured profile. If multiple profiles exist and none was requested, ask which one to use and identify the current one as the default suggestion. Require `connection` equal to `ok`, then pass the same explicit `--profile <profile>` to every API-backed command below.
 
-Then apply internal IDs to node queries:
+### 2. Collect overview
+
+Collect the tenant overview before inventory:
 
 ```bash
-nvfleetint node list --compute-zone-ids <zone-ids> ...
-nvfleetint node list --nodegroup-ids <nodegroup-ids> ...
+nvfleetint overview --profile <profile> --output json
 ```
 
-Use `overview` as the headline only for an entire-fleet report. For scoped
-reports, derive totals from filtered nodes. The alert and error-report APIs
-cannot filter by zone/group; state this limitation and never label tenant-wide
-data as scoped.
+Use it for the entire-fleet headline. In a scoped report, label it fleet-wide context and derive scoped totals from the filtered node list instead.
 
-Pin comparison boundaries once (24h default):
+### 3. Collect inventory and resolve scope
+
+Accept the entire fleet, compute-zone names, or node-group names. List compute zones first, node groups second, and nodes third. Resolve supplied names to IDs internally; clarify only ambiguous name matches.
+
+Probe each list with the same filters, `--view basic` where supported, and `--page-size 1` before its full pull. Collect the full lists in this order:
 
 ```bash
-now=$(date +%s)
-if date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
-  # GNU/Linux date
-  end=$(date -u -d "@$now" +%Y-%m-%dT%H:%M:%SZ)
-  cur_start=$(date -u -d "@$((now - 86400))" +%Y-%m-%dT%H:%M:%SZ)
-  prev_start=$(date -u -d "@$((now - 172800))" +%Y-%m-%dT%H:%M:%SZ)
-elif date -u -r "$now" -v-1H +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
-  # BSD/macOS date
-  end=$(date -u -r "$now" +%Y-%m-%dT%H:%M:%SZ)
-  cur_start=$(date -u -r "$now" -v-24H +%Y-%m-%dT%H:%M:%SZ)
-  prev_start=$(date -u -r "$now" -v-48H +%Y-%m-%dT%H:%M:%SZ)
-else
-  echo "unsupported date implementation" >&2
-  exit 1
-fi
+nvfleetint computezone list --all --profile <profile> --output json
+nvfleetint nodegroup list --all --profile <profile> --output json
+nvfleetint node list <scope> --all --profile <profile> --output json
 ```
 
-### 2. Probe cardinality
+After the first two lists, apply resolved `--compute-zone-ids` or `--nodegroup-ids` to the node query.
 
-Run before full pulls, with supported scope filters:
+### 4. Collect recent errors
+
+Pin one 24-hour error window. Use GNU `date -u -d "@$now"` and `date -u -d "@$((now - 86400))"`, or BSD/macOS `date -u -r "$now"` and `date -u -r "$now" -v-24H`, formatted as RFC3339 UTC.
 
 ```bash
-nvfleetint node list <scope> --view basic --page-size 1 --output json
-nvfleetint nodegroup list <scope> --view basic --page-size 1 --output json
-nvfleetint computezone list <scope> --view basic --page-size 1 --output json
-nvfleetint alert list --page-size 1 --output json
+nvfleetint report error --view list --group-by error \
+  --start "$start" --end "$end" --all \
+  --profile <profile> --output json
 ```
 
-Read top-level totals. If an alert probe returns items but total is zero/absent,
-treat cardinality as unknown and use the large-fleet path.
+Sum row `count`; pagination total counts grouped rows, not error occurrences. The error API cannot filter by zone/group, so label it tenant-wide in a scoped report or omit it when strictly scoped evidence is required.
 
-### 3. Collect inventory
+### 5. Collect filtered active alerts
+
+Discover the server-supported filter values first:
 
 ```bash
-nvfleetint overview --output json                         # entire fleet only
-nvfleetint computezone list <scope> --all --output json
-nvfleetint nodegroup list <scope> --all --output json
-nvfleetint node list <scope> --all --output json
+nvfleetint alert options --view active --profile <profile> --output json
 ```
 
-Keep overview metrics. For demonstrated slow node pages above 1,000 rows, use the
-contract's longer per-request timeout guidance.
+From the returned `componentTypes` options, build a comma-separated list of component IDs excluding exact IDs `psirt` and `agent_liveness`. Stop if no component IDs remain.
 
-### 4. Collect alerts adaptively
-
-Use **5,000 alerts** as the fixed threshold:
-
-- Below 5,000: try one `alert list --all --output json`.
-- At/above 5,000 or unknown: probe each severity, then run in parallel into
-  separate captures:
-  - `alert list --severity Critical --all --output json`
-  - `alert list --severity Warning --all --output json`
-- If the small unfiltered pull ends in timeout/final 5xx, malformed JSON, or an
-  incomplete envelope, discard its capture and switch once to the split. Never
-  retry unfiltered.
-- Never overlap strategies or writers. On `Extra data`/truncation, discard the
-  capture; if either severity partition then fails, stop.
-
-Critical and Warning are disjoint and cover the documented domain. Validate each
-partition before union. For scoped reports, join the complete alert set to the
-scoped node UUIDs; surface alerts lacking UUIDs as unassignable.
-
-### 5. Collect trends
+Request the filtered count of all affected nodes and up to 10 machines ordered by active-alert count:
 
 ```bash
-nvfleetint report error --view list --group-by error   --start "$cur_start" --end "$end" --all --output json
-nvfleetint report error --view list --group-by error   --start "$prev_start" --end "$cur_start" --all --output json
+nvfleetint alert summary <scope> --view active \
+  --component-type <component-types> \
+  --sort-by alert --order desc --page-size 10 \
+  --profile <profile> --output json
 ```
 
-Sum row `count`; pagination total counts grouped rows, not errors. In scoped
-reports, label this tenant-wide or omit it for strictly scoped evidence. Query
-alert timeline or error-by-node only when materially useful.
+Use summary `.total` for all Nodes with Active Alerts and `.totalCritical`/`.totalWarning` for filtered fleet-wide severity totals. The bounded page contains up to 10 machines ordered by active-alert count; state `showing N of total` when applicable. Do not fetch every affected node merely to count or rank them.
 
-## Validate and derive
-
-Apply the shared completeness contract. Additionally:
-
-- Validate `overview` as a single object.
-- For split alerts, record
-  `Critical.count + Warning.count` (reported total, otherwise validated item
-  count). Duplicate IDs across severities are a contract error.
-- Compare composed count with the unfiltered probe. Accept and disclose drift up
-  to `max(100, 1% of probe)`. Beyond that, refresh the three one-row alert
-  probes once; stop if still outside the bound.
-- For entire-fleet reports, reconcile overview node/group/zone totals with list
-  totals. Refresh probes once on an order-of-magnitude mismatch, then stop.
-
-Derive only these semantics:
-
-| Output | Source/rule |
-| --- | --- |
-| Totals and backend health % | Entire fleet: overview; scoped: filtered nodes. Label source. |
-| Node status counts | Complete nodes; retain unknown/missing values. |
-| Active alerts | Complete single/composed alerts by severity/component. Preserve unexpected severity as Other. |
-| Derived health score | `100 * healthy / total`, labeled report-derived. Never average with backend score. |
-| Fleet metrics | Present overview `metrics` fields verbatim; label tenant-wide in scoped reports. |
-| Trend | Current/previous summed errors, delta, direction, percent; previous zero means new increase/no change. |
-| Recurrence | Errors positive in both windows; label current-only new and previous-only no longer observed. |
-| Attention | Critical count + Unhealthy first; then warnings/other alerts and Degraded/Unknown; then node-local agent/firmware/verification outliers. |
-
-Join alerts to nodes by UUID. Stream captures or load once to build full
-per-node severity/component counts. Cap only presentation tables (top 25 by
-default) and state `showing 25 of N`.
-
-A nonhealthy operational value shared by 100% of evaluated nodes is a
-fleet-uniform signal: count it in overall status and mention it once, but exclude
-it from top-N tie-breaking.
-
-Overall status:
-
-- Critical: any Critical alert or Unhealthy node.
-- Needs attention: otherwise any Warning/Other alert, Degraded/Unknown node,
-  offline/unknown agent, failed/unknown firmware, or non-verified/missing
-  verification.
-- Healthy: at least one node and no attention signal.
-- No data: no nodes, or every node lacks health.
-
-## Build and deliver
-
-Follow the HTML template. Use semantic HTML, inline CSS/optional JS, no external
-assets, HTML-escape backend strings, and include:
-
-1. At a glance: scope, timestamp, totals, health, alerts, derived formula, and
-   backend score when applicable.
-2. Distribution and operational signals.
-3. Equal-window trend.
-4. Issue concentration.
-5. Machines needing immediate attention.
-6. Evidence-based action summary when supported.
-
-Validate markup, escaping, headline values, closing HTML, and every required
-section by ID:
+For each returned UUID only, fetch its full filtered drill-down:
 
 ```bash
-for id in at-a-glance distribution trend concentration attention; do
+nvfleetint alert node <node_uuid> --view active \
+  --component-type <component-types> --all \
+  --profile <profile> --output json
+```
+
+Run at most four node calls concurrently. This workflow makes at most 12 calls: one options call, one summary call, and up to 10 node calls.
+
+### 6. Derive and write the report
+
+- Entire fleet: show `overview.healthPercentage` once as `Fleet Health Percentage`. Scoped: show `100 * healthy / total` once as `Healthy Node Percentage` and its formula. Do not show both or repeat the percentage in Fleet Summary.
+- Keep node health/severity at source level; present fleet counts and distributions without an aggregate fleet severity badge.
+- Join the returned summary machines to inventory by UUID and preserve the returned order.
+- Use node-alert rows only for those machines' drill-down detail; do not infer unseen component distribution.
+
+Apply the shared HTML theme and use these four report sections:
+
+1. Fleet Summary: executive summary, fleet totals, and health distribution.
+2. Fleet Distribution: compute zones, node groups, capacity, and operational signals.
+3. Active Alerts: filtered Nodes with Active Alerts, severity aggregates, Machines Needing Immediate Attention (up to 10), and one expandable per-machine drill-down showing component, status, start time, last update, and available evidence text.
+4. Error Distribution: grouped recent errors over the pinned window.
+
+### 7. Validate and deliver
+
+Apply the CLI contract's completeness checks. The bounded summary page is the only intentional partial result; use its top-level aggregates for fleet-wide claims. For an entire-fleet report, reconcile overview totals with complete inventory totals.
+
+Validate the final HTML:
+
+```bash
+for id in at-a-glance distribution alerts errors; do
   grep -q "id=\"$id\"" "$out" || exit 1
 done
 grep -q '</html>' "$out" && ! grep -qE '\[[a-z_]+\]' "$out"
 ```
 
-Remove temporary artifacts and return the report path, scope, collection time,
-and horizon. On evidence failure, return no report.
+Leave only the final HTML and return its path, scope, collection time, and error window.

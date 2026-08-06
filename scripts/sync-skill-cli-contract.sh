@@ -5,9 +5,9 @@
 set -euo pipefail
 
 repo_root=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
-# Portable skills cannot reference sibling skill directories. Keep nvfleetint's
-# copy canonical in the repository and package byte-identical copies with the two
-# report skills; validate-skills.sh rejects drift.
+# Portable skills cannot reference sibling skill directories. Package
+# byte-identical shared references inside both report skills; validate-skills.sh
+# rejects drift.
 canonical="$repo_root/skills/nvfleetint/references/cli-contract.md"
 
 targets=(
@@ -18,4 +18,9 @@ for target in "${targets[@]}"; do
   cp -- "$canonical" "$target"
 done
 
-echo "Synchronized portable CLI contract copies."
+cp -- "$repo_root/skills/fleet-health-report/references/html-theme.md" \
+  "$repo_root/skills/node-rca-rcca/references/html-theme.md"
+cp -- "$repo_root/skills/fleet-health-report/references/workspace.md" \
+  "$repo_root/skills/node-rca-rcca/references/workspace.md"
+
+echo "Synchronized portable shared report references."
