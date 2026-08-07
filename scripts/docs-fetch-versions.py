@@ -19,8 +19,8 @@ Usage:
     fern docs dev
     git checkout fern/docs.yml   # restore when done
 
-    # Include RC tags as placeholders for version groups with no stable release
-    # (local preview only — the publish workflow never passes this flag):
+    # Include RC tags as placeholders for version groups with no stable release.
+    # Use for local preview or a manual pre-release publish dispatch:
     python3 scripts/docs-fetch-versions.py --include-rc --patch-fern-docs
     fern docs dev
     git checkout fern/docs.yml
@@ -238,12 +238,16 @@ def patch_fern_docs_yml(manifest: list[dict]) -> None:
         ]
     versions_block = "\n".join(versions_lines) + "\n"
     content = docs_yml.read_text()
-    patched = re.sub(
+    patched, count = re.subn(
         r"^navigation:(\n  .*)*\n",
         versions_block,
         content,
         flags=re.MULTILINE,
     )
+    if count != 1:
+        raise RuntimeError(
+            f"Expected exactly one top-level navigation: block in fern/docs.yml, found {count}"
+        )
     docs_yml.write_text(patched)
 
 
@@ -269,8 +273,7 @@ def main() -> None:
         help=(
             "Fall back to the latest RC tag for version groups that have no stable "
             "release yet. RC-sourced versions are labeled '(Preview)' in the version "
-            "selector. Intended for local preview only — the publish workflow never "
-            "passes this flag."
+            "selector. Use for local preview or a manual pre-release publish dispatch."
         ),
     )
     args = parser.parse_args()

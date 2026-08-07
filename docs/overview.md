@@ -67,13 +67,14 @@ nvfleetint node list
 Credentials are stored in named profiles; with no name, `auth add` uses one
 called `default`, so single-tenant setup is the one command above. To work
 against several tenants or endpoints, name them: add more with `nvfleetint auth
-add <name>`, switch the default with `nvfleetint auth use <name>`, and select one
+add <name> --api-key <your-ngc-api-key>`, switch the default with `nvfleetint auth use <name>`, and select one
 for a single command with `--profile`. Re-running `auth add` with an existing
 name changes that profile in place, which is how a key is rotated — replacing a
 stored key confirms first, since the old one cannot be recovered (`--yes` skips
 the prompt):
 
 ```bash
+nvfleetint auth add dev --api-key <your-ngc-api-key>
 nvfleetint node list --profile dev
 ```
 

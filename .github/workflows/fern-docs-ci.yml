@@ -22,6 +22,7 @@ on:
     paths:
       - 'docs/**'
       - 'fern/**'
+      - 'scripts/docs-fetch-versions.py'
       - '.github/workflows/fern-docs-ci.yml'
   workflow_dispatch: {}
   ## --- OPTION: NVIDIA copy-PR-bot trigger ---
@@ -75,6 +76,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-tags: true
 
       ## --- OPTION: filename convention check (warning) ---
       # - name: Warn on non-lowercase or underscore markdown filenames
@@ -112,17 +115,18 @@ jobs:
           fi
           npm install -g "fern-api@${VERSION}"
 
-      - name: Check MDX safety
-        run: |
-          BAD=$(grep -rn '<img\b[^>]*[^/]>\|<img>' docs/ fern/ --include="*.md" --include="*.mdx" || true)
-          if [ -n "$BAD" ]; then
-            echo "::error::Non-self-closing <img> tags found (MDX requires <img ... />):"
-            echo "$BAD"
-            exit 1
-          fi
+      - name: Generate versioned docs
+        run: python3 scripts/docs-fetch-versions.py --patch-fern-docs
 
       - name: Fern check
         run: fern check
+
+      - name: Fern MDX check
+        run: fern docs md check
+
+      - name: Restore fern/docs.yml
+        if: always()
+        run: git checkout fern/docs.yml
 
       - name: Check links
         uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0

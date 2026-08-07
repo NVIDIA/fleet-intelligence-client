@@ -68,6 +68,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-tags: true
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -112,12 +113,16 @@ jobs:
 
           content = Path("fern/docs.yml").read_text()
           # Replace the navigation: block (HEAD mode) with versions: (publish mode)
-          patched = re.sub(
+          patched, count = re.subn(
               r"^navigation:(\n  .*)*\n",
               versions_block,
               content,
               flags=re.MULTILINE,
           )
+          if count != 1:
+              raise RuntimeError(
+                  f"Expected exactly one top-level navigation: block in fern/docs.yml, found {count}"
+              )
           Path("fern/docs.yml").write_text(patched)
           PYEOF
 
