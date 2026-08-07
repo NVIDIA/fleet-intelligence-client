@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+instances:
+  - url: fleet-intel.docs.buildwithfern.com/fleet-intel/client
+    custom-domain: docs.nvidia.com/fleet-intel/client
+    multi-source: true
+
+title: NVIDIA Fleet Intelligence Client
+
+global-theme: nvidia
+
+metadata:
+  canonical-host: "docs.nvidia.com/fleet-intel/client"
+
+# HEAD navigation — used by fern check (PRs) and fern docs dev (local preview).
+# The publish workflow replaces this block with a versioned `versions:` list
+# built from release tags at publish time. Do not edit the versions: block here;
+# it is entirely CI-managed. Update this navigation: block when pages are added
+# or removed from docs/.
+navigation:
+  - page: Overview
+    path: ../docs/overview.md
+    slug: overview
+  - page: Architecture
+    path: ../docs/architecture.md
+    slug: architecture
+  - page: CLI
+    path: ../docs/cli.md
+    slug: cli
+  - page: Go SDK
+    path: ../docs/sdk.md
+    slug: sdk
+  - page: Agent Skills
+    path: ../docs/skills.md
+    slug: skills
+  - page: Verify Releases
+    path: ../docs/verify-releases.md
+    slug: verify-releases
+
+redirects:
+  - source: "/fleet-intel/client/index.html"
+    destination: "/fleet-intel/client/"
+
+logo:
+  href: /fleet-intel/client
+  right-text: Fleet Intelligence Client
+
+navbar-links:
+  - type: secondary
+    text: Fleet Intelligence Docs
+    url: https://docs.nvidia.com/fleet-intel
+  - type: github
+    value: https://github.com/NVIDIA/fleet-intelligence-client
+
+experimental:
+  mdx-components:
+    - ./components
