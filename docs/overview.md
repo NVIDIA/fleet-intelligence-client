@@ -1,7 +1,5 @@
 # NVIDIA Fleet Intelligence Client
 
-## Overview
-
 `nvfleetint` provides command-line and Go interfaces to NVIDIA Fleet
 Intelligence.
 
@@ -30,7 +28,7 @@ curl -fsSL https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/d
 The installer verifies the release checksum and, on macOS, the Developer ID
 signature and Apple notarization ticket before installing the executable.
 For publisher-authenticated verification using the signed checksum manifest,
-see [Verify release artifacts](docs/verify-releases.md).
+see [Verify release artifacts](verify-releases.md).
 
 #### Windows
 
@@ -49,7 +47,7 @@ Add the `nvfleetint` package to a Go module:
 go get github.com/NVIDIA/fleet-intelligence-client/nvfleetint
 ```
 
-See the [Go SDK guide](docs/sdk.md) for client setup and usage.
+See the [Go SDK guide](sdk.md) for client setup and usage.
 
 ## Quick Start
 
@@ -69,13 +67,14 @@ nvfleetint node list
 Credentials are stored in named profiles; with no name, `auth add` uses one
 called `default`, so single-tenant setup is the one command above. To work
 against several tenants or endpoints, name them: add more with `nvfleetint auth
-add <name>`, switch the default with `nvfleetint auth use <name>`, and select one
+add <name> --api-key <your-ngc-api-key>`, switch the default with `nvfleetint auth use <name>`, and select one
 for a single command with `--profile`. Re-running `auth add` with an existing
 name changes that profile in place, which is how a key is rotated — replacing a
 stored key confirms first, since the old one cannot be recovered (`--yes` skips
 the prompt):
 
 ```bash
+nvfleetint auth add dev --api-key <your-ngc-api-key>
 nvfleetint node list --profile dev
 ```
 
@@ -93,16 +92,4 @@ npx skills add NVIDIA/fleet-intelligence-client \
 ```
 
 Install and authenticate `nvfleetint` first. See
-[Agent Skills](docs/skills.md) for available skills and usage guidance.
-
-## Documentation
-
-- [CLI guide](docs/cli.md)
-- [Go SDK](docs/sdk.md)
-- [OpenAPI contract](api/openapi/openapi.yaml)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-
-This project is available under the [Apache License 2.0](LICENSE). Open a
-[GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues) for
-support, and report vulnerabilities through the [security policy](SECURITY.md).
+[Agent Skills](skills.md) for available skills and usage guidance.
