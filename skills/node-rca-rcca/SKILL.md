@@ -48,11 +48,19 @@ nvfleetint alert node <node_uuid> --view historical --without-psirt --all \
   --profile <profile> --output json
 ```
 
-Treat the default view as current active alerts. Aggregate current and historical alerts by component ID/display name and status, deduplicating the same `alertUuid` across both sets. For each current alert, count prior historical rows with the same component ID after excluding its own `alertUuid`, and record the most recent prior occurrence. Empty alert sets are valid evidence.
+Describe every unique current alert:
+
+```bash
+nvfleetint alert describe <alert_uuid> --node <node_uuid> --profile <profile> --output json
+```
+
+Run at most four describe calls concurrently. Use each description's timeline, messages, errors, incidents, and suggested actions to identify the exact issue; treat missing optional fields as unavailable evidence.
+
+Treat the default node view as current active alerts. Aggregate current and historical alerts by component ID/display name and status, deduplicating the same `alertUuid` across both sets. For each current alert, count prior historical rows with the same component ID after excluding its own `alertUuid`, and record the most recent prior occurrence. Empty alert sets are valid evidence.
 
 ### 4. Determine the root cause
 
-Validate every response with the CLI contract before analysis. Correlate node state, current alerts, and historical alerts by component and time. State:
+Validate every response with the CLI contract before analysis. Correlate node state, current alert descriptions, and historical alerts by component and time. State:
 
 - observed symptoms and impact;
 - the most specific supported root cause;
@@ -75,7 +83,7 @@ Apply the shared HTML theme and workspace workflow. Summarize saved JSON rather 
 
 1. Executive Summary: node, collection time, impact, root cause, and confidence.
 2. Node Details: relevant node metadata.
-3. Alert Evidence: first show aggregate current and historical counts grouped by component and status, then show a collapsed `<details>` breakdown for every current alert with its status, component, timing, prior occurrence count, and most recent prior occurrence.
+3. Alert Evidence: first show aggregate current and historical counts grouped by component and status, then show a collapsed `<details>` breakdown for every current alert with its described issue, timeline evidence, status, component, timing, prior occurrence count, and most recent prior occurrence.
 4. Root Cause Analysis: reasoning, competing explanations, and evidence gaps.
 5. Corrective Action Plan: containment, corrective, preventive, and validation actions.
 6. References: cited corrective-action sources.

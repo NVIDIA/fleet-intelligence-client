@@ -20,7 +20,7 @@ Read this before querying live data.
 
 - Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `event buckets`, `tag list`, and `report error --view overview|graph`.
 - Single pages use backend arrays (`nodes`, `nodeGroups`, `computezones`, `alerts`, `events`) plus top-level `total`, `page`, and `pageSize`. Most use `hasMore`; `alert list` uses nonempty `pageCursorNext` instead. `alert summary` uses `nodes`, `alert node` uses `alerts`, and report-error list uses `nodes`.
-- `--all` normalizes every list to `{items, pagination:{total,hasMore,pagesFetched}}`.
+- `--all` normalizes every paginated list to `{items, pagination:{total,hasMore,pagesFetched}}`; non-paginated commands keep their native shape.
 - Count cheaply with the same filters plus `--page-size 1`, reading `.total`. For `alert summary`, `.total` is nodes with matching alerts; use `totalCritical` and `totalWarning` for alert aggregates. `tag list` is the exception: count its non-paginated `tags`.
 - `--view basic` returns identities only: node returns hostname/UUID; compute zone and node group return `id`/`name`. Node basic rejects `--health`, `--agent-status`, `--verification-check`, and `--firmware-check`, and sorts only by hostname or nodeUUID. Node-group basic rejects health, gpu-type, and sorting.
 
@@ -30,7 +30,7 @@ Use backend names: `healthStatus`, `integrityCheck`, `integrityCheckReason`, `la
 
 ## Completeness
 
-Before analysis require exit 0, nonempty valid JSON, and no top-level `error`/`api_error`. For every `--all` response require an `items` array, `hasMore == false`, `pagesFetched >= 1`, and—when `total > 0`—item count equal to total. A nonempty result with `total: 0` means total was unreported; label it and rely on traversal evidence. Empty with `hasMore: false` is valid.
+Before analysis require exit 0, nonempty valid JSON, and no top-level `error`/`api_error`. For every `--all` response require an `items` array, `hasMore == false`, `pagesFetched >= 1`, and—when `total > 0`—item count equal to total. A missing or null total is unreported; a nonempty result with explicit `total: 0` is malformed. Empty with `hasMore: false` is valid.
 
 Filtered pulls may be composed only when each is complete and the disjoint filters cover the domain. Record each reported total or validated item count, then union. Never analyze partial pages. On malformed/incomplete data, use only the report workflow's allowed fallback or stop.
 

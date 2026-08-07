@@ -125,7 +125,8 @@ required_fleet_rules=(
   '--component-type <component-types> --all'
   'agent_liveness'
   'comma-separated list of component IDs excluding exact IDs `psirt` and `agent_liveness`'
-  'at most 12 calls'
+  'Alert collection invokes at most 12 `nvfleetint` commands'
+  'An `--all` command may make multiple paginated requests.'
   'Do not fetch every affected node merely to count or rank them.'
   'Nodes with Active Alerts'
   'Machines Needing Immediate Attention (up to 10)'
@@ -211,6 +212,10 @@ for required in 'nvfleetint auth list --output json' \
   'Aggregate current and historical alerts by component ID/display name and status' \
   'deduplicating the same `alertUuid` across both sets' \
   'count prior historical rows with the same component ID after excluding its own `alertUuid`' \
+  'Describe every unique current alert' \
+  'Use each description' \
+  'timeline, messages, errors, incidents, and suggested actions' \
+  'Run at most four describe calls concurrently' \
   'collapsed `<details>` breakdown for every current alert' \
   'Prefer official NVIDIA documentation' \
   'Never include hostname, node UUID, profile, tenant, or customer data in a query'; do
@@ -219,7 +224,8 @@ for required in 'nvfleetint auth list --output json' \
   fi
 done
 for required in 'alert node <node_uuid> --without-psirt --all' \
-  'alert node <node_uuid> --view historical --without-psirt --all'; do
+  'alert node <node_uuid> --view historical --without-psirt --all' \
+  'alert describe <alert_uuid> --node <node_uuid> --profile <profile> --output json'; do
   if ! grep -Fq "$required" "$node_skill"; then
     fail "$node_skill is missing required alert command: $required"
   fi
@@ -232,6 +238,7 @@ node_collection_order=(
   'nvfleetint node describe'
   'nvfleetint alert node <node_uuid> --without-psirt'
   'nvfleetint alert node <node_uuid> --view historical'
+  'nvfleetint alert describe <alert_uuid>'
 )
 previous_line=0
 for command in "${node_collection_order[@]}"; do

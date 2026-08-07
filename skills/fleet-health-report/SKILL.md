@@ -85,7 +85,7 @@ nvfleetint alert node <node_uuid> --view active \
   --profile <profile> --output json
 ```
 
-Run at most four node calls concurrently. This workflow makes at most 12 calls: one options call, one summary call, and up to 10 node calls.
+Run at most four node calls concurrently. Alert collection invokes at most 12 `nvfleetint` commands: one options command, one summary command, and up to 10 node commands. An `--all` command may make multiple paginated requests.
 
 ### 6. Derive and write the report
 
