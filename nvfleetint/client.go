@@ -115,8 +115,13 @@ func NewClient(baseURL, apiKey string, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(client)
 	}
+	// The size cap sits innermost so every retry attempt is bounded on its own
+	// and every consumer of requestDoer inherits it.
 	client.requestDoer = &retryingDoer{
-		inner:       client.httpClient,
+		inner: &limitingDoer{
+			inner:    client.httpClient,
+			maxBytes: maxResponseBytes,
+		},
 		maxAttempts: defaultRequestAttempts,
 	}
 
@@ -237,10 +242,24 @@ func originHostPort(u *url.URL) string {
 	return net.JoinHostPort(u.Hostname(), port)
 }
 
-// Clones base (preserving proxy, keep-alive, and HTTP/2 defaults) and pins at
-// least a TLS 1.2 floor, since Go's default has none. An existing stricter
-// floor is left alone. Returns nil when base is not an *http.Transport, leaving
-// the caller to fall back to net/http's own default.
+// Connection pool bounds for the default transport. A client talks to a single
+// API host, and net/http's defaults fit that badly in both directions:
+// MaxConnsPerHost is unlimited, so a concurrent embedder can open sockets
+// against the backend without bound, while MaxIdleConnsPerHost of 2 sends most
+// of those connections through a fresh TCP and TLS handshake. Capping the total
+// and sizing the idle pool to match bounds the fan-out and lets repeated calls
+// reuse a warm connection.
+const (
+	maxConnsPerHost     = 32
+	maxIdleConnsPerHost = maxConnsPerHost
+	maxIdleConns        = maxConnsPerHost
+)
+
+// Clones base (preserving proxy, keep-alive, and HTTP/2 defaults), pins at
+// least a TLS 1.2 floor, since Go's default has none, and bounds the connection
+// pool. An existing stricter floor or tighter pool limit is left alone. Returns
+// nil when base is not an *http.Transport, leaving the caller to fall back to
+// net/http's own default.
 func hardenedTransport(base http.RoundTripper) *http.Transport {
 	transport, ok := base.(*http.Transport)
 	if !ok {
@@ -254,8 +273,22 @@ func hardenedTransport(base http.RoundTripper) *http.Transport {
 	if cloned.TLSClientConfig.MinVersion < tls.VersionTLS12 {
 		cloned.TLSClientConfig.MinVersion = tls.VersionTLS12
 	}
+	cloned.MaxConnsPerHost = boundedConns(cloned.MaxConnsPerHost, maxConnsPerHost)
+	cloned.MaxIdleConns = boundedConns(cloned.MaxIdleConns, maxIdleConns)
+	cloned.MaxIdleConnsPerHost = boundedConns(cloned.MaxIdleConnsPerHost, maxIdleConnsPerHost)
 
 	return cloned
+}
+
+// Returns the tighter of a configured connection limit and our own. Zero is
+// never the stricter value: net/http reads it as unlimited (MaxConnsPerHost,
+// MaxIdleConns) or as its own small default (MaxIdleConnsPerHost).
+func boundedConns(configured, limit int) int {
+	if configured > 0 && configured < limit {
+		return configured
+	}
+
+	return limit
 }
 
 // Wraps the HTTP Doer to translate the configured timeout firing into a
@@ -474,7 +507,7 @@ func (c *Client) FetchSigningKey(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("fetch signing key: unexpected status %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(newLimitedBody(resp.Body, maxSigningKeyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("read signing key: %w", err)
 	}

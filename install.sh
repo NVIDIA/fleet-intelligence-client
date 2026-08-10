@@ -7,6 +7,16 @@ set -euo pipefail
 
 readonly REPOSITORY="NVIDIA/fleet-intelligence-client"
 
+# Every network call is bounded. Without these a stalled connection leaves the
+# installer -- and any CI job running it -- hanging indefinitely. --retry uses
+# curl's built-in exponential backoff (1s, 2s, 4s ...); --retry-max-time caps
+# the total time spent retrying, and --max-time caps each individual attempt.
+readonly CONNECT_TIMEOUT=10
+readonly METADATA_MAX_TIME=30
+readonly DOWNLOAD_MAX_TIME=300
+readonly RETRY_ATTEMPTS=3
+readonly RETRY_MAX_TIME=120
+
 version="${NVFLEETINT_VERSION:-latest}"
 install_dir="${NVFLEETINT_INSTALL_DIR:-${HOME}/.local/bin}"
 
@@ -81,8 +91,15 @@ case "$(uname -m)" in
     ;;
 esac
 
+curl_retry_opts=(
+  --connect-timeout "$CONNECT_TIMEOUT"
+  --retry "$RETRY_ATTEMPTS"
+  --retry-max-time "$RETRY_MAX_TIME"
+)
+
 if [[ "$version" == "latest" ]]; then
-  latest_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+  latest_url="$(curl -fsSL "${curl_retry_opts[@]}" --max-time "$METADATA_MAX_TIME" \
+    -o /dev/null -w '%{url_effective}' \
     "https://github.com/${REPOSITORY}/releases/latest")"
   version="${latest_url##*/}"
   [[ "$version" == v* ]] || {
@@ -111,8 +128,10 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Downloading nvfleetint ${tag} for ${os}/${arch}"
-curl -fsSL "${base_url}/${asset}" -o "${work_dir}/${asset}"
-curl -fsSL "${base_url}/${checksum_file}" -o "${work_dir}/${checksum_file}"
+curl -fsSL "${curl_retry_opts[@]}" --max-time "$DOWNLOAD_MAX_TIME" \
+  "${base_url}/${asset}" -o "${work_dir}/${asset}"
+curl -fsSL "${curl_retry_opts[@]}" --max-time "$DOWNLOAD_MAX_TIME" \
+  "${base_url}/${checksum_file}" -o "${work_dir}/${checksum_file}"
 
 expected_checksum="$(awk -v name="$asset" '$2 == name || $2 == "*" name { print $1; exit }' \
   "${work_dir}/${checksum_file}")"
