@@ -31,13 +31,20 @@ func TestLimitedBodyAllowsBodyAtLimit(t *testing.T) {
 	}
 }
 
-// Verifies a body one byte past the cap is refused, and that the failure
-// latches so a caller cannot read further by retrying.
+// Verifies a body one byte past the cap is refused, that no more than the cap
+// is ever handed to the caller, and that the failure latches so a caller
+// cannot read further by retrying.
 func TestLimitedBodyRejectsBodyPastLimit(t *testing.T) {
-	body := newLimitedBody(io.NopCloser(strings.NewReader(strings.Repeat("a", 65))), 64)
+	const maxBytes = 64
+	body := newLimitedBody(io.NopCloser(strings.NewReader(strings.Repeat("a", maxBytes+1))), maxBytes)
 
-	if _, err := io.ReadAll(body); !errors.Is(err, ErrResponseTooLarge) {
+	read, err := io.ReadAll(body)
+	if !errors.Is(err, ErrResponseTooLarge) {
 		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
+	}
+	// The byte read to detect the overrun must not reach the caller.
+	if len(read) != maxBytes {
+		t.Fatalf("read %d bytes, want %d", len(read), maxBytes)
 	}
 	if _, err := body.Read(make([]byte, 1)); !errors.Is(err, ErrResponseTooLarge) {
 		t.Fatalf("expected latched ErrResponseTooLarge, got %v", err)

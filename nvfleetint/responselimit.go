@@ -80,7 +80,13 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 	n, err := b.inner.Read(p)
 	b.remaining -= int64(n)
 	if b.remaining < 0 {
-		return n, b.tooLargeError()
+		// The budget is blown, so the detection byte (and anything a
+		// misbehaving reader wrote past it) is dropped rather than handed
+		// out: a caller must never see more than limit bytes. remaining
+		// stays negative, which latches the failure for later reads.
+		allowed := max(int64(n)+b.remaining, 0)
+
+		return int(allowed), b.tooLargeError()
 	}
 
 	return n, err
