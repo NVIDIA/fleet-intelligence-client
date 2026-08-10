@@ -30,7 +30,11 @@ function Invoke-WithRetry {
         [Parameter(Mandatory = $true)][string]$Description
     )
 
-    for ($attempt = 1; $attempt -le $RetryAttempts; $attempt++) {
+    # $RetryAttempts is the number of *retries*, matching curl's --retry in
+    # install.sh, so the initial attempt is on top of it.
+    $MaxAttempts = $RetryAttempts + 1
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         try {
             return & $Action
         } catch {
@@ -41,13 +45,13 @@ function Invoke-WithRetry {
             try { $status = [int]$_.Exception.Response.StatusCode } catch { $status = $null }
             $retryable = (-not $status) -or ($status -ge 500) -or ($status -eq 408) -or ($status -eq 429)
 
-            if (-not $retryable -or $attempt -eq $RetryAttempts) {
+            if (-not $retryable -or $attempt -eq $MaxAttempts) {
                 throw "$Description failed: $($_.Exception.Message)"
             }
 
             # Exponential backoff: 1s, 2s, 4s ...
             $delay = [int][math]::Pow(2, $attempt - 1)
-            Write-Host "$Description failed (attempt $attempt of $RetryAttempts): $($_.Exception.Message). Retrying in $delay second(s)."
+            Write-Host "$Description failed (attempt $attempt of $MaxAttempts): $($_.Exception.Message). Retrying in $delay second(s)."
             Start-Sleep -Seconds $delay
         }
     }
