@@ -115,8 +115,13 @@ func NewClient(baseURL, apiKey string, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(client)
 	}
+	// The size cap sits innermost so every retry attempt is bounded on its own
+	// and every consumer of requestDoer inherits it.
 	client.requestDoer = &retryingDoer{
-		inner:       client.httpClient,
+		inner: &limitingDoer{
+			inner:    client.httpClient,
+			maxBytes: maxResponseBytes,
+		},
 		maxAttempts: defaultRequestAttempts,
 	}
 
@@ -474,7 +479,7 @@ func (c *Client) FetchSigningKey(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("fetch signing key: unexpected status %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(newLimitedBody(resp.Body, maxSigningKeyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("read signing key: %w", err)
 	}
