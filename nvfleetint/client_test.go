@@ -125,6 +125,65 @@ func TestHardenedTransportAddsMissingTLSConfig(t *testing.T) {
 	}
 }
 
+// Verifies transport hardening bounds the connection pool, which net/http
+// leaves unlimited per host by default
+func TestHardenedTransportBoundsConnectionPool(t *testing.T) {
+	hardened := hardenedTransport(&http.Transport{})
+
+	if hardened == nil {
+		t.Fatal("expected a hardened transport")
+		return
+	}
+	if hardened.MaxConnsPerHost != maxConnsPerHost {
+		t.Fatalf("unexpected MaxConnsPerHost: got %d, want %d", hardened.MaxConnsPerHost, maxConnsPerHost)
+	}
+	if hardened.MaxIdleConns != maxIdleConns {
+		t.Fatalf("unexpected MaxIdleConns: got %d, want %d", hardened.MaxIdleConns, maxIdleConns)
+	}
+	if hardened.MaxIdleConnsPerHost != maxIdleConnsPerHost {
+		t.Fatalf("unexpected MaxIdleConnsPerHost: got %d, want %d", hardened.MaxIdleConnsPerHost, maxIdleConnsPerHost)
+	}
+}
+
+// Verifies transport hardening keeps a caller's tighter connection limits
+func TestHardenedTransportPreservesTighterConnectionLimits(t *testing.T) {
+	hardened := hardenedTransport(&http.Transport{
+		MaxConnsPerHost:     4,
+		MaxIdleConns:        3,
+		MaxIdleConnsPerHost: 2,
+	})
+
+	if hardened == nil {
+		t.Fatal("expected a hardened transport")
+		return
+	}
+	if hardened.MaxConnsPerHost != 4 {
+		t.Fatalf("unexpected MaxConnsPerHost: got %d, want 4", hardened.MaxConnsPerHost)
+	}
+	if hardened.MaxIdleConns != 3 {
+		t.Fatalf("unexpected MaxIdleConns: got %d, want 3", hardened.MaxIdleConns)
+	}
+	if hardened.MaxIdleConnsPerHost != 2 {
+		t.Fatalf("unexpected MaxIdleConnsPerHost: got %d, want 2", hardened.MaxIdleConnsPerHost)
+	}
+}
+
+// Verifies the shared default transport carries the connection pool bounds
+func TestDefaultHTTPClientBoundsConnectionPool(t *testing.T) {
+	transport, ok := defaultHTTPClient().Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("expected an *http.Transport, got %T", defaultHTTPClient().Transport)
+		return
+	}
+
+	if transport.MaxConnsPerHost != maxConnsPerHost {
+		t.Fatalf("unexpected MaxConnsPerHost: got %d, want %d", transport.MaxConnsPerHost, maxConnsPerHost)
+	}
+	if transport.MaxIdleConnsPerHost != maxIdleConnsPerHost {
+		t.Fatalf("unexpected MaxIdleConnsPerHost: got %d, want %d", transport.MaxIdleConnsPerHost, maxIdleConnsPerHost)
+	}
+}
+
 // Verifies transport hardening declines round trippers it cannot clone
 func TestHardenedTransportRejectsForeignRoundTripper(t *testing.T) {
 	if hardened := hardenedTransport(roundTripperFunc(nil)); hardened != nil {
