@@ -17,8 +17,47 @@ $ProgressPreference = "SilentlyContinue"
 $repository = "NVIDIA/fleet-intelligence-client"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+# Every network call is bounded. Without these a stalled connection leaves the
+# installer -- and any CI job running it -- hanging indefinitely. Windows
+# PowerShell 5.1 has no -MaximumRetryCount, so retries are done here.
+$MetadataTimeoutSeconds = 30
+$DownloadTimeoutSeconds = 300
+$RetryAttempts = 3
+
+function Invoke-WithRetry {
+    param(
+        [Parameter(Mandatory = $true)][scriptblock]$Action,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    for ($attempt = 1; $attempt -le $RetryAttempts; $attempt++) {
+        try {
+            return & $Action
+        } catch {
+            # Retry only what may succeed later: transport failures and
+            # timeouts (no status code), 5xx, 408, and 429. A 404 for a
+            # nonexistent release must fail immediately.
+            $status = $null
+            try { $status = [int]$_.Exception.Response.StatusCode } catch { $status = $null }
+            $retryable = (-not $status) -or ($status -ge 500) -or ($status -eq 408) -or ($status -eq 429)
+
+            if (-not $retryable -or $attempt -eq $RetryAttempts) {
+                throw "$Description failed: $($_.Exception.Message)"
+            }
+
+            # Exponential backoff: 1s, 2s, 4s ...
+            $delay = [int][math]::Pow(2, $attempt - 1)
+            Write-Host "$Description failed (attempt $attempt of $RetryAttempts): $($_.Exception.Message). Retrying in $delay second(s)."
+            Start-Sleep -Seconds $delay
+        }
+    }
+}
+
 if ($Version -eq "latest") {
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repository/releases/latest"
+    $release = Invoke-WithRetry -Description "Resolving the latest release" -Action {
+        Invoke-RestMethod -Uri "https://api.github.com/repos/$repository/releases/latest" `
+            -TimeoutSec $MetadataTimeoutSeconds -UseBasicParsing
+    }
     $Version = $release.tag_name
 }
 
@@ -53,8 +92,14 @@ $extractDir = Join-Path $workDir "extract"
 try {
     New-Item -ItemType Directory -Path $workDir | Out-Null
     Write-Host "Downloading nvfleetint $tag for windows/$architecture"
-    Invoke-WebRequest -Uri "$baseUrl/$asset" -OutFile $archive -UseBasicParsing
-    Invoke-WebRequest -Uri "$baseUrl/checksums.txt" -OutFile $checksumPath -UseBasicParsing
+    Invoke-WithRetry -Description "Downloading $asset" -Action {
+        Invoke-WebRequest -Uri "$baseUrl/$asset" -OutFile $archive `
+            -TimeoutSec $DownloadTimeoutSeconds -UseBasicParsing
+    }
+    Invoke-WithRetry -Description "Downloading checksums.txt" -Action {
+        Invoke-WebRequest -Uri "$baseUrl/checksums.txt" -OutFile $checksumPath `
+            -TimeoutSec $DownloadTimeoutSeconds -UseBasicParsing
+    }
 
     $escapedAsset = [regex]::Escape($asset)
     $checksumLine = Get-Content $checksumPath | Where-Object {
