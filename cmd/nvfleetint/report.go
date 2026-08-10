@@ -86,6 +86,7 @@ func newReportCmd() *cobra.Command {
 	cmd.AddCommand(newReportInventoryCmd())
 	cmd.AddCommand(newReportErrorCmd())
 	cmd.AddCommand(newReportVerifyCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -100,6 +101,7 @@ func newReportInventoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inventory",
 		Short: "Generate an inventory report",
+		Args:  cobra.NoArgs,
 		Long: `Generate an inventory report for the fleet.
 
 Use --signed with --format csv to download a signed CSV bundle (a zip
@@ -137,6 +139,7 @@ func newReportErrorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "error",
 		Short: "Generate an error report",
+		Args:  cobra.NoArgs,
 		Long: `Generate an error report for the fleet.
 
 Views:
@@ -181,6 +184,7 @@ func newReportVerifyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "verify",
 		Short: "Verify a signed inventory report",
+		Args:  cobra.NoArgs,
 		Long: `Verify a signed inventory report downloaded with
 "report inventory --format csv --signed".
 

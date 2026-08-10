@@ -52,6 +52,7 @@ func newEventCmd() *cobra.Command {
 
 	cmd.AddCommand(newEventListCmd())
 	cmd.AddCommand(newEventBucketsCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -64,6 +65,7 @@ func newEventListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List events",
+		Args:  cobra.NoArgs,
 		Long: `List events filtered by node, component, and a time range.
 
 A time range is required: use --window for a relative range, or --start and
@@ -92,6 +94,7 @@ func newEventBucketsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "buckets",
 		Short: "Show time-bucketed event counts",
+		Args:  cobra.NoArgs,
 		Long: `Show time-bucketed event counts for histogram display, filtered by node,
 component, and a time range.
 

@@ -155,6 +155,21 @@ func optionalSingleArg(name string) cobra.PositionalArgs {
 	}
 }
 
+// Makes a resource group such as `node` reject an unknown subcommand instead of
+// printing its help and exiting 0, so a typo'd command in a script fails loudly
+// rather than reporting success having done nothing. Both fields are needed:
+// cobra skips Args validation on a command that has no Run of its own.
+//
+// Only groups need this. Cobra applies the same check to the root command
+// automatically (where it also suggests near-misses), and every leaf command
+// declares its own Args.
+func rejectUnknownSubcommands(cmd *cobra.Command) {
+	cmd.Args = cobra.NoArgs
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		return cmd.Help()
+	}
+}
+
 // Returns common flag values and whether pagination flags were supplied
 func resolveCommonFlags(cmd *cobra.Command, flags *commonFlags) resolvedCommonFlags {
 	return resolvedCommonFlags{
@@ -241,6 +256,7 @@ func newVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print version information",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			commonFlags := resolveCommonFlags(cmd, common)
 			if err := validateReadCommonFlags(commonFlags); err != nil {

@@ -101,12 +101,6 @@ func newAlertCmd() *cobra.Command {
 			"  nvfleetint alert node <node-uuid>\n" +
 			"  nvfleetint alert describe <alert-uuid> --node <node-uuid>\n" +
 			"  nvfleetint alert list --severity Critical",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
-			}
-			return cmd.Help()
-		},
 	}
 
 	cmd.AddCommand(newAlertListCmd())
@@ -114,6 +108,7 @@ func newAlertCmd() *cobra.Command {
 	cmd.AddCommand(newAlertNodeCmd())
 	cmd.AddCommand(newAlertDescribeCmd())
 	cmd.AddCommand(newAlertOptionsCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -125,6 +120,7 @@ func newAlertListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List alerts",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertList(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -146,6 +142,7 @@ func newAlertSummaryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "summary",
 		Short: "Summarize impacted nodes and their alert counts",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertSummary(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -199,6 +196,7 @@ func newAlertOptionsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "options",
 		Short: "List available alert filters and sorting options",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertTimelineOptions(cmd, flags, resolveCommonFlags(cmd, common))
 		},

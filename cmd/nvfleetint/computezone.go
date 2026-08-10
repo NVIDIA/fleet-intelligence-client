@@ -38,6 +38,7 @@ func newComputeZoneCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newComputeZoneListCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -52,6 +53,7 @@ func newComputeZoneListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List compute zones",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runComputeZoneList(cmd, flags, resolveCommonFlags(cmd, common))
 		},

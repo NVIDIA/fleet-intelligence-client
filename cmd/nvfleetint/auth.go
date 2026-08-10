@@ -70,14 +70,6 @@ it is read from stdin, so it stays out of shell history.
 The profile is the object of these commands, so add/remove/use name it
 positionally. Commands that call the API instead select a profile with
 --profile; without it they use the current profile.`,
-		// Without these an unrecognized subcommand — `auth update`, which used to
-		// exist — prints the help text and exits 0, so a key-rotation script
-		// would report success having changed nothing. Cobra skips Args
-		// validation on a command with no RunE, hence both.
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help()
-		},
 	}
 
 	cmd.AddCommand(newAuthAddCmd())
@@ -85,6 +77,10 @@ positionally. Commands that call the API instead select a profile with
 	cmd.AddCommand(newAuthUseCmd())
 	cmd.AddCommand(newAuthListCmd())
 	cmd.AddCommand(newAuthStatusCmd())
+	// Without this an unrecognized subcommand — `auth update`, which used to
+	// exist — prints the help text and exits 0, so a key-rotation script would
+	// report success having changed nothing.
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }

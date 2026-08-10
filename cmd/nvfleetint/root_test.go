@@ -8,6 +8,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -256,5 +259,148 @@ func TestRequireSingleArg(t *testing.T) {
 	err = validate(nil, []string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "only one node UUID may be given, got 2") {
 		t.Fatalf("expected too-many-args error, got: %v", err)
+	}
+}
+
+// Cobra's default is to accept and silently ignore positional arguments, so a
+// command that declares no Args validator runs normally when given one:
+// `nvfleetint node list abcd` would print the whole node list, and a group like
+// `nvfleetint node bogus` would print help and exit 0. Every command must
+// therefore state what it takes. Root is exempt because cobra applies the same
+// check to it for free (and there also suggests near-misses).
+func TestEveryCommandDeclaresArgsValidator(t *testing.T) {
+	var walk func(cmd *cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		if cmd.Args == nil {
+			t.Errorf("%s declares no Args validator, so it silently accepts stray arguments", cmd.CommandPath())
+		}
+		for _, child := range cmd.Commands() {
+			walk(child)
+		}
+	}
+
+	root := newRootCmd()
+	for _, child := range root.Commands() {
+		walk(child)
+	}
+}
+
+// The behavior the validators above buy, end to end. Each case must fail
+// *because of* the argument: a bare "expected an error" would also pass on the
+// "no profile configured" error these commands raise once they reach the API.
+func TestCommandsRejectUnexpectedArguments(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{"list command", []string{"node", "list", "abcd"}, `unknown command "abcd" for "nvfleetint node list"`},
+		{"read command", []string{"overview", "abcd"}, `unknown command "abcd" for "nvfleetint overview"`},
+		{"local command", []string{"version", "abcd"}, `unknown command "abcd" for "nvfleetint version"`},
+		{"report subcommand", []string{"report", "inventory", "abcd"}, `unknown command "abcd" for "nvfleetint report inventory"`},
+		{"group typo", []string{"node", "bogus"}, `unknown command "bogus" for "nvfleetint node"`},
+		{"auth group typo", []string{"auth", "update"}, `unknown command "update" for "nvfleetint auth"`},
+		{"unknown top-level command", []string{"bogus"}, `unknown command "bogus" for "nvfleetint"`},
+		{"too many args", []string{"node", "describe", "uuid-a", "uuid-b"}, "only one node UUID may be given, got 2"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			// Credentials have to be configured for the command to get as far as
+			// a request, so that "no request was made" means the argument was
+			// rejected rather than that there was nothing to authenticate with.
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Errorf("%v reached the API: %s %s", tt.args, r.Method, r.URL.Path)
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer server.Close()
+			saveTestConfig(t, server.URL, "test-key")
+
+			cmd := newRootCmd()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatalf("%v was accepted; output: %q", tt.args, out.String())
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("%v: got error %q, want it to contain %q", tt.args, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// Reads the positional arity a command advertises in its Use line: `<uuid>` is
+// required, `[<name>]` is optional. Keeping this in sync with the Args
+// validator is the point of the test below — a command whose help promises one
+// argument but accepts three is as much a bug as one that accepts a stray word.
+func arityFromUse(use string) (minArgs, maxArgs int) {
+	for _, token := range strings.Fields(use)[1:] {
+		switch {
+		case strings.HasPrefix(token, "[<"):
+			maxArgs++
+		case strings.HasPrefix(token, "<"):
+			minArgs++
+			maxArgs++
+		}
+	}
+	return minArgs, maxArgs
+}
+
+// Sweeps every command in the tree at every arity it does not accept — too few
+// as well as too many — rather than trusting a hand-picked sample. A command
+// that takes one UUID has to reject zero and two, not just the stray-word case.
+func TestEveryCommandRejectsWrongArgCount(t *testing.T) {
+	var commands []*cobra.Command
+	var collect func(cmd *cobra.Command)
+	collect = func(cmd *cobra.Command) {
+		commands = append(commands, cmd)
+		for _, child := range cmd.Commands() {
+			collect(child)
+		}
+	}
+	for _, child := range newRootCmd().Commands() {
+		collect(child)
+	}
+
+	for _, cmd := range commands {
+		path := strings.Fields(cmd.CommandPath())[1:]
+		minArgs, maxArgs := arityFromUse(cmd.Use)
+
+		for count := 0; count <= maxArgs+1; count++ {
+			if count >= minArgs && count <= maxArgs {
+				continue // an accepted arity; running it would call the API
+			}
+			t.Run(fmt.Sprintf("%s/%d args", cmd.CommandPath(), count), func(t *testing.T) {
+				t.Setenv("HOME", t.TempDir())
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					t.Errorf("reached the API: %s %s", r.Method, r.URL.Path)
+					w.WriteHeader(http.StatusInternalServerError)
+				}))
+				defer server.Close()
+				saveTestConfig(t, server.URL, "test-key")
+
+				args := append([]string{}, path...)
+				for i := 0; i < count; i++ {
+					args = append(args, fmt.Sprintf("extra%d", i))
+				}
+
+				root := newRootCmd()
+				var out bytes.Buffer
+				root.SetOut(&out)
+				root.SetErr(&out)
+				root.SetIn(strings.NewReader(""))
+				root.SetArgs(args)
+
+				if err := root.Execute(); err == nil {
+					t.Errorf("%v took %d positional args, want %d-%d; output: %q",
+						args, count, minArgs, maxArgs, out.String())
+				}
+			})
+		}
 	}
 }
