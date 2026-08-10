@@ -10,9 +10,22 @@ or [service key](https://org.ngc.nvidia.com/identity-access/service-keys), then
 store it:
 
 ```bash
-nvfleetint auth add --api-key <your-ngc-api-key>
+nvfleetint auth add
 nvfleetint auth status
 ```
+
+`auth add` asks for the key and the API URL on stdin.
+
+```
+$ nvfleetint auth add
+API key:
+API URL [production: https://api.fleet-intelligence.nvidia.com]:
+Profile "default" added.
+```
+
+Prompts and their warnings are written to stderr, so stdout stays parseable. An
+answer that is rejected — an empty key, a malformed URL — is asked for again, up
+to three times.
 
 With no name, that stores the key in a profile called `default`. If you only
 work against one tenant, that is the whole of it — the rest of this section is
@@ -29,11 +42,11 @@ A profile pairs an API key with an API URL, so one installation can work
 against several tenants or endpoints:
 
 ```bash
-nvfleetint auth add prod --api-key <ngc-api-key>
-nvfleetint auth add dev --api-key <ngc-api-key> --api-url https://dev.example.com
+nvfleetint auth add prod            # prompts for the key, keeps the production URL
+nvfleetint auth add dev             # prompts for the key, answer the URL prompt with your endpoint
 nvfleetint auth list
 nvfleetint auth use prod            # pick the default
-nvfleetint auth add dev --api-key <rotated-key>   # existing name: rotate the key (prompts)
+nvfleetint auth add dev             # existing name: rotate the key
 nvfleetint auth remove dev
 ```
 
@@ -53,32 +66,31 @@ Without `--profile`, commands use the current profile — the one marked `*` by
 
 `auth add` creates a profile or changes an existing one — there is no separate
 update command, so re-running it with the same name is how a key is rotated. On
-an existing name the change is partial: an omitted flag leaves that value
-untouched, so rotating a key preserves a custom API URL and vice versa. The
-output says `added` or `updated`, which is how you notice a name collision;
-`auth list` shows what is already taken. A new profile still requires `--api-key`,
-and re-running `auth add <name>` with no flags at all is an error rather than a
-reset to defaults.
+an existing name the change is partial: the key prompt then offers to keep the
+stored key and the URL prompt offers the stored URL, so pressing Enter at either
+one leaves that value untouched. Rotating a key preserves a custom API URL and
+vice versa, and keeping both is reported as `unchanged` rather than treated as an
+error. The output otherwise says `added` or `updated`, which is how you notice a
+name collision; `auth list` shows what is already taken. A new profile still
+requires a key, because there is nothing stored to keep.
 
 The name is optional only on `auth add`, where omitting it means the `default`
 profile. `auth remove` and `auth use` always require one: defaulting a deletion
 or a switch would act on a profile you never named.
 
-An empty value is rejected rather than treated as "clear this field", so
-`--api-key "$KEY"` with `KEY` unset fails instead of silently wiping the stored key.
+An empty answer always means "keep what is stored", never "clear this field", so
+piping an unset `$KEY` leaves the stored key alone instead of wiping it.
 
-Because replacing a stored API key destroys a value that cannot be
-recovered, `--api-key` on a profile that already has one asks for confirmation
-before writing — the prompt names the fields being replaced, goes to stderr, and
-defaults to No. Nothing else prompts: creating a profile, changing only its API
-URL, and supplying the first key for a profile that has none all take nothing
-away. Pass `--yes` to skip the prompt; in a script or CI job, where stdin is not
-a terminal, the command refuses to prompt and tells you to use `--yes` rather
-than hanging:
+Replacing a stored API key destroys a value that cannot be recovered, so
+`auth add` on a profile that already has one prints a warning above the key
+prompt. At a terminal, typing a new key is itself the answer to that warning —
+there is no second confirmation. Pressing Enter keeps the stored key without ever
+displaying it.
 
-```bash
-nvfleetint auth add prod --api-key <rotated-key> --yes
-```
+Replacing a stored key this way requires `--yes`; without it the command fails
+and tells you so rather than overwriting a key nobody confirmed. `--yes` is not
+needed to create a profile, to change only its API URL, or to supply the first
+key for a profile that has none — none of those take anything away.
 
 `auth remove` deletes an API key that cannot be recovered, so it asks for
 confirmation. The prompt is written to stderr (stdout stays parseable) and

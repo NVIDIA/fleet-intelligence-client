@@ -64,7 +64,8 @@ func newAuthCmd() *cobra.Command {
 Each profile pairs an NGC API key with an API URL, so one installation can
 work against several tenants or endpoints. "add" both creates and changes a
 profile, so it is also how a key is rotated, and its name is optional — with one
-tenant, "nvfleetint auth add --api-key <ngc-api-key>" is the whole setup.
+tenant, "nvfleetint auth add" is the whole setup. The API key is never a flag:
+it is read from stdin, so it stays out of shell history.
 
 The profile is the object of these commands, so add/remove/use name it
 positionally. Commands that call the API instead select a profile with
@@ -102,7 +103,6 @@ func requireProfileNameArg() cobra.PositionalArgs {
 }
 
 func newAuthAddCmd() *cobra.Command {
-	var apiKey, apiURL string
 	var skipConfirm bool
 
 	cmd := &cobra.Command{
@@ -110,22 +110,26 @@ func newAuthAddCmd() *cobra.Command {
 		Short: "Add a credential profile, or change an existing one",
 		Long: `Store an NGC API key and API URL under a profile name.
 
+The key and the URL are read from stdin, not from flags: a key passed on the
+command line is recorded in shell history and visible in the process list for as
+long as the command runs.
+
 The name is optional: omitting it targets the profile named "` + config.DefaultProfileName + `",
 so a single-tenant setup never has to invent one.
 
-An existing profile is changed in place, so this is also the key-rotation path.
-The change is partial: an omitted flag leaves that value alone, and rotating a
-key therefore preserves a custom API URL.
+At a terminal the key is typed without being echoed, and the API URL is offered
+with a value to accept — the production endpoint for a new profile, the stored
+one for an existing profile — so pressing Enter keeps it. An existing profile is
+changed in place, which makes this the key-rotation path; pressing Enter at the
+key prompt keeps the stored key without ever displaying it.
 
-Replacing a stored API key destroys it, so that prompts for confirmation;
-pass --yes to skip the prompt in a script. Creating a profile, changing only its
-API URL, or supplying the first key for a profile that has none replaces nothing
-recoverable and never prompts.`,
-		Example: `  nvfleetint auth add --api-key <ngc-api-key>
-  nvfleetint auth add prod --api-key <ngc-api-key>
-  nvfleetint auth add dev --api-key <ngc-api-key> --api-url https://dev.example.com
-  nvfleetint auth add prod --api-key <rotated-key> --yes
-  nvfleetint auth add dev --api-url https://other.example.com`,
+With stdin piped in, the first line is the API key and the second is the API
+URL. Either may be blank to keep the stored or default value. Replacing a stored
+key that way needs --yes, since there is nobody to warn.`,
+		Example: `  nvfleetint auth add
+  nvfleetint auth add prod
+  printf '%s\n' "$NGC_API_KEY" | nvfleetint auth add prod --yes
+  printf '%s\n%s\n' "$NGC_API_KEY" https://dev.example.com | nvfleetint auth add dev`,
 		Args: optionalSingleArg("profile name"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// No name means the default profile, so first-time setup is a single
@@ -139,48 +143,43 @@ recoverable and never prompts.`,
 				return err
 			}
 
-			// Changed() rather than a non-empty check, so an omitted flag is
-			// distinguishable from one supplied as empty — which is rejected
-			// below rather than treated as "clear this credential", since
-			// `--api-key "$KEY"` with KEY unset would otherwise wipe the key.
-			inputs := authAddInputs{
-				apiKeySet: cmd.Flags().Changed("api-key"),
-				apiURLSet: cmd.Flags().Changed("api-url"),
-				apiKey:    strings.TrimSpace(apiKey),
-			}
-			if inputs.apiKeySet && inputs.apiKey == "" {
-				return errors.New("--api-key cannot be empty")
-			}
-			if inputs.apiURLSet && strings.TrimSpace(apiURL) == "" {
-				return errors.New("--api-url cannot be empty")
-			}
-			// Validated before the config file is read or written, so bad input
-			// can never leave stored credentials disturbed. Whether a key is
-			// *required* depends on the profile existing, so that check has to
-			// wait until the config is read.
-			if inputs.apiURL, err = resolveNewAPIURL(apiURL); err != nil {
-				return err
-			}
-
-			// Read once outside the lock to decide whether this overwrites a
-			// stored key, so the prompt never blocks other processes on the
-			// config lock while it waits for an answer. Any error the plan
-			// raises is reported before prompting, so we never ask about a
-			// command that was going to fail anyway.
+			// Read once outside the lock, so the questions can offer to keep
+			// what is already stored without holding the config lock while
+			// waiting for an answer. The write below re-reads under the lock,
+			// so this snapshot only shapes the prompts.
 			cfg, err := config.Load()
 			if err != nil {
 				return err
 			}
-			if _, _, err := resolveAuthAddProfile(cfg, name, inputs); err != nil {
+			current, lookupErr := cfg.Profile(name)
+			if lookupErr != nil && !errors.Is(lookupErr, config.ErrProfileNotFound) {
+				return lookupErr
+			}
+			exists := lookupErr == nil
+
+			prompt := newCredentialPrompt(cmd.InOrStdin(), cmd.ErrOrStderr())
+			inputs, err := promptForCredentials(prompt, name, current, exists)
+			if err != nil {
 				return err
 			}
-			confirmed := skipConfirm
-			if !confirmed && destroysStoredKey(cfg.Profiles[name], inputs) {
-				if err := clihelpers.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), overwriteProfileSummary(name, cfg.Profiles[name], inputs)); err != nil {
-					return err
-				}
-				confirmed = true
+
+			out := cmd.OutOrStdout()
+			// Keeping both values is a legitimate answer — the whole point of
+			// offering them — so it is reported rather than rewritten.
+			if exists && !inputs.apiKeySet && !inputs.apiURLSet {
+				fmt.Fprintf(out, "Profile %q unchanged.\n", name)
+				return nil
 			}
+			// Replacing a stored key destroys it. At a terminal the key prompt
+			// says so and typing a new key is the answer to it; with input
+			// piped in nobody saw the warning, so --yes has to carry the intent.
+			if destroysStoredKey(current, inputs) && !skipConfirm && !prompt.terminal {
+				return fmt.Errorf(
+					"profile %q already has an API key; re-run with --yes to replace it", name)
+			}
+			// Only a warning the user actually saw counts as consent, so this
+			// stays false when there was no stored key to warn about.
+			confirmed := skipConfirm || (prompt.terminal && destroysStoredKey(current, inputs))
 
 			var wroteOver, becameCurrent bool
 			cfg, err = config.Edit(func(cfg *config.Config) error {
@@ -217,7 +216,6 @@ recoverable and never prompts.`,
 			if err != nil {
 				return err
 			}
-			out := cmd.OutOrStdout()
 			if wroteOver {
 				fmt.Fprintf(out, "Profile %q updated.\n", name)
 			} else {
@@ -231,16 +229,14 @@ recoverable and never prompts.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&apiKey, "api-key", "", "NGC API key")
-	cmd.Flags().StringVar(&apiURL, "api-url", "", "Fleet Intelligence API URL")
 	cmd.Flags().BoolVar(&skipConfirm, "yes", false,
-		"Skip the confirmation prompt shown when a profile is overwritten")
+		"Replace a stored API key when stdin is piped in rather than typed")
 
 	return cmd
 }
 
-// authAddInputs is what `auth add` was told to store. The *Set fields record
-// whether a flag was supplied at all, which is what separates "leave this
+// authAddInputs is what `auth add` was answered with. The *Set fields record
+// whether an answer changed anything, which is what separates "leave this
 // alone" from "set it to this".
 type authAddInputs struct {
 	apiKeySet bool
@@ -249,30 +245,64 @@ type authAddInputs struct {
 	apiURL    string
 }
 
+// promptForCredentials asks for the values `auth add` used to take as flags.
+// current is the profile as stored, and is the zero value unless exists.
+func promptForCredentials(prompt *credentialPrompt, name string, current config.Profile, exists bool) (authAddInputs, error) {
+	storedKey := strings.TrimSpace(current.APIKey) != ""
+	switch {
+	case exists && storedKey:
+		// Said before the prompt rather than after the fact: at a terminal,
+		// typing a new key here is the answer to this warning, and there is no
+		// second question to catch a change of mind.
+		prompt.note("Profile %q already exists. Entering a new API key replaces the stored one, which cannot be recovered.", name)
+	case exists:
+		prompt.note("Profile %q already exists but has no API key stored.", name)
+	}
+
+	apiKey, apiKeySet, err := prompt.promptAPIKey(storedKey)
+	if err != nil {
+		return authAddInputs{}, err
+	}
+
+	// A new profile starts from the production endpoint; an existing one from
+	// whatever it already points at, so keeping it is the default answer.
+	currentURL := config.DefaultAPIURL
+	if exists && strings.TrimSpace(current.APIURL) != "" {
+		currentURL = current.APIURL
+	}
+	apiURL, err := prompt.promptAPIURL(currentURL)
+	if err != nil {
+		return authAddInputs{}, err
+	}
+
+	return authAddInputs{
+		apiKeySet: apiKeySet,
+		apiKey:    apiKey,
+		// An answer that matches what is stored changes nothing, and a new
+		// profile has nothing to match, so it always takes the answer.
+		apiURLSet: !exists || apiURL != strings.TrimSpace(current.APIURL),
+		apiURL:    apiURL,
+	}, nil
+}
+
 // resolveAuthAddProfile decides what `auth add` writes for one snapshot of the
-// config, and reports whether the profile already existed. It runs twice per
-// command — once on a loaded copy to decide whether to confirm an overwrite,
-// then again inside config.Edit so the write is planned against the config as
-// it actually is under the lock.
+// config, and reports whether the profile already existed. It is planned
+// against the config as it is under the lock, which the answers the user gave
+// beforehand may no longer describe.
 func resolveAuthAddProfile(cfg config.Config, name string, in authAddInputs) (config.Profile, bool, error) {
 	profile, lookupErr := cfg.Profile(name)
 	existed := lookupErr == nil
 
-	switch {
-	case !existed && !in.apiKeySet:
-		// A profile with no key cannot authenticate anything.
+	// The prompt already refuses to leave a keyless profile, so this catches
+	// only a profile that vanished between the questions and the write.
+	if !existed && !in.apiKeySet {
 		return config.Profile{}, false, errors.New("API key is required")
-	case existed && !in.apiKeySet && !in.apiURLSet:
-		return config.Profile{}, true, fmt.Errorf(
-			"profile %q already exists and nothing was supplied to change; pass --api-key, --api-url, or both",
-			name,
-		)
 	}
 
 	if in.apiKeySet {
 		profile.APIKey = in.apiKey
 	}
-	// On an existing profile an omitted --api-url keeps the stored endpoint; on
+	// On an existing profile an unchanged answer keeps the stored endpoint; on
 	// a new one it takes the default.
 	if in.apiURLSet || !existed {
 		profile.APIURL = in.apiURL
@@ -283,40 +313,14 @@ func resolveAuthAddProfile(cfg config.Config, name string, in authAddInputs) (co
 
 // destroysStoredKey reports whether `auth add` is about to replace a service
 // key that cannot be recovered — the only thing this command destroys, and so
-// the only thing worth prompting about. Creating a profile, changing an API
-// URL, or supplying the first key for a profile that has none all take nothing
-// away, and a prompt that fires when nothing is at stake is one people learn to
-// answer without reading. It also has to stay this narrow because the CLI's own
-// remediation hints (missingAPIKeyError, fixAPIURLHint) name an existing
-// profile: were those to prompt, the printed fix would be unusable in CI.
+// the only thing worth warning about. Creating a profile, changing an API URL,
+// or supplying the first key for a profile that has none all take nothing away,
+// and a warning that fires when nothing is at stake is one people learn to
+// ignore. It also has to stay this narrow because the CLI's own remediation
+// hints (missingAPIKeyError, fixAPIURLHint) name an existing profile: were
+// those to need --yes, the printed fix would be unusable in CI.
 func destroysStoredKey(current config.Profile, in authAddInputs) bool {
 	return in.apiKeySet && strings.TrimSpace(current.APIKey) != ""
-}
-
-// overwriteProfileSummary describes the credentials `auth add` is about to
-// replace. It names only the fields actually being overwritten — warning about
-// an API URL that is not changing would train people to ignore the prompt — and
-// never prints a key, only the endpoint it is paired with.
-func overwriteProfileSummary(name string, current config.Profile, in authAddInputs) string {
-	var replacing []string
-	if in.apiKeySet {
-		replacing = append(replacing, "API key")
-	}
-	if in.apiURLSet {
-		replacing = append(replacing, "API URL")
-	}
-
-	summary := fmt.Sprintf("Profile %q already exists. This replaces its %s.",
-		name, strings.Join(replacing, " and "))
-	if destroysStoredKey(current, in) {
-		if url := strings.TrimSpace(current.APIURL); url != "" {
-			summary += fmt.Sprintf("\nThe stored key for %s cannot be recovered.", url)
-		} else {
-			summary += "\nThe stored key cannot be recovered."
-		}
-	}
-
-	return summary
 }
 
 func newAuthRemoveCmd() *cobra.Command {
@@ -368,7 +372,7 @@ func newAuthRemoveCmd() *cobra.Command {
 			case len(cfg.Profiles) > 0:
 				fmt.Fprintln(out, "No current profile; run `nvfleetint auth use <name>`.")
 			default:
-				fmt.Fprintln(out, "No profiles remain; run `nvfleetint auth add <name> --api-key <api-key>`.")
+				fmt.Fprintln(out, "No profiles remain; run `nvfleetint auth add <name>`.")
 			}
 
 			return nil
@@ -397,7 +401,7 @@ func newAuthUseCmd() *cobra.Command {
 				// "that name is wrong", and needs a different remedy.
 				if len(cfg.Profiles) == 0 {
 					return fmt.Errorf(
-						"%w; run `nvfleetint auth add %s --api-key <api-key>` first",
+						"%w; run `nvfleetint auth add %s` first",
 						config.ErrNoProfile, name,
 					)
 				}
@@ -457,7 +461,7 @@ func newAuthListCmd() *cobra.Command {
 				return clioutput.WriteJSON(out, listOutput)
 			}
 			if len(listOutput.Profiles) == 0 {
-				fmt.Fprintln(out, "No profiles configured. Run `nvfleetint auth add <name> --api-key <api-key>`.")
+				fmt.Fprintln(out, "No profiles configured. Run `nvfleetint auth add <name>`.")
 				return nil
 			}
 
@@ -632,22 +636,6 @@ func withProfileListHint(err error) error {
 	}
 
 	return err
-}
-
-// resolveNewAPIURL validates an --api-url value before it is written to disk,
-// so a bad endpoint fails now rather than on the next command. The rules live
-// in the SDK (nvfleetint.ValidateBaseURL) so the flag, the NVFLEETINT_API_URL
-// override, and the stored profile are all held to the same standard.
-func resolveNewAPIURL(rawURL string) (string, error) {
-	rawURL = strings.TrimSpace(rawURL)
-	if rawURL == "" {
-		return config.DefaultAPIURL, nil
-	}
-	if err := nvfleetint.ValidateBaseURL(rawURL); err != nil {
-		return "", err
-	}
-
-	return rawURL, nil
 }
 
 // shadowedProfileNote warns when an environment variable is overriding part of

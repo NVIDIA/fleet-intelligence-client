@@ -12,7 +12,7 @@ Read this before querying live data.
 ## Auth and profiles
 
 - Require `Connection: ok` from `auth status`; it exits 0 even when auth fails. Exit 77 or HTTP 401/403 is auth failure, not an empty fleet.
-- Never request or expose an API key. Direct users to <https://org.ngc.nvidia.com/identity-access/service-keys> and `nvfleetint auth add --api-key <key>`.
+- Never request or expose an API key. Direct users to <https://org.ngc.nvidia.com/identity-access/service-keys> and `nvfleetint auth add`, which prompts for the key on stdin.
 - If the user names a tenant/environment, use that profile. If multiple profiles exist and none is named, ask which one. Pass the same explicit `--profile <name>` to every report command.
 - Explicit `--profile` ignores `NVFLEETINT_API_KEY` and `NVFLEETINT_API_URL`.
 

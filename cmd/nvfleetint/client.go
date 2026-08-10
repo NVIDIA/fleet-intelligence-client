@@ -73,13 +73,13 @@ func missingAPIKeyError(resolved config.Resolved) error {
 		)
 	case resolved.Profile == "":
 		return fmt.Errorf(
-			"%w; run `nvfleetint auth add <name> --api-key <api-key>`, or set %s%s",
+			"%w; run `nvfleetint auth add <name>`, or set %s%s",
 			config.ErrNoProfile, config.EnvAPIKey, hint,
 		)
 	}
 
 	return fmt.Errorf(
-		"profile %q has no API key; run `nvfleetint auth add %s --api-key <api-key>`%s",
+		"profile %q has no API key; run `nvfleetint auth add %s`%s",
 		resolved.Profile, resolved.Profile, hint,
 	)
 }
@@ -140,10 +140,10 @@ func fixAPIURLHint(resolved config.Resolved) string {
 		return "update " + config.EnvAPIURL
 	}
 	if resolved.Profile != "" {
-		return fmt.Sprintf("run `nvfleetint auth add %s --api-url <https-url>`", resolved.Profile)
+		return fmt.Sprintf("run `nvfleetint auth add %s` and enter an https URL", resolved.Profile)
 	}
 
-	return "run `nvfleetint auth add <name> --api-key <api-key> --api-url <https-url>`"
+	return "run `nvfleetint auth add <name>` and enter an https URL"
 }
 
 // Builds the SDK options implied by resolved common flags
