@@ -356,10 +356,7 @@ func (c *Client) ListAlerts(ctx context.Context, opts ListAlertsOptions) (Alerts
 		params.Severity = &severity
 	}
 	if opts.Page != nil {
-		// /v1/alerts is the only Fleet Intelligence list endpoint that numbers
-		// pages from 1; shift the caller's 0-indexed page to match it.
-		apiPage := *opts.Page + alertsAPIPageOffset
-		params.Page = &apiPage
+		params.Page = cloneInt(opts.Page)
 	}
 	if opts.PageSize != nil {
 		params.PageSize = cloneInt(opts.PageSize)
@@ -650,13 +647,6 @@ func validateAlertTimelineStates(states []AlertTimelineState) error {
 	return nil
 }
 
-// alertsAPIPageOffset bridges the /v1/alerts endpoint's 1-indexed paging to the
-// 0-indexed page numbers this SDK exposes for every list call. /v1/alerts is the
-// only Fleet Intelligence list endpoint that starts at page 1 (see
-// api/openapi/openapi.yaml); ListAlerts shifts the page number by this offset on
-// the way out and rewrites it on the way back so callers never see the quirk.
-const alertsAPIPageOffset = 1
-
 // Decodes alert responses and preserves the original payload
 func decodeAlerts(data []byte) (AlertsPage, error) {
 	var resp fleetapi.ModelsAlertResponse
@@ -665,11 +655,11 @@ func decodeAlerts(data []byte) (AlertsPage, error) {
 	}
 
 	page := AlertsPage{
-		Page:           zeroIndexedAlertsPage(intValue(resp.Page)),
+		Page:           intValue(resp.Page),
 		PageSize:       intValue(resp.PageSize),
 		Total:          intValue(resp.Total),
 		PageCursorNext: stringValue(resp.PageCursorNext),
-		RawJSON:        normalizeRawAlertsPage(data),
+		RawJSON:        append([]byte(nil), data...),
 	}
 	if resp.Alerts != nil {
 		page.Alerts = make([]Alert, 0, len(*resp.Alerts))
@@ -679,45 +669,6 @@ func decodeAlerts(data []byte) (AlertsPage, error) {
 	}
 
 	return page, nil
-}
-
-// zeroIndexedAlertsPage converts a 1-indexed /v1/alerts page number to the
-// 0-indexed value the SDK exposes, guarding against an unexpected non-positive
-// page from the backend.
-func zeroIndexedAlertsPage(apiPage int) int {
-	if apiPage <= 0 {
-		return 0
-	}
-	return apiPage - alertsAPIPageOffset
-}
-
-// normalizeRawAlertsPage rewrites the 1-indexed "page" field in a raw /v1/alerts
-// payload to its 0-indexed equivalent so JSON consumers see the same paging
-// contract as every other list command. The original bytes are returned
-// unchanged when the payload has no usable page field.
-func normalizeRawAlertsPage(data []byte) []byte {
-	var body map[string]json.RawMessage
-	if err := json.Unmarshal(data, &body); err != nil {
-		return append([]byte(nil), data...)
-	}
-	raw, ok := body["page"]
-	if !ok {
-		return append([]byte(nil), data...)
-	}
-	var apiPage int
-	if err := json.Unmarshal(raw, &apiPage); err != nil {
-		return append([]byte(nil), data...)
-	}
-	normalized, err := json.Marshal(zeroIndexedAlertsPage(apiPage))
-	if err != nil {
-		return append([]byte(nil), data...)
-	}
-	body["page"] = normalized
-	out, err := json.Marshal(body)
-	if err != nil {
-		return append([]byte(nil), data...)
-	}
-	return out
 }
 
 // Decodes alert timeline node responses and preserves the original payload

@@ -33,12 +33,12 @@ func TestAlertListAllJSONMergesRawItems(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Query().Get("page") {
+		case "0":
+			requests++
+			_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-1","nodeUUID":"node-1","component":"gpu","severity":"Critical","state":"Triggered","triggeredAt":"2026-05-01T00:00:00Z","extra":"kept"}],"page":0,"pageSize":1,"total":2}`))
 		case "1":
 			requests++
-			_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-1","nodeUUID":"node-1","component":"gpu","severity":"Critical","state":"Triggered","triggeredAt":"2026-05-01T00:00:00Z","extra":"kept"}],"page":1,"pageSize":1,"total":2}`))
-		case "2":
-			requests++
-			_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-2","nodeUUID":"node-1","component":"memory","severity":"Critical","state":"Triggered","triggeredAt":"2026-05-01T00:01:00Z"}],"page":2,"pageSize":1,"total":2}`))
+			_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-2","nodeUUID":"node-1","component":"memory","severity":"Critical","state":"Triggered","triggeredAt":"2026-05-01T00:01:00Z"}],"page":1,"pageSize":1,"total":2}`))
 		default:
 			t.Fatalf("unexpected page: %q", r.URL.Query().Get("page"))
 		}
@@ -88,9 +88,7 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 		if r.URL.Path != "/v1/alerts" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		// --page 1 (1-based) maps to the SDK's 0-based page 0, which the alerts
-		// API sees as its 1-based page 1.
-		if got := r.URL.Query().Get("page"); got != "1" {
+		if got := r.URL.Query().Get("page"); got != "0" {
 			t.Fatalf("unexpected page: %q", got)
 		}
 		if got := r.URL.Query().Get("component"); got != "gpu" {
@@ -101,7 +99,7 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-1","nodeUUID":"node-1","component":"gpu","severity":"Warning","state":"Detected","detectedAt":"2026-05-01T00:00:00Z"}],"page":1,"pageSize":1,"total":2}`))
+		_, _ = w.Write([]byte(`{"alerts":[{"alertUUID":"alert-1","nodeUUID":"node-1","component":"gpu","severity":"Warning","state":"Detected","detectedAt":"2026-05-01T00:00:00Z"}],"page":0,"pageSize":1,"total":2}`))
 	}))
 	defer server.Close()
 

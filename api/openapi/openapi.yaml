@@ -262,13 +262,13 @@ paths:
           schema:
             default: false
             type: boolean
-        - description: 'Page number (0-indexed, default: 0)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: 'Number of nodes per page (default: 50, max: 100)'
+        - description: Number of nodes per page
           in: query
           name: pageSize
           schema:
@@ -474,13 +474,13 @@ paths:
             items:
               type: string
             type: array
-        - description: 'Page number (0-indexed, default: 0)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: 'Number of alerts per page (default: 50, max: 100)'
+        - description: Number of alerts per page
           in: query
           name: pageSize
           schema:
@@ -560,20 +560,18 @@ paths:
               - asc
               - desc
             type: string
-        - description: Page number (0-indexed); only applied when pageSize is supplied
+        - description: 'Page number (0-indexed). Only applied when pageSize is supplied,
+            but always validated: an invalid value returns 400 either way'
           in: query
           name: page
           schema:
             default: 0
-            minimum: 0
             type: integer
-        - description: Timeline events per page (1-100). Omit for the full, unpaginated
-            timeline (default behavior)
+        - description: Timeline events per page. Omit for the full, unpaginated timeline
+            (default behavior)
           in: query
           name: pageSize
           schema:
-            maximum: 100
-            minimum: 1
             type: integer
       responses:
         '200':
@@ -641,13 +639,13 @@ paths:
           name: severity
           schema:
             type: string
-        - description: 'Page number (default: 1)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
-            default: 1
+            default: 0
             type: integer
-        - description: 'Page size (default: 50, max: 100)'
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -708,13 +706,13 @@ paths:
           name: severity
           schema:
             type: string
-        - description: 'Page number (default: 1)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
-            default: 1
+            default: 0
             type: integer
-        - description: 'Page size (default: 50, max: 100)'
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -818,13 +816,13 @@ paths:
             items:
               type: string
             type: array
-        - description: 'Page number (default: 0)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: 'Page size (default: 20, max: 100)'
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -975,13 +973,13 @@ paths:
           name: component
           schema:
             type: string
-        - description: 'Page number (default: 0)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: 'Page size (default: 50, max: 100)'
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -1378,13 +1376,13 @@ paths:
           name: nodeUUID
           schema:
             type: string
-        - description: 'Page number (0-based, default: 0)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: 'Page size (default: 20, max: 100)'
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -1627,13 +1625,13 @@ paths:
               - asc
               - desc
             type: string
-        - description: 'Page number (default: 0)'
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: 'Page size (default: 20, max: 100)'
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -1821,7 +1819,7 @@ paths:
               - detail
               - basic
             type: string
-        - description: Page number
+        - description: Page number (0-indexed)
           in: query
           name: page
           schema:
@@ -2048,7 +2046,7 @@ paths:
           schema:
             default: 0
             type: integer
-        - description: Page size (max 100)
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -2465,7 +2463,7 @@ paths:
           schema:
             default: 0
             type: integer
-        - description: Page size (max 100)
+        - description: Page size
           in: query
           name: pageSize
           schema:
@@ -2944,15 +2942,15 @@ paths:
               - json
               - csv
             type: string
-        - description: Page number (Not used for CSV format, graph view, or overview
-            view)
+        - description: Page number (0-indexed). Not used for CSV format, graph view,
+            or overview view
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: Page size (Not used for CSV format, graph view, or overview
-            view)
+        - description: Page size. Not used for CSV format, graph view, or overview
+            view
           in: query
           name: pageSize
           schema:
@@ -3084,13 +3082,13 @@ paths:
         auto-removed alike; absent for active nodes).'
       operationId: getV1ReportsInventory
       parameters:
-        - description: Page number (Not used for CSV format)
+        - description: Page number (0-indexed). Not used for CSV format
           in: query
           name: page
           schema:
             default: 0
             type: integer
-        - description: Page size (Not used for CSV format)
+        - description: Page size. Not used for CSV format
           in: query
           name: pageSize
           schema:
@@ -4681,6 +4679,12 @@ components:
           type: string
         chassisSN:
           example: '1583425610002'
+          type: string
+        cliqueID:
+          example: 0
+          type: integer
+        clusterUUID:
+          example: 6e4e8ea1-6b2a-4c3e-8b8f-b854f77a7f1a
           type: string
         gpuIndex:
           example: '0'

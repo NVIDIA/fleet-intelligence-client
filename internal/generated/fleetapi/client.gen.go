@@ -1600,6 +1600,8 @@ type ModelsGPUDevice struct {
 	BoardID      *int    `json:"boardID,omitempty"`
 	BusID        *string `json:"busID,omitempty"`
 	ChassisSN    *string `json:"chassisSN,omitempty"`
+	CliqueID     *int    `json:"cliqueID,omitempty"`
+	ClusterUUID  *string `json:"clusterUUID,omitempty"`
 	GpuIndex     *string `json:"gpuIndex,omitempty"`
 	MinorID      *string `json:"minorID,omitempty"`
 	Sn           *string `json:"sn,omitempty"`
@@ -2343,10 +2345,10 @@ type GetV1AlertTimelineNodesParams struct {
 	// Active Active Alerts view when true; Historical Alerts when false (default: false)
 	Active *bool `form:"active,omitempty" json:"active,omitempty"`
 
-	// Page Page number (0-indexed, default: 0)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Number of nodes per page (default: 50, max: 100)
+	// PageSize Number of nodes per page
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 
 	// Hostname Case-insensitive partial match on hostname
@@ -2412,10 +2414,10 @@ type GetV1AlertTimelineNodesNodeUuidAlertsParams struct {
 	// ComputeZoneIds Node-level filter carried from Level 1: match the node's compute zone by ID (OR within dimension)
 	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
 
-	// Page Page number (0-indexed, default: 0)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Number of alerts per page (default: 50, max: 100)
+	// PageSize Number of alerts per page
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2433,10 +2435,10 @@ type GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams struct {
 	// Order Sort direction on event time: 'desc' (default, most recent update first) or 'asc' (chronological, oldest first)
 	Order *GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 
-	// Page Page number (0-indexed); only applied when pageSize is supplied
+	// Page Page number (0-indexed). Only applied when pageSize is supplied, but always validated: an invalid value returns 400 either way
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Timeline events per page (1-100). Omit for the full, unpaginated timeline (default behavior)
+	// PageSize Timeline events per page. Omit for the full, unpaginated timeline (default behavior)
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2457,10 +2459,10 @@ type GetV1AlertsParams struct {
 	// Severity Filter by alert severity (Critical, Warning)
 	Severity *string `form:"severity,omitempty" json:"severity,omitempty"`
 
-	// Page Page number (default: 1)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (default: 50, max: 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2475,10 +2477,10 @@ type GetV1AlertsNodeUuidParams struct {
 	// Severity Filter by alert severity (Critical, Warning)
 	Severity *string `form:"severity,omitempty" json:"severity,omitempty"`
 
-	// Page Page number (default: 1)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (default: 50, max: 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2493,10 +2495,10 @@ type GetV1ComputezonesParams struct {
 	// ComputeZoneIds List of compute zone IDs to filter (comma-separated)
 	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
 
-	// Page Page number (default: 0)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (default: 20, max: 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2528,10 +2530,10 @@ type GetV1EventsParams struct {
 	// Component Filter by component (optional)
 	Component *string `form:"component,omitempty" json:"component,omitempty"`
 
-	// Page Page number (default: 0)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (default: 50, max: 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2633,10 +2635,10 @@ type GetV1NodeGroupMembershipsParams struct {
 	// NodeUUID Node UUID to filter memberships
 	NodeUUID *string `form:"nodeUUID,omitempty" json:"nodeUUID,omitempty"`
 
-	// Page Page number (0-based, default: 0)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (default: 20, max: 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2672,10 +2674,10 @@ type GetV1NodegroupsParams struct {
 	// Order Sort order (asc, desc)
 	Order *GetV1NodegroupsParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 
-	// Page Page number (default: 0)
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (default: 20, max: 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2701,7 +2703,7 @@ type GetV1NodesParams struct {
 	// View View mode: 'detail' for full response (default) or 'basic' for nodeUUID + hostname only (lightweight query, does not support filtering or sorting by healthStatuses, integrityChecks, firmwareChecks, or agentStatuses).
 	View *GetV1NodesParamsView `form:"view,omitempty" json:"view,omitempty"`
 
-	// Page Page number
+	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
 	// PageSize Page size
@@ -2787,7 +2789,7 @@ type GetV1NodesHistoryParams struct {
 	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (max 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 
 	// ActorType Filter by removal actor
@@ -2832,7 +2834,7 @@ type GetV1NotificationDeliveryLogParams struct {
 	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (max 100)
+	// PageSize Page size
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
@@ -2853,10 +2855,10 @@ type GetV1ReportsErrorParams struct {
 	// Format Response format (json or csv, only for list view)
 	Format *GetV1ReportsErrorParamsFormat `form:"format,omitempty" json:"format,omitempty"`
 
-	// Page Page number (Not used for CSV format, graph view, or overview view)
+	// Page Page number (0-indexed). Not used for CSV format, graph view, or overview view
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (Not used for CSV format, graph view, or overview view)
+	// PageSize Page size. Not used for CSV format, graph view, or overview view
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 
 	// Step Query resolution step width in duration format (e.g. 1h, 1m). Only used for graph view. If not provided, backend will choose a suitable step width. Minimum step width is 1 minute.
@@ -2906,10 +2908,10 @@ type GetV1ReportsError200JSONResponseBody struct {
 
 // GetV1ReportsInventoryParams defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventoryParams struct {
-	// Page Page number (Not used for CSV format)
+	// Page Page number (0-indexed). Not used for CSV format
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
-	// PageSize Page size (Not used for CSV format)
+	// PageSize Page size. Not used for CSV format
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 
 	// Format Response format (json or csv)

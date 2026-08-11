@@ -28,7 +28,6 @@ func TestListAlertsSendsAuthAndParams(t *testing.T) {
 		if got := query.Get("severity"); got != "Critical" {
 			t.Fatalf("unexpected severity: %q", got)
 		}
-		// /v1/alerts is 1-indexed; the SDK's 0-indexed page 0 maps to API page 1.
 		if got := query.Get("page"); got != "1" {
 			t.Fatalf("unexpected page: %q", got)
 		}
@@ -46,7 +45,7 @@ func TestListAlertsSendsAuthAndParams(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 
-	page := 0
+	page := 1
 	pageSize := 50
 	got, err := client.ListAlerts(context.Background(), ListAlertsOptions{
 		NodeUUID: "node-1",
@@ -57,8 +56,7 @@ func TestListAlertsSendsAuthAndParams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list alerts failed: %v", err)
 	}
-	// The API's 1-indexed page 1 is normalized back to the SDK's 0-indexed page 0.
-	if got.Page != 0 || got.PageSize != 50 || got.Total != 1 || len(got.Alerts) != 1 {
+	if got.Page != 1 || got.PageSize != 50 || got.Total != 1 || len(got.Alerts) != 1 {
 		t.Fatalf("unexpected page: %#v", got)
 	}
 	alert := got.Alerts[0]
@@ -67,10 +65,6 @@ func TestListAlertsSendsAuthAndParams(t *testing.T) {
 	}
 	if !strings.Contains(string(got.RawJSON), `"alerts"`) {
 		t.Fatalf("raw JSON not preserved: %q", string(got.RawJSON))
-	}
-	// The preserved payload must also carry the normalized 0-indexed page.
-	if !strings.Contains(string(got.RawJSON), `"page":0`) {
-		t.Fatalf("raw JSON page not normalized: %q", string(got.RawJSON))
 	}
 }
 
