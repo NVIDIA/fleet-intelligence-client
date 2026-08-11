@@ -61,21 +61,24 @@ Choose an NGC API key:
   programmatic integrations.
 
 ```bash
-nvfleetint auth add --api-key <your-ngc-api-key>
+nvfleetint auth add     # prompts for the API key and API URL
 nvfleetint overview
 nvfleetint node list
 ```
+
+`auth add` reads the API key from stdin rather than a flag.
 
 Credentials are stored in named profiles; with no name, `auth add` uses one
 called `default`, so single-tenant setup is the one command above. To work
 against several tenants or endpoints, name them: add more with `nvfleetint auth
 add <name>`, switch the default with `nvfleetint auth use <name>`, and select one
 for a single command with `--profile`. Re-running `auth add` with an existing
-name changes that profile in place, which is how a key is rotated — replacing a
-stored key confirms first, since the old one cannot be recovered (`--yes` skips
-the prompt):
+name changes that profile in place, which is how a key is rotated — press Enter
+at the key prompt to keep the stored key without ever displaying it (`--yes`
+covers replacing it from a script, where nothing can be confirmed):
 
 ```bash
+nvfleetint auth add dev
 nvfleetint node list --profile dev
 ```
 

@@ -30,6 +30,7 @@ func newTagCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newTagListCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -42,6 +43,7 @@ func newTagListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List unique tags",
+		Args:  cobra.NoArgs,
 		Long: `List the unique customer tags.
 
 Use --prefix to filter by prefix. Scope the results to a single resource with at

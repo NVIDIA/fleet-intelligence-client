@@ -65,6 +65,7 @@ func newNodeCmd() *cobra.Command {
 	cmd.AddCommand(newNodeListCmd())
 	cmd.AddCommand(newNodeDescribeCmd())
 	cmd.AddCommand(newNodeHealthCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -79,6 +80,7 @@ func newNodeListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List nodes",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runNodeList(cmd, flags, resolveCommonFlags(cmd, common))
 		},

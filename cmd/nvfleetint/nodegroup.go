@@ -44,6 +44,7 @@ func newNodeGroupCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newNodeGroupListCmd())
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
@@ -58,6 +59,7 @@ func newNodeGroupListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List node groups",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runNodeGroupList(cmd, flags, resolveCommonFlags(cmd, common))
 		},

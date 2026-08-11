@@ -13,14 +13,19 @@ Profiles pair API URL and key in `~/.config/nvfleetint/config.yaml` (0600):
 ```bash
 nvfleetint auth list
 nvfleetint auth status [--profile <name>]
-nvfleetint auth add --api-key <key>                    # default profile
-nvfleetint auth add <name> --api-key <key> [--api-url https://...]
+nvfleetint auth add                                    # default profile
+nvfleetint auth add <name>                             # named profile; existing name rotates its key
 nvfleetint auth use <name>
-nvfleetint auth add <name> --api-key <new-key> --yes   # rotate
 nvfleetint auth remove <name>
 ```
 
-`auth add/remove/use` take a positional name, not `--profile`; add's name is optional and defaults to `default`. There is no `auth update`: add updates an existing profile. Run `auth list` before add so a typo cannot overwrite another profile. Use `--yes` only when the user explicitly requested key replacement.
+`auth add` takes no credential flags: it prompts for the API key (not echoed) and the API URL (pre-filled — Enter keeps it). On an existing profile, Enter at the key prompt keeps the stored key.
+
+Always have the user run `auth add` themselves. Never type, paste, or pipe an API key on their behalf, and never run the command with a key you obtained from them.
+
+Separately, a user's own script may supply the answers on stdin: line 1 = API key, line 2 = API URL. Replacing a stored key that way needs `--yes`, since no warning is shown. Document this when asked; do not use it yourself.
+
+`auth add/remove/use` take a positional name, not `--profile`; add's name is optional and defaults to `default`. There is no `auth update`: add updates an existing profile. Run `auth list` before add so a typo cannot overwrite another profile. `--yes` is only for piped stdin; at a terminal it is never needed.
 
 Require HTTPS except localhost. Never request, print, or log a key.
 

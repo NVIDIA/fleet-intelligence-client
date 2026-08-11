@@ -60,9 +60,17 @@ func mustRunAuth(t *testing.T, args ...string) string {
 // runAuthErr executes an auth subcommand that is expected to fail.
 func runAuthErr(t *testing.T, args ...string) error {
 	t.Helper()
+	return runAuthInputErr(t, "", args...)
+}
+
+// runAuthInputErr executes an auth subcommand with input on stdin, expecting
+// it to fail.
+func runAuthInputErr(t *testing.T, input string, args ...string) error {
+	t.Helper()
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetIn(strings.NewReader(input))
 	cmd.SetArgs(append([]string{"auth"}, args...))
 
 	err := cmd.Execute()
@@ -73,11 +81,43 @@ func runAuthErr(t *testing.T, args ...string) error {
 	return err
 }
 
+// addAnswers is what `auth add` reads from a piped stdin: the API key, then
+// the API URL. An empty answer keeps the stored (or default) value.
+func addAnswers(apiKey, apiURL string) string {
+	return apiKey + "\n" + apiURL + "\n"
+}
+
+// mustAddProfile stores a profile through `auth add`, answering its prompts on
+// stdin. The reader is not a terminal, so this exercises the piped form —
+// which is also why replacing a stored key here needs an explicit "--yes".
+func mustAddProfile(t *testing.T, name, apiKey, apiURL string, extra ...string) string {
+	t.Helper()
+
+	args := []string{"auth", "add"}
+	if name != "" {
+		args = append(args, name)
+	}
+	args = append(args, extra...)
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetIn(strings.NewReader(addAnswers(apiKey, apiURL)))
+	cmd.SetArgs(args)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("auth add %s failed: %v", strings.Join(args[2:], " "), err)
+	}
+
+	return out.String()
+}
+
 // The profile-naming commands take exactly one <name>; a second word is a typo
 // (an unquoted name, a stray flag value) and must not be silently ignored.
 func TestAuthSubcommandsRejectExtraProfileNames(t *testing.T) {
 	tests := [][]string{
-		{"add", "prod", "extra", "--api-key", apiKey},
+		{"add", "prod", "extra"},
 		{"remove", "prod", "extra", "--yes"},
 		{"use", "prod", "extra"},
 	}
@@ -102,7 +142,7 @@ func TestAuthSubcommandsRejectExtraProfileNames(t *testing.T) {
 func TestAuthRejectsRemovedUpdateSubcommand(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+	mustAddProfile(t, "prod", apiKey, "")
 
 	err := runAuthErr(t, "update", "prod")
 	if !strings.Contains(err.Error(), `unknown command "update"`) {
@@ -149,7 +189,7 @@ func TestAuthAddStoresProfileAndSelectsIt(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	got := mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+	got := mustAddProfile(t, "prod", apiKey, "")
 	if !strings.Contains(got, `Profile "prod" added.`) {
 		t.Fatalf("unexpected output: %q", got)
 	}
@@ -177,8 +217,8 @@ func TestAuthAddSavesExplicitAPIURLAndKeepsCurrent(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
-	got := mustRunAuth(t, "add", "dev", "--api-key", "dev-key", "--api-url", apiURL)
+	mustAddProfile(t, "prod", apiKey, "")
+	got := mustAddProfile(t, "dev", "dev-key", apiURL)
 	if strings.Contains(got, "is now the current profile") {
 		t.Fatalf("adding a second profile must not steal the selection: %q", got)
 	}
@@ -202,9 +242,9 @@ func TestAuthAddUpdatesExistingProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey, "--api-url", apiURL)
+	mustAddProfile(t, "prod", apiKey, apiURL)
 
-	got := mustRunAuth(t, "add", "prod", "--api-key", "rotated-key", "--yes")
+	got := mustAddProfile(t, "prod", "rotated-key", "", "--yes")
 	if !strings.Contains(got, `Profile "prod" updated.`) {
 		t.Fatalf("expected an overwrite to be reported as an update: %q", got)
 	}
@@ -226,97 +266,137 @@ func TestAuthAddUpdatesExistingProfile(t *testing.T) {
 	}
 }
 
-// Overwriting a profile destroys an API key that cannot be recovered, so it
-// confirms first. The prompt goes to stderr and defaults to No.
-func TestAuthAddPromptsBeforeOverwritingProfile(t *testing.T) {
-	tests := []struct {
-		name      string
-		answer    string
-		overwrote bool
-	}{
-		{name: "y", answer: "y\n", overwrote: true},
-		{name: "yes", answer: "YES\n", overwrote: true},
-		{name: "n", answer: "n\n", overwrote: false},
-		{name: "empty defaults to no", answer: "\n", overwrote: false},
-		{name: "eof defaults to no", answer: "", overwrote: false},
+// The credentials are no longer flags. Accepting them again would put the key
+// back in shell history, and silently ignoring the flag would store the wrong
+// thing, so both have to be rejected outright.
+func TestAuthAddRejectsCredentialFlags(t *testing.T) {
+	tests := [][]string{
+		{"add", "prod", "--api-key", "secret"},
+		{"add", "prod", "--api-url", apiURL},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, args := range tests {
+		t.Run(args[2], func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			clearCredentialEnv(t)
-			mustRunAuth(t, "add", "prod", "--api-key", apiKey, "--api-url", apiURL)
 
-			var out, errOut bytes.Buffer
-			cmd := newRootCmd()
-			cmd.SetOut(&out)
-			cmd.SetErr(&errOut)
-			cmd.SetIn(strings.NewReader(tt.answer))
-			cmd.SetArgs([]string{"auth", "add", "prod", "--api-key", "rotated-key"})
-
-			err := cmd.Execute()
-
-			// The prompt must stay off stdout so `-o json` remains parseable.
-			if !strings.Contains(errOut.String(), "Are you sure? [y/N]") {
-				t.Fatalf("prompt missing from stderr: %q", errOut.String())
-			}
-			if strings.Contains(out.String(), "Are you sure?") {
-				t.Fatalf("prompt leaked to stdout: %q", out.String())
-			}
-			// The prompt describes the overwrite; it must not print either key.
-			if strings.Contains(errOut.String(), apiKey) || strings.Contains(errOut.String(), "rotated-key") {
-				t.Fatalf("prompt printed a secret: %q", errOut.String())
-			}
-
-			cfg, loadErr := config.Load()
-			if loadErr != nil {
-				t.Fatalf("load failed: %v", loadErr)
-			}
-			stored := cfg.Profiles["prod"].APIKey
-
-			if tt.overwrote {
-				if err != nil {
-					t.Fatalf("add failed: %v", err)
-				}
-				if stored != "rotated-key" {
-					t.Fatalf("expected the key to be replaced, got %q", stored)
-				}
-				return
-			}
-			if !errors.Is(err, clihelpers.ErrAborted) {
-				t.Fatalf("expected ErrAborted, got %v", err)
-			}
-			if stored != apiKey {
-				t.Fatalf("a declined prompt must leave the key alone, got %q", stored)
+			err := runAuthErr(t, args...)
+			if !strings.Contains(err.Error(), "unknown flag: "+args[2]) {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}
 }
 
-// Creating a profile destroys nothing, so it must not ask.
-func TestAuthAddDoesNotPromptForNewProfile(t *testing.T) {
+// The questions belong on stderr, and the answers must never be echoed back:
+// the whole point of reading the key from stdin is that it leaves no trace.
+func TestAuthAddPromptsOnStderrWithoutEchoingTheKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+
+	var out, errOut bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetIn(strings.NewReader(addAnswers(apiKey, "")))
+	cmd.SetArgs([]string{"auth", "add", "prod"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("add failed: %v", err)
+	}
+	for _, want := range []string{"API key:", "API URL [production: " + config.DefaultAPIURL + "]:"} {
+		if !strings.Contains(errOut.String(), want) {
+			t.Fatalf("prompt %q missing from stderr: %q", want, errOut.String())
+		}
+	}
+	if strings.Contains(out.String(), "API key:") {
+		t.Fatalf("prompt leaked to stdout: %q", out.String())
+	}
+	if strings.Contains(out.String()+errOut.String(), apiKey) {
+		t.Fatalf("the key was echoed back: %q / %q", out.String(), errOut.String())
+	}
+}
+
+// Pressing Enter at the key prompt keeps the stored key, so changing an
+// endpoint never means re-entering — or seeing — the current credential.
+func TestAuthAddKeepsStoredKeyOnEmptyAnswer(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	mustAddProfile(t, "prod", apiKey, apiURL)
 
 	var errOut bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&errOut)
-	cmd.SetIn(strings.NewReader("n\n"))
-	cmd.SetArgs([]string{"auth", "add", "dev", "--api-key", "dev-key"})
+	cmd.SetIn(strings.NewReader(addAnswers("", "https://other.example.com")))
+	cmd.SetArgs([]string{"auth", "add", "prod"})
+
+	// Keeping the key destroys nothing, so this must not need --yes.
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("add failed: %v", err)
+	}
+	if !strings.Contains(errOut.String(), "keep the stored key") {
+		t.Fatalf("expected the prompt to offer keeping the key: %q", errOut.String())
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	profile := cfg.Profiles["prod"]
+	if profile.APIKey != apiKey {
+		t.Fatalf("an empty answer wiped the stored key: %q", profile.APIKey)
+	}
+	if profile.APIURL != "https://other.example.com" {
+		t.Fatalf("unexpected API URL: %q", profile.APIURL)
+	}
+}
+
+// With input piped in nobody sees the warning, so replacing a stored key needs
+// --yes. The key must survive the refusal.
+func TestAuthAddPipedOverwriteRequiresYes(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	mustAddProfile(t, "prod", apiKey, apiURL)
+
+	err := runAuthInputErr(t, addAnswers("rotated-key", ""), "add", "prod")
+	if !strings.Contains(err.Error(), "--yes") {
+		t.Fatalf("expected the error to name --yes, got %v", err)
+	}
+
+	cfg, loadErr := config.Load()
+	if loadErr != nil {
+		t.Fatalf("load failed: %v", loadErr)
+	}
+	if cfg.Profiles["prod"].APIKey != apiKey {
+		t.Fatal("the stored key must survive a refused overwrite")
+	}
+}
+
+// Creating a profile destroys nothing, so it must not need --yes.
+func TestAuthAddNewProfileNeedsNoConfirmation(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	mustAddProfile(t, "prod", apiKey, "")
+
+	var errOut bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&errOut)
+	cmd.SetIn(strings.NewReader(addAnswers("dev-key", "")))
+	cmd.SetArgs([]string{"auth", "add", "dev"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
-	if strings.Contains(errOut.String(), "Are you sure?") {
-		t.Fatalf("unexpected prompt for a new profile: %q", errOut.String())
+	if strings.Contains(errOut.String(), "already exists") {
+		t.Fatalf("unexpected overwrite warning for a new profile: %q", errOut.String())
 	}
 }
 
 // Supplying the first key for a profile that has none takes nothing away, so it
-// must neither prompt nor claim a stored key is being lost.
-func TestAuthAddDoesNotPromptWhenProfileHasNoStoredKey(t *testing.T) {
+// must neither need --yes nor claim a stored key is being lost.
+func TestAuthAddDoesNotWarnWhenProfileHasNoStoredKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	saveTestConfig(t, apiURL, "")
 
@@ -324,15 +404,11 @@ func TestAuthAddDoesNotPromptWhenProfileHasNoStoredKey(t *testing.T) {
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&errOut)
-	// An answerable stdin, so a prompt would abort rather than be refused.
-	cmd.SetIn(strings.NewReader("n\n"))
-	cmd.SetArgs([]string{"auth", "add", testProfile, "--api-key", apiKey})
+	cmd.SetIn(strings.NewReader(addAnswers(apiKey, "")))
+	cmd.SetArgs([]string{"auth", "add", testProfile})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("add failed: %v", err)
-	}
-	if strings.Contains(errOut.String(), "Are you sure?") {
-		t.Fatalf("unexpected prompt: %q", errOut.String())
 	}
 	if strings.Contains(errOut.String(), "cannot be recovered") {
 		t.Fatalf("warned about losing a key that was never stored: %q", errOut.String())
@@ -348,40 +424,103 @@ func TestAuthAddDoesNotPromptWhenProfileHasNoStoredKey(t *testing.T) {
 }
 
 // The remediation hints the CLI prints name an existing profile — `auth add
-// <profile> --api-key` for a keyless profile, `auth add <profile> --api-url` for a
-// rejected endpoint — and neither mentions --yes. Both therefore have to run
-// with no terminal attached, or the printed fix is a dead end in cron and CI.
+// <profile>` for a keyless profile and for a rejected endpoint — and neither
+// mentions --yes. Both therefore have to run with input piped in, or the
+// printed fix is a dead end in cron and CI.
 func TestAuthAddRunsHintedFixesWithoutATerminal(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	// No key and an endpoint the SDK rejects: the state both hints repair.
 	saveTestConfig(t, "http://fleet.example.com", "")
 
 	_, err := newConfiguredClient(testCommonFlags(""))
-	if err == nil || !strings.Contains(err.Error(), "auth add "+testProfile+" --api-key") {
+	if err == nil || !strings.Contains(err.Error(), "auth add "+testProfile) {
 		t.Fatalf("expected the missing-key hint, got %v", err)
 	}
-	mustRunAuth(t, "add", testProfile, "--api-key", apiKey)
-
-	_, err = newConfiguredClient(testCommonFlags(""))
-	if !errors.Is(err, nvfleetint.ErrInsecureBaseURL) {
-		t.Fatalf("expected ErrInsecureBaseURL, got %v", err)
+	// The stored endpoint is the one the SDK rejects, so accepting it as the
+	// offered value has to fail rather than write it back.
+	keyErr := runAuthInputErr(t, addAnswers(apiKey, ""), "add", testProfile)
+	if !errors.Is(keyErr, nvfleetint.ErrInsecureBaseURL) {
+		t.Fatalf("expected the stored endpoint to be re-validated, got %v", keyErr)
 	}
-	if !strings.Contains(err.Error(), "auth add "+testProfile+" --api-url") {
-		t.Fatalf("expected the API URL hint, got %v", err)
-	}
-	mustRunAuth(t, "add", testProfile, "--api-url", apiURL)
+	mustAddProfile(t, testProfile, apiKey, apiURL)
 
 	if _, err := newConfiguredClient(testCommonFlags("")); err != nil {
-		t.Fatalf("the hinted fixes left the profile unusable: %v", err)
+		t.Fatalf("the hinted fix left the profile unusable: %v", err)
 	}
 }
 
 // A cron or CI job rotating a key gets a clear error naming --yes rather than
-// blocking, and the stored key survives until it re-runs with --yes.
-func TestAuthAddRefusesToPromptWithoutATerminal(t *testing.T) {
+// blocking, and the stored key survives until it re-runs with --yes. /dev/null
+// is the case a character-device check gets wrong: it looks like a terminal by
+// mode, so `auth add prod </dev/null` would be treated as a conversation.
+func TestAuthAddRefusesToReplaceStoredKeyWithoutATerminal(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+	mustAddProfile(t, "prod", apiKey, "")
+
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe failed: %v", err)
+	}
+	t.Cleanup(func() { _ = reader.Close() })
+	if _, err := writer.WriteString(addAnswers("rotated-key", "")); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+	_ = writer.Close()
+
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetIn(reader)
+	cmd.SetArgs([]string{"auth", "add", "prod"})
+
+	execErr := cmd.Execute()
+	if execErr == nil {
+		t.Fatal("expected a refusal to replace the stored key")
+	}
+	if !strings.Contains(execErr.Error(), "--yes") {
+		t.Fatalf("expected the error to name --yes, got %v", execErr)
+	}
+
+	cfg, loadErr := config.Load()
+	if loadErr != nil {
+		t.Fatalf("load failed: %v", loadErr)
+	}
+	if cfg.Profiles["prod"].APIKey != apiKey {
+		t.Fatal("the stored key must survive a refused replacement")
+	}
+}
+
+// Keeping both offered values is a legitimate answer, not a failure: it is what
+// pressing Enter twice does. Nothing is written and nothing is destroyed.
+func TestAuthAddReportsAnUnchangedProfile(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	mustAddProfile(t, "prod", apiKey, apiURL)
+
+	got := mustAddProfile(t, "prod", "", "")
+	if !strings.Contains(got, `Profile "prod" unchanged.`) {
+		t.Fatalf("unexpected output: %q", got)
+	}
+	if strings.Contains(got, "updated") {
+		t.Fatalf("a no-op must not report a write: %q", got)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if got := cfg.Profiles["prod"]; got.APIKey != apiKey || got.APIURL != apiURL {
+		t.Fatalf("a no-op must not disturb the profile: %#v", got)
+	}
+}
+
+// A closed stdin answers nothing, so an existing profile is left alone rather
+// than reset to defaults or stripped of its key.
+func TestAuthAddWithClosedStdinLeavesProfileAlone(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	mustAddProfile(t, "prod", apiKey, apiURL)
 
 	devNull, err := os.Open(os.DevNull)
 	if err != nil {
@@ -393,56 +532,28 @@ func TestAuthAddRefusesToPromptWithoutATerminal(t *testing.T) {
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetIn(devNull)
-	cmd.SetArgs([]string{"auth", "add", "prod", "--api-key", "rotated-key"})
+	cmd.SetArgs([]string{"auth", "add", "prod"})
 
-	execErr := cmd.Execute()
-	if execErr == nil {
-		t.Fatal("expected a refusal to prompt")
-	}
-	if !strings.Contains(execErr.Error(), "--yes") {
-		t.Fatalf("expected the error to name --yes, got %v", execErr)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("add failed: %v", err)
 	}
 
 	cfg, loadErr := config.Load()
 	if loadErr != nil {
 		t.Fatalf("load failed: %v", loadErr)
 	}
-	if cfg.Profiles["prod"].APIKey != apiKey {
-		t.Fatal("the stored key must survive a refused prompt")
+	if got := cfg.Profiles["prod"]; got.APIKey != apiKey || got.APIURL != apiURL {
+		t.Fatalf("an unanswered add must not disturb the profile: %#v", got)
 	}
 }
 
-// A command that is going to fail anyway must not ask first — the prompt would
-// imply the overwrite was about to happen.
-func TestAuthAddDoesNotPromptWhenNothingWouldChange(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	clearCredentialEnv(t)
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
-
-	var errOut bytes.Buffer
-	cmd := newRootCmd()
-	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetErr(&errOut)
-	cmd.SetIn(strings.NewReader("y\n"))
-	cmd.SetArgs([]string{"auth", "add", "prod"})
-
-	if err := cmd.Execute(); !strings.Contains(err.Error(), "already exists") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if strings.Contains(errOut.String(), "Are you sure?") {
-		t.Fatalf("unexpected prompt: %q", errOut.String())
-	}
-}
-
-// The other half of the partial update: --api-url alone keeps the stored key.
-// It also must not prompt — mustRunAuth leaves stdin as the test binary's,
-// which is not a terminal, so a prompt here would fail the command outright.
+// The other half of the partial update: a new URL alone keeps the stored key.
 func TestAuthAddChangesAPIURLWithoutKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "dev", "--api-key", apiKey)
-	mustRunAuth(t, "add", "dev", "--api-url", apiURL)
+	mustAddProfile(t, "dev", apiKey, "")
+	mustAddProfile(t, "dev", "", apiURL)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -457,40 +568,15 @@ func TestAuthAddChangesAPIURLWithoutKey(t *testing.T) {
 	}
 }
 
-// Re-adding an existing profile with no values is a typo, not a request to
-// reset it to defaults — the stored key must survive.
-func TestAuthAddExistingProfileRequiresSomethingToChange(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	clearCredentialEnv(t)
-
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey, "--api-url", apiURL)
-
-	err := runAuthErr(t, "add", "prod")
-	if !strings.Contains(err.Error(), "already exists") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(err.Error(), "--api-key") {
-		t.Fatalf("expected the error to name the flags that change it: %v", err)
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("load failed: %v", err)
-	}
-	if got := cfg.Profiles["prod"]; got.APIKey != apiKey || got.APIURL != apiURL {
-		t.Fatalf("a rejected add must not disturb the profile: %#v", got)
-	}
-}
-
 // Updating a profile must not steal the current-profile selection.
 func TestAuthAddExistingProfileKeepsCurrent(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
-	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
+	mustAddProfile(t, "prod", apiKey, "")
+	mustAddProfile(t, "dev", "dev-key", "")
 
-	got := mustRunAuth(t, "add", "dev", "--api-key", "rotated-key", "--yes")
+	got := mustAddProfile(t, "dev", "rotated-key", "", "--yes")
 	if strings.Contains(got, "is now the current profile") {
 		t.Fatalf("updating a profile must not change the selection: %q", got)
 	}
@@ -510,7 +596,7 @@ func TestAuthAddWithoutNameUsesDefaultProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	got := mustRunAuth(t, "add", "--api-key", apiKey)
+	got := mustAddProfile(t, "", apiKey, "")
 	if !strings.Contains(got, `Profile "`+config.DefaultProfileName+`" added.`) {
 		t.Fatalf("unexpected output: %q", got)
 	}
@@ -540,9 +626,9 @@ func TestAuthAddWithoutNameUpdatesDefaultProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "--api-key", apiKey, "--api-url", apiURL)
+	mustAddProfile(t, "", apiKey, apiURL)
 
-	got := mustRunAuth(t, "add", "--api-key", "rotated-key", "--yes")
+	got := mustAddProfile(t, "", "rotated-key", "", "--yes")
 	if !strings.Contains(got, `Profile "`+config.DefaultProfileName+`" updated.`) {
 		t.Fatalf("expected an update: %q", got)
 	}
@@ -587,7 +673,7 @@ func TestAuthRemoveAndUseStillRequireProfileName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			clearCredentialEnv(t)
-			mustRunAuth(t, "add", "--api-key", apiKey)
+			mustAddProfile(t, "", apiKey, "")
 
 			err := runAuthErr(t, name)
 			if !strings.Contains(err.Error(), "profile name is required") {
@@ -605,19 +691,31 @@ func TestAuthRemoveAndUseStillRequireProfileName(t *testing.T) {
 	}
 }
 
-func TestAuthAddRejectsInvalidProfileName(t *testing.T) {
+// An invalid name is caught before anything is asked: a question about a
+// profile that cannot exist is worse than no question at all.
+func TestAuthAddRejectsInvalidProfileNameBeforePrompting(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	err := runAuthErr(t, "add", "has space", "--api-key", apiKey)
-	if !strings.Contains(err.Error(), "invalid profile name") {
+	cmd := newRootCmd()
+	var errOut bytes.Buffer
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&errOut)
+	cmd.SetIn(strings.NewReader(addAnswers(apiKey, "")))
+	cmd.SetArgs([]string{"auth", "add", "has space"})
+
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "invalid profile name") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(errOut.String(), "API key:") {
+		t.Fatalf("asked for a key it could not store: %q", errOut.String())
 	}
 }
 
 func TestAuthAddRequiresKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	err := runAuthErr(t, "add", "prod")
+	err := runAuthInputErr(t, "\n\n", "add", "prod")
 	if !strings.Contains(err.Error(), "API key is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -626,7 +724,7 @@ func TestAuthAddRequiresKey(t *testing.T) {
 func TestAuthAddRejectsInvalidAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	err := runAuthErr(t, "add", "prod", "--api-key", apiKey, "--api-url", "example.com")
+	err := runAuthInputErr(t, addAnswers(apiKey, "example.com"), "add", "prod")
 	if !strings.Contains(err.Error(), "absolute https URL is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -638,7 +736,7 @@ func TestAuthAddRejectsInsecureAPIURL(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	err := runAuthErr(t, "add", "prod", "--api-key", apiKey, "--api-url", "http://api.example.com")
+	err := runAuthInputErr(t, addAnswers(apiKey, "http://api.example.com"), "add", "prod")
 	if !strings.Contains(err.Error(), "https is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -655,7 +753,7 @@ func TestAuthAddAcceptsLoopbackHTTPAPIURL(t *testing.T) {
 	clearCredentialEnv(t)
 
 	const loopbackURL = "http://127.0.0.1:9999"
-	mustRunAuth(t, "add", "local", "--api-key", apiKey, "--api-url", loopbackURL)
+	mustAddProfile(t, "local", apiKey, loopbackURL)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -666,48 +764,33 @@ func TestAuthAddAcceptsLoopbackHTTPAPIURL(t *testing.T) {
 	}
 }
 
-// An empty value is rejected rather than treated as "clear this credential":
-// `--api-key "$KEY"` with KEY unset must not silently wipe a stored key.
-func TestAuthAddRejectsEmptyValues(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-		want string
-	}{
-		{name: "key", args: []string{"--api-key", ""}, want: "--api-key cannot be empty"},
-		{name: "api-url", args: []string{"--api-url", ""}, want: "--api-url cannot be empty"},
-		{name: "whitespace key", args: []string{"--api-key", "   "}, want: "--api-key cannot be empty"},
+// An answer of nothing but whitespace is an empty answer — `echo "$KEY" | ...`
+// with KEY unset keeps the stored key rather than wiping it.
+func TestAuthAddTreatsWhitespaceAnswersAsEmpty(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	clearCredentialEnv(t)
+	mustAddProfile(t, "prod", apiKey, apiURL)
+
+	got := mustAddProfile(t, "prod", "   ", "  ")
+	if !strings.Contains(got, `Profile "prod" unchanged.`) {
+		t.Fatalf("unexpected output: %q", got)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("HOME", t.TempDir())
-			clearCredentialEnv(t)
-			mustRunAuth(t, "add", "prod", "--api-key", apiKey, "--api-url", apiURL)
-
-			err := runAuthErr(t, append([]string{"add", "prod"}, tt.args...)...)
-			if !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			cfg, loadErr := config.Load()
-			if loadErr != nil {
-				t.Fatalf("load failed: %v", loadErr)
-			}
-			if got := cfg.Profiles["prod"]; got.APIKey != apiKey || got.APIURL != apiURL {
-				t.Fatalf("a rejected add must not change the profile: %#v", got)
-			}
-		})
+	cfg, loadErr := config.Load()
+	if loadErr != nil {
+		t.Fatalf("load failed: %v", loadErr)
+	}
+	if got := cfg.Profiles["prod"]; got.APIKey != apiKey || got.APIURL != apiURL {
+		t.Fatalf("a blank answer must not change the profile: %#v", got)
 	}
 }
 
-// A brand-new profile needs a key; only an existing one can be changed by
-// --api-url alone.
+// A brand-new profile needs a key; only an existing one has a key to keep.
 func TestAuthAddNewProfileRequiresKeyEvenWithAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	err := runAuthErr(t, "add", "nope", "--api-url", apiURL)
+	err := runAuthInputErr(t, addAnswers("", apiURL), "add", "nope")
 	if !strings.Contains(err.Error(), "API key is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -725,8 +808,8 @@ func TestAuthRemoveCurrentProfileClearsSelection(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
-	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
+	mustAddProfile(t, "prod", apiKey, "")
+	mustAddProfile(t, "dev", "dev-key", "")
 
 	got := mustRunAuth(t, "remove", "prod", "--yes")
 	if !strings.Contains(got, `Profile "prod" removed.`) {
@@ -752,8 +835,8 @@ func TestAuthRemoveOtherProfileKeepsSelection(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
-	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
+	mustAddProfile(t, "prod", apiKey, "")
+	mustAddProfile(t, "dev", "dev-key", "")
 
 	got := mustRunAuth(t, "remove", "dev", "--yes")
 	if !strings.Contains(got, "Current profile: prod") {
@@ -773,7 +856,7 @@ func TestAuthRemoveLastProfileExplainsRecovery(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+	mustAddProfile(t, "prod", apiKey, "")
 
 	got := mustRunAuth(t, "remove", "prod", "--yes")
 	if !strings.Contains(got, "No profiles remain") {
@@ -818,7 +901,7 @@ func TestAuthRemovePromptsForConfirmation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			clearCredentialEnv(t)
-			mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+			mustAddProfile(t, "prod", apiKey, "")
 
 			var out, errOut bytes.Buffer
 			cmd := newRootCmd()
@@ -918,7 +1001,7 @@ func TestAuthRemoveRefusesToPromptWithoutATerminal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			clearCredentialEnv(t)
-			mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+			mustAddProfile(t, "prod", apiKey, "")
 
 			cmd := newRootCmd()
 			cmd.SetOut(&bytes.Buffer{})
@@ -949,7 +1032,7 @@ func TestAuthRemoveRefusesToPromptWithoutATerminal(t *testing.T) {
 func TestAuthRemoveUnknownProfileDoesNotPrompt(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+	mustAddProfile(t, "prod", apiKey, "")
 
 	var errOut bytes.Buffer
 	cmd := newRootCmd()
@@ -970,8 +1053,8 @@ func TestAuthUseSelectsProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
-	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
+	mustAddProfile(t, "prod", apiKey, "")
+	mustAddProfile(t, "dev", "dev-key", "")
 
 	got := mustRunAuth(t, "use", "dev")
 	if !strings.Contains(got, "Current profile: dev") {
@@ -991,7 +1074,7 @@ func TestAuthUseRejectsUnknownProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey)
+	mustAddProfile(t, "prod", apiKey, "")
 
 	err := runAuthErr(t, "use", "nope")
 	if !strings.Contains(err.Error(), "profile not found") {
@@ -1017,8 +1100,8 @@ func TestAuthListShowsProfilesWithoutPrintingKeys(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey, "--api-url", apiURL)
-	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
+	mustAddProfile(t, "prod", apiKey, apiURL)
+	mustAddProfile(t, "dev", "dev-key", "")
 
 	got := mustRunAuth(t, "list")
 	for _, want := range []string{"NAME", "API KEY", "ACTIVE", "prod", "dev", apiURL, "configured"} {
@@ -1035,7 +1118,7 @@ func TestAuthListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", apiKey, "--api-url", apiURL)
+	mustAddProfile(t, "prod", apiKey, apiURL)
 
 	out := mustRunAuth(t, "list", "--output", "json")
 	var got authListOutput
@@ -1061,8 +1144,8 @@ func TestAuthListMarksSelectedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	clearCredentialEnv(t)
 
-	mustRunAuth(t, "add", "prod", "--api-key", "prod-key")
-	mustRunAuth(t, "add", "dev", "--api-key", "dev-key")
+	mustAddProfile(t, "prod", "prod-key", "")
+	mustAddProfile(t, "dev", "dev-key", "")
 	mustRunAuth(t, "use", "dev")
 
 	out := mustRunAuth(t, "list", "--output", "json")
@@ -1223,8 +1306,8 @@ func TestAuthStatusChecksNamedProfile(t *testing.T) {
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
 	defer server.Close()
 
-	mustRunAuth(t, "add", "prod", "--api-key", "prod-key")
-	mustRunAuth(t, "add", "dev", "--api-key", apiKey, "--api-url", server.URL)
+	mustAddProfile(t, "prod", "prod-key", "")
+	mustAddProfile(t, "dev", apiKey, server.URL)
 
 	got := mustRunAuth(t, "status", "--profile", "dev")
 	if !strings.Contains(got, "Profile: dev") {
@@ -1243,7 +1326,7 @@ func TestAuthStatusReportsIgnoredEnvironment(t *testing.T) {
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
 	defer server.Close()
 
-	mustRunAuth(t, "add", "dev", "--api-key", apiKey, "--api-url", server.URL)
+	mustAddProfile(t, "dev", apiKey, server.URL)
 	t.Setenv(config.EnvAPIKey, "stale-key")
 
 	got := mustRunAuth(t, "status", "--profile", "dev")
@@ -1265,7 +1348,7 @@ func TestAuthStatusIgnoredEnvironmentNamesOnlySetVariables(t *testing.T) {
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
 	defer server.Close()
 
-	mustRunAuth(t, "add", "dev", "--api-key", apiKey, "--api-url", server.URL)
+	mustAddProfile(t, "dev", apiKey, server.URL)
 	t.Setenv(config.EnvAPIKey, "stale-key")
 
 	got := mustRunAuth(t, "status", "--profile", "dev")
