@@ -185,8 +185,8 @@ jobs:
         with:
           name: linux-windows-archives
           path: |
-            dist/nvfleetctl_*_linux_*.tar.gz
-            dist/nvfleetctl_*_windows_*.zip
+            dist/nvfleetint_*_linux_*.tar.gz
+            dist/nvfleetint_*_windows_*.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -369,7 +369,7 @@ jobs:
 
           for target in "${TARGETS[@]}"; do
             read -r suffix platform os arch <<<"$target"
-            archive="artifactory-upload/nvfleetctl_${VERSION}_${suffix}"
+            archive="artifactory-upload/nvfleetint_${VERSION}_${suffix}"
             if [[ ! -f "$archive" ]]; then
               echo "Expected release archive not found: $archive" >&2
               exit 1
