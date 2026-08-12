@@ -128,6 +128,10 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A commit can carry both a release-candidate and stable tag. Force
+          # GoReleaser to use the tag that triggered this workflow so archive
+          # names and downstream notarization agree with GITHUB_REF_NAME.
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
           # Fail fast and loudly on a cache miss instead of hanging on a TLS
           # handshake the runner's network will never complete. Module mode
           # stays at the default -mod=readonly so the build can never rewrite
