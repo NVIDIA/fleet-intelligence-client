@@ -244,7 +244,11 @@ func writePaginatedListJSON(w io.Writer, rawJSON []byte, jsonValue any) error {
 		return clioutput.WriteRawJSON(w, clihelpers.OneIndexRawPage(rawJSON))
 	}
 	if merged, ok := jsonValue.(clihelpers.MergedJSONResult); ok {
-		merged.Pagination.Page++
+		merged.Pagination.Page = clihelpers.OneBasedPage(
+			merged.Pagination.Page,
+			merged.Pagination.PageSize,
+			merged.Pagination.Total,
+		)
 		return clioutput.WriteJSON(w, merged)
 	}
 	return clioutput.WriteJSON(w, jsonValue)

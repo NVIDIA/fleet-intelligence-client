@@ -138,6 +138,43 @@ func TestWriteTableAndPaginationFooter(t *testing.T) {
 	}
 }
 
+// Verifies pagination footers never display a page beyond the available pages.
+func TestWritePaginationFooterBoundsPage(t *testing.T) {
+	tests := []struct {
+		name string
+		page Pagination
+		want string
+	}{
+		{
+			name: "empty first page",
+			page: Pagination{Page: 0, PageSize: 20, Total: 0},
+			want: "Page: 0  Total Pages: 0  Page Size: 20  Total Entries: 0\n",
+		},
+		{
+			name: "empty requested page",
+			page: Pagination{Page: 1, PageSize: 20, Total: 0},
+			want: "Page: 0  Total Pages: 0  Page Size: 20  Total Entries: 0\n",
+		},
+		{
+			name: "past last page",
+			page: Pagination{Page: 9, PageSize: 20, Total: 50},
+			want: "Page: 3  Total Pages: 3  Page Size: 20  Total Entries: 50\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			if err := WritePaginationFooter(&out, tt.page); err != nil {
+				t.Fatalf("write footer failed: %v", err)
+			}
+			if got := out.String(); got != tt.want {
+				t.Fatalf("unexpected footer: got %q want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // Verifies multi-line cells are flattened so they do not break column alignment
 func TestWriteTableFlattensMultilineCells(t *testing.T) {
 	var out bytes.Buffer

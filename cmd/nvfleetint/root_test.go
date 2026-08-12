@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
 	"github.com/spf13/cobra"
@@ -51,6 +52,28 @@ func TestVersionCommandJSON(t *testing.T) {
 	}
 	if got.Name != "nvfleetint" || got.Version == "" {
 		t.Fatalf("unexpected version JSON: %#v", got)
+	}
+}
+
+// Verifies merged empty-list JSON uses page 0 when there are no pages.
+func TestWritePaginatedListJSONEmpty(t *testing.T) {
+	var out bytes.Buffer
+	result := clihelpers.MergedJSONResult{
+		Items: []json.RawMessage{},
+		Pagination: clihelpers.MergedPagination{
+			Page: 1, PageSize: 20, Total: 0, PagesFetched: 1,
+		},
+	}
+	if err := writePaginatedListJSON(&out, nil, result); err != nil {
+		t.Fatalf("write paginated JSON failed: %v", err)
+	}
+
+	var got clihelpers.MergedJSONResult
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("decode paginated JSON failed: %v", err)
+	}
+	if got.Pagination.Page != 0 {
+		t.Fatalf("unexpected page: got %d want 0", got.Pagination.Page)
 	}
 }
 

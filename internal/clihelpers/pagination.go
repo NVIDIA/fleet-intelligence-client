@@ -41,6 +41,31 @@ type MergedPagination struct {
 	PagesFetched int  `json:"pagesFetched"`
 }
 
+// TotalPages returns the number of pages needed to hold total items.
+func TotalPages(total, pageSize int) int {
+	if total <= 0 || pageSize <= 0 {
+		return 0
+	}
+	return (total-1)/pageSize + 1
+}
+
+// OneBasedPage converts an SDK page to the CLI's 1-based page number and
+// bounds it to the available pages. Empty results are represented as page 0 of
+// 0 so the displayed page never exceeds the total page count.
+func OneBasedPage(page, pageSize, total int) int {
+	totalPages := TotalPages(total, pageSize)
+	if totalPages == 0 {
+		return 0
+	}
+	if page < 0 {
+		return 1
+	}
+	if page >= totalPages {
+		return totalPages
+	}
+	return page + 1
+}
+
 // Fetches and merges raw API item payloads across pages
 func FetchAllRawPages(itemKey string, startPage int, fetch func(page int) (RawPage, error)) (MergedJSONResult, error) {
 	result := MergedJSONResult{
@@ -100,8 +125,9 @@ func FetchAllRawPages(itemKey string, startPage int, fetch func(page int) (RawPa
 }
 
 // OneIndexRawPage rewrites the 0-indexed "page" field in a raw list payload to
-// its 1-indexed equivalent so JSON consumers see the CLI's 1-based paging
-// contract. The original bytes are returned unchanged when the payload has no
+// its 1-indexed equivalent so JSON consumers see the CLI's paging contract.
+// When total and pageSize are available, the page is bounded to the available
+// pages. The original bytes are returned unchanged when the payload has no
 // usable page field.
 func OneIndexRawPage(data []byte) []byte {
 	var body map[string]json.RawMessage
@@ -116,10 +142,24 @@ func OneIndexRawPage(data []byte) []byte {
 	if err := json.Unmarshal(raw, &page); err != nil {
 		return data
 	}
-	if page == nil || *page == int(^uint(0)>>1) {
+	if page == nil {
 		return data
 	}
-	normalized, err := json.Marshal(*page + 1)
+
+	displayPage := 0
+	var pageSize, total *int
+	pageSizeErr := json.Unmarshal(body["pageSize"], &pageSize)
+	totalErr := json.Unmarshal(body["total"], &total)
+	if pageSizeErr == nil && totalErr == nil && pageSize != nil && total != nil {
+		displayPage = OneBasedPage(*page, *pageSize, *total)
+	} else {
+		if *page == int(^uint(0)>>1) {
+			return data
+		}
+		displayPage = *page + 1
+	}
+
+	normalized, err := json.Marshal(displayPage)
 	if err != nil {
 		return data
 	}

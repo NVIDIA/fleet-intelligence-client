@@ -58,7 +58,7 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 	}
 
 	got := out.String()
-	for _, want := range []string{"ID", "NAME", "TYPE", "LOCATION", "NODE COUNT", "cz-1", "East", "datacenter", "Santa Clara, US", "Page: 2"} {
+	for _, want := range []string{"ID", "NAME", "TYPE", "LOCATION", "NODE COUNT", "cz-1", "East", "datacenter", "Santa Clara, US", "Page: 1  Total Pages: 1"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
