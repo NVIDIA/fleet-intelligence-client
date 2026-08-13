@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
@@ -143,7 +144,7 @@ func cloneFloat32(value *float32) *float32 {
 	return &out
 }
 
-// Copies an optional boolean
+// Copies optional booleans without sharing pointers
 func cloneBool(value *bool) *bool {
 	if value == nil {
 		return nil
@@ -152,12 +153,39 @@ func cloneBool(value *bool) *bool {
 	return &out
 }
 
+// Converts optional timestamps into RFC3339 strings without dropping fractional
+// seconds, matching the string timestamps the other SDK models expose.
+func timeValue(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.Format(time.RFC3339Nano)
+}
+
 // Copies optional string slices without sharing backing arrays
 func cloneStringSlice(values *[]string) []string {
 	if values == nil {
 		return nil
 	}
 	return append([]string(nil), (*values)...)
+}
+
+// Converts a slice into an optional query parameter, omitting it when empty
+func optionalStringSlice(values []string) *[]string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := append([]string(nil), values...)
+	return &out
+}
+
+// Converts a string into an optional query parameter, omitting it when blank
+func optionalTrimmedString(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 // Returns a pointer to a copied boolean value

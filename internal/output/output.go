@@ -113,6 +113,15 @@ func FormatOptionalInt(value *int) string {
 	return strconv.Itoa(*value)
 }
 
+// Formats optional booleans for table output. A nil value renders as "-" so a
+// field the backend omitted is distinguishable from one reported as false.
+func FormatOptionalBool(value *bool) string {
+	if value == nil {
+		return "-"
+	}
+	return strconv.FormatBool(*value)
+}
+
 // Formats optional percentage values for table output
 func FormatOptionalPercentage(value *float32) string {
 	if value == nil {
