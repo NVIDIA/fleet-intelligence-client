@@ -40,6 +40,13 @@ name: Publish Fern Docs
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      include_rc:
+        description: >
+          Fall back to RC tags for version groups with no stable release yet.
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       include_rc:
@@ -88,7 +95,7 @@ jobs:
       - name: Fetch versioned docs from tags
         run: |
           ARGS=""
-          if [ "${{ github.event.inputs.include_rc }}" = "true" ]; then
+          if [ "${{ inputs.include_rc }}" = "true" ]; then
             ARGS="--include-rc"
           fi
           python3 scripts/docs-fetch-versions.py $ARGS

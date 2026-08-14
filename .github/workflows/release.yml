@@ -259,6 +259,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  publish-docs:
+    name: Publish Fern docs
+    needs: publish
+    uses: ./.github/workflows/publish-fern-docs.yml
+    secrets: inherit
+
   artifactory:
     name: Publish to Artifactory
     needs: publish
