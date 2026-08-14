@@ -43,10 +43,17 @@ Invoke-WebRequest https://github.com/NVIDIA/fleet-intelligence-client/releases/l
 
 #### Staying current
 
-`nvfleetint version` checks GitHub for the newest published release and prints
-the upgrade command when the installed build is behind. Re-run the install
-command above to upgrade in place. See
-[Version and updates](docs/cli.md#version-and-updates) to turn the check off.
+`nvfleetint version` checks GitHub for the newest published release and tells
+you when the installed build is behind. To upgrade:
+
+```bash
+nvfleetint version --upgrade
+```
+
+That runs the installer published with the new release, so it verifies the same
+checksum and code signature a fresh install does. See
+[Version and updates](docs/cli.md#version-and-updates) for the JSON output, the
+`--yes` flag for CI, and how to turn the check off.
 
 ### Go SDK
 

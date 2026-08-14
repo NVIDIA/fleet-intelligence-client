@@ -176,7 +176,7 @@ built: 2026-08-14
 
 Update available: v1.1.0 (current v1.0.0)
 Release notes: https://github.com/NVIDIA/fleet-intelligence-client/releases/tag/v1.1.0
-Upgrade: curl -fsSL https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.sh | bash
+Upgrade: nvfleetint version --upgrade
 ```
 
 The notice goes to stderr, so piping `version` output stays unaffected. With
@@ -201,6 +201,58 @@ command, and it is skipped entirely for a locally built binary, which has no
 release version to compare. Turn it off with `--check-update=false` for a single
 run, or by exporting `NVFLEETINT_NO_UPDATE_CHECK=1`. Prereleases are ignored, so
 a stable install is never pointed at a release candidate.
+
+The check reads the redirect from the `releases/latest` permalink on
+`github.com` rather than calling the GitHub REST API, so it consumes none of the
+API's unauthenticated request budget — a shared allowance that matters behind a
+corporate NAT or on CI runners. `install.sh` and `install.ps1` resolve the
+version to download the same way.
+
+### Upgrading in place
+
+`nvfleetint version --upgrade` installs the newest release over the running
+binary:
+
+```text
+$ nvfleetint version --upgrade
+nvfleetint v1.0.0 -> v1.1.0
+Install dir: /home/you/.local/bin
+
+This runs the official installer (https://github.com/.../download/v1.1.0/install.sh), which
+verifies the release checksum and code signature.
+Are you sure? [y/N]: y
+
+Downloading nvfleetint v1.1.0 for linux/amd64
+Installed nvfleetint to /home/you/.local/bin/nvfleetint
+Upgraded 1.0.0 -> v1.1.0
+```
+
+It downloads and runs the installer published with that release rather than
+replacing the binary itself, so an upgrade performs exactly the same
+verification a fresh install does — the release checksum, and the Developer ID
+signature and notarization ticket or the Authenticode signature. The installer
+is pinned to the resolved tag, so the script and the archive it fetches always
+come from one release.
+
+The new binary is written to the directory the running one occupies, with
+symlinks resolved. If that directory is not writable — a system-wide install
+under `/usr/local/bin`, say — the command says so and stops before downloading
+anything; re-run it with elevated privileges, or install elsewhere with
+`NVFLEETINT_INSTALL_DIR`.
+
+Prompts and installer output go to stderr, so `-o json` emits only a summary on
+stdout:
+
+```json
+{"name":"nvfleetint","from":"1.0.0","to":"v1.1.0","installDir":"/home/you/.local/bin","upgraded":true}
+```
+
+`--yes` skips the confirmation, and is required in a script or CI job: where
+stdin is not a terminal the command refuses to prompt and says so, rather than
+upgrading a binary nobody confirmed. Unlike the passive check, `--upgrade`
+reports every failure — a failed lookup or a failed install is an error, because
+silence would leave you believing you had been upgraded. A locally built binary
+cannot be upgraded, since it has no release version to compare.
 
 ## Automation
 

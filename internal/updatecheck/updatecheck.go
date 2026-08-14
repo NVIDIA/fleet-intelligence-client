@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -190,17 +189,8 @@ func Notice(result Result, current string) string {
 	if result.URL != "" {
 		fmt.Fprintf(&builder, "Release notes: %s\n", result.URL)
 	}
-	fmt.Fprintf(&builder, "Upgrade: %s\n", upgradeCommand())
+	builder.WriteString("Upgrade: nvfleetint version --upgrade\n")
 	return builder.String()
-}
-
-// upgradeCommand returns the install command for the running platform, matching
-// the README's install instructions.
-func upgradeCommand() string {
-	if runtime.GOOS == "windows" {
-		return "Invoke-WebRequest " + releasesPage + "/latest/download/install.ps1 -OutFile install.ps1; .\\install.ps1"
-	}
-	return "curl -fsSL " + releasesPage + "/latest/download/install.sh | bash"
 }
 
 // displayVersion prints the running version the way releases are tagged, so the
