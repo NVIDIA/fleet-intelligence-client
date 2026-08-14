@@ -173,6 +173,9 @@ func TestAuthProfileCommandsRejectProfileFlag(t *testing.T) {
 
 // Verifies the top-level execute helper
 func TestExecuteRunsRootCommand(t *testing.T) {
+	server, _ := releaseServer(t, "v1.2.0")
+	setUpdateChecker(t, server.URL)
+
 	if err := execute(context.Background(), []string{"version"}); err != nil {
 		t.Fatalf("execute failed: %v", err)
 	}

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -36,9 +35,6 @@ const (
 	// releaseTagSegment separates the repository path from the tag in a resolved
 	// release URL.
 	releaseTagSegment = "/releases/tag/"
-
-	// EnvDisable turns the check off entirely when set to a truthy value.
-	EnvDisable = "NVFLEETINT_NO_UPDATE_CHECK"
 
 	// DefaultTimeout bounds the release lookup. It is deliberately short: the
 	// check is a courtesy, and `nvfleetint version` must stay fast offline.
@@ -147,16 +143,6 @@ func Check(ctx context.Context, checker Checker, current string) (Result, error)
 		return Result{}, err
 	}
 	return Result{Release: release, Available: newer}, nil
-}
-
-// Disabled reports whether the environment turned the check off.
-func Disabled() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv(EnvDisable))) {
-	case "", "0", "false", "no":
-		return false
-	default:
-		return true
-	}
 }
 
 // IsReleaseVersion reports whether version parses as a semantic version, i.e.

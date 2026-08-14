@@ -21,6 +21,9 @@ import (
 )
 
 func TestVersionCommand(t *testing.T) {
+	server, _ := releaseServer(t, "v1.2.0")
+	setUpdateChecker(t, server.URL)
+
 	stdout, _ := runVersion(t, "version")
 
 	if !strings.Contains(stdout, "nvfleetint ") {
@@ -29,6 +32,9 @@ func TestVersionCommand(t *testing.T) {
 }
 
 func TestVersionCommandJSON(t *testing.T) {
+	server, _ := releaseServer(t, "v1.2.0")
+	setUpdateChecker(t, server.URL)
+
 	stdout, _ := runVersion(t, "version", "--output", "json")
 
 	var got versionOutput
@@ -88,9 +94,9 @@ func TestVersionCommandUpToDateJSON(t *testing.T) {
 	}
 }
 
-// Verifies a failed lookup never fails the command and never prints a notice —
-// being offline is not an error for `nvfleetint version`.
-func TestVersionCommandLookupFailureIsSilent(t *testing.T) {
+// Verifies a failed lookup never fails the command, but does tell the user the
+// CLI could not check whether it is current.
+func TestVersionCommandLookupFailureIsReported(t *testing.T) {
 	setVersion(t, "1.0.0")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,38 +113,40 @@ func TestVersionCommandLookupFailureIsSilent(t *testing.T) {
 	if got.UpdateCheck != nil {
 		t.Fatalf("expected no updateCheck after a failed lookup: %#v", got.UpdateCheck)
 	}
-	if stderr != "" {
-		t.Fatalf("expected no output after a failed lookup: %q", stderr)
+	if !strings.Contains(stderr, "Can't check if nvfleetint is up to date. Check your internet connection and try again.") {
+		t.Fatalf("expected a non-fatal lookup warning, got %q", stderr)
 	}
 }
 
-// Verifies every documented way of turning the check off keeps the CLI offline.
-func TestVersionCommandSkipsLookup(t *testing.T) {
+// Verifies the version command performs the release lookup for release builds,
+// but skips locally built binaries whose versions cannot be compared.
+func TestVersionCommandAlwaysLooksUpLatestRelease(t *testing.T) {
 	tests := []struct {
-		name    string
-		version string
-		args    []string
-		env     string
+		name       string
+		version    string
+		wantChecks int64
+		wantStderr string
 	}{
-		{name: "flag", version: "1.0.0", args: []string{"version", "--check-update=false"}},
-		{name: "env", version: "1.0.0", args: []string{"version"}, env: "1"},
-		{name: "dev build", version: "dev", args: []string{"version"}},
+		{name: "release build", version: "1.0.0", wantChecks: 1, wantStderr: "Update available"},
+		{name: "dev build skips", version: "dev"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			setVersion(t, test.version)
-			t.Setenv(updatecheck.EnvDisable, test.env)
 			server, requests := releaseServer(t, "v9.9.9")
 			setUpdateChecker(t, server.URL)
 
-			_, stderr := runVersion(t, test.args...)
+			_, stderr := runVersion(t, "version")
 
-			if requests.Load() != 0 {
-				t.Fatalf("expected no release lookup, got %d", requests.Load())
+			if requests.Load() != test.wantChecks {
+				t.Fatalf("expected %d release lookups, got %d", test.wantChecks, requests.Load())
 			}
-			if stderr != "" {
-				t.Fatalf("expected no notice: %q", stderr)
+			if test.wantStderr != "" && !strings.Contains(stderr, test.wantStderr) {
+				t.Fatalf("stderr missing %q: %q", test.wantStderr, stderr)
+			}
+			if test.wantStderr == "" && stderr != "" {
+				t.Fatalf("expected no stderr, got %q", stderr)
 			}
 		})
 	}
@@ -283,12 +291,6 @@ func TestVersionCommandUpgradeRejectsFlags(t *testing.T) {
 			version: "dev",
 			args:    []string{"version", "--upgrade", "--yes"},
 			wantErr: "cannot upgrade a locally built binary",
-		},
-		{
-			name:    "check disabled",
-			version: "1.0.0",
-			args:    []string{"version", "--upgrade", "--check-update=false"},
-			wantErr: "--upgrade cannot be used with --check-update=false",
 		},
 		{
 			name:    "yes without upgrade",

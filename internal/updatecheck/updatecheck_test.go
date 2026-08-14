@@ -172,31 +172,6 @@ func TestCheckSkipsDevBuild(t *testing.T) {
 	}
 }
 
-func TestDisabled(t *testing.T) {
-	tests := []struct {
-		value string
-		want  bool
-	}{
-		{value: "", want: false},
-		{value: "0", want: false},
-		{value: "false", want: false},
-		{value: "no", want: false},
-		{value: "1", want: true},
-		{value: "true", want: true},
-		{value: "yes", want: true},
-		{value: " TRUE ", want: true},
-	}
-
-	for _, test := range tests {
-		t.Run("value="+test.value, func(t *testing.T) {
-			t.Setenv(EnvDisable, test.value)
-			if got := Disabled(); got != test.want {
-				t.Fatalf("Disabled() = %v, want %v", got, test.want)
-			}
-		})
-	}
-}
-
 func TestIsNewer(t *testing.T) {
 	tests := []struct {
 		candidate string

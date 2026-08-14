@@ -197,10 +197,10 @@ The notice goes to stderr, so piping `version` output stays unaffected. With
 ```
 
 The lookup is best effort and bounded by a short timeout: it never fails the
-command, and it is skipped entirely for a locally built binary, which has no
-release version to compare. Turn it off with `--check-update=false` for a single
-run, or by exporting `NVFLEETINT_NO_UPDATE_CHECK=1`. Prereleases are ignored, so
-a stable install is never pointed at a release candidate.
+command. It is skipped for a locally built binary, which has no release version
+to compare. When the CLI is offline, the command prints a short warning to
+stderr saying it cannot check whether the version is up to date. Prereleases
+are ignored, so a stable install is never pointed at a release candidate.
 
 The check reads the redirect from the `releases/latest` permalink on
 `github.com` rather than calling the GitHub REST API, so it consumes none of the
