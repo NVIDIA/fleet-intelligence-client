@@ -17,12 +17,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Lists the sort fields accepted by xid burst list
+// Lists the sort fields accepted by xidburst list
 const xidBurstSortByList = "startTime, hostname, nodeGroup, computeZone, xidNumbers, jobDisruption, " +
 	"jobDisruptionDueToPlatformIssue, category, subcategory, tenantAction, tenantInvestigation, " +
 	"dcAdminAction, or dcAdminInvestigation"
 
-// Stores local flag values for xid burst list
+// Stores local flag values for xidburst list
 type xidBurstListFlags struct {
 	window                     string
 	start                      string
@@ -50,7 +50,7 @@ type xidBurstListFlags struct {
 	order                      string
 }
 
-// Stores data ready for xid burst list rendering
+// Stores data ready for xidburst list rendering
 type xidBurstListOutput struct {
 	Bursts    []nvfleetint.XIDBurst
 	JSONValue any
@@ -58,30 +58,17 @@ type xidBurstListOutput struct {
 	Page      *clioutput.Pagination
 }
 
-// Creates the top-level xid command group
-func newXIDCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "xid",
-		Short: "Inspect XID diagnostics",
-	}
-
-	cmd.AddCommand(newXIDBurstCmd())
-	rejectUnknownSubcommands(cmd)
-
-	return cmd
-}
-
-// Creates the xid burst command group
+// Creates the top-level xidburst command group
 func newXIDBurstCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "burst",
+		Use:   "xidburst",
 		Short: "Inspect finalized XID bursts",
 		Long: "Inspect finalized XID bursts: groups of XID errors observed together on one node.\n\n" +
 			"Workflow: list → describe. List the bursts in a time range, then describe one for its " +
 			"impacted devices, XID catalog details, and suggested actions.",
-		Example: "  nvfleetint xid burst list --window 24h\n" +
-			"  nvfleetint xid burst list --window 168h --job-disruption --sort-by startTime\n" +
-			"  nvfleetint xid burst describe <burst-id>",
+		Example: "  nvfleetint xidburst list --window 24h\n" +
+			"  nvfleetint xidburst list --window 168h --job-disruption --sort-by startTime\n" +
+			"  nvfleetint xidburst describe <burst-id>",
 	}
 
 	cmd.AddCommand(newXIDBurstListCmd())
@@ -91,7 +78,7 @@ func newXIDBurstCmd() *cobra.Command {
 	return cmd
 }
 
-// Creates the xid burst list command
+// Creates the xidburst list command
 func newXIDBurstListCmd() *cobra.Command {
 	flags := xidBurstListFlags{}
 	common := newCommonFlags()
@@ -108,9 +95,9 @@ A time range is required: use --window for a relative range, or --start and
 
 Some filters and response fields are only available to cloud-provider/NCP
 callers; for tenant callers the backend rejects them.`,
-		Example: `  nvfleetint xid burst list --window 24h
-  nvfleetint xid burst list --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z
-  nvfleetint xid burst list --window 168h --xid-numbers 48,94 --job-disruption`,
+		Example: `  nvfleetint xidburst list --window 24h
+  nvfleetint xidburst list --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z
+  nvfleetint xidburst list --window 168h --xid-numbers 48,94 --job-disruption`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runXIDBurstList(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -143,7 +130,7 @@ callers; for tenant callers the backend rejects them.`,
 	return cmd
 }
 
-// Creates the xid burst describe command
+// Creates the xidburst describe command
 func newXIDBurstDescribeCmd() *cobra.Command {
 	common := newCommonFlags()
 	cmd := &cobra.Command{
@@ -332,7 +319,7 @@ func xidBurstPageHasMore(page nvfleetint.XIDBurstsPage) bool {
 	return (page.Page+1)*page.PageSize < page.Total
 }
 
-// Writes JSON or table output for xid burst list results
+// Writes JSON or table output for xidburst list results
 func writeXIDBurstListOutput(w io.Writer, common resolvedCommonFlags, result xidBurstListOutput) error {
 	if common.output == clioutput.FormatJSON {
 		return writePaginatedListJSON(w, result.RawJSON, result.JSONValue)

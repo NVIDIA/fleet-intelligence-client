@@ -127,9 +127,9 @@ nvfleetint event list --window 24h
 nvfleetint event buckets --window 24h
 
 # XID bursts
-nvfleetint xid burst list --window 24h
-nvfleetint xid burst list --window 168h --xid-numbers 48,94 --job-disruption
-nvfleetint xid burst describe <burst-id>
+nvfleetint xidburst list --window 24h
+nvfleetint xidburst list --window 168h --xid-numbers 48,94 --job-disruption
+nvfleetint xidburst describe <burst-id>
 
 # Tags and reports
 nvfleetint tag list --prefix gpu
@@ -154,11 +154,11 @@ complete event timeline. `alert list` separately provides the fleet-wide flat
 alert records. `alert summary`, `alert node`, and `alert options` default to the
 active view; pass `--view historical` for history.
 
-`xid burst list` requires a time range (`--window`, or `--start` and `--end`),
+`xidburst list` requires a time range (`--window`, or `--start` and `--end`),
 which applies to each burst's start time. Some of its filters and response
 fields — category, subcategory, platform-attributed disruption, XID
 descriptions, and DC-admin actions — are available only to cloud-provider/NCP
-callers. `xid burst describe` adds the impacted GPU device IDs, per-XID catalog
+callers. `xidburst describe` adds the impacted GPU device IDs, per-XID catalog
 details, and suggested actions.
 
 ## CSV reports

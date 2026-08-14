@@ -15,7 +15,7 @@ import (
 
 const xidBurstsBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostname":"gpu-01","nodeGroup":"ng","nodeGroupId":"ng-1","computeZone":"cz","computeZoneId":"cz-1","startTime":"2026-05-01T00:00:00Z","endTime":"2026-05-01T00:05:00Z","burstDurationSeconds":300,"xidCount":2,"xidNumbers":[{"xidNumber":48,"mnemonic":"DBE","description":"Double Bit ECC"},{"xidNumber":94,"mnemonic":"CE"}],"deviceIds":{"0000:0f:00.0":[48,94]},"jobDisruption":true,"category":"GPU","subcategory":"Memory","stickyXidsSuppressed":1,"suggestedActions":[{"action":"Drain the node","code":"DRAIN","persona":"tenant","type":"immediate"}]}],"page":0,"pageSize":20,"total":1}`
 
-// Verifies xid burst list table output and filter translation
+// Verifies xidburst list table output and filter translation
 func TestXIDBurstListTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -50,7 +50,7 @@ func TestXIDBurstListTable(t *testing.T) {
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"xid", "burst", "list", "--window", "24h", "--xid-numbers", "48,94",
+		"xidburst", "list", "--window", "24h", "--xid-numbers", "48,94",
 		"--job-disruption", "--sort-by", "startTime",
 	})
 
@@ -77,7 +77,7 @@ func TestXIDBurstListTable(t *testing.T) {
 	}
 }
 
-// Verifies xid burst list JSON output is the raw payload with a 1-based page
+// Verifies xidburst list JSON output is the raw payload with a 1-based page
 func TestXIDBurstListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -92,7 +92,7 @@ func TestXIDBurstListJSON(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"xid", "burst", "list", "--window", "24h", "--output", "json"})
+	cmd.SetArgs([]string{"xidburst", "list", "--window", "24h", "--output", "json"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -110,7 +110,7 @@ func TestXIDBurstListJSON(t *testing.T) {
 	}
 }
 
-// Verifies xid burst list rejects invalid flags before any request
+// Verifies xidburst list rejects invalid flags before any request
 func TestXIDBurstListFlagValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -125,12 +125,12 @@ func TestXIDBurstListFlagValidation(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"missing time range", []string{"xid", "burst", "list"}},
-		{"window with start", []string{"xid", "burst", "list", "--window", "24h", "--start", "2026-05-01T00:00:00Z"}},
-		{"bad sort field", []string{"xid", "burst", "list", "--window", "24h", "--sort-by", "burstId"}},
-		{"bad order", []string{"xid", "burst", "list", "--window", "24h", "--order", "sideways"}},
-		{"non-numeric xid", []string{"xid", "burst", "list", "--window", "24h", "--xid-numbers", "forty-eight"}},
-		{"bad output", []string{"xid", "burst", "list", "--window", "24h", "--output", "yaml"}},
+		{"missing time range", []string{"xidburst", "list"}},
+		{"window with start", []string{"xidburst", "list", "--window", "24h", "--start", "2026-05-01T00:00:00Z"}},
+		{"bad sort field", []string{"xidburst", "list", "--window", "24h", "--sort-by", "burstId"}},
+		{"bad order", []string{"xidburst", "list", "--window", "24h", "--order", "sideways"}},
+		{"non-numeric xid", []string{"xidburst", "list", "--window", "24h", "--xid-numbers", "forty-eight"}},
+		{"bad output", []string{"xidburst", "list", "--window", "24h", "--output", "yaml"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -144,7 +144,7 @@ func TestXIDBurstListFlagValidation(t *testing.T) {
 	}
 }
 
-// Verifies xid burst describe renders the field/value table
+// Verifies xidburst describe renders the field/value table
 func TestXIDBurstDescribeTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -162,7 +162,7 @@ func TestXIDBurstDescribeTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"xid", "burst", "describe", "burst-1"})
+	cmd.SetArgs([]string{"xidburst", "describe", "burst-1"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -186,7 +186,7 @@ func TestXIDBurstDescribeTable(t *testing.T) {
 	}
 }
 
-// Verifies xid burst describe JSON output is the raw backend payload
+// Verifies xidburst describe JSON output is the raw backend payload
 func TestXIDBurstDescribeJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -202,7 +202,7 @@ func TestXIDBurstDescribeJSON(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"xid", "burst", "describe", "burst-1", "--output", "json"})
+	cmd.SetArgs([]string{"xidburst", "describe", "burst-1", "--output", "json"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -212,7 +212,7 @@ func TestXIDBurstDescribeJSON(t *testing.T) {
 	}
 }
 
-// Verifies xid burst describe requires exactly one burst ID
+// Verifies xidburst describe requires exactly one burst ID
 func TestXIDBurstDescribeRequiresBurstID(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -224,8 +224,8 @@ func TestXIDBurstDescribeRequiresBurstID(t *testing.T) {
 	saveTestConfig(t, server.URL, "test-key")
 
 	for _, args := range [][]string{
-		{"xid", "burst", "describe"},
-		{"xid", "burst", "describe", "burst-1", "burst-2"},
+		{"xidburst", "describe"},
+		{"xidburst", "describe", "burst-1", "burst-2"},
 	} {
 		cmd := newRootCmd()
 		cmd.SetOut(new(bytes.Buffer))
@@ -261,7 +261,7 @@ func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"xid", "burst", "list", "--window", "24h", "--all", "--page-size", "1"})
+	cmd.SetArgs([]string{"xidburst", "list", "--window", "24h", "--all", "--page-size", "1"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
