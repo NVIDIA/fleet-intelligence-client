@@ -47,6 +47,9 @@ on:
           Fall back to RC tags for version groups with no stable release yet.
         type: boolean
         default: false
+    secrets:
+      DOCS_FERN_TOKEN:
+        required: true
   workflow_dispatch:
     inputs:
       include_rc:

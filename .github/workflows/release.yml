@@ -263,7 +263,8 @@ jobs:
     name: Publish Fern docs
     needs: publish
     uses: ./.github/workflows/publish-fern-docs.yml
-    secrets: inherit
+    secrets:
+      DOCS_FERN_TOKEN: ${{ secrets.DOCS_FERN_TOKEN }}
 
   artifactory:
     name: Publish to Artifactory
