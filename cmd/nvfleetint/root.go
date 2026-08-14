@@ -18,12 +18,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	version   = "dev"
-	commit    = "unknown"
-	buildDate = "unknown"
-)
-
 // Stores shared output, pagination, and credential flag values
 type commonFlags struct {
 	output   string
@@ -252,44 +246,4 @@ func writePaginatedListJSON(w io.Writer, rawJSON []byte, jsonValue any) error {
 		return clioutput.WriteJSON(w, merged)
 	}
 	return clioutput.WriteJSON(w, jsonValue)
-}
-
-// Creates the version command
-func newVersionCmd() *cobra.Command {
-	common := newCommonFlags()
-	cmd := &cobra.Command{
-		Use:   "version",
-		Short: "Print version information",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			commonFlags := resolveCommonFlags(cmd, common)
-			if err := validateReadCommonFlags(commonFlags); err != nil {
-				return err
-			}
-			if commonFlags.output == clioutput.FormatJSON {
-				return clioutput.WriteJSON(cmd.OutOrStdout(), versionOutput{
-					Name:      "nvfleetint",
-					Version:   version,
-					Commit:    commit,
-					BuildDate: buildDate,
-				})
-			}
-			writeVersion(cmd.OutOrStdout())
-			return nil
-		},
-	}
-	registerOutputFlag(cmd, common)
-	return cmd
-}
-
-type versionOutput struct {
-	Name      string `json:"name"`
-	Version   string `json:"version"`
-	Commit    string `json:"commit"`
-	BuildDate string `json:"buildDate"`
-}
-
-// Writes binary version details
-func writeVersion(w io.Writer) {
-	fmt.Fprintf(w, "nvfleetint %s\ncommit: %s\nbuilt: %s\n", version, commit, buildDate)
 }

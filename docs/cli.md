@@ -163,6 +163,45 @@ nvfleetint report verify \
 
 Use `--key signing-key.pub` with `report verify` to supply a local public key.
 
+## Version and updates
+
+`nvfleetint version` prints the binary version, git commit, and build date. It
+also asks GitHub for the newest published release and prints an upgrade notice
+when the running build is behind:
+
+```text
+nvfleetint 1.0.0
+commit: e9941e1
+built: 2026-08-14
+
+Update available: v1.1.0 (current v1.0.0)
+Release notes: https://github.com/NVIDIA/fleet-intelligence-client/releases/tag/v1.1.0
+Upgrade: curl -fsSL https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.sh | bash
+```
+
+The notice goes to stderr, so piping `version` output stays unaffected. With
+`-o json` the check appears as an `updateCheck` object instead:
+
+```json
+{
+  "name": "nvfleetint",
+  "version": "1.0.0",
+  "commit": "e9941e1",
+  "buildDate": "2026-08-14",
+  "updateCheck": {
+    "latestVersion": "v1.1.0",
+    "releaseUrl": "https://github.com/NVIDIA/fleet-intelligence-client/releases/tag/v1.1.0",
+    "updateAvailable": true
+  }
+}
+```
+
+The lookup is best effort and bounded by a short timeout: it never fails the
+command, and it is skipped entirely for a locally built binary, which has no
+release version to compare. Turn it off with `--check-update=false` for a single
+run, or by exporting `NVFLEETINT_NO_UPDATE_CHECK=1`. Prereleases are ignored, so
+a stable install is never pointed at a release candidate.
+
 ## Automation
 
 For scripts and CI jobs, authenticate without writing a configuration file:

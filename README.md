@@ -41,6 +41,13 @@ Invoke-WebRequest https://github.com/NVIDIA/fleet-intelligence-client/releases/l
 .\install.ps1
 ```
 
+#### Staying current
+
+`nvfleetint version` checks GitHub for the newest published release and prints
+the upgrade command when the installed build is behind. Re-run the install
+command above to upgrade in place. See
+[Version and updates](docs/cli.md#version-and-updates) to turn the check off.
+
 ### Go SDK
 
 Add the `nvfleetint` package to a Go module:

@@ -58,11 +58,32 @@ function Invoke-WithRetry {
 }
 
 if ($Version -eq "latest") {
-    $release = Invoke-WithRetry -Description "Resolving the latest release" -Action {
-        Invoke-RestMethod -Uri "https://api.github.com/repos/$repository/releases/latest" `
-            -TimeoutSec $MetadataTimeoutSeconds -UseBasicParsing
+    # Resolve the version from the releases/latest permalink, which redirects to
+    # the newest release's own page, rather than from api.github.com. The REST
+    # API allows 60 unauthenticated requests per hour per IP -- a budget shared
+    # with every other tool behind the same address, which a CI runner or a
+    # corporate NAT can exhaust -- while the website imposes no such quota.
+    # install.sh resolves the version the same way.
+    $response = Invoke-WithRetry -Description "Resolving the latest release" -Action {
+        Invoke-WebRequest -Uri "https://github.com/$repository/releases/latest" `
+            -Method Head -TimeoutSec $MetadataTimeoutSeconds -UseBasicParsing
     }
-    $Version = $release.tag_name
+
+    # Windows PowerShell 5.1 reports the address the redirects landed on as
+    # ResponseUri; PowerShell 7 as RequestMessage.RequestUri.
+    $resolvedUri = $null
+    if ($response.BaseResponse.ResponseUri) {
+        $resolvedUri = $response.BaseResponse.ResponseUri.AbsoluteUri
+    } elseif ($response.BaseResponse.RequestMessage) {
+        $resolvedUri = $response.BaseResponse.RequestMessage.RequestUri.AbsoluteUri
+    }
+
+    # A repository with no published release redirects to its release index
+    # instead of a tag, which is where the REST API would have returned a 404.
+    if (-not ($resolvedUri -match '/releases/tag/(.+)$')) {
+        throw "Could not determine the latest release version"
+    }
+    $Version = [uri]::UnescapeDataString($Matches[1])
 }
 
 $tag = if ($Version.StartsWith("v")) { $Version } else { "v$Version" }
