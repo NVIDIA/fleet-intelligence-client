@@ -224,7 +224,7 @@ Are you sure? [y/N]: y
 
 Downloading nvfleetint v1.1.0 for linux/amd64
 Installed nvfleetint to /home/you/.local/bin/nvfleetint
-Upgraded 1.0.0 -> v1.1.0
+Upgraded v1.0.0 -> v1.1.0
 ```
 
 It downloads and runs the installer published with that release rather than

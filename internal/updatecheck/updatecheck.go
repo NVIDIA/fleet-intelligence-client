@@ -171,7 +171,7 @@ func Notice(result Result, current string) string {
 	}
 
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "\nUpdate available: %s (current %s)\n", result.Version, displayVersion(current))
+	fmt.Fprintf(&builder, "\nUpdate available: %s (current %s)\n", result.Version, DisplayVersion(current))
 	if result.URL != "" {
 		fmt.Fprintf(&builder, "Release notes: %s\n", result.URL)
 	}
@@ -179,9 +179,10 @@ func Notice(result Result, current string) string {
 	return builder.String()
 }
 
-// displayVersion prints the running version the way releases are tagged, so the
-// two versions in the notice are directly comparable.
-func displayVersion(version string) string {
+// DisplayVersion prints the running version the way releases are tagged, so the
+// two versions in a message are directly comparable. The version injected at
+// build time carries no "v" prefix, while release tags do.
+func DisplayVersion(version string) string {
 	version = strings.TrimSpace(version)
 	if version == "" {
 		return "unknown"

@@ -75,7 +75,7 @@ func NewUpgradePlan(current string, release Release) (UpgradePlan, error) {
 // Summary renders what the upgrade will do, for the confirmation prompt.
 func (p UpgradePlan) Summary() string {
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "nvfleetint %s -> %s\n", displayVersion(p.CurrentVersion), p.Release.Version)
+	fmt.Fprintf(&builder, "nvfleetint %s -> %s\n", DisplayVersion(p.CurrentVersion), p.Release.Version)
 	fmt.Fprintf(&builder, "Install dir: %s\n", p.InstallDir)
 	fmt.Fprintf(&builder, "\nThis runs the official installer (%s), which\nverifies the release checksum and code signature.\n", p.InstallerURL)
 	return builder.String()

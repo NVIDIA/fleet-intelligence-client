@@ -168,7 +168,7 @@ func TestVersionCommandUpgrade(t *testing.T) {
 	if recorder.plans[0].Release.Version != "v1.2.0" || recorder.plans[0].CurrentVersion != "1.0.0" {
 		t.Fatalf("unexpected plan %#v", recorder.plans[0])
 	}
-	if !strings.Contains(stdout, "Upgraded 1.0.0 -> v1.2.0") {
+	if !strings.Contains(stdout, "Upgraded v1.0.0 -> v1.2.0") {
 		t.Fatalf("stdout missing the result: %q", stdout)
 	}
 	// The prompt has to say what is about to happen, on stderr.

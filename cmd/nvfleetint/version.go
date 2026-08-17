@@ -141,7 +141,7 @@ func runUpgrade(cmd *cobra.Command, output string, yes bool) error {
 			Name: "nvfleetint",
 			From: version,
 			To:   result.Version,
-		}, fmt.Sprintf("nvfleetint %s is already the newest release.\n", version))
+		}, fmt.Sprintf("nvfleetint %s is already the newest release.\n", updatecheck.DisplayVersion(version)))
 	}
 
 	plan, err := updatecheck.NewUpgradePlan(version, result.Release)
@@ -172,7 +172,7 @@ func runUpgrade(cmd *cobra.Command, output string, yes bool) error {
 		To:         result.Version,
 		InstallDir: plan.InstallDir,
 		Upgraded:   true,
-	}, fmt.Sprintf("Upgraded %s -> %s\n", version, result.Version))
+	}, fmt.Sprintf("Upgraded %s -> %s\n", updatecheck.DisplayVersion(version), result.Version))
 }
 
 // writeUpgradeResult renders the outcome in the requested format.
