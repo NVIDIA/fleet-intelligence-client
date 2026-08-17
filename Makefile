@@ -12,7 +12,7 @@ COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 OPENAPI_SPEC := api/openapi/openapi.yaml
 OPENAPI_CODEGEN_CONFIG := api/openapi/oapi-codegen.yaml
-OPENAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.0
+OPENAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 COVERAGE_FILE := coverage.out
 COVERAGE_THRESHOLD := 80
 # Packages excluded from coverage (generated code is not hand-tested).
