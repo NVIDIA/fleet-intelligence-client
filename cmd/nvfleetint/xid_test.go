@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -110,6 +112,44 @@ func TestXIDBurstListJSON(t *testing.T) {
 	}
 }
 
+// Verifies the exclusion filter flags reach the backend as query parameters
+func TestXIDBurstListExclusionFlags(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var query url.Values
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(xidBurstsBody))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	cmd := newRootCmd()
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetArgs([]string{
+		"xidburst", "list", "--window", "24h",
+		"--exclude-nodegroup-ids", "ng-1,ng-2",
+		"--exclude-compute-zone-ids", "cz-1",
+		"--sort-by", "xidCount",
+	})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	if got := query["excludeNodeGroupIds"]; !reflect.DeepEqual(got, []string{"ng-1", "ng-2"}) {
+		t.Fatalf("unexpected excludeNodeGroupIds: %#v", got)
+	}
+	if got := query["excludeComputeZoneIds"]; !reflect.DeepEqual(got, []string{"cz-1"}) {
+		t.Fatalf("unexpected excludeComputeZoneIds: %#v", got)
+	}
+	if got := query.Get("sortBy"); got != "xidCount" {
+		t.Fatalf("unexpected sortBy: %q", got)
+	}
+}
+
 // Verifies xidburst list rejects invalid flags before any request
 func TestXIDBurstListFlagValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -131,6 +171,14 @@ func TestXIDBurstListFlagValidation(t *testing.T) {
 		{"bad order", []string{"xidburst", "list", "--window", "24h", "--order", "sideways"}},
 		{"non-numeric xid", []string{"xidburst", "list", "--window", "24h", "--xid-numbers", "forty-eight"}},
 		{"bad output", []string{"xidburst", "list", "--window", "24h", "--output", "yaml"}},
+		{"nodegroup include with exclude", []string{
+			"xidburst", "list", "--window", "24h",
+			"--nodegroup-ids", "ng-1", "--exclude-nodegroup-ids", "ng-2",
+		}},
+		{"compute zone include with exclude", []string{
+			"xidburst", "list", "--window", "24h",
+			"--compute-zone-ids", "cz-1", "--exclude-compute-zone-ids", "cz-2",
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

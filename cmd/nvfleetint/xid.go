@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -18,9 +19,9 @@ import (
 )
 
 // Lists the sort fields accepted by xidburst list
-const xidBurstSortByList = "startTime, hostname, nodeGroup, computeZone, xidNumbers, jobDisruption, " +
-	"jobDisruptionDueToPlatformIssue, category, subcategory, tenantAction, tenantInvestigation, " +
-	"dcAdminAction, or dcAdminInvestigation"
+const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeUuid, nodeGroup, computeZone, " +
+	"xidNumbers, xidCount, jobDisruption, jobDisruptionDueToPlatformIssue, category, subcategory, " +
+	"tenantAction, tenantInvestigation, dcAdminAction, or dcAdminInvestigation"
 
 // Stores local flag values for xidburst list
 type xidBurstListFlags struct {
@@ -30,6 +31,8 @@ type xidBurstListFlags struct {
 	node                       string
 	nodeGroupIDs               string
 	computeZoneIDs             string
+	excludeNodeGroupIDs        string
+	excludeComputeZoneIDs      string
 	jobDisruption              bool
 	platformDisruption         bool
 	xidNumbers                 string
@@ -107,6 +110,10 @@ callers; for tenant callers the backend rejects them.`,
 	cmd.Flags().StringVar(&flags.node, "node", "", "Filter by node UUID")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.excludeNodeGroupIDs, "exclude-nodegroup-ids", "",
+		"Comma-separated node group IDs to exclude; cannot be combined with --nodegroup-ids")
+	cmd.Flags().StringVar(&flags.excludeComputeZoneIDs, "exclude-compute-zone-ids", "",
+		"Comma-separated compute zone IDs to exclude; cannot be combined with --compute-zone-ids")
 	cmd.Flags().BoolVar(&flags.jobDisruption, "job-disruption", false, "Filter by the public fatal-XID job-disruption value")
 	cmd.Flags().BoolVar(&flags.platformDisruption, "platform-disruption", false, "Filter by analyzer platform-attributed disruption (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.xidNumbers, "xid-numbers", "", "Comma-separated XID numbers; a burst matches if it contains any of them")
@@ -200,6 +207,8 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common resolve
 	}{
 		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, assign: func(v []string) { opts.NodeGroupIDs = v }},
 		{name: "compute-zone-ids", raw: flags.computeZoneIDs, assign: func(v []string) { opts.ComputeZoneIDs = v }},
+		{name: "exclude-nodegroup-ids", raw: flags.excludeNodeGroupIDs, assign: func(v []string) { opts.ExcludeNodeGroupIDs = v }},
+		{name: "exclude-compute-zone-ids", raw: flags.excludeComputeZoneIDs, assign: func(v []string) { opts.ExcludeComputeZoneIDs = v }},
 		{name: "categories", raw: flags.categories, assign: func(v []string) { opts.Categories = v }},
 		{name: "subcategories", raw: flags.subcategories, assign: func(v []string) { opts.Subcategories = v }},
 		{name: "tenant-actions", raw: flags.tenantActions, assign: func(v []string) { opts.TenantActions = v }},
@@ -212,6 +221,13 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common resolve
 			return fmt.Errorf("invalid --%s: %w", filter.name, err)
 		}
 		filter.assign(values)
+	}
+
+	if len(opts.NodeGroupIDs) > 0 && len(opts.ExcludeNodeGroupIDs) > 0 {
+		return errors.New("--nodegroup-ids cannot be used with --exclude-nodegroup-ids")
+	}
+	if len(opts.ComputeZoneIDs) > 0 && len(opts.ExcludeComputeZoneIDs) > 0 {
+		return errors.New("--compute-zone-ids cannot be used with --exclude-compute-zone-ids")
 	}
 
 	client, err := newConfiguredClient(common)

@@ -6,6 +6,7 @@ package nvfleetint
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,14 +20,19 @@ const (
 	XIDBurstSortByCategory                        XIDBurstSortBy = "category"
 	XIDBurstSortBySubcategory                     XIDBurstSortBy = "subcategory"
 	XIDBurstSortByXIDNumbers                      XIDBurstSortBy = "xidNumbers"
-	XIDBurstSortByHostname                        XIDBurstSortBy = "hostname"
-	XIDBurstSortByNodeGroup                       XIDBurstSortBy = "nodeGroup"
-	XIDBurstSortByComputeZone                     XIDBurstSortBy = "computeZone"
-	XIDBurstSortByStartTime                       XIDBurstSortBy = "startTime"
-	XIDBurstSortByDCAdminAction                   XIDBurstSortBy = "dcAdminAction"
-	XIDBurstSortByDCAdminInvestigation            XIDBurstSortBy = "dcAdminInvestigation"
-	XIDBurstSortByTenantAction                    XIDBurstSortBy = "tenantAction"
-	XIDBurstSortByTenantInvestigation             XIDBurstSortBy = "tenantInvestigation"
+	XIDBurstSortByXIDCount                        XIDBurstSortBy = "xidCount"
+	XIDBurstSortByBurstDuration                   XIDBurstSortBy = "burstDurationSeconds"
+	// XIDBurstSortByNodeUUID spells the value "nodeUuid" to match the API contract,
+	// which differs from the nodeUUID casing used elsewhere in the spec.
+	XIDBurstSortByNodeUUID             XIDBurstSortBy = "nodeUuid"
+	XIDBurstSortByHostname             XIDBurstSortBy = "hostname"
+	XIDBurstSortByNodeGroup            XIDBurstSortBy = "nodeGroup"
+	XIDBurstSortByComputeZone          XIDBurstSortBy = "computeZone"
+	XIDBurstSortByStartTime            XIDBurstSortBy = "startTime"
+	XIDBurstSortByDCAdminAction        XIDBurstSortBy = "dcAdminAction"
+	XIDBurstSortByDCAdminInvestigation XIDBurstSortBy = "dcAdminInvestigation"
+	XIDBurstSortByTenantAction         XIDBurstSortBy = "tenantAction"
+	XIDBurstSortByTenantInvestigation  XIDBurstSortBy = "tenantInvestigation"
 
 	XIDBurstOrderAsc  XIDBurstSortOrder = "asc"
 	XIDBurstOrderDesc XIDBurstSortOrder = "desc"
@@ -60,6 +66,11 @@ type ListXIDBurstsOptions struct {
 	NodeUUID       string
 	NodeGroupIDs   []string
 	ComputeZoneIDs []string
+
+	// Exclusion filters select every assignment except the supplied IDs. Each
+	// cannot be combined with the inclusive filter for the same dimension.
+	ExcludeNodeGroupIDs   []string
+	ExcludeComputeZoneIDs []string
 
 	JobDisruption                   *bool
 	JobDisruptionDueToPlatformIssue *bool
@@ -165,6 +176,8 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 	}
 	params.NodeGroupIds = optionalStringSlice(opts.NodeGroupIDs)
 	params.ComputeZoneIds = optionalStringSlice(opts.ComputeZoneIDs)
+	params.ExcludeNodeGroupIds = optionalStringSlice(opts.ExcludeNodeGroupIDs)
+	params.ExcludeComputeZoneIds = optionalStringSlice(opts.ExcludeComputeZoneIDs)
 	params.JobDisruption = cloneBool(opts.JobDisruption)
 	params.JobDisruptionDueToPlatformIssue = cloneBool(opts.JobDisruptionDueToPlatformIssue)
 	if len(opts.XIDNumbers) > 0 {
@@ -263,6 +276,12 @@ func validateListXIDBurstsOptions(opts ListXIDBurstsOptions) error {
 	}
 	if opts.SortOrder != "" && !opts.SortOrder.Valid() {
 		return fmt.Errorf("invalid XID burst sort order %q: expected asc or desc", opts.SortOrder)
+	}
+	if len(opts.NodeGroupIDs) > 0 && len(opts.ExcludeNodeGroupIDs) > 0 {
+		return errors.New("node group include and exclude filters cannot be combined")
+	}
+	if len(opts.ComputeZoneIDs) > 0 && len(opts.ExcludeComputeZoneIDs) > 0 {
+		return errors.New("compute zone include and exclude filters cannot be combined")
 	}
 	for _, xid := range opts.XIDNumbers {
 		if xid < 0 {

@@ -170,6 +170,91 @@ func TestListXIDBurstsAbsoluteRange(t *testing.T) {
 	}
 }
 
+// Verifies exclusion filters are sent and omitted when unset
+func TestListXIDBurstsSendsExclusionFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		if got := query["excludeNodeGroupIds"]; !reflect.DeepEqual(got, []string{"ng-1", "ng-2"}) {
+			t.Fatalf("unexpected excludeNodeGroupIds: %#v", got)
+		}
+		if got := query["excludeComputeZoneIds"]; !reflect.DeepEqual(got, []string{"cz-1"}) {
+			t.Fatalf("unexpected excludeComputeZoneIds: %#v", got)
+		}
+		// The inclusive filters were left unset and must not be sent alongside.
+		for _, key := range []string{"nodeGroupIds", "computeZoneIds"} {
+			if query.Has(key) {
+				t.Fatalf("did not expect %s: %q", key, r.URL.RawQuery)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	if _, err := client.ListXIDBursts(context.Background(), ListXIDBurstsOptions{
+		Window:                "24h",
+		ExcludeNodeGroupIDs:   []string{"ng-1", "ng-2"},
+		ExcludeComputeZoneIDs: []string{"cz-1"},
+	}); err != nil {
+		t.Fatalf("list XID bursts failed: %v", err)
+	}
+}
+
+// Verifies every exported sort field is accepted by the API contract and sent verbatim
+func TestListXIDBurstsSortFields(t *testing.T) {
+	sortFields := []XIDBurstSortBy{
+		XIDBurstSortByJobDisruption,
+		XIDBurstSortByJobDisruptionDueToPlatformIssue,
+		XIDBurstSortByCategory,
+		XIDBurstSortBySubcategory,
+		XIDBurstSortByXIDNumbers,
+		XIDBurstSortByXIDCount,
+		XIDBurstSortByBurstDuration,
+		XIDBurstSortByNodeUUID,
+		XIDBurstSortByHostname,
+		XIDBurstSortByNodeGroup,
+		XIDBurstSortByComputeZone,
+		XIDBurstSortByStartTime,
+		XIDBurstSortByDCAdminAction,
+		XIDBurstSortByDCAdminInvestigation,
+		XIDBurstSortByTenantAction,
+		XIDBurstSortByTenantInvestigation,
+	}
+
+	for _, sortBy := range sortFields {
+		t.Run(string(sortBy), func(t *testing.T) {
+			if !sortBy.Valid() {
+				t.Fatalf("sort field %q is not accepted by the API contract", sortBy)
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got := r.URL.Query().Get("sortBy"); got != string(sortBy) {
+					t.Fatalf("unexpected sortBy: %q", got)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0}`))
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-key")
+			if err != nil {
+				t.Fatalf("new client failed: %v", err)
+			}
+			if _, err := client.ListXIDBursts(context.Background(), ListXIDBurstsOptions{
+				Window: "24h",
+				SortBy: sortBy,
+			}); err != nil {
+				t.Fatalf("list XID bursts failed: %v", err)
+			}
+		})
+	}
+}
+
 // Verifies invalid list options are rejected before any request
 func TestListXIDBurstsValidation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
@@ -193,6 +278,16 @@ func TestListXIDBurstsValidation(t *testing.T) {
 		{"bad sort", ListXIDBurstsOptions{Window: "24h", SortBy: "burstId"}, "invalid XID burst sort"},
 		{"bad order", ListXIDBurstsOptions{Window: "24h", SortOrder: "sideways"}, "invalid XID burst sort order"},
 		{"negative XID", ListXIDBurstsOptions{Window: "24h", XIDNumbers: []int{-1}}, "invalid XID number"},
+		{
+			"node group include with exclude",
+			ListXIDBurstsOptions{Window: "24h", NodeGroupIDs: []string{"ng-1"}, ExcludeNodeGroupIDs: []string{"ng-2"}},
+			"node group include and exclude filters cannot be combined",
+		},
+		{
+			"compute zone include with exclude",
+			ListXIDBurstsOptions{Window: "24h", ComputeZoneIDs: []string{"cz-1"}, ExcludeComputeZoneIDs: []string{"cz-2"}},
+			"compute zone include and exclude filters cannot be combined",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
