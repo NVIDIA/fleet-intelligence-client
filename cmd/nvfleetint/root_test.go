@@ -124,6 +124,7 @@ func TestClientCommandsAcceptProfileFlag(t *testing.T) {
 	// Commands that run entirely locally and so need no credentials.
 	exempt := map[string]bool{
 		"nvfleetint version":     true,
+		"nvfleetint upgrade":     true,
 		"nvfleetint auth list":   true,
 		"nvfleetint auth add":    true,
 		"nvfleetint auth remove": true,

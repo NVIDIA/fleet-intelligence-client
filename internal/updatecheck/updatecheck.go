@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -19,9 +20,10 @@ const (
 	// releasesPage is the repository's release index on the GitHub website.
 	releasesPage = "https://github.com/NVIDIA/fleet-intelligence-client/releases"
 
-	// DefaultReleaseURL is the permalink for the newest published release. It
-	// resolves to the newest release that is neither a draft nor a prerelease,
-	// so a stable install is never nudged onto a release candidate.
+	// latestSegment is the permalink, relative to the release index, for the
+	// newest published release. It resolves to the newest release that is
+	// neither a draft nor a prerelease, so a stable install is never nudged onto
+	// a release candidate.
 	//
 	// This is deliberately a github.com web URL rather than the equivalent
 	// api.github.com endpoint: the redirect it answers with already names the
@@ -30,11 +32,14 @@ const (
 	// other unauthenticated caller behind the same address, so a courtesy check
 	// has no business spending it. install.sh resolves the version to download
 	// the same way.
-	DefaultReleaseURL = releasesPage + "/latest"
+	latestSegment = "/latest"
+
+	// tagSegment prefixes a single release's page, relative to the release index.
+	tagSegment = "/tag/"
 
 	// releaseTagSegment separates the repository path from the tag in a resolved
 	// release URL.
-	releaseTagSegment = "/releases/tag/"
+	releaseTagSegment = "/releases" + tagSegment
 
 	// DefaultTimeout bounds the release lookup. It is deliberately short: the
 	// check is a courtesy, and `nvfleetint version` must stay fast offline.
@@ -56,13 +61,33 @@ type Result struct {
 	Available bool `json:"updateAvailable"`
 }
 
-// Checker resolves the newest published release from GitHub.
+// ErrReleaseNotFound reports that a requested release is not published.
+var ErrReleaseNotFound = errors.New("no such release")
+
+// Checker resolves published releases from GitHub.
 type Checker struct {
-	// URL is the latest-release permalink; DefaultReleaseURL when empty.
-	URL string
-	// HTTPClient issues the request; a DefaultTimeout client when nil. Its
-	// redirect policy is overridden, since reading the redirect is the point.
+	// ReleasesURL is the repository's release index; releasesPage when empty.
+	// The permalink for the newest release and a single release's page are both
+	// derived from it.
+	ReleasesURL string
+	// HTTPClient issues the request; a DefaultTimeout client when nil.
 	HTTPClient *http.Client
+}
+
+// releasesURL is the release index the lookups are built from.
+func (c Checker) releasesURL() string {
+	if c.ReleasesURL == "" {
+		return releasesPage
+	}
+	return strings.TrimSuffix(c.ReleasesURL, "/")
+}
+
+// client returns the HTTP client to issue lookups with.
+func (c Checker) client() http.Client {
+	if c.HTTPClient != nil {
+		return *c.HTTPClient
+	}
+	return http.Client{Timeout: DefaultTimeout}
 }
 
 // Latest returns the newest published release.
@@ -72,15 +97,10 @@ type Checker struct {
 // URL both names the tag and is the page a user wants to open. Fetching that
 // page would add nothing.
 func (c Checker) Latest(ctx context.Context) (Release, error) {
-	requestURL := c.URL
-	if requestURL == "" {
-		requestURL = DefaultReleaseURL
-	}
+	requestURL := c.releasesURL() + latestSegment
 
-	client := http.Client{Timeout: DefaultTimeout}
-	if c.HTTPClient != nil {
-		client = *c.HTTPClient
-	}
+	// Reading the redirect is the point here, so it is not followed.
+	client := c.client()
 	client.CheckRedirect = func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
@@ -120,8 +140,86 @@ func (c Checker) Latest(ctx context.Context) (Release, error) {
 	if unescaped, err := url.PathUnescape(tag); err == nil {
 		tag = unescaped
 	}
+	// The tag came off the wire and ends up as an argument to the installer, so
+	// it is held to the same shape a tag we were asked for is.
+	if !releaseTagPattern.MatchString(tag) {
+		return Release{}, fmt.Errorf("release lookup failed: %q is not a release tag", tag)
+	}
 
 	return Release{Version: tag, URL: target.String()}, nil
+}
+
+// Release resolves a single published release by version. The version may be
+// given with or without the leading "v" that release tags carry.
+//
+// It requests the release's own page and treats a 404 as ErrReleaseNotFound, so
+// a version that was never published is refused before anything is downloaded —
+// the alternative is the installer failing halfway through on a 404 of its own,
+// after the binary has already been moved aside.
+func (c Checker) Release(ctx context.Context, version string) (Release, error) {
+	tag, err := ReleaseTag(version)
+	if err != nil {
+		return Release{}, err
+	}
+	// The tag becomes a path segment, so an unusual one has to be escaped.
+	requestURL := c.releasesURL() + tagSegment + url.PathEscape(tag)
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodHead, requestURL, nil)
+	if err != nil {
+		return Release{}, err
+	}
+	request.Header.Set("User-Agent", "nvfleetint")
+
+	// Redirects are followed here, unlike the latest-release lookup: the tag URL
+	// already names the release, and a moved repository should still resolve.
+	client := c.client()
+	response, err := client.Do(request)
+	if err != nil {
+		return Release{}, err
+	}
+	defer func() { _ = response.Body.Close() }()
+
+	switch {
+	case response.StatusCode == http.StatusNotFound:
+		return Release{}, fmt.Errorf("%w: nvfleetint %s is not published; see %s for the releases that are",
+			ErrReleaseNotFound, tag, releasesPage)
+	case response.StatusCode < 200 || response.StatusCode > 299:
+		return Release{}, fmt.Errorf("release lookup failed: unexpected status %d", response.StatusCode)
+	}
+
+	return Release{Version: tag, URL: response.Request.URL.String()}, nil
+}
+
+// releaseTagPattern is the shape a release tag is allowed to take. It is the
+// same allowlist install.sh applies to its own --version, and it is what keeps
+// a caller-supplied version from becoming anything but a version: the tag ends
+// up in a URL and as an argument to the installer, so a value carrying a space,
+// a quote, a shell metacharacter, a slash, or a control character is refused
+// here rather than relying on every consumer downstream to be careful with it.
+//
+// parseVersion alone is not enough. It discards build metadata before parsing
+// and does not constrain prerelease identifiers at all, so "1.0.0+../../x" and
+// "1.0.0-$(curl evil)" both parse as valid semantic versions.
+var releaseTagPattern = regexp.MustCompile(`^v[0-9][0-9A-Za-z.+-]*$`)
+
+// ReleaseTag canonicalizes a user-supplied version into the tag a release is
+// published under, rejecting anything that is not a version at all. Validating
+// here means a typo fails immediately rather than as a 404 from GitHub, and a
+// hostile value never reaches the network or the installer in the first place.
+func ReleaseTag(version string) (string, error) {
+	trimmed := strings.TrimSpace(version)
+	if trimmed == "" {
+		return "", errors.New("a release version is required, e.g. v1.2.0")
+	}
+	if _, err := parseVersion(trimmed); err != nil {
+		return "", err
+	}
+	// Releases are tagged with a lowercase "v", whatever the user typed.
+	tag := "v" + strings.TrimPrefix(strings.TrimPrefix(trimmed, "v"), "V")
+	if !releaseTagPattern.MatchString(tag) {
+		return "", fmt.Errorf("invalid version %q: a release version may contain only letters, digits, and .+-", version)
+	}
+	return tag, nil
 }
 
 // Check compares current against the newest published release. A build whose
@@ -163,6 +261,16 @@ func IsNewer(candidate, current string) (bool, error) {
 	return order > 0, nil
 }
 
+// IsSame reports whether two versions name the same release, ignoring an
+// optional leading "v" and build metadata, neither of which affects precedence.
+func IsSame(a, b string) (bool, error) {
+	order, err := compare(a, b)
+	if err != nil {
+		return false, err
+	}
+	return order == 0, nil
+}
+
 // Notice renders the upgrade prompt shown when an update is available. It
 // returns an empty string when there is nothing to say.
 func Notice(result Result, current string) string {
@@ -175,7 +283,7 @@ func Notice(result Result, current string) string {
 	if result.URL != "" {
 		fmt.Fprintf(&builder, "Release notes: %s\n", result.URL)
 	}
-	builder.WriteString("Upgrade: nvfleetint version --upgrade\n")
+	builder.WriteString("Upgrade: nvfleetint upgrade\n")
 	return builder.String()
 }
 

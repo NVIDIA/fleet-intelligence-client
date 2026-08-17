@@ -47,13 +47,19 @@ Invoke-WebRequest https://github.com/NVIDIA/fleet-intelligence-client/releases/l
 you when the installed build is behind. To upgrade:
 
 ```bash
-nvfleetint version --upgrade
+nvfleetint upgrade
 ```
 
 That runs the installer published with the new release, so it verifies the same
-checksum and code signature a fresh install does. See
-[Version and updates](docs/cli.md#version-and-updates) for the JSON output, the
-`--yes` flag for CI, and how to turn the check off.
+checksum and code signature a fresh install does. To install a specific release
+instead of the newest one, name it:
+
+```bash
+nvfleetint upgrade --version v1.1.0
+```
+
+See [Version and updates](docs/cli.md#version-and-updates) for the JSON output,
+the `--yes` flag for CI, and how to turn the check off.
 
 ### Go SDK
 

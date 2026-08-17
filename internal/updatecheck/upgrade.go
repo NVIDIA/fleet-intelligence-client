@@ -3,7 +3,7 @@
 
 package updatecheck
 
-// This file implements `nvfleetint version --upgrade` by delegating to the
+// This file implements `nvfleetint upgrade` by delegating to the
 // release's own installer rather than replacing the binary directly. The
 // installers verify the release checksum and, per platform, the Developer ID
 // signature and notarization ticket or the Authenticode signature. Reproducing
@@ -33,7 +33,7 @@ const (
 	maxInstallerBytes = 1 << 20
 )
 
-// UpgradePlan describes the upgrade that `--upgrade` would perform.
+// UpgradePlan describes the upgrade that `nvfleetint upgrade` would perform.
 type UpgradePlan struct {
 	// CurrentVersion is the running build's version.
 	CurrentVersion string

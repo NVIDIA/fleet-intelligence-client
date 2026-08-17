@@ -176,7 +176,7 @@ built: 2026-08-14
 
 Update available: v1.1.0 (current v1.0.0)
 Release notes: https://github.com/NVIDIA/fleet-intelligence-client/releases/tag/v1.1.0
-Upgrade: nvfleetint version --upgrade
+Upgrade: nvfleetint upgrade
 ```
 
 The notice goes to stderr, so piping `version` output stays unaffected. With
@@ -210,11 +210,10 @@ version to download the same way.
 
 ### Upgrading in place
 
-`nvfleetint version --upgrade` installs the newest release over the running
-binary:
+`nvfleetint upgrade` installs the newest release over the running binary:
 
 ```text
-$ nvfleetint version --upgrade
+$ nvfleetint upgrade
 nvfleetint v1.0.0 -> v1.1.0
 Install dir: /home/you/.local/bin
 
@@ -249,10 +248,39 @@ stdout:
 
 `--yes` skips the confirmation, and is required in a script or CI job: where
 stdin is not a terminal the command refuses to prompt and says so, rather than
-upgrading a binary nobody confirmed. Unlike the passive check, `--upgrade`
-reports every failure — a failed lookup or a failed install is an error, because
-silence would leave you believing you had been upgraded. A locally built binary
-cannot be upgraded, since it has no release version to compare.
+upgrading a binary nobody confirmed. Unlike the passive check, `upgrade` reports
+every failure — a failed lookup or a failed install is an error, because silence
+would leave you believing you had been upgraded. A locally built binary cannot
+be upgraded, since it has no release version to compare.
+
+#### Installing a specific release
+
+`--version` installs exactly the release named instead of the newest one, with
+or without the leading `v`:
+
+```bash
+nvfleetint upgrade --version v1.1.0
+```
+
+An older release is a legitimate target — pinning a known-good build is the
+reason to name a version — so `--version` will downgrade. Naming the version
+already installed does nothing and says so. A version that was never published
+is refused before anything is downloaded:
+
+```text
+$ nvfleetint upgrade --version v9.9.9
+no such release: nvfleetint v9.9.9 is not published; see
+https://github.com/NVIDIA/fleet-intelligence-client/releases for the releases that are
+```
+
+Without `--version`, the command installs the newest release and does nothing
+when the running build is already on it.
+
+`--version` selects *which* published release to install; it cannot change
+where the release comes from. The repository and host are compiled in, the
+value must match a release tag (letters, digits, and `.+-`, after a leading
+`v`) or it is refused locally without a network call, and the release's own
+checksum and code-signature verification runs either way.
 
 ## Automation
 

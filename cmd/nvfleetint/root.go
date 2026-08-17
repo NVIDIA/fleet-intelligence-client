@@ -73,6 +73,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newReportCmd())
 	cmd.AddCommand(newTagCmd())
 	cmd.AddCommand(newVersionCmd())
+	cmd.AddCommand(newUpgradeCmd())
 
 	return cmd
 }
