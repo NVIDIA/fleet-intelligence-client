@@ -182,31 +182,56 @@ func runCLI(t *testing.T, args ...string) (string, string) {
 }
 
 // Serves the release pages the CLI reads the way github.com does: the
-// latest-release permalink as a redirect to latest's own page, and a page per
-// published release — 404 for anything else, which is how an unpublished
-// version is refused. It counts the requests it received.
+// latest-release permalink as a redirect to latest's own page, a page per
+// published release, and that release's installer asset — 404 for anything
+// else, which is how an unpublished version is refused. It counts the requests
+// it received.
+//
+// A tag listed in withoutInstaller has a release page but no installer asset,
+// which is what the releases published before install.sh existed look like.
 func releaseServer(t *testing.T, latest string, alsoPublished ...string) (*httptest.Server, *atomic.Int64) {
+	t.Helper()
+	return releaseServerWithout(t, nil, latest, alsoPublished...)
+}
+
+func releaseServerWithout(t *testing.T, withoutInstaller []string, latest string, alsoPublished ...string) (*httptest.Server, *atomic.Int64) {
 	t.Helper()
 
 	published := map[string]bool{latest: true}
 	for _, tag := range alsoPublished {
 		published[tag] = true
 	}
+	installerMissing := map[string]bool{}
+	for _, tag := range withoutInstaller {
+		published[tag] = true
+		installerMissing[tag] = true
+	}
 
 	var requests atomic.Int64
 	var base string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests.Add(1)
-		if _, tag, isTagPage := strings.Cut(r.URL.Path, "/tag/"); isTagPage {
+		switch {
+		case strings.Contains(r.URL.Path, "/download/"):
+			// /download/<tag>/<installer>
+			_, rest, _ := strings.Cut(r.URL.Path, "/download/")
+			tag, _, _ := strings.Cut(rest, "/")
+			if !published[tag] || installerMissing[tag] {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			_, _ = w.Write([]byte("#!/usr/bin/env bash\n"))
+		case strings.Contains(r.URL.Path, "/tag/"):
+			_, tag, _ := strings.Cut(r.URL.Path, "/tag/")
 			if !published[tag] {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
 			_, _ = w.Write([]byte("release page"))
-			return
+		default:
+			w.Header().Set("Location", fmt.Sprintf("%s/releases/tag/%s", base, latest))
+			w.WriteHeader(http.StatusFound)
 		}
-		w.Header().Set("Location", fmt.Sprintf("%s/releases/tag/%s", base, latest))
-		w.WriteHeader(http.StatusFound)
 	}))
 	base = server.URL
 	t.Cleanup(server.Close)

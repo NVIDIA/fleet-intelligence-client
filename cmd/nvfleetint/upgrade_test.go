@@ -213,6 +213,39 @@ func TestUpgradeCommandVersionAlreadyInstalled(t *testing.T) {
 	}
 }
 
+// Verifies a release that exists but ships no installer fails *before* the
+// confirmation prompt. Releases published before install.sh existed are exactly
+// this case, and asking the user to confirm an upgrade that cannot run is worse
+// than refusing it outright.
+func TestUpgradeCommandVersionWithoutInstaller(t *testing.T) {
+	setVersion(t, "1.0.0")
+	server, _ := releaseServerWithout(t, []string{"v0.2.0"}, "v1.2.0")
+	setUpdateChecker(t, server.URL)
+	recorder := captureUpgrades(t, nil)
+
+	cmd := newRootCmd()
+	var stderr bytes.Buffer
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&stderr)
+	// Stdin would answer "y" if it were ever read; it must not be.
+	cmd.SetIn(strings.NewReader("y\n"))
+	cmd.SetArgs([]string{"upgrade", "--version", "v0.2.0"})
+
+	err := cmd.Execute()
+	if !errors.Is(err, updatecheck.ErrInstallerUnavailable) {
+		t.Fatalf("expected ErrInstallerUnavailable, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "v0.2.0") {
+		t.Fatalf("error does not name the release: %v", err)
+	}
+	if strings.Contains(stderr.String(), "Are you sure?") {
+		t.Fatalf("the user was asked to confirm an impossible upgrade: %q", stderr.String())
+	}
+	if len(recorder.plans) != 0 {
+		t.Fatalf("expected no upgrade, got %d", len(recorder.plans))
+	}
+}
+
 // Verifies a failed upgrade is reported. The passive check swallows failures;
 // an explicit upgrade must not, or the user believes they were upgraded.
 func TestUpgradeCommandFailureIsReported(t *testing.T) {

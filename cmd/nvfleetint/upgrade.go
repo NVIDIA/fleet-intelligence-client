@@ -100,11 +100,16 @@ func runUpgrade(cmd *cobra.Command, output string, flags upgradeFlags) error {
 		}, upgradeSkippedMessage(flags.versionSet, target.Version))
 	}
 
-	plan, err := updatecheck.NewUpgradePlan(version, target)
+	plan, err := updateChecker.NewUpgradePlan(version, target)
 	if err != nil {
 		return err
 	}
+	// Both checks run before the prompt: a confirmation is only worth asking for
+	// once the upgrade is known to be possible.
 	if err := plan.CheckWritable(); err != nil {
+		return err
+	}
+	if err := plan.CheckInstallerAvailable(ctx); err != nil {
 		return err
 	}
 

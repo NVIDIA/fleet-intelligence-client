@@ -5,6 +5,7 @@ package updatecheck
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestNewUpgradePlan(t *testing.T) {
-	plan, err := NewUpgradePlan("1.0.0", Release{Version: "v1.2.0"})
+	plan, err := Checker{}.NewUpgradePlan("1.0.0", Release{Version: "v1.2.0"})
 	if err != nil {
 		t.Fatalf("NewUpgradePlan failed: %v", err)
 	}
@@ -45,7 +46,7 @@ func TestNewUpgradePlan(t *testing.T) {
 }
 
 func TestUpgradePlanSummary(t *testing.T) {
-	plan, err := NewUpgradePlan("1.0.0", Release{Version: "v1.2.0"})
+	plan, err := Checker{}.NewUpgradePlan("1.0.0", Release{Version: "v1.2.0"})
 	if err != nil {
 		t.Fatalf("NewUpgradePlan failed: %v", err)
 	}
@@ -55,6 +56,84 @@ func TestUpgradePlanSummary(t *testing.T) {
 		if !strings.Contains(summary, want) {
 			t.Fatalf("summary missing %q: %q", want, summary)
 		}
+	}
+}
+
+// Verifies the installer URL follows the checker's base, so a plan built from a
+// test server does not reach github.com.
+func TestNewUpgradePlanFollowsCheckerBase(t *testing.T) {
+	plan, err := Checker{ReleasesURL: "https://example.test/releases"}.
+		NewUpgradePlan("1.0.0", Release{Version: "v1.2.0"})
+	if err != nil {
+		t.Fatalf("NewUpgradePlan failed: %v", err)
+	}
+	if want := "https://example.test/releases/download/v1.2.0/" + installerName(); plan.InstallerURL != want {
+		t.Fatalf("InstallerURL = %q, want %q", plan.InstallerURL, want)
+	}
+}
+
+// Verifies a release that ships no installer is caught before the confirmation
+// prompt, and says why. Releases published before the installers were added —
+// v0.1.0 and v0.2.0 — are exactly this case: the tag resolves, but there is no
+// install.sh to run.
+func TestCheckInstallerAvailable(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		wantErr string
+		wantIs  error
+	}{
+		{name: "published", status: http.StatusOK},
+		{name: "no installer", status: http.StatusNotFound, wantErr: "predates the installer", wantIs: ErrInstallerUnavailable},
+		{name: "unexpected status", status: http.StatusInternalServerError, wantErr: "unexpected status 500"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var gotMethod string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotMethod = r.Method
+				w.WriteHeader(test.status)
+			}))
+			defer server.Close()
+
+			plan := UpgradePlan{
+				Release:      Release{Version: "v0.2.0", URL: "https://example.test/tag/v0.2.0"},
+				InstallerURL: server.URL + "/download/v0.2.0/" + installerName(),
+			}
+
+			err := plan.CheckInstallerAvailable(context.Background())
+			if test.wantErr == "" {
+				if err != nil {
+					t.Fatalf("CheckInstallerAvailable failed: %v", err)
+				}
+				// The check must not download the script, only ask whether it exists.
+				if gotMethod != http.MethodHead {
+					t.Fatalf("expected a HEAD request, got %s", gotMethod)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), test.wantErr) {
+				t.Fatalf("expected an error containing %q, got %v", test.wantErr, err)
+			}
+			if test.wantIs != nil {
+				if !errors.Is(err, test.wantIs) {
+					t.Fatalf("expected %v, got %v", test.wantIs, err)
+				}
+				// The user has to be left somewhere to go.
+				if !strings.Contains(err.Error(), "https://example.test/tag/v0.2.0") {
+					t.Fatalf("error does not point at the release page: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestReleasePageURLFallsBackToReleasePage(t *testing.T) {
+	plan := UpgradePlan{Release: Release{Version: "v0.2.0"}}
+	want := releasesPage + tagSegment + "v0.2.0"
+	if got := plan.releasePageURL(); got != want {
+		t.Fatalf("releasePageURL() = %q, want %q", got, want)
 	}
 }
 

@@ -264,14 +264,7 @@ nvfleetint upgrade --version v1.1.0
 
 An older release is a legitimate target — pinning a known-good build is the
 reason to name a version — so `--version` will downgrade. Naming the version
-already installed does nothing and says so. A version that was never published
-is refused before anything is downloaded:
-
-```text
-$ nvfleetint upgrade --version v9.9.9
-no such release: nvfleetint v9.9.9 is not published; see
-https://github.com/NVIDIA/fleet-intelligence-client/releases for the releases that are
-```
+already installed does nothing and says so.
 
 Without `--version`, the command installs the newest release and does nothing
 when the running build is already on it.

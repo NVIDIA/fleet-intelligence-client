@@ -48,8 +48,14 @@ type UpgradePlan struct {
 	InstallerURL string
 }
 
-// NewUpgradePlan describes how to replace the running binary with release.
-func NewUpgradePlan(current string, release Release) (UpgradePlan, error) {
+// ErrInstallerUnavailable reports that a release publishes no installer for the
+// running platform, so it cannot be installed in place.
+var ErrInstallerUnavailable = errors.New("no installer for this release")
+
+// NewUpgradePlan describes how to replace the running binary with release. It
+// hangs off Checker so the installer and the release lookup are addressed
+// through one base URL.
+func (c Checker) NewUpgradePlan(current string, release Release) (UpgradePlan, error) {
 	executable, err := os.Executable()
 	if err != nil {
 		return UpgradePlan{}, fmt.Errorf("could not locate the running executable: %w", err)
@@ -68,8 +74,50 @@ func NewUpgradePlan(current string, release Release) (UpgradePlan, error) {
 		// Pin the installer to the resolved tag rather than the `latest`
 		// permalink, so the script and the archive it downloads come from one
 		// release even if a new one is published mid-upgrade.
-		InstallerURL: fmt.Sprintf("%s/download/%s/%s", releasesPage, release.Version, installerName()),
+		InstallerURL: fmt.Sprintf("%s/download/%s/%s", c.releasesURL(), release.Version, installerName()),
 	}, nil
+}
+
+// CheckInstallerAvailable reports whether the target release actually publishes
+// the installer this platform needs.
+//
+// It runs before the confirmation prompt, because not every published release
+// can be installed in place: releases made before the installers were added to
+// the release ship no install.sh or install.ps1 at all. Without this the user
+// confirms an upgrade, and only then does the installer download 404 — a
+// confirmation for something that was never going to work.
+func (p UpgradePlan) CheckInstallerAvailable(ctx context.Context) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodHead, p.InstallerURL, nil)
+	if err != nil {
+		return err
+	}
+	request.Header.Set("User-Agent", "nvfleetint")
+
+	client := http.Client{Timeout: installerTimeout}
+	response, err := client.Do(request)
+	if err != nil {
+		return fmt.Errorf("could not reach the installer for %s: %w", p.Release.Version, err)
+	}
+	defer func() { _ = response.Body.Close() }()
+
+	switch {
+	case response.StatusCode == http.StatusNotFound:
+		return fmt.Errorf("%w: nvfleetint %s publishes no %s, so it cannot be installed in place; "+
+			"it predates the installer. Download it from %s and install it by hand",
+			ErrInstallerUnavailable, p.Release.Version, installerName(), p.releasePageURL())
+	case response.StatusCode < 200 || response.StatusCode > 299:
+		return fmt.Errorf("could not reach the installer for %s: unexpected status %d",
+			p.Release.Version, response.StatusCode)
+	}
+	return nil
+}
+
+// releasePageURL is where a user is sent to install a release by hand.
+func (p UpgradePlan) releasePageURL() string {
+	if p.Release.URL != "" {
+		return p.Release.URL
+	}
+	return releasesPage + tagSegment + p.Release.Version
 }
 
 // Summary renders what the upgrade will do, for the confirmation prompt.
