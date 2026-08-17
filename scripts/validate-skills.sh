@@ -186,7 +186,7 @@ nvfleet_skill="$repo_root/skills/nvfleetint/SKILL.md"
 required_nvfleet_rules=(
   '--compute-zone-names'
   '--nodegroup-names'
-  'supports sorting only by `hostname` or `nodeUUID`'
+  'supports sorting by `hostname`, `nodeUUID`, or `bmcHostname`'
   'alert summary --output json'
   'alert node <node-uuid> --output json'
   'It does not support'

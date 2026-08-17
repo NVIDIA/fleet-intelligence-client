@@ -111,7 +111,9 @@ nvfleetint overview
 nvfleetint computezone list
 nvfleetint nodegroup list
 nvfleetint node list
+nvfleetint node list --agent-type oob --bmc-hostname bmc-01
 nvfleetint node describe <node-uuid>
+nvfleetint node describe <node-uuid> --agent-type oob --section all
 
 # Health, alerts, and events
 nvfleetint node health <node-uuid> \
@@ -132,6 +134,14 @@ nvfleetint report error --window 24h
 
 List commands support shared flags including `--all`, `--page`, `--page-size`,
 `--timeout`, and `--output json`.
+
+Detailed node list and describe commands query both in-band and out-of-band
+(OOB) views by default. Table output labels the two sections; JSON output uses
+top-level `inband` and `oob` objects. Use `--agent-type inband` or
+`--agent-type oob` to request one view. OOB lists accept `--bmc-hostname` and
+the `bmcHostname` sort key. OOB describe tables can be narrowed with
+`--section managers,systems,chassis,firmware`; `--section all` includes every
+inventory section. JSON describe output always includes the full inventory.
 
 The investigative alert workflow is `summary → node → describe`: start with
 impacted-node counts, inspect one node's alerts, then retrieve one alert's

@@ -143,6 +143,15 @@ func cloneFloat32(value *float32) *float32 {
 	return &out
 }
 
+// Copies an optional boolean
+func cloneBool(value *bool) *bool {
+	if value == nil {
+		return nil
+	}
+	out := *value
+	return &out
+}
+
 // Copies optional string slices without sharing backing arrays
 func cloneStringSlice(values *[]string) []string {
 	if values == nil {
