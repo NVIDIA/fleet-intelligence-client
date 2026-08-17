@@ -16,6 +16,9 @@ const (
 	NodeViewDetail NodeView = "detail"
 	NodeViewBasic  NodeView = "basic"
 
+	NodeAgentTypeInband NodeAgentType = "inband"
+	NodeAgentTypeOOB    NodeAgentType = "oob"
+
 	NodeHealthHealthy   NodeHealthStatus = "Healthy"
 	NodeHealthDegraded  NodeHealthStatus = "Degraded"
 	NodeHealthUnhealthy NodeHealthStatus = "Unhealthy"
@@ -53,6 +56,7 @@ const (
 	NodeSortByKernelVersion       NodeSortBy = "kernelVersion"
 	NodeSortByGPUDriverVersion    NodeSortBy = "gpuDriverVersion"
 	NodeSortByGPUFirmwareVersions NodeSortBy = "gpuFirmwareVersions"
+	NodeSortByBMCHostname         NodeSortBy = "bmcHostname"
 
 	NodeOrderAsc  NodeSortOrder = "asc"
 	NodeOrderDesc NodeSortOrder = "desc"
@@ -64,6 +68,14 @@ type NodeView string
 // Reports whether the view is accepted by the API
 func (view NodeView) Valid() bool {
 	return fleetapi.GetV1NodesParamsView(view).Valid()
+}
+
+// Represents the agent source used to list or describe nodes
+type NodeAgentType string
+
+// Reports whether the agent type is accepted by the API
+func (agentType NodeAgentType) Valid() bool {
+	return fleetapi.GetV1NodesParamsAgentType(agentType).Valid()
 }
 
 // Represents supported health filters for listing nodes
@@ -119,6 +131,7 @@ func (order NodeSortOrder) Valid() bool {
 // Represents request options for listing nodes
 type ListNodesOptions struct {
 	View             NodeView
+	AgentType        NodeAgentType
 	NodeUUIDs        []string
 	HealthStatuses   []NodeHealthStatus
 	ComputeZoneIDs   []string
@@ -130,6 +143,7 @@ type ListNodesOptions struct {
 	PublicIPs        []string
 	PrivateIPs       []string
 	Hostname         string
+	BMCHostname      string
 	AgentStatuses    []NodeAgentStatus
 	IntegrityChecks  []NodeIntegrityCheck
 	FirmwareChecks   []NodeFirmwareCheck
@@ -151,21 +165,89 @@ type NodesPage struct {
 
 // Represents a node
 type Node struct {
-	UUID                   string `json:"nodeUUID"`
-	Hostname               string `json:"hostname"`
-	ComputeZone            string `json:"computeZone,omitempty"`
-	NodeGroup              string `json:"nodeGroup,omitempty"`
-	Health                 string `json:"healthStatus,omitempty"`
-	GPUType                string `json:"gpuType,omitempty"`
-	GPUCount               *int   `json:"gpuCount,omitempty"`
-	AgentStatus            string `json:"agentStatus,omitempty"`
-	IntegrityCheck         string `json:"integrityCheck,omitempty"`
-	IntegrityCheckReason   string `json:"integrityCheckReason,omitempty"`
-	FirmwareCheck          string `json:"firmwareCheck,omitempty"`
-	PublicIP               string `json:"publicIP,omitempty"`
-	PrivateIP              string `json:"privateIP,omitempty"`
-	LastIntegrityCheckTime string `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTime        string `json:"lastUpdatedTS,omitempty"`
+	UUID                    string                   `json:"nodeUUID"`
+	Hostname                string                   `json:"hostname,omitempty"`
+	AgentType               string                   `json:"agentType,omitempty"`
+	AgentVersion            string                   `json:"agentVersion,omitempty"`
+	BMCHostname             string                   `json:"bmcHostname,omitempty"`
+	BMCIP                   string                   `json:"bmcIP,omitempty"`
+	ComputeZone             string                   `json:"computeZone,omitempty"`
+	NodeGroup               string                   `json:"nodeGroup,omitempty"`
+	Health                  string                   `json:"healthStatus,omitempty"`
+	GPUType                 string                   `json:"gpuType,omitempty"`
+	GPUCount                *int                     `json:"gpuCount,omitempty"`
+	AgentStatus             string                   `json:"agentStatus,omitempty"`
+	IntegrityCheck          string                   `json:"integrityCheck,omitempty"`
+	IntegrityCheckExtraInfo *IntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
+	IntegrityCheckReason    string                   `json:"integrityCheckReason,omitempty"`
+	FirmwareCheck           string                   `json:"firmwareCheck,omitempty"`
+	GPUDriverVersion        string                   `json:"gpuDriverVersion,omitempty"`
+	GPUFirmwareVersions     []GPUFirmwareVersion     `json:"gpuFirmwareVersions,omitempty"`
+	KernelVersion           string                   `json:"kernelVersion,omitempty"`
+	PublicIP                string                   `json:"publicIP,omitempty"`
+	PrivateIP               string                   `json:"privateIP,omitempty"`
+	LastIntegrityCheckTime  string                   `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTime         string                   `json:"lastUpdatedTS,omitempty"`
+}
+
+// Represents firmware reported by one GPU
+type GPUFirmwareVersion struct {
+	FirmwareVersion string `json:"firmwareVersion,omitempty"`
+	GPUIndex        string `json:"gpuIndex,omitempty"`
+}
+
+// Represents structured details returned with an integrity check
+type IntegrityCheckExtraInfo struct {
+	ErrorDetails             string               `json:"errorDetails,omitempty"`
+	GPUEvidencePresent       *bool                `json:"gpuEvidencePresent,omitempty"`
+	GPUResults               map[string]JWTClaims `json:"gpuResults,omitempty"`
+	NRASCallResult           string               `json:"nrasCallResult,omitempty"`
+	OverallAttestationResult *bool                `json:"overallAttestationResult,omitempty"`
+}
+
+// Represents claims returned for a GPU attestation result
+type JWTClaims struct {
+	EATNonce                                    string            `json:"eat_nonce,omitempty"`
+	ExpiresAt                                   *int              `json:"exp,omitempty"`
+	HardwareModel                               string            `json:"hwmodel,omitempty"`
+	IssuedAt                                    *int              `json:"iat,omitempty"`
+	Issuer                                      string            `json:"iss,omitempty"`
+	JWTID                                       string            `json:"jti,omitempty"`
+	MeasurementResults                          string            `json:"measres,omitempty"`
+	NotBefore                                   *int              `json:"nbf,omitempty"`
+	Subject                                     string            `json:"sub,omitempty"`
+	UEID                                        string            `json:"ueid,omitempty"`
+	NVIDIAAttestationWarning                    string            `json:"x-nvidia-attestation-warning,omitempty"`
+	NVIDIAErrorDetails                          []NRASErrorDetail `json:"x-nvidia-error-details,omitempty"`
+	NVIDIAGPUArchitectureCheck                  *bool             `json:"x-nvidia-gpu-arch-check,omitempty"`
+	NVIDIAGPUAttestationReportCertChain         *CertChainStatus  `json:"x-nvidia-gpu-attestation-report-cert-chain,omitempty"`
+	NVIDIAGPUAttestationReportNonceMatch        *bool             `json:"x-nvidia-gpu-attestation-report-nonce-match,omitempty"`
+	NVIDIAGPUAttestationReportParsed            *bool             `json:"x-nvidia-gpu-attestation-report-parsed,omitempty"`
+	NVIDIAGPUAttestationReportSignatureVerified *bool             `json:"x-nvidia-gpu-attestation-report-signature-verified,omitempty"`
+	NVIDIAGPUVBIOSRIMFetched                    *bool             `json:"x-nvidia-gpu-vbios-rim-fetched,omitempty"`
+	NVIDIAGPUVBIOSRIMMeasurementsAvailable      *bool             `json:"x-nvidia-gpu-vbios-rim-measurements-available,omitempty"`
+	NVIDIAGPUVBIOSVersion                       string            `json:"x-nvidia-gpu-vbios-version,omitempty"`
+	NVIDIAMismatchMeasurementRecords            []any             `json:"x-nvidia-mismatch-measurement-records,omitempty"`
+	NVIDIAOverallAttestationResult              *bool             `json:"x-nvidia-overall-att-result,omitempty"`
+}
+
+// Represents an NRAS error returned in attestation claims
+type NRASErrorDetail struct {
+	Code        *int   `json:"code,omitempty"`
+	Description string `json:"description,omitempty"`
+	FieldName   string `json:"fieldName,omitempty"`
+	HTTPStatus  string `json:"httpStatus,omitempty"`
+	Message     string `json:"message,omitempty"`
+}
+
+// Represents certificate-chain validation details returned in attestation claims
+type CertChainStatus struct {
+	ExpirationDate    string `json:"x-nvidia-cert-expiration-date,omitempty"`
+	OCSPNonceMatches  *bool  `json:"x-nvidia-cert-ocsp-nonce-matches,omitempty"`
+	OCSPResponseValid *bool  `json:"x-nvidia-cert-ocsp-response-valid,omitempty"`
+	OCSPStatus        string `json:"x-nvidia-cert-ocsp-status,omitempty"`
+	RevocationReason  string `json:"x-nvidia-cert-revocation-reason,omitempty"`
+	Status            string `json:"x-nvidia-cert-status,omitempty"`
 }
 
 // Represents detailed node metadata
@@ -180,8 +262,14 @@ type NodeDetails struct {
 	UnhealthyComponentCount *int           `json:"unhealthyComponentCount,omitempty"`
 	Resources               *NodeResources `json:"resources,omitempty"`
 	SystemInfo              *SystemInfo    `json:"systemInfo,omitempty"`
+	OOBInventory            *OOBInventory  `json:"oobInventory,omitempty"`
 	Tags                    []string       `json:"tags,omitempty"`
 	RawJSON                 []byte         `json:"-"`
+}
+
+// Represents request options for describing a node
+type DescribeNodeOptions struct {
+	AgentType NodeAgentType
 }
 
 // Represents hardware and network resource metadata for a node
@@ -290,12 +378,19 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	params := fleetapi.GetV1NodesParams{
 		View: nodeViewParam(view),
 	}
+	if opts.AgentType != "" {
+		agentType := fleetapi.GetV1NodesParamsAgentType(opts.AgentType)
+		params.AgentType = &agentType
+	}
 	if len(opts.NodeUUIDs) > 0 {
 		nodeUUIDs := append([]string(nil), opts.NodeUUIDs...)
 		params.NodeUUIDs = &nodeUUIDs
 	}
 	if opts.Hostname != "" {
 		params.Hostname = &opts.Hostname
+	}
+	if opts.BMCHostname != "" {
+		params.BmcHostname = &opts.BMCHostname
 	}
 	if len(opts.ComputeZoneIDs) > 0 {
 		computeZoneIDs := append([]string(nil), opts.ComputeZoneIDs...)
@@ -385,20 +480,40 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if view == NodeViewBasic {
 		return decodeBasicNodes(resp.Body)
 	}
+	if opts.AgentType == NodeAgentTypeOOB {
+		return decodeOOBDetailNodes(resp.Body)
+	}
 
-	return decodeDetailNodes(resp.Body)
+	return decodeInbandDetailNodes(resp.Body)
 }
 
 // Retrieves detail for a single node using the configured API client
 func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails, error) {
+	return c.DescribeNodeWithOptions(ctx, nodeUUID, DescribeNodeOptions{})
+}
+
+// Retrieves agent-specific detail for a single node using the configured API client
+func (c *Client) DescribeNodeWithOptions(
+	ctx context.Context,
+	nodeUUID string,
+	opts DescribeNodeOptions,
+) (NodeDetails, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
 	if nodeUUID == "" {
 		return NodeDetails{}, fmt.Errorf("node UUID is required")
 	}
+	if opts.AgentType != "" && !opts.AgentType.Valid() {
+		return NodeDetails{}, fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
+	}
 
-	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, nil)
+	params := fleetapi.GetV1NodesNodeUuidParams{}
+	if opts.AgentType != "" {
+		agentType := fleetapi.GetV1NodesNodeUuidParamsAgentType(opts.AgentType)
+		params.AgentType = &agentType
+	}
+	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, &params)
 	if err != nil {
 		return NodeDetails{}, err
 	}
@@ -406,12 +521,21 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 		return NodeDetails{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
-	var data fleetapi.ModelsInbandNodeDetailsResponse
-	if err := json.Unmarshal(resp.Body, &data); err != nil {
-		return NodeDetails{}, err
+	var node NodeDetails
+	if opts.AgentType == NodeAgentTypeOOB {
+		var data fleetapi.ModelsOobNodeDetailsResponse
+		if err := json.Unmarshal(resp.Body, &data); err != nil {
+			return NodeDetails{}, err
+		}
+		node = oobNodeDetailsFromGenerated(data)
+	} else {
+		var data fleetapi.ModelsInbandNodeDetailsResponse
+		if err := json.Unmarshal(resp.Body, &data); err != nil {
+			return NodeDetails{}, err
+		}
+		node = inbandNodeDetailsFromGenerated(data)
 	}
 
-	node := nodeDetailsFromGenerated(data)
 	node.RawJSON = append([]byte(nil), resp.Body...)
 	return node, nil
 }
@@ -430,6 +554,9 @@ func normalizeNodeView(view NodeView) (NodeView, error) {
 
 // Checks node list options before making the request
 func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
+	if opts.AgentType != "" && !opts.AgentType.Valid() {
+		return fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
+	}
 	for _, status := range opts.HealthStatuses {
 		if !status.Valid() {
 			return fmt.Errorf("invalid node health %q: expected Healthy, Degraded, Unhealthy, or Unknown", status)
@@ -456,7 +583,7 @@ func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
 		}
 	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node sort %q: expected hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, integrityCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions", opts.SortBy)
+		return fmt.Errorf("invalid node sort %q", opts.SortBy)
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
 		return fmt.Errorf("invalid node order %q: expected asc or desc", opts.Order)
@@ -476,10 +603,10 @@ func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
 // Reports whether a sort field works with basic view
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHostname, NodeSortByUUID:
-		return true
-	default:
+	case NodeSortByHealthStatus, NodeSortByIntegrityCheck, NodeSortByAgentStatus:
 		return false
+	default:
+		return true
 	}
 }
 
@@ -490,7 +617,7 @@ func nodeViewParam(view NodeView) *fleetapi.GetV1NodesParamsView {
 }
 
 // Decodes detail responses and preserves the original payload
-func decodeDetailNodes(data []byte) (NodesPage, error) {
+func decodeInbandDetailNodes(data []byte) (NodesPage, error) {
 	var resp fleetapi.ModelsInbandNodesResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return NodesPage{}, err
@@ -506,7 +633,31 @@ func decodeDetailNodes(data []byte) (NodesPage, error) {
 	if resp.Nodes != nil {
 		page.Nodes = make([]Node, 0, len(*resp.Nodes))
 		for _, node := range *resp.Nodes {
-			page.Nodes = append(page.Nodes, nodeFromGenerated(node))
+			page.Nodes = append(page.Nodes, inbandNodeFromGenerated(node))
+		}
+	}
+
+	return page, nil
+}
+
+// Decodes OOB detail responses and preserves the original payload
+func decodeOOBDetailNodes(data []byte) (NodesPage, error) {
+	var resp fleetapi.ModelsOobNodesResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return NodesPage{}, err
+	}
+
+	page := NodesPage{
+		HasMore:  boolValue(resp.HasMore),
+		Page:     intValue(resp.Page),
+		PageSize: intValue(resp.PageSize),
+		Total:    intValue(resp.Total),
+		RawJSON:  append([]byte(nil), data...),
+	}
+	if resp.Nodes != nil {
+		page.Nodes = make([]Node, 0, len(*resp.Nodes))
+		for _, node := range *resp.Nodes {
+			page.Nodes = append(page.Nodes, oobNodeFromGenerated(node))
 		}
 	}
 
@@ -538,53 +689,87 @@ func decodeBasicNodes(data []byte) (NodesPage, error) {
 }
 
 // Maps detail API models into SDK values
-func nodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
+func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
-		UUID:                   node.NodeUUID,
-		Hostname:               stringValue(node.Hostname),
-		ComputeZone:            stringValue(node.ComputeZone),
-		NodeGroup:              stringValue(node.NodeGroup),
-		Health:                 enumStringValue(node.HealthStatus),
-		GPUType:                stringValue(node.GpuType),
-		GPUCount:               cloneInt(node.GpuCount),
-		AgentStatus:            enumStringValue(node.AgentStatus),
-		IntegrityCheck:         enumStringValue(node.IntegrityCheck),
-		IntegrityCheckReason:   stringValue(node.IntegrityCheckReason),
-		FirmwareCheck:          enumStringValue(node.FirmwareCheck),
-		PublicIP:               stringValue(node.PublicIP),
-		PrivateIP:              stringValue(node.PrivateIP),
-		LastIntegrityCheckTime: stringValue(node.LastIntegrityCheckTS),
-		LastUpdatedTime:        stringValue(node.LastUpdatedTS),
+		UUID:                    node.NodeUUID,
+		Hostname:                stringValue(node.Hostname),
+		AgentType:               stringValue(node.AgentType),
+		AgentVersion:            stringValue(node.AgentVersion),
+		ComputeZone:             stringValue(node.ComputeZone),
+		NodeGroup:               stringValue(node.NodeGroup),
+		Health:                  enumStringValue(node.HealthStatus),
+		GPUType:                 stringValue(node.GpuType),
+		GPUCount:                cloneInt(node.GpuCount),
+		AgentStatus:             enumStringValue(node.AgentStatus),
+		IntegrityCheck:          enumStringValue(node.IntegrityCheck),
+		IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
+		IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
+		FirmwareCheck:           enumStringValue(node.FirmwareCheck),
+		GPUDriverVersion:        stringValue(node.GpuDriverVersion),
+		GPUFirmwareVersions:     gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
+		KernelVersion:           stringValue(node.KernelVersion),
+		PublicIP:                stringValue(node.PublicIP),
+		PrivateIP:               stringValue(node.PrivateIP),
+		LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
+		LastUpdatedTime:         stringValue(node.LastUpdatedTS),
+	}
+}
+
+// Maps OOB list API models into SDK values
+func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
+	return Node{
+		UUID:                    node.NodeUUID,
+		AgentType:               stringValue(node.AgentType),
+		AgentVersion:            stringValue(node.AgentVersion),
+		BMCHostname:             stringValue(node.BmcHostname),
+		BMCIP:                   stringValue(node.BmcIP),
+		ComputeZone:             stringValue(node.ComputeZone),
+		NodeGroup:               stringValue(node.NodeGroup),
+		Health:                  enumStringValue(node.HealthStatus),
+		AgentStatus:             enumStringValue(node.AgentStatus),
+		IntegrityCheck:          enumStringValue(node.IntegrityCheck),
+		IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
+		IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
+		LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
+		LastUpdatedTime:         stringValue(node.LastUpdatedTS),
 	}
 }
 
 // Maps basic API models into SDK values
 func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
-		UUID:     node.NodeUUID,
-		Hostname: stringValue(node.Hostname),
+		UUID:        node.NodeUUID,
+		Hostname:    stringValue(node.Hostname),
+		BMCHostname: stringValue(node.BmcHostname),
+		BMCIP:       stringValue(node.BmcIP),
 	}
 }
 
 // Maps node detail API models into SDK values
-func nodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
+func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
-			UUID:                   node.NodeUUID,
-			Hostname:               stringValue(node.Hostname),
-			ComputeZone:            stringValue(node.ComputeZone),
-			NodeGroup:              stringValue(node.NodeGroup),
-			Health:                 enumStringValue(node.HealthStatus),
-			GPUType:                stringValue(node.GpuType),
-			GPUCount:               cloneInt(node.GpuCount),
-			AgentStatus:            enumStringValue(node.AgentStatus),
-			IntegrityCheck:         enumStringValue(node.IntegrityCheck),
-			IntegrityCheckReason:   stringValue(node.IntegrityCheckReason),
-			FirmwareCheck:          enumStringValue(node.FirmwareCheck),
-			PublicIP:               stringValue(node.PublicIP),
-			PrivateIP:              stringValue(node.PrivateIP),
-			LastIntegrityCheckTime: stringValue(node.LastIntegrityCheckTS),
-			LastUpdatedTime:        stringValue(node.LastUpdatedTS),
+			UUID:                    node.NodeUUID,
+			Hostname:                stringValue(node.Hostname),
+			AgentType:               stringValue(node.AgentType),
+			AgentVersion:            stringValue(node.AgentVersion),
+			ComputeZone:             stringValue(node.ComputeZone),
+			NodeGroup:               stringValue(node.NodeGroup),
+			Health:                  enumStringValue(node.HealthStatus),
+			GPUType:                 stringValue(node.GpuType),
+			GPUCount:                cloneInt(node.GpuCount),
+			AgentStatus:             enumStringValue(node.AgentStatus),
+			IntegrityCheck:          enumStringValue(node.IntegrityCheck),
+			IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
+			IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
+			FirmwareCheck:           enumStringValue(node.FirmwareCheck),
+			GPUDriverVersion:        stringValue(node.GpuDriverVersion),
+			GPUFirmwareVersions:     gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
+			KernelVersion:           stringValue(node.KernelVersion),
+			PublicIP:                stringValue(node.PublicIP),
+			PrivateIP:               stringValue(node.PrivateIP),
+			LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
+			LastUpdatedTime:         stringValue(node.LastUpdatedTS),
 		},
 		ComputeZoneID:           stringValue(node.ComputeZoneId),
 		NodeGroupID:             stringValue(node.NodeGroupId),
@@ -597,6 +782,137 @@ func nodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) Nod
 		SystemInfo:              systemInfoFromGenerated(node.SystemInfo),
 		Tags:                    cloneStringSlice(node.Tags),
 	}
+}
+
+// Maps OOB node detail API models into SDK values
+func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) NodeDetails {
+	return NodeDetails{
+		Node: Node{
+			UUID:                    node.NodeUUID,
+			AgentType:               stringValue(node.AgentType),
+			AgentVersion:            stringValue(node.AgentVersion),
+			BMCHostname:             stringValue(node.BmcHostname),
+			BMCIP:                   stringValue(node.BmcIP),
+			ComputeZone:             stringValue(node.ComputeZone),
+			NodeGroup:               stringValue(node.NodeGroup),
+			Health:                  enumStringValue(node.HealthStatus),
+			AgentStatus:             enumStringValue(node.AgentStatus),
+			IntegrityCheck:          enumStringValue(node.IntegrityCheck),
+			IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
+			IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
+			LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
+			LastUpdatedTime:         stringValue(node.LastUpdatedTS),
+		},
+		ComputeZoneID:           stringValue(node.ComputeZoneId),
+		NodeGroupID:             stringValue(node.NodeGroupId),
+		EnrolledAt:              stringValue(node.EnrolledAt),
+		GeoLocation:             geoLocationFromGenerated(node.GeoLocation),
+		HealthyComponentCount:   cloneInt(node.HealthyComponentCount),
+		DegradedComponentCount:  cloneInt(node.DegradedComponentCount),
+		UnhealthyComponentCount: cloneInt(node.UnhealthyComponentCount),
+		OOBInventory:            oobInventoryFromGenerated(node.OobInventory),
+		Tags:                    cloneStringSlice(node.Tags),
+	}
+}
+
+func gpuFirmwareVersionsFromGenerated(versions *[]fleetapi.ModelsGPUFirmwareVersion) []GPUFirmwareVersion {
+	if versions == nil {
+		return nil
+	}
+	out := make([]GPUFirmwareVersion, 0, len(*versions))
+	for _, version := range *versions {
+		out = append(out, GPUFirmwareVersion{
+			FirmwareVersion: stringValue(version.FirmwareVersion),
+			GPUIndex:        stringValue(version.GpuIndex),
+		})
+	}
+	return out
+}
+
+func integrityCheckExtraInfoFromGenerated(
+	info *fleetapi.ModelsIntegrityCheckExtraInfo,
+) *IntegrityCheckExtraInfo {
+	if info == nil {
+		return nil
+	}
+	out := &IntegrityCheckExtraInfo{
+		ErrorDetails:             stringValue(info.ErrorDetails),
+		GPUEvidencePresent:       cloneBool(info.GpuEvidencePresent),
+		NRASCallResult:           stringValue(info.NrasCallResult),
+		OverallAttestationResult: cloneBool(info.OverallAttestationResult),
+	}
+	if info.GpuResults != nil {
+		out.GPUResults = make(map[string]JWTClaims, len(*info.GpuResults))
+		for gpuID, claims := range *info.GpuResults {
+			out.GPUResults[gpuID] = jwtClaimsFromGenerated(claims)
+		}
+	}
+	return out
+}
+
+func jwtClaimsFromGenerated(claims fleetapi.ModelsJWTClaims) JWTClaims {
+	return JWTClaims{
+		EATNonce:                             stringValue(claims.EatNonce),
+		ExpiresAt:                            cloneInt(claims.Exp),
+		HardwareModel:                        stringValue(claims.Hwmodel),
+		IssuedAt:                             cloneInt(claims.Iat),
+		Issuer:                               stringValue(claims.Iss),
+		JWTID:                                stringValue(claims.Jti),
+		MeasurementResults:                   stringValue(claims.Measres),
+		NotBefore:                            cloneInt(claims.Nbf),
+		Subject:                              stringValue(claims.Sub),
+		UEID:                                 stringValue(claims.Ueid),
+		NVIDIAAttestationWarning:             stringValue(claims.XNvidiaAttestationWarning),
+		NVIDIAErrorDetails:                   nrasErrorDetailsFromGenerated(claims.XNvidiaErrorDetails),
+		NVIDIAGPUArchitectureCheck:           cloneBool(claims.XNvidiaGpuArchCheck),
+		NVIDIAGPUAttestationReportCertChain:  certChainStatusFromGenerated(claims.XNvidiaGpuAttestationReportCertChain),
+		NVIDIAGPUAttestationReportNonceMatch: cloneBool(claims.XNvidiaGpuAttestationReportNonceMatch),
+		NVIDIAGPUAttestationReportParsed:     cloneBool(claims.XNvidiaGpuAttestationReportParsed),
+		NVIDIAGPUAttestationReportSignatureVerified: cloneBool(claims.XNvidiaGpuAttestationReportSignatureVerified),
+		NVIDIAGPUVBIOSRIMFetched:                    cloneBool(claims.XNvidiaGpuVbiosRimFetched),
+		NVIDIAGPUVBIOSRIMMeasurementsAvailable:      cloneBool(claims.XNvidiaGpuVbiosRimMeasurementsAvailable),
+		NVIDIAGPUVBIOSVersion:                       stringValue(claims.XNvidiaGpuVbiosVersion),
+		NVIDIAMismatchMeasurementRecords:            cloneAnySlice(claims.XNvidiaMismatchMeasurementRecords),
+		NVIDIAOverallAttestationResult:              cloneBool(claims.XNvidiaOverallAttResult),
+	}
+}
+
+func nrasErrorDetailsFromGenerated(details *[]fleetapi.ModelsNRASErrorDetail) []NRASErrorDetail {
+	if details == nil {
+		return nil
+	}
+	out := make([]NRASErrorDetail, 0, len(*details))
+	for _, detail := range *details {
+		out = append(out, NRASErrorDetail{
+			Code:        cloneInt(detail.Code),
+			Description: stringValue(detail.Description),
+			FieldName:   stringValue(detail.FieldName),
+			HTTPStatus:  stringValue(detail.HttpStatus),
+			Message:     stringValue(detail.Message),
+		})
+	}
+	return out
+}
+
+func certChainStatusFromGenerated(status *fleetapi.ModelsCertChainStatus) *CertChainStatus {
+	if status == nil {
+		return nil
+	}
+	return &CertChainStatus{
+		ExpirationDate:    stringValue(status.XNvidiaCertExpirationDate),
+		OCSPNonceMatches:  cloneBool(status.XNvidiaCertOcspNonceMatches),
+		OCSPResponseValid: cloneBool(status.XNvidiaCertOcspResponseValid),
+		OCSPStatus:        stringValue(status.XNvidiaCertOcspStatus),
+		RevocationReason:  stringValue(status.XNvidiaCertRevocationReason),
+		Status:            stringValue(status.XNvidiaCertStatus),
+	}
+}
+
+func cloneAnySlice(values *[]interface{}) []any {
+	if values == nil {
+		return nil
+	}
+	return append([]any(nil), (*values)...)
 }
 
 // Maps resource API models into SDK values

@@ -45,6 +45,23 @@ func main() {
 }
 ```
 
+Select the out-of-band node view and retrieve its BMC inventory with explicit
+agent options:
+
+```go
+page, err := client.ListNodes(ctx, nvfleetint.ListNodesOptions{
+	AgentType:   nvfleetint.NodeAgentTypeOOB,
+	BMCHostname: "bmc-01",
+})
+
+node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
+	AgentType: nvfleetint.NodeAgentTypeOOB,
+})
+if err == nil && node.OOBInventory != nil {
+	fmt.Println(node.OOBInventory.SchemaVersion)
+}
+```
+
 `NewClient` requires an HTTPS API URL and an API key. Plain HTTP is accepted
 only for loopback addresses used during local development.
 

@@ -157,7 +157,7 @@ func TestListNodesBasic(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -177,6 +177,9 @@ func TestListNodesBasic(t *testing.T) {
 	}
 	if len(got.Nodes) != 1 || got.Nodes[0].UUID != "node-1" || got.Nodes[0].Hostname != "gpu-001" {
 		t.Fatalf("unexpected nodes: %#v", got.Nodes)
+	}
+	if got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10:443" {
+		t.Fatalf("unexpected basic BMC fields: %#v", got.Nodes[0])
 	}
 	if got.Nodes[0].GPUCount != nil || got.Nodes[0].Health != "" {
 		t.Fatalf("basic view should not set detail fields: %#v", got.Nodes[0])
@@ -227,6 +230,96 @@ func TestDescribeNodeSendsAuthAndDecodesDetails(t *testing.T) {
 	}
 	if !strings.Contains(string(got.RawJSON), `"nodeUUID"`) {
 		t.Fatalf("raw JSON not preserved: %q", string(got.RawJSON))
+	}
+}
+
+// Verifies OOB detail selection and nested inventory decoding
+func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("agentType"); got != "oob" {
+			t.Fatalf("unexpected agentType: %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"nodeUUID":"node-oob-1",
+			"hostname":"host-001",
+			"agentType":"oob",
+			"bmcHostname":"bmc-001",
+			"bmcIP":"192.0.2.10",
+			"oobInventory":{
+				"collectedAt":"2026-07-30T20:00:00Z",
+				"schemaVersion":"inventory.v1alpha1",
+				"primarySystemId":"System.Embedded.1",
+				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","hostName":"bmc-001"},
+				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
+				"managers":[{"id":"iDRAC.Embedded.1","firmwareVersion":"7.10.00.00"}],
+				"chassis":[{"id":"System.Embedded.1","pcieDevices":[{"id":"GPU.Slot.1","model":"NVIDIA H100"}]}],
+				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","statusState":"Enabled","health":"OK","healthRollup":"Warning"}],
+				"domainErrors":[{"domain":"firmware","message":"partial collection"}]
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	got, err := client.DescribeNodeWithOptions(context.Background(), "node-oob-1", DescribeNodeOptions{
+		AgentType: NodeAgentTypeOOB,
+	})
+	if err != nil {
+		t.Fatalf("describe failed: %v", err)
+	}
+	if got.AgentType != "oob" || got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
+		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
+	}
+	if got.OOBInventory == nil || got.OOBInventory.SchemaVersion != "inventory.v1alpha1" {
+		t.Fatalf("unexpected inventory: %#v", got.OOBInventory)
+	}
+	if got.OOBInventory.Source == nil || got.OOBInventory.Source.Hostname != "bmc-001" {
+		t.Fatalf("unexpected inventory source: %#v", got.OOBInventory.Source)
+	}
+	if len(got.OOBInventory.Systems) != 1 || got.OOBInventory.Systems[0].CPUCount == nil ||
+		*got.OOBInventory.Systems[0].CPUCount != 2 {
+		t.Fatalf("unexpected systems: %#v", got.OOBInventory.Systems)
+	}
+	if len(got.OOBInventory.Chassis) != 1 || len(got.OOBInventory.Chassis[0].PCIeDevices) != 1 {
+		t.Fatalf("unexpected chassis: %#v", got.OOBInventory.Chassis)
+	}
+	if len(got.OOBInventory.Firmware) != 1 || got.OOBInventory.Firmware[0].ServiceID != "fw-service" ||
+		got.OOBInventory.Firmware[0].StatusState != "Enabled" || got.OOBInventory.Firmware[0].Health != "OK" ||
+		got.OOBInventory.Firmware[0].HealthRollup != "Warning" {
+		t.Fatalf("unexpected firmware: %#v", got.OOBInventory.Firmware)
+	}
+}
+
+// Verifies the OOB node list query and BMC fields
+func TestListNodesOOB(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		if query.Get("agentType") != "oob" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "bmcHostname" {
+			t.Fatalf("unexpected query: %q", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	got, err := client.ListNodes(context.Background(), ListNodesOptions{
+		AgentType:   NodeAgentTypeOOB,
+		BMCHostname: "bmc",
+		SortBy:      NodeSortByBMCHostname,
+	})
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if len(got.Nodes) != 1 || got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
+		t.Fatalf("unexpected OOB nodes: %#v", got.Nodes)
 	}
 }
 
@@ -289,6 +382,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		want string
 	}{
 		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
+		{name: "agent type", opts: ListNodesOptions{AgentType: "sideband"}, want: "invalid node agent type"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
 		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node verification check"},
@@ -349,6 +443,7 @@ func TestNodeSortByValid(t *testing.T) {
 		NodeSortByKernelVersion,
 		NodeSortByGPUDriverVersion,
 		NodeSortByGPUFirmwareVersions,
+		NodeSortByBMCHostname,
 	}
 
 	for _, sortBy := range tests {

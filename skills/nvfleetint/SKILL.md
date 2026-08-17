@@ -50,13 +50,21 @@ nvfleetint node list --agent-status Offline --output json
 nvfleetint node list --hostname gpu-node-7 --view basic --output json
 nvfleetint node list --compute-zone-names ord --output json
 nvfleetint node list --nodegroup-names training --output json
+nvfleetint node list --agent-type oob --bmc-hostname bmc-01 --output json
 nvfleetint node describe <node-uuid> --output json
+nvfleetint node describe <node-uuid> --agent-type oob --output json
 nvfleetint node health <node-uuid> --start <rfc3339> --end <rfc3339> --output json
 ```
 
 Ask users for human-readable zone/group names, never IDs. Name filters are comma-separated partial matches. For exact scope, resolve with `computezone list --view basic` or `nodegroup list --view basic`, clarify ambiguous names with recognizable detail metadata, then use IDs internally. Accept an ID already supplied by the user.
 
-Node basic rejects health, agent, verification, and firmware filters and supports sorting only by `hostname` or `nodeUUID`. `node health` requires both absolute boundaries. It does not support `--window`.
+Detailed node list and describe query both agent views by default and return
+`{inband: ..., oob: ...}` in JSON. Use `--agent-type inband|oob` when only one
+view is needed. OOB list supports `--bmc-hostname`; OOB describe includes full
+inventory JSON and supports table sections `managers`, `systems`, `chassis`,
+and `firmware`. Node basic rejects health, agent, verification, and firmware
+filters and supports sorting by `hostname`, `nodeUUID`, or `bmcHostname`.
+`node health` requires both absolute boundaries. It does not support `--window`.
 
 Filter values:
 
@@ -67,7 +75,7 @@ Filter values:
 | `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
-Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, and `gpuFirmwareVersions`. The backend spelling `integrityCheck` remains accepted as an alias for `verificationCheck`. Node-group sort keys are `health` and `nodes`.
+Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcHostname`. The backend spelling `integrityCheck` remains accepted as an alias for `verificationCheck`. Node-group sort keys are `health` and `nodes`.
 
 ### Alerts and events
 
