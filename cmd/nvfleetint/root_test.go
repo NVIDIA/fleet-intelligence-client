@@ -20,41 +20,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestVersionCommand(t *testing.T) {
-	cmd := newRootCmd()
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"version"})
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("version command failed: %v", err)
-	}
-
-	got := out.String()
-	if !strings.Contains(got, "nvfleetint ") {
-		t.Fatalf("version output missing binary name: %q", got)
-	}
-}
-
-func TestVersionCommandJSON(t *testing.T) {
-	cmd := newRootCmd()
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"version", "--output", "json"})
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("version command failed: %v", err)
-	}
-
-	var got versionOutput
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("decode version JSON failed: %v", err)
-	}
-	if got.Name != "nvfleetint" || got.Version == "" {
-		t.Fatalf("unexpected version JSON: %#v", got)
-	}
-}
-
 // Verifies merged empty-list JSON uses page 0 when there are no pages.
 func TestWritePaginatedListJSONEmpty(t *testing.T) {
 	var out bytes.Buffer
@@ -159,6 +124,7 @@ func TestClientCommandsAcceptProfileFlag(t *testing.T) {
 	// Commands that run entirely locally and so need no credentials.
 	exempt := map[string]bool{
 		"nvfleetint version":     true,
+		"nvfleetint upgrade":     true,
 		"nvfleetint auth list":   true,
 		"nvfleetint auth add":    true,
 		"nvfleetint auth remove": true,
@@ -208,6 +174,9 @@ func TestAuthProfileCommandsRejectProfileFlag(t *testing.T) {
 
 // Verifies the top-level execute helper
 func TestExecuteRunsRootCommand(t *testing.T) {
+	server, _ := releaseServer(t, "v1.2.0")
+	setUpdateChecker(t, server.URL)
+
 	if err := execute(context.Background(), []string{"version"}); err != nil {
 		t.Fatalf("execute failed: %v", err)
 	}
