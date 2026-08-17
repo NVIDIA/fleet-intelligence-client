@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-
 info:
   title: Fleet Intelligence API (external)
   version: ''
@@ -408,14 +405,12 @@ paths:
           schema:
             default: false
             type: boolean
-        - description: Sortable table-header column. component sorts by component
-            name.
+        - description: Sortable table-header column.
           in: query
           name: sortBy
           schema:
             default: lastUpdate
             enum:
-              - component
               - startTime
               - lastUpdate
             type: string
@@ -1809,8 +1804,9 @@ paths:
       operationId: getV1Nodes
       parameters:
         - description: 'View mode: ''detail'' for full response (default) or ''basic''
-            for nodeUUID + hostname only (lightweight query, does not support filtering
-            or sorting by healthStatuses, integrityChecks, firmwareChecks, or agentStatuses).'
+            for nodeUUID + hostname + bmcHostname/bmcIP only (lightweight query, does
+            not support filtering or sorting by healthStatuses, integrityChecks, firmwareChecks,
+            or agentStatuses).'
           in: query
           name: view
           schema:
@@ -1818,6 +1814,20 @@ paths:
             enum:
               - detail
               - basic
+            type: string
+        - description: 'Select the in-band or OOB (BMC/Redfish) view: returns only
+            nodes enrolled by that agent type. In the OOB view, nodes expose bmcHostname/bmcIP
+            and BMC-based integrityCheck, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions
+            are empty. Empty defaults to the in-band view for view=detail; for view=basic,
+            an empty agentType returns a combined view populating hostname and bmcHostname/bmcIP
+            for every node.'
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
             type: string
         - description: Page number (0-indexed)
           in: query
@@ -1913,45 +1923,40 @@ paths:
           name: integrityChecks
           schema:
             items:
-              enum:
-                - Verified
-                - Unverified
-                - Degraded
-                - Pending
-                - Unsupported
-                - Unknown
-              type: string
+              $ref: '#/components/schemas/models.IntegrityCheck'
             type: array
         - description: Filter by firmware check status
           in: query
           name: firmwareChecks
           schema:
             items:
-              enum:
-                - Passed
-                - Failed
-                - Unknown
-              type: string
+              $ref: '#/components/schemas/models.FirmwareCheck'
             type: array
         - description: Filter by agent status values
           in: query
           name: agentStatuses
           schema:
             items:
-              enum:
-                - Online
-                - Offline
-                - Unknown
-              type: string
+              $ref: '#/components/schemas/models.AgentStatus'
             type: array
         - description: Filter by hostname (case-insensitive partial match)
           in: query
           name: hostname
           schema:
             type: string
-        - description: Field to sort by. gpuFirmwareVersions pins nodes whose GPUs
-            have mismatched vbios versions to the top, then sorts the remaining (uniform)
-            nodes by that common vbios in the requested order.
+        - description: Filter by BMC hostname (case-insensitive partial match). Applies
+            only to the OOB view (agentType=oob); ignored in the in-band view.
+          in: query
+          name: bmcHostname
+          schema:
+            type: string
+        - description: Field to sort by. Defaults to hostname (in-band view) or bmcHostname
+            (OOB view). bmcHostname applies only to the OOB view; the in-band-only
+            GPU/kernel/driver/agentVersion keys apply only to the in-band view — a
+            key not valid for the selected view falls back to the view's default.
+            gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions
+            to the top, then sorts the remaining (uniform) nodes by that common vbios
+            in the requested order.
           in: query
           name: sortBy
           schema:
@@ -1970,6 +1975,7 @@ paths:
               - kernelVersion
               - gpuDriverVersion
               - gpuFirmwareVersions
+              - bmcHostname
             type: string
         - description: Sort order (asc, desc)
           in: query
@@ -1986,7 +1992,8 @@ paths:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/models.NodesResponse'
+                  - $ref: '#/components/schemas/models.InbandNodesResponse'
+                  - $ref: '#/components/schemas/models.OobNodesResponse'
                   - $ref: '#/components/schemas/models.BasicNodesResponse'
           description: Basic view response (view=basic)
         '400':
@@ -2116,8 +2123,24 @@ paths:
         "Unhealthy"]}`
 
         - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1",
-        "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`'
+        "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`
+
+
+        The available options depend on the agentType view. The OOB view omits the
+        gpuTypes filter and the GPU/kernel/driver/firmware/agentVersion sort fields,
+        which apply only to in-band-enrolled nodes.'
       operationId: getV1NodesOptions
+      parameters:
+        - description: Select the in-band (default) or OOB (BMC/Redfish) view. The
+            OOB view returns a reduced set of filter and sorting options.
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+            type: string
       responses:
         '200':
           content:
@@ -2125,6 +2148,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.Options'
           description: Available query options including filters and sorting configuration
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request - invalid agentType
         '401':
           content:
             application/json:
@@ -2226,13 +2255,24 @@ paths:
           required: true
           schema:
             type: string
+        - description: 'Agent type view: inband (default) or oob'
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+            type: string
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.NodeDetailsResponse'
-          description: OK
+                oneOf:
+                  - $ref: '#/components/schemas/models.InbandNodeDetailsResponse'
+                  - $ref: '#/components/schemas/models.OobNodeDetailsResponse'
+          description: OOB detail (agentType=oob)
         '400':
           content:
             application/json:
@@ -2994,6 +3034,13 @@ paths:
             items:
               type: string
             type: array
+        - description: Filter errors by severity. Empty means all severities
+          in: query
+          name: severities
+          schema:
+            items:
+              $ref: '#/components/schemas/models.EventSeverity'
+            type: array
         - description: 'Time mode: ''absolute'' (default) or ''relative''. Absolute
             requires start/end; relative requires window'
           in: query
@@ -3490,6 +3537,423 @@ paths:
       summary: Batch update tags for multiple nodes
       tags:
         - tags
+  /v1/xid/bursts:
+    get:
+      description: 'Returns the flat finalized-burst table for the authenticated customer.
+        Results default to startTime descending (latest first), with burstId descending
+        as the stable pagination tie-breaker.
+
+        The selected time range applies to burst start time using [startTime, endTime)
+        and is required, matching GET /v1/events. Relative mode requires timeMode=relative
+        and a positive Go duration window; absolute mode (default) requires startTime
+        and endTime. Do not combine window with startTime/endTime. Absolute endTime
+        must be after startTime.
+
+        Node-group and compute-zone filters use customer-scoped UUIDs, matching the
+        node and alert APIs. Values are OR-combined within each dimension and AND-combined
+        across dimensions. Exclusion filters select every assignment except the supplied
+        IDs and cannot be combined with the inclusive filter for the same dimension.
+        Filter option IDs and labels are available from GET /v1/nodes/options. Bursts
+        on soft-deleted nodes are never returned.
+
+        Multiple xidNumbers are OR-combined: a burst matches if it contains any of
+        the requested XIDs (including bursts that contain only one of them, or both).
+        String search parameters are case-insensitive substring filters. Categories,
+        subcategories, and action-code array parameters (e.g. tenantActions) are exact-match
+        checkbox-style filters, OR-combined within the same parameter; their values
+        come from GET /v1/xid/bursts/options. All filters across different columns/parameters
+        are AND-combined, including a *Search param and its exact-match sibling. Action
+        filters and searches match catalog action codes (not Guidance Classes text)
+        and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they
+        replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes
+        match stored bursts.
+
+        Response fields are shaped server-side from the caller''s persona. Tenants
+        receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP
+        callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue,
+        XID catalog descriptions, and DC-admin actions. Action text is resolved from
+        the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid,
+        hostname, and the node''s current nodeGroup/computeZone (display names and
+        IDs), matching alert timeline Level 1 inventory enrichment.'
+      operationId: getV1XIDBursts
+      parameters:
+        - description: Start time in RFC3339 format (required for absolute mode, e.g.
+            2024-01-01T01:00:00Z).
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: End time in RFC3339 format (required for absolute mode). Must
+            be after startTime.
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: Time mode for range selection. Defaults to absolute.
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: Relative duration window (required for relative mode). Uses
+            Go duration units h, m, and s; use 168h for 7 days ('d' is not supported)
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Filter by node UUID
+          in: query
+          name: nodeUUID
+          schema:
+            type: string
+        - description: Filter to nodes in matching node groups by node group ID (OR
+            within dimension)
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter to nodes in matching compute zones by compute zone ID
+            (OR within dimension)
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exclude nodes in matching node groups by node group ID (OR
+            within dimension; cannot be combined with nodeGroupIds)
+          in: query
+          name: excludeNodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exclude nodes in matching compute zones by compute zone ID
+            (OR within dimension; cannot be combined with computeZoneIds)
+          in: query
+          name: excludeComputeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by the public fatal-XID job-disruption definition
+          in: query
+          name: jobDisruption
+          schema:
+            type: boolean
+        - description: Filter by analyzer platform-attributed disruption (cloud-provider/NCP
+            only)
+          in: query
+          name: jobDisruptionDueToPlatformIssue
+          schema:
+            type: boolean
+        - description: Exact XID numbers; burst matches if it contains any of them
+            (OR semantics)
+          in: query
+          name: xidNumbers
+          schema:
+            items:
+              type: integer
+            type: array
+        - description: Case-insensitive hostname substring
+          in: query
+          name: hostnameSearch
+          schema:
+            type: string
+        - description: Case-insensitive category substring (cloud-provider/NCP only)
+          in: query
+          name: categorySearch
+          schema:
+            type: string
+        - description: Case-insensitive subcategory substring (cloud-provider/NCP
+            only)
+          in: query
+          name: subcategorySearch
+          schema:
+            type: string
+        - description: Case-insensitive tenant immediate-action code substring
+          in: query
+          name: tenantActionSearch
+          schema:
+            type: string
+        - description: Case-insensitive tenant investigatory-action code substring
+          in: query
+          name: tenantInvestigationSearch
+          schema:
+            type: string
+        - description: Case-insensitive DC-admin immediate-action code substring (cloud-provider/NCP
+            only)
+          in: query
+          name: dcAdminActionSearch
+          schema:
+            type: string
+        - description: Case-insensitive DC-admin investigatory-action code substring
+            (cloud-provider/NCP only)
+          in: query
+          name: dcAdminInvestigationSearch
+          schema:
+            type: string
+        - description: Exact category values from GET /v1/xid/bursts/options; OR-combined
+            (cloud-provider/NCP only)
+          in: query
+          name: categories
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact subcategory values from GET /v1/xid/bursts/options; OR-combined
+            (cloud-provider/NCP only)
+          in: query
+          name: subcategories
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact tenant immediate-action codes from GET /v1/xid/bursts/options;
+            OR-combined
+          in: query
+          name: tenantActions
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact tenant investigatory-action codes from GET /v1/xid/bursts/options;
+            OR-combined
+          in: query
+          name: tenantInvestigations
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact DC-admin immediate-action codes from GET /v1/xid/bursts/options;
+            OR-combined (cloud-provider/NCP only)
+          in: query
+          name: dcAdminActions
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact DC-admin investigatory-action codes from GET /v1/xid/bursts/options;
+            OR-combined (cloud-provider/NCP only)
+          in: query
+          name: dcAdminInvestigations
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Sortable table column (cloud-provider/NCP only for jobDisruptionDueToPlatformIssue,
+            category, subcategory, dcAdminAction, dcAdminInvestigation)
+          in: query
+          name: sortBy
+          schema:
+            default: startTime
+            enum:
+              - jobDisruption
+              - jobDisruptionDueToPlatformIssue
+              - category
+              - subcategory
+              - xidNumbers
+              - xidCount
+              - burstDurationSeconds
+              - nodeUuid
+              - hostname
+              - nodeGroup
+              - computeZone
+              - startTime
+              - dcAdminAction
+              - dcAdminInvestigation
+              - tenantAction
+              - tenantInvestigation
+            type: string
+        - description: Sort direction
+          in: query
+          name: sortOrder
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: Page number (0-indexed)
+          in: query
+          name: page
+          schema:
+            default: 0
+            type: integer
+        - description: Page size (1-100)
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.XIDBurstsListResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid filter, time range, sort, or pagination
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied or NCP-only filter requested
+            by tenant
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: List finalized XID bursts
+      tags:
+        - xid
+  /v1/xid/bursts/options:
+    get:
+      description: 'Returns all filter options available to the authenticated customer
+        and persona. Options are not narrowed by the table''s current time, scope,
+        or column filters. This v1 response contains no counts and has no cross-filter
+        impact-count behavior.
+
+        Tenant callers receive public disruption values, XIDs, and tenant actions.
+        Cloud-provider/NCP callers additionally receive platform-disruption values,
+        categories, subcategories, and DC-admin actions. suggestedActions uses the
+        shared action model; clients group it by persona and type. Category and action
+        labels are resolved from the persona-appropriate catalogs.
+
+        jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true,
+        false] domain. XID numbers, categories, subcategories, and suggestedActions
+        reflect the distinct values actually present across the customer''s finalized
+        bursts (still unfiltered by the current table filters). Action codes are alias-normalized
+        and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname
+        filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts
+        rather than a distinct-hostname options list.'
+      operationId: getV1XIDBurstOptions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.XIDBurstFilterOptionsResponse'
+          description: OK
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get XID burst filter options
+      tags:
+        - xid
+  /v1/xid/bursts/{burstId}:
+    get:
+      description: 'Returns the side-panel details for one finalized burst belonging
+        to the authenticated customer.
+
+        Response fields are shaped server-side from the caller''s persona. Tenants
+        receive the public job-disruption value, XID numbers with mnemonics, and tenant
+        actions. Cloud-provider/NCP callers additionally receive category, subcategory,
+        platform-attributed disruption, XID catalog descriptions, and all tenant plus
+        DC-admin actions. Suggested action text is resolved from the persona-appropriate
+        Guidance Classes catalog. The response includes nodeUuid, hostname, and the
+        node''s current nodeGroup/computeZone (display names and IDs).'
+      operationId: getV1XIDBurstDetail
+      parameters:
+        - description: XID burst UUID
+          in: path
+          name: burstId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.XIDBurstDetail'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid burst ID
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Finalized burst not found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get finalized XID burst details
+      tags:
+        - xid
   /v2/commands:
     get:
       description: Get list of commands (v2)
@@ -3525,9 +3989,9 @@ paths:
   /v2/metrics:
     get:
       description: Returns historical chart data for customer, node group, compute
-        zone, or node level. This endpoint follows the v1/metrics/query_range pattern
-        with a unified interface. Aggregation functions are determined by metric configuration
-        in base-config.yaml.
+        zone, or node level. The service selects the appropriate query path for each
+        metric and aggregation level. Aggregation functions are determined by metric
+        configuration in base-config.yaml.
       operationId: getV2Metrics
       parameters:
         - description: The aggregation level to group metrics by
@@ -3542,11 +4006,38 @@ paths:
               - computezone
               - node
             type: string
-        - description: The ID of the entity (required for nodegroup, computezone,
-            node; not needed for customer level)
+        - description: Entity ID for node, nodegroup, or computezone queries.
           example: 550e8400-e29b-41d4-a716-446655440000
           in: query
           name: groupId
+          schema:
+            type: string
+        - description: Legacy generic entity name. Prefer nodeGroupName for nodegroup
+            and computeZoneName for computezone.
+          example: training-nodegroup
+          in: query
+          name: groupName
+          schema:
+            type: string
+        - description: The node group name for nodegroup level when computeZoneId
+            or computeZoneName is also provided.
+          example: training-nodegroup
+          in: query
+          name: nodeGroupName
+          schema:
+            type: string
+        - description: The compute zone ID disambiguator when querying nodegroup by
+            name.
+          example: 550e8400-e29b-41d4-a716-446655440000
+          in: query
+          name: computeZoneId
+          schema:
+            type: string
+        - description: The compute zone name for computezone level, or disambiguator
+            with nodeGroupName.
+          example: training-computezone
+          in: query
+          name: computeZoneName
           schema:
             type: string
         - description: Comma-separated list of metric names to query (e.g., dcgm_fi_dev_gpu_util,cpu_used_percent,memory_used_percent)
@@ -3613,7 +4104,8 @@ paths:
 components:
   schemas:
     models.ActionPersona:
-      description: Target persona (stored in DB, stripped before API response)
+      description: Target persona; omitted when an endpoint has already reduced actions
+        to one persona
       enum:
         - tenant
         - dc_admin
@@ -4146,6 +4638,20 @@ components:
         nodeCount:
           example: 5
           type: integer
+        severities:
+          description: 'Severities lists all remaining severities this error still
+            carries after
+
+            the severity filter has been applied. When no severity filter is set it
+
+            contains every severity the error was observed with.'
+          example:
+            - Fatal
+            - Critical
+          items:
+            $ref: '#/components/schemas/models.EventSeverity'
+          type: array
+          uniqueItems: true
         suggestedAction:
           $ref: '#/components/schemas/models.SuggestedAction'
       type: object
@@ -4588,7 +5094,7 @@ components:
           type: string
         type:
           description: Event type
-          example: error
+          example: Warning
           type: string
       type: object
     models.EventBucket:
@@ -4617,6 +5123,18 @@ components:
           type: array
           uniqueItems: false
       type: object
+    models.EventSeverity:
+      enum:
+        - Fatal
+        - Critical
+        - Warning
+        - Info
+      type: string
+      x-enum-varnames:
+        - EventSeverityFatal
+        - EventSeverityCritical
+        - EventSeverityWarning
+        - EventSeverityInfo
     models.EventsResponse:
       properties:
         events:
@@ -4808,6 +5326,188 @@ components:
           type: number
         unhealthyPercentage:
           type: number
+      type: object
+    models.InbandNode:
+      properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AgentStatus'
+        agentType:
+          example: inband
+          type: string
+        agentVersion:
+          example: 1.2.3
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        firmwareCheck:
+          $ref: '#/components/schemas/models.FirmwareCheck'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        gpuFirmwareVersions:
+          items:
+            $ref: '#/components/schemas/models.GPUFirmwareVersion'
+          type: array
+          uniqueItems: false
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
+        healthStatus:
+          $ref: '#/components/schemas/models.HealthState'
+        hostname:
+          example: node-001
+          type: string
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        kernelVersion:
+          example: 6.8.0-49-generic
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        privateIP:
+          example: 10.0.0.100
+          type: string
+        publicIP:
+          example: 203.0.113.100
+          type: string
+      required:
+        - nodeUUID
+      type: object
+    models.InbandNodeDetailsResponse:
+      properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AgentStatus'
+        agentType:
+          example: inband
+          type: string
+        agentVersion:
+          example: 1.2.3
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        computeZoneId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        degradedComponentCount:
+          example: 1
+          type: integer
+        enrolledAt:
+          example: '2025-08-11T17:23:02Z'
+          type: string
+        firmwareCheck:
+          $ref: '#/components/schemas/models.FirmwareCheck'
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        gpuFirmwareVersions:
+          items:
+            $ref: '#/components/schemas/models.GPUFirmwareVersion'
+          type: array
+          uniqueItems: false
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
+        healthStatus:
+          $ref: '#/components/schemas/models.HealthState'
+        healthyComponentCount:
+          example: 3
+          type: integer
+        hostname:
+          example: node-001
+          type: string
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        kernelVersion:
+          example: 6.8.0-49-generic
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeGroupId:
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        privateIP:
+          example: 10.0.0.100
+          type: string
+        publicIP:
+          example: 203.0.113.100
+          type: string
+        resources:
+          $ref: '#/components/schemas/models.NodeResources'
+        systemInfo:
+          $ref: '#/components/schemas/models.SystemInfo'
+        tags:
+          example:
+            - gpu
+            - high-memory
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        unhealthyComponentCount:
+          example: 1
+          type: integer
+      required:
+        - nodeUUID
+      type: object
+    models.InbandNodesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.InbandNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
       type: object
     models.InfoResponse:
       properties:
@@ -5305,66 +6005,6 @@ components:
           example: 00:11:22:33:44:55
           type: string
       type: object
-    models.Node:
-      properties:
-        agentStatus:
-          $ref: '#/components/schemas/models.AgentStatus'
-        agentVersion:
-          example: 1.2.3
-          type: string
-        computeZone:
-          example: compute-zone-1
-          type: string
-        firmwareCheck:
-          $ref: '#/components/schemas/models.FirmwareCheck'
-        gpuCount:
-          example: 4
-          type: integer
-        gpuDriverVersion:
-          example: '550.120'
-          type: string
-        gpuFirmwareVersions:
-          items:
-            $ref: '#/components/schemas/models.GPUFirmwareVersion'
-          type: array
-          uniqueItems: false
-        gpuType:
-          example: NVIDIA-T400-4GB
-          type: string
-        healthStatus:
-          $ref: '#/components/schemas/models.HealthState'
-        hostname:
-          example: node-001
-          type: string
-        integrityCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
-        integrityCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
-        integrityCheckReason:
-          example: 'Attestation verification unavailable: SDK error'
-          type: string
-        kernelVersion:
-          example: 6.8.0-49-generic
-          type: string
-        lastIntegrityCheckTS:
-          example: '2024-01-15T10:30:00Z'
-          type: string
-        lastUpdatedTS:
-          example: '2024-01-15T10:30:00Z'
-          type: string
-        nodeGroup:
-          example: node-group-1
-          type: string
-        nodeUUID:
-          example: node-123
-          type: string
-        privateIP:
-          example: 10.0.0.100
-          type: string
-        publicIP:
-          example: 203.0.113.100
-          type: string
-      type: object
     models.NodeAlertComponent:
       properties:
         component:
@@ -5393,98 +6033,6 @@ components:
         pageCursorNext:
           type: string
         pageSize:
-          type: integer
-      type: object
-    models.NodeDetailsResponse:
-      properties:
-        agentStatus:
-          $ref: '#/components/schemas/models.AgentStatus'
-        agentVersion:
-          example: 1.2.3
-          type: string
-        computeZone:
-          example: compute-zone-1
-          type: string
-        computeZoneId:
-          example: 550e8400-e29b-41d4-a716-446655440000
-          type: string
-        degradedComponentCount:
-          example: 1
-          type: integer
-        enrolledAt:
-          example: '2025-08-11T17:23:02Z'
-          type: string
-        firmwareCheck:
-          $ref: '#/components/schemas/models.FirmwareCheck'
-        geoLocation:
-          $ref: '#/components/schemas/models.GeoLocation'
-        gpuCount:
-          example: 4
-          type: integer
-        gpuDriverVersion:
-          example: '550.120'
-          type: string
-        gpuFirmwareVersions:
-          items:
-            $ref: '#/components/schemas/models.GPUFirmwareVersion'
-          type: array
-          uniqueItems: false
-        gpuType:
-          example: NVIDIA-T400-4GB
-          type: string
-        healthStatus:
-          $ref: '#/components/schemas/models.HealthState'
-        healthyComponentCount:
-          example: 3
-          type: integer
-        hostname:
-          example: node-001
-          type: string
-        integrityCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
-        integrityCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
-        integrityCheckReason:
-          example: 'Attestation verification unavailable: SDK error'
-          type: string
-        kernelVersion:
-          example: 6.8.0-49-generic
-          type: string
-        lastIntegrityCheckTS:
-          example: '2024-01-15T10:30:00Z'
-          type: string
-        lastUpdatedTS:
-          example: '2024-01-15T10:30:00Z'
-          type: string
-        nodeGroup:
-          example: node-group-1
-          type: string
-        nodeGroupId:
-          example: 550e8400-e29b-41d4-a716-446655440001
-          type: string
-        nodeUUID:
-          example: node-123
-          type: string
-        privateIP:
-          example: 10.0.0.100
-          type: string
-        publicIP:
-          example: 203.0.113.100
-          type: string
-        resources:
-          $ref: '#/components/schemas/models.NodeResources'
-        systemInfo:
-          $ref: '#/components/schemas/models.SystemInfo'
-        tags:
-          example:
-            - gpu
-            - high-memory
-          items:
-            type: string
-          type: array
-          uniqueItems: false
-        unhealthyComponentCount:
-          example: 1
           type: integer
       type: object
     models.NodeGroupMembership:
@@ -5551,6 +6099,19 @@ components:
         gpusCount:
           example: 80
           type: integer
+        hasInbandAgent:
+          description: 'HasInbandAgent / HasOobAgent are true when at least one node
+            in this group has ever
+
+            reported in-band / OOB inventory. A group can have both, one, or neither
+            depending on
+
+            its membership (empty group → both false).'
+          example: true
+          type: boolean
+        hasOobAgent:
+          example: false
+          type: boolean
         healthPercentage:
           example: 95
           type: number
@@ -5708,26 +6269,6 @@ components:
           $ref: '#/components/schemas/models.MemoryInfo'
         nicInfo:
           $ref: '#/components/schemas/models.NicInfo'
-      type: object
-    models.NodesResponse:
-      properties:
-        hasMore:
-          example: false
-          type: boolean
-        nodes:
-          items:
-            $ref: '#/components/schemas/models.Node'
-          type: array
-          uniqueItems: false
-        page:
-          example: 0
-          type: integer
-        pageSize:
-          example: 10
-          type: integer
-        total:
-          example: 100
-          type: integer
       type: object
     models.NotificationChannel:
       description: 'Channel type: email, slack, or webhook'
@@ -5895,6 +6436,532 @@ components:
         - channel
         - config
       type: object
+    models.OobChassis:
+      properties:
+        assetTag:
+          example: Free form asset tag
+          type: string
+        chassisType:
+          example: module
+          type: string
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: OK
+          type: string
+        id:
+          example: HGX_GPU_SXM_1
+          type: string
+        location:
+          $ref: '#/components/schemas/models.OobChassisLocation'
+        manufacturer:
+          example: NVIDIA
+          type: string
+        model:
+          example: H100 80GB HBM3
+          type: string
+        odataId:
+          example: /redfish/v1/Chassis/HGX_GPU_SXM_1
+          type: string
+        partNumber:
+          example: 2330-885-A1
+          type: string
+        pcieDevices:
+          items:
+            $ref: '#/components/schemas/models.OobPcieDevice'
+          type: array
+          uniqueItems: false
+        powerState:
+          example: 'on'
+          type: string
+        serialNumber:
+          example: '1655023015625'
+          type: string
+        sku:
+          example: '0x37040020'
+          type: string
+        statusState:
+          example: Enabled
+          type: string
+      required:
+        - id
+      type: object
+    models.OobChassisLocation:
+      properties:
+        rack:
+          example: Rack-1
+          type: string
+        rackOffset:
+          example: 10
+          type: integer
+        room:
+          example: DC-1
+          type: string
+        row:
+          example: Row-A
+          type: string
+        serviceLabel:
+          example: SXM1
+          type: string
+      type: object
+    models.OobDomainError:
+      properties:
+        domain:
+          example: firmware
+          type: string
+        message:
+          example: 'firmware inventories: BMC request timed out'
+          type: string
+        resource:
+          example: HGX_FW_GPU_SXM_1
+          type: string
+      required:
+        - domain
+        - message
+      type: object
+    models.OobFirmware:
+      properties:
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: OK
+          type: string
+        id:
+          example: HGX_FW_GPU_SXM_1
+          type: string
+        name:
+          example: HGX_FW_GPU_SXM_1
+          type: string
+        odataId:
+          example: /redfish/v1/UpdateService/FirmwareInventory/HGX_FW_GPU_SXM_1
+          type: string
+        releaseDate:
+          example: '2026-05-01'
+          type: string
+        serviceId:
+          example: FirmwareInventory
+          type: string
+        statusState:
+          example: Enabled
+          type: string
+        version:
+          example: 96.00.DA.00.0C
+          type: string
+      required:
+        - id
+        - name
+        - serviceId
+      type: object
+    models.OobInventory:
+      properties:
+        chassis:
+          items:
+            $ref: '#/components/schemas/models.OobChassis'
+          type: array
+          uniqueItems: false
+        collectedAt:
+          example: '2026-07-23T17:20:43Z'
+          type: string
+        domainErrors:
+          items:
+            $ref: '#/components/schemas/models.OobDomainError'
+          type: array
+          uniqueItems: false
+        firmware:
+          items:
+            $ref: '#/components/schemas/models.OobFirmware'
+          type: array
+          uniqueItems: false
+        managers:
+          items:
+            $ref: '#/components/schemas/models.OobManager'
+          type: array
+          uniqueItems: false
+        primarySystemId:
+          description: 'Optional fields — omitted from the response when absent:'
+          example: DGX
+          type: string
+        schemaVersion:
+          description: 'Required scalars — always present on a valid inventory document.
+
+            `binding:"required"` is honored when this struct is embedded into
+
+            OobNodeUpsertRequest and bound from a request body; the tag is
+
+            inert during response marshaling.'
+          example: inventory.v1alpha1
+          type: string
+        source:
+          $ref: '#/components/schemas/models.OobSource'
+        systems:
+          description: 'List sections — always emitted as a JSON array, possibly empty:'
+          items:
+            $ref: '#/components/schemas/models.OobSystem'
+          type: array
+          uniqueItems: false
+        targetError:
+          type: string
+      required:
+        - collectedAt
+        - schemaVersion
+        - source
+      type: object
+    models.OobManager:
+      properties:
+        firmwareVersion:
+          example: 26.03.03
+          type: string
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: OK
+          type: string
+        id:
+          example: BMC
+          type: string
+        managerType:
+          example: bmc
+          type: string
+        model:
+          example: '77171220'
+          type: string
+        odataId:
+          example: /redfish/v1/Managers/BMC
+          type: string
+        statusState:
+          example: Enabled
+          type: string
+        uuid:
+          example: 6b00139a-bfde-1000-02b9-f2e9fb35ff5c
+          type: string
+      required:
+        - id
+      type: object
+    models.OobNode:
+      properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AgentStatus'
+        agentType:
+          example: inband
+          type: string
+        agentVersion:
+          example: 1.2.3
+          type: string
+        bmcHostname:
+          example: bmc-a.example.com
+          type: string
+        bmcIP:
+          example: 10.57.17.140
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        healthStatus:
+          $ref: '#/components/schemas/models.HealthState'
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+      required:
+        - nodeUUID
+      type: object
+    models.OobNodeDetailsResponse:
+      properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AgentStatus'
+        agentType:
+          example: inband
+          type: string
+        agentVersion:
+          example: 1.2.3
+          type: string
+        bmcHostname:
+          example: bmc-a.example.com
+          type: string
+        bmcIP:
+          example: 10.57.17.140
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        computeZoneId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        degradedComponentCount:
+          example: 1
+          type: integer
+        enrolledAt:
+          example: '2025-08-11T17:23:02Z'
+          type: string
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+        healthStatus:
+          $ref: '#/components/schemas/models.HealthState'
+        healthyComponentCount:
+          example: 3
+          type: integer
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        integrityCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+        lastIntegrityCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeGroupId:
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        oobInventory:
+          $ref: '#/components/schemas/models.OobInventory'
+        tags:
+          example:
+            - gpu
+            - high-memory
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        unhealthyComponentCount:
+          example: 1
+          type: integer
+      required:
+        - nodeUUID
+      type: object
+    models.OobNodesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.OobNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
+    models.OobPcieDevice:
+      properties:
+        deviceType:
+          example: single_function
+          type: string
+        firmwareVersion:
+          example: 96.00.DA.00.0C
+          type: string
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: OK
+          type: string
+        id:
+          example: GPU_SXM_1
+          type: string
+        manufacturer:
+          example: NVIDIA
+          type: string
+        model:
+          example: H100 80GB HBM3
+          type: string
+        odataId:
+          example: /redfish/v1/Chassis/HGX_GPU_SXM_1/PCIeDevices/GPU_SXM_1
+          type: string
+        partNumber:
+          example: 2330-885-A1
+          type: string
+        serialNumber:
+          example: '1655023015625'
+          type: string
+        sku:
+          example: '0x37040020'
+          type: string
+        statusState:
+          example: Enabled
+          type: string
+        uuid:
+          example: beea8cdf-7b7d-035c-ed07-360e311fcbe1
+          type: string
+      required:
+        - id
+      type: object
+    models.OobProcessor:
+      properties:
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: OK
+          type: string
+        id:
+          example: DevType1_CPU0
+          type: string
+        instructionSet:
+          example: x86-64
+          type: string
+        manufacturer:
+          example: Intel(R) Corporation
+          type: string
+        maxSpeedMhz:
+          example: 4000
+          type: integer
+        model:
+          example: Intel(R) Xeon(R) Platinum 8480CL
+          type: string
+        odataId:
+          example: /redfish/v1/Systems/DGX/Processors/DevType1_CPU0
+          type: string
+        processorArchitecture:
+          example: x86
+          type: string
+        processorType:
+          example: cpu
+          type: string
+        socket:
+          example: CPU0
+          type: string
+        statusState:
+          example: Enabled
+          type: string
+        totalCores:
+          example: 56
+          type: integer
+        totalThreads:
+          example: 112
+          type: integer
+      required:
+        - id
+      type: object
+    models.OobSource:
+      properties:
+        address:
+          example: 10.77.91.72:443
+          type: string
+        hostName:
+          example: bmc-a.example.com
+          type: string
+        mac:
+          example: 5c:ff:35:fb:e9:f2
+          type: string
+        redfishVersion:
+          example: 1.11.0
+          type: string
+        serviceUuid:
+          example: 6b00139a-bfde-1000-02b9-f2e9fb35ff5c
+          type: string
+        sourceType:
+          example: redfish
+          type: string
+        vendor:
+          example: AMI
+          type: string
+      required:
+        - address
+        - mac
+        - sourceType
+      type: object
+    models.OobSystem:
+      properties:
+        assetTag:
+          example: Free form asset tag
+          type: string
+        biosVersion:
+          example: 1.7.8
+          type: string
+        cpuCoreCount:
+          example: 112
+          type: integer
+        cpuCount:
+          example: 2
+          type: integer
+        cpuModel:
+          example: Intel(R) Xeon(R) Platinum 8480CL
+          type: string
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: OK
+          type: string
+        hostName:
+          example: dgx-01
+          type: string
+        id:
+          example: DGX
+          type: string
+        manufacturer:
+          example: NVIDIA
+          type: string
+        memoryGib:
+          example: 2048
+          type: number
+        model:
+          example: DGXH100
+          type: string
+        odataId:
+          example: /redfish/v1/Systems/DGX
+          type: string
+        powerState:
+          example: 'on'
+          type: string
+        processors:
+          items:
+            $ref: '#/components/schemas/models.OobProcessor'
+          type: array
+          uniqueItems: false
+        secureBootEnabled:
+          example: false
+          type: boolean
+        serialNumber:
+          example: '1665123610227'
+          type: string
+        sku:
+          example: 920-24387-2540-000
+          type: string
+        statusState:
+          example: Enabled
+          type: string
+        uuid:
+          example: 936672d4-bfde-1000-02bc-5cff35fbe9f2
+          type: string
+      required:
+        - id
+      type: object
     models.Options:
       properties:
         filters:
@@ -6021,12 +7088,20 @@ components:
       type: object
     models.SimpleNode:
       properties:
+        bmcHostname:
+          example: bmc-a.example.com
+          type: string
+        bmcIP:
+          example: 10.57.17.140
+          type: string
         hostname:
           example: node-001
           type: string
         nodeUUID:
           example: node-123
           type: string
+      required:
+        - nodeUUID
       type: object
     models.SimpleNodeGroup:
       properties:
@@ -6221,4 +7296,260 @@ components:
           type: integer
       required:
         - retentionDays
+      type: object
+    models.XIDBurstDetail:
+      properties:
+        burstDurationSeconds:
+          example: 506
+          type: integer
+        burstId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        category:
+          description: Category and Subcategory are cloud-provider/NCP-only fields.
+          example: NVLink
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        computeZoneId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        deviceIds:
+          additionalProperties:
+            items:
+              type: integer
+            type: array
+          description: 'DeviceIDs maps each impacted GPU PCI device ID to the distinct
+            XID
+
+            numbers observed on that device in the burst.'
+          type: object
+        endTime:
+          example: '2026-07-17T11:33:59Z'
+          format: date-time
+          type: string
+        hostname:
+          example: machine-hostname-1
+          type: string
+        jobDisruption:
+          description: 'JobDisruption is true when any XID in the burst is job-fatal.
+            It is
+
+            identical for tenant and cloud-provider/NCP callers.'
+          example: true
+          type: boolean
+        jobDisruptionDueToPlatformIssue:
+          description: 'JobDisruptionDueToPlatformIssue is the analyzer''s platform-attributed
+
+            burst classification and is omitted for tenant callers.'
+          example: true
+          type: boolean
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeGroupId:
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeUuid:
+          example: 624fea4b-0000-0000-0000-0e5737890000
+          type: string
+        startTime:
+          example: '2026-07-17T11:25:33Z'
+          format: date-time
+          type: string
+        stickyXidsSuppressed:
+          example: 0
+          type: integer
+        subcategory:
+          example: NVLink timeout
+          type: string
+        suggestedActions:
+          description: 'SuggestedActions contains tenant actions for tenants and all
+            tenant plus
+
+            dc_admin actions for cloud-provider/NCP callers. Action is resolved
+
+            Guidance Classes text; Code is the catalog action code and Persona identifies
+
+            the tenant or dc_admin UI section.'
+          items:
+            $ref: '#/components/schemas/models.SuggestedAction'
+          type: array
+          uniqueItems: false
+        xidCount:
+          example: 3
+          type: integer
+        xidNumbers:
+          items:
+            $ref: '#/components/schemas/models.XIDBurstXID'
+          type: array
+          uniqueItems: false
+      type: object
+    models.XIDBurstFilterOptionsResponse:
+      properties:
+        categories:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        jobDisruption:
+          example:
+            - true
+            - false
+          items:
+            type: boolean
+          type: array
+          uniqueItems: false
+        jobDisruptionDueToPlatformIssue:
+          description: JobDisruptionDueToPlatformIssue is omitted for tenant callers.
+          example:
+            - true
+            - false
+          items:
+            type: boolean
+          type: array
+          uniqueItems: false
+        subcategories:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        suggestedActions:
+          description: 'SuggestedActions is persona-shaped: tenants receive tenant
+            actions, while
+
+            cloud-provider/NCP callers receive both tenant and dc_admin actions. Clients
+
+            group options by persona and type (immediate or investigatory).'
+          items:
+            $ref: '#/components/schemas/models.SuggestedAction'
+          type: array
+          uniqueItems: false
+        xidNumbers:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+      type: object
+    models.XIDBurstListItem:
+      properties:
+        burstDurationSeconds:
+          example: 506
+          type: integer
+        burstId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        category:
+          description: Category and Subcategory are cloud-provider/NCP-only fields.
+          example: NVLink
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        computeZoneId:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        deviceIds:
+          additionalProperties:
+            items:
+              type: integer
+            type: array
+          description: 'DeviceIDs maps each impacted GPU PCI device ID to the distinct
+            XID
+
+            numbers observed on that device in the burst.'
+          type: object
+        endTime:
+          example: '2026-07-17T11:33:59Z'
+          format: date-time
+          type: string
+        hostname:
+          example: machine-hostname-1
+          type: string
+        jobDisruption:
+          description: 'JobDisruption is true when any XID in the burst is job-fatal.
+            It is
+
+            identical for tenant and cloud-provider/NCP callers.'
+          example: true
+          type: boolean
+        jobDisruptionDueToPlatformIssue:
+          description: 'JobDisruptionDueToPlatformIssue is the analyzer''s platform-attributed
+
+            burst classification and is omitted for tenant callers.'
+          example: true
+          type: boolean
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeGroupId:
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeUuid:
+          example: 624fea4b-0000-0000-0000-0e5737890000
+          type: string
+        startTime:
+          example: '2026-07-17T11:25:33Z'
+          format: date-time
+          type: string
+        stickyXidsSuppressed:
+          example: 0
+          type: integer
+        subcategory:
+          example: NVLink timeout
+          type: string
+        suggestedActions:
+          description: 'SuggestedActions contains tenant actions for tenants and all
+            tenant plus
+
+            dc_admin actions for cloud-provider/NCP callers. Action is resolved
+
+            Guidance Classes text; Code is the catalog action code and Persona identifies
+
+            the tenant or dc_admin UI section.'
+          items:
+            $ref: '#/components/schemas/models.SuggestedAction'
+          type: array
+          uniqueItems: false
+        xidCount:
+          example: 3
+          type: integer
+        xidNumbers:
+          items:
+            $ref: '#/components/schemas/models.XIDBurstXID'
+          type: array
+          uniqueItems: false
+      type: object
+    models.XIDBurstXID:
+      properties:
+        description:
+          description: Description is the XID catalog description and is cloud-provider/NCP-only.
+          example: Graphics Engine Exception
+          type: string
+        mnemonic:
+          example: GR_EXCEPTION
+          type: string
+        xidNumber:
+          example: 13
+          type: integer
+      type: object
+    models.XIDBurstsListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/models.XIDBurstListItem'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+        total:
+          description: Total is the number of finalized bursts matching all supplied
+            filters before pagination.
+          example: 200
+          type: integer
       type: object

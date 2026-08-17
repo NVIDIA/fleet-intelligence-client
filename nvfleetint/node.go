@@ -81,7 +81,7 @@ type NodeIntegrityCheck string
 
 // Reports whether the integrity check status is accepted by the API
 func (check NodeIntegrityCheck) Valid() bool {
-	return fleetapi.GetV1NodesParamsIntegrityChecks(check).Valid()
+	return fleetapi.ModelsIntegrityCheck(check).Valid()
 }
 
 // Represents supported firmware check filters for listing nodes
@@ -89,7 +89,7 @@ type NodeFirmwareCheck string
 
 // Reports whether the firmware check status is accepted by the API
 func (check NodeFirmwareCheck) Valid() bool {
-	return fleetapi.GetV1NodesParamsFirmwareChecks(check).Valid()
+	return fleetapi.ModelsFirmwareCheck(check).Valid()
 }
 
 // Represents supported agent status filters for listing nodes
@@ -97,7 +97,7 @@ type NodeAgentStatus string
 
 // Reports whether the agent status is accepted by the API
 func (status NodeAgentStatus) Valid() bool {
-	return fleetapi.GetV1NodesParamsAgentStatuses(status).Valid()
+	return fleetapi.ModelsAgentStatus(status).Valid()
 }
 
 // Represents supported sort fields for listing nodes
@@ -338,23 +338,23 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 			params.HealthStatuses = &statuses
 		}
 		if len(opts.AgentStatuses) > 0 {
-			statuses := make([]fleetapi.GetV1NodesParamsAgentStatuses, 0, len(opts.AgentStatuses))
+			statuses := make([]fleetapi.ModelsAgentStatus, 0, len(opts.AgentStatuses))
 			for _, status := range opts.AgentStatuses {
-				statuses = append(statuses, fleetapi.GetV1NodesParamsAgentStatuses(status))
+				statuses = append(statuses, fleetapi.ModelsAgentStatus(status))
 			}
 			params.AgentStatuses = &statuses
 		}
 		if len(opts.IntegrityChecks) > 0 {
-			checks := make([]fleetapi.GetV1NodesParamsIntegrityChecks, 0, len(opts.IntegrityChecks))
+			checks := make([]fleetapi.ModelsIntegrityCheck, 0, len(opts.IntegrityChecks))
 			for _, check := range opts.IntegrityChecks {
-				checks = append(checks, fleetapi.GetV1NodesParamsIntegrityChecks(check))
+				checks = append(checks, fleetapi.ModelsIntegrityCheck(check))
 			}
 			params.IntegrityChecks = &checks
 		}
 		if len(opts.FirmwareChecks) > 0 {
-			checks := make([]fleetapi.GetV1NodesParamsFirmwareChecks, 0, len(opts.FirmwareChecks))
+			checks := make([]fleetapi.ModelsFirmwareCheck, 0, len(opts.FirmwareChecks))
 			for _, check := range opts.FirmwareChecks {
-				checks = append(checks, fleetapi.GetV1NodesParamsFirmwareChecks(check))
+				checks = append(checks, fleetapi.ModelsFirmwareCheck(check))
 			}
 			params.FirmwareChecks = &checks
 		}
@@ -398,7 +398,7 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 		return NodeDetails{}, fmt.Errorf("node UUID is required")
 	}
 
-	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID)
+	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, nil)
 	if err != nil {
 		return NodeDetails{}, err
 	}
@@ -406,7 +406,7 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 		return NodeDetails{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
-	var data fleetapi.ModelsNodeDetailsResponse
+	var data fleetapi.ModelsInbandNodeDetailsResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return NodeDetails{}, err
 	}
@@ -491,7 +491,7 @@ func nodeViewParam(view NodeView) *fleetapi.GetV1NodesParamsView {
 
 // Decodes detail responses and preserves the original payload
 func decodeDetailNodes(data []byte) (NodesPage, error) {
-	var resp fleetapi.ModelsNodesResponse
+	var resp fleetapi.ModelsInbandNodesResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return NodesPage{}, err
 	}
@@ -538,9 +538,9 @@ func decodeBasicNodes(data []byte) (NodesPage, error) {
 }
 
 // Maps detail API models into SDK values
-func nodeFromGenerated(node fleetapi.ModelsNode) Node {
+func nodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
-		UUID:                   stringValue(node.NodeUUID),
+		UUID:                   node.NodeUUID,
 		Hostname:               stringValue(node.Hostname),
 		ComputeZone:            stringValue(node.ComputeZone),
 		NodeGroup:              stringValue(node.NodeGroup),
@@ -561,16 +561,16 @@ func nodeFromGenerated(node fleetapi.ModelsNode) Node {
 // Maps basic API models into SDK values
 func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
-		UUID:     stringValue(node.NodeUUID),
+		UUID:     node.NodeUUID,
 		Hostname: stringValue(node.Hostname),
 	}
 }
 
 // Maps node detail API models into SDK values
-func nodeDetailsFromGenerated(node fleetapi.ModelsNodeDetailsResponse) NodeDetails {
+func nodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
-			UUID:                   stringValue(node.NodeUUID),
+			UUID:                   node.NodeUUID,
 			Hostname:               stringValue(node.Hostname),
 			ComputeZone:            stringValue(node.ComputeZone),
 			NodeGroup:              stringValue(node.NodeGroup),
