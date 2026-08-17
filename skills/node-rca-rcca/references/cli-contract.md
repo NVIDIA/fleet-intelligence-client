@@ -18,7 +18,7 @@ Read this before querying live data.
 
 ## Pagination
 
-- Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `event buckets`, `tag list`, and `report error --view overview|graph`.
+- Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `node options`, `nodegroup options`, `xidburst options`, `event buckets`, `tag list`, and `report error --view overview|graph`.
 - Single pages use backend arrays (`nodes`, `nodeGroups`, `computezones`, `alerts`, `events`) plus top-level `total`, `page`, and `pageSize`. Most use `hasMore`; `alert list` uses nonempty `pageCursorNext` instead. `alert summary` uses `nodes`, `alert node` uses `alerts`, and report-error list uses `nodes`. Detailed `node list` without `--agent-type` wraps independent pages as `{inband: ..., oob: ...}`.
 - `--all` normalizes every paginated list to `{items, pagination:{total,hasMore,pagesFetched}}`; detailed `node list` without `--agent-type` wraps one normalized result under each of `inband` and `oob`. Non-paginated commands keep their native shape, except default `node describe` similarly wraps its available agent views.
 - Count cheaply with the same filters plus `--page-size 1`, reading `.total`. For `alert summary`, `.total` is nodes with matching alerts; use `totalCritical` and `totalWarning` for alert aggregates. `tag list` is the exception: count its non-paginated `tags`.

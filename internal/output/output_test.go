@@ -202,3 +202,151 @@ func TestWriteTableFlattensMultilineCells(t *testing.T) {
 		t.Fatalf("embedded newline leaked into table: %q", got)
 	}
 }
+
+// Verifies indented rows are aligned as columns under a common indent, with no
+// header row, and that multi-line cells are flattened as they are in tables.
+func TestWriteIndentedRows(t *testing.T) {
+	var out bytes.Buffer
+	if err := WriteIndentedRows(&out, "  ", [][]string{
+		{"ng-1", "Training", "(in East)"},
+		{"ng-longer-id", "Serving\nteam", "(in West)"},
+		{"solo"},
+	}); err != nil {
+		t.Fatalf("write indented rows failed: %v", err)
+	}
+
+	got := out.String()
+	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected one line per row, got %d:\n%s", len(lines), got)
+	}
+	for _, line := range lines {
+		if !strings.HasPrefix(line, "  ") {
+			t.Fatalf("row is not indented: %q", line)
+		}
+	}
+	// The second column starts at the same offset on every row that has one.
+	if strings.Index(lines[0], "Training") != strings.Index(lines[1], "Serving") {
+		t.Fatalf("columns are not aligned:\n%s", got)
+	}
+	if strings.Contains(got, "Serving\nteam") {
+		t.Fatalf("multi-line cell was not flattened:\n%s", got)
+	}
+}
+
+// Verifies a paragraph in the final column wraps on word boundaries and hangs
+// under the column it belongs to, instead of folding back to column zero.
+func TestWriteIndentedRowsWrapsFinalColumn(t *testing.T) {
+	paragraph := "Drain the node, pull it from the scheduling pool, and open a hardware ticket " +
+		"with the burst ID attached so the device can be replaced during the next maintenance window."
+
+	var out bytes.Buffer
+	if err := WriteIndentedRows(&out, "  ", [][]string{
+		{"PULL_FROM_SERVICE", paragraph},
+		{"CHECK_LOGS", "Inspect application logs"},
+	}); err != nil {
+		t.Fatalf("write indented rows failed: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	if len(lines) < 3 {
+		t.Fatalf("paragraph was not wrapped:\n%s", out.String())
+	}
+	column := strings.Index(lines[0], "Drain")
+	if column <= 0 {
+		t.Fatalf("first line does not start the paragraph:\n%s", out.String())
+	}
+	for _, line := range lines {
+		if len([]rune(line)) > indentedRowWidth {
+			t.Fatalf("line exceeds the layout width:\n%s", line)
+		}
+	}
+	// Every continuation line hangs under the column, and none of them is blank
+	// or starts mid-word with a stray space.
+	for _, line := range lines[1 : len(lines)-1] {
+		if got := len(line) - len(strings.TrimLeft(line, " ")); got != column {
+			t.Fatalf("continuation line indented to %d, want %d:\n%s", got, column, out.String())
+		}
+	}
+	// Wrapping preserves the text; only the line breaks differ.
+	joined := strings.Join(strings.Fields(strings.Join(lines[:len(lines)-1], " ")), " ")
+	if !strings.Contains(joined, strings.Join(strings.Fields(paragraph), " ")) {
+		t.Fatalf("wrapping lost or reordered text:\n%s", out.String())
+	}
+	// The short row still renders on one line, aligned with the wrapped one.
+	last := lines[len(lines)-1]
+	if strings.Index(last, "Inspect") != column {
+		t.Fatalf("short row is not aligned with the wrapped column:\n%s", out.String())
+	}
+}
+
+// Verifies a paragraph in a middle column wraps while the column after it stays
+// on the row's first line, so that column still reads across rows.
+func TestWriteIndentedRowsKeepsTrailingColumnOnFirstLine(t *testing.T) {
+	var out bytes.Buffer
+	if err := WriteIndentedRows(&out, "  ", [][]string{
+		{"ng-1", strings.Repeat("long name ", 12), "(in East)"},
+		{"ng-2", "Serving", "(in West)"},
+	}); err != nil {
+		t.Fatalf("write indented rows failed: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	if len(lines) < 3 {
+		t.Fatalf("middle column was not wrapped:\n%s", out.String())
+	}
+	if !strings.Contains(lines[0], "(in East)") {
+		t.Fatalf("trailing column left the first line:\n%s", out.String())
+	}
+	// The tag column starts at the same offset on both rows.
+	if strings.Index(lines[0], "(in East)") != strings.Index(lines[len(lines)-1], "(in West)") {
+		t.Fatalf("trailing column is not aligned across rows:\n%s", out.String())
+	}
+}
+
+// Verifies rows that already fit are written unwrapped, and that a column left
+// too little room to wrap into is written long rather than shredded.
+func TestWriteIndentedRowsWrapsOnlyWhenItHelps(t *testing.T) {
+	var fits bytes.Buffer
+	if err := WriteIndentedRows(&fits, "  ", [][]string{{"ng-1", "Training"}}); err != nil {
+		t.Fatalf("write indented rows failed: %v", err)
+	}
+	if got := strings.Count(strings.TrimRight(fits.String(), "\n"), "\n"); got != 0 {
+		t.Fatalf("a row that fits should stay on one line:\n%s", fits.String())
+	}
+
+	// The identifier alone leaves less than minWrappedColumnWidth for the text.
+	wide := strings.Repeat("x", indentedRowWidth-minWrappedColumnWidth)
+	var cramped bytes.Buffer
+	if err := WriteIndentedRows(&cramped, "  ", [][]string{{wide, strings.Repeat("word ", 20)}}); err != nil {
+		t.Fatalf("write indented rows failed: %v", err)
+	}
+	if got := strings.Count(strings.TrimRight(cramped.String(), "\n"), "\n"); got != 0 {
+		t.Fatalf("a column with no room to wrap should stay long:\n%s", cramped.String())
+	}
+}
+
+// Verifies a single-column section renders without needing a column to wrap.
+func TestWriteIndentedRowsSingleColumn(t *testing.T) {
+	var out bytes.Buffer
+	if err := WriteIndentedRows(&out, "  ", [][]string{{"(none)"}, {strings.Repeat("word ", 40)}}); err != nil {
+		t.Fatalf("write indented rows failed: %v", err)
+	}
+	if !strings.HasPrefix(out.String(), "  (none)\n") {
+		t.Fatalf("unexpected single-column output:\n%s", out.String())
+	}
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	for _, line := range lines {
+		if len([]rune(line)) > indentedRowWidth {
+			t.Fatalf("single-column line exceeds the layout width:\n%s", line)
+		}
+	}
+	// A wrapped value continues at a deeper indent than the values themselves,
+	// so its second line cannot be mistaken for a value of its own.
+	valueIndent := len(lines[0]) - len(strings.TrimLeft(lines[0], " "))
+	for _, line := range lines[2:] {
+		if got := len(line) - len(strings.TrimLeft(line, " ")); got <= valueIndent {
+			t.Fatalf("continuation line is indented %d, no deeper than a value at %d:\n%s", got, valueIndent, out.String())
+		}
+	}
+}

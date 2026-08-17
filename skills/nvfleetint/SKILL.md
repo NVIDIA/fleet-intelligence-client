@@ -29,6 +29,7 @@ Use live `nvfleetint` JSON; never answer fleet-state questions from memory. Read
 | Customer tags | `tag list` |
 | Inventory/error reports | `report inventory`, `report error` |
 | Verify signed report | `report verify` |
+| Filter/sort values a command accepts | `node options`, `nodegroup options`, `alert options`, `xidburst options` |
 
 ### Overview and inventory
 

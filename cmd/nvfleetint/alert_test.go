@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 // Verifies all-page alert JSON output
@@ -299,10 +301,38 @@ func TestAlertTimelineOptionsOutput(t *testing.T) {
 	if err := tableCmd.Execute(); err != nil {
 		t.Fatalf("alert options table command failed: %v", err)
 	}
-	for _, want := range []string{"FILTER", "gpuTypes", "H100", "nodeGroups", "ng-1", "Training", "SORTING", "DEFAULT FIELD", "alert"} {
+	for _, want := range []string{
+		"--gpu-type", "H100",
+		"--nodegroup-ids", "ng-1", "Training",
+		"--sort-by", "hostname", "--order", "(default: alert)", "(default: desc)",
+	} {
 		if !strings.Contains(tableOut.String(), want) {
 			t.Fatalf("table output missing %q:\n%s", want, tableOut.String())
 		}
+	}
+}
+
+// Verifies filter fields with no matching flag, empty option lists, and absent
+// sorting defaults still render rather than being dropped.
+func TestAlertTimelineOptionsTableFallbacks(t *testing.T) {
+	var out bytes.Buffer
+	err := writeAlertTimelineOptionsTable(&out, nvfleetint.AlertTimelineFilterOptions{
+		Filters: nvfleetint.AlertTimelineFilters{Fields: []nvfleetint.AlertTimelineFilterField{
+			{Name: "newBackendFilter", Options: []nvfleetint.AlertTimelineFilterOption{{Value: "somevalue"}}},
+			{Name: "alertStates"},
+		}},
+		Sorting: nvfleetint.AlertTimelineSortingOptions{Fields: []string{"alert"}, Orders: []string{"asc"}},
+	})
+	if err != nil {
+		t.Fatalf("render options table failed: %v", err)
+	}
+	for _, want := range []string{"newBackendFilter", "no flag on", "somevalue", "--alert-state", "(none)"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("output missing %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "default:") {
+		t.Fatalf("absent sorting defaults should not render:\n%s", out.String())
 	}
 }
 

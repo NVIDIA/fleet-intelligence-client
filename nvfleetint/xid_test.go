@@ -397,3 +397,69 @@ func TestDescribeXIDBurstErrors(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// Verifies XID burst filter options decode the per-field value lists.
+func TestGetXIDBurstFilterOptions(t *testing.T) {
+	body := `{"xidNumbers":[43,94],"categories":["User-App"],"subcategories":["Illegal Memory Access"],` +
+		`"jobDisruption":[true,false],"jobDisruptionDueToPlatformIssue":[true,false],` +
+		`"suggestedActions":[{"code":"RESTART_APP","action":"Restart the application","persona":"tenant","type":"immediate"}]}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/xid/bursts/options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+			t.Fatalf("unexpected auth header: %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	options, err := client.GetXIDBurstFilterOptions(context.Background())
+	if err != nil {
+		t.Fatalf("get XID burst filter options failed: %v", err)
+	}
+
+	if len(options.XIDNumbers) != 2 || options.XIDNumbers[0] != 43 {
+		t.Fatalf("unexpected XID numbers: %#v", options.XIDNumbers)
+	}
+	if len(options.Categories) != 1 || options.Categories[0] != "User-App" {
+		t.Fatalf("unexpected categories: %#v", options.Categories)
+	}
+	if len(options.JobDisruption) != 2 || !options.JobDisruption[0] || options.JobDisruption[1] {
+		t.Fatalf("unexpected job disruption values: %#v", options.JobDisruption)
+	}
+	if len(options.SuggestedActions) != 1 {
+		t.Fatalf("unexpected suggested actions: %#v", options.SuggestedActions)
+	}
+	action := options.SuggestedActions[0]
+	if action.Code != "RESTART_APP" || action.Persona != ActionPersonaTenant || action.Type != ActionTypeImmediate {
+		t.Fatalf("unexpected suggested action: %#v", action)
+	}
+	if string(options.RawJSON) != body {
+		t.Fatalf("raw JSON not preserved: %s", options.RawJSON)
+	}
+}
+
+// Verifies a non-2xx XID burst options response surfaces as an APIError.
+func TestGetXIDBurstFilterOptionsAPIError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"message":"denied"}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	if _, err := client.GetXIDBurstFilterOptions(context.Background()); err == nil {
+		t.Fatal("expected an error")
+	} else if !strings.Contains(err.Error(), "403") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

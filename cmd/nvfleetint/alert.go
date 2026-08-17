@@ -760,26 +760,26 @@ func writeAlertTimelineOutput(w io.Writer, common resolvedCommonFlags, result al
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-// Writes alert timeline filter values and sorting metadata as readable tables.
+// Maps each filter field returned by the alert options endpoint to the flag on
+// `alert summary` / `alert node` that consumes it.
+var alertOptionsRenderer = optionsRenderer{
+	consumers: []string{"alert summary", "alert node"},
+	filters: map[string]optionFlag{
+		"gpuTypes":       {name: "--gpu-type"},
+		"nodeGroups":     {name: "--nodegroup-ids"},
+		"computeZones":   {name: "--compute-zone-ids", promote: "--nodegroup-ids"},
+		"componentTypes": {name: "--component-type"},
+		"alertStates":    {name: "--alert-state"},
+	},
+	sortAccepted: func(field string) bool {
+		return nvfleetint.AlertTimelineNodeSortBy(field).Valid()
+	},
+}
+
+// Writes alert timeline filter values grouped by the flag that accepts them,
+// followed by the sorting flags.
 func writeAlertTimelineOptionsTable(w io.Writer, options nvfleetint.AlertTimelineFilterOptions) error {
-	rows := make([][]string, 0)
-	for _, field := range options.Filters.Fields {
-		for _, option := range field.Options {
-			rows = append(rows, []string{field.Name, option.ID, option.Value})
-		}
-	}
-	if err := clioutput.WriteTable(w, []string{"FILTER", "ID", "VALUE"}, rows); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(w); err != nil {
-		return err
-	}
-	return clioutput.WriteTable(w, []string{"SORTING", "VALUE"}, [][]string{
-		{"FIELDS", strings.Join(options.Sorting.Fields, ", ")},
-		{"ORDERS", strings.Join(options.Sorting.Orders, ", ")},
-		{"DEFAULT FIELD", options.Sorting.Defaults.Field},
-		{"DEFAULT ORDER", options.Sorting.Defaults.Order},
-	})
+	return alertOptionsRenderer.write(w, options)
 }
 
 // Renders alert timeline events as a table

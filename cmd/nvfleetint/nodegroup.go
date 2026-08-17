@@ -44,6 +44,7 @@ func newNodeGroupCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newNodeGroupListCmd())
+	cmd.AddCommand(newNodeGroupOptionsCmd())
 	rejectUnknownSubcommands(cmd)
 
 	return cmd
@@ -253,4 +254,58 @@ func detailNodeGroupRows(groups []nvfleetint.NodeGroup) [][]string {
 		})
 	}
 	return rows
+}
+
+// Maps each filter field returned by the node group options endpoint to the
+// flag on `nodegroup list` that consumes it. The endpoint is shared with
+// nodes, so it returns a computeZones field that `nodegroup list` has no flag
+// for; its nested values are the node group IDs the command does accept.
+var nodeGroupOptionsRenderer = optionsRenderer{
+	consumers: []string{"nodegroup list"},
+	filters: map[string]optionFlag{
+		"computeZones":   {promote: "--nodegroup-ids"},
+		"nodeGroups":     {name: "--nodegroup-ids"},
+		"gpuTypes":       {name: "--gpu-type"},
+		"healthStatuses": {name: "--health"},
+	},
+	sortAccepted: func(field string) bool {
+		return nvfleetint.NodeGroupSortBy(field).Valid()
+	},
+}
+
+// Creates the node group options command
+func newNodeGroupOptionsCmd() *cobra.Command {
+	common := newCommonFlags()
+	cmd := &cobra.Command{
+		Use:   "options",
+		Short: "List available node group filters and sorting options",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runNodeGroupOptions(cmd, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	registerReadCommonFlags(cmd, common)
+
+	return cmd
+}
+
+// Gets and renders the filters and sorting choices available for node group queries.
+func runNodeGroupOptions(cmd *cobra.Command, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+	options, err := client.GetNodeGroupFilterOptions(cmd.Context())
+	if err != nil {
+		return err
+	}
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
+	}
+	return nodeGroupOptionsRenderer.write(cmd.OutOrStdout(), options)
 }

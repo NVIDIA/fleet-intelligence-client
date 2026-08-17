@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
@@ -95,74 +94,23 @@ func (order AlertTimelineSortOrder) Valid() bool {
 	}
 }
 
-// Represents the alert timeline filters and sorting choices available to the caller.
-type AlertTimelineFilterOptions struct {
-	Filters AlertTimelineFilters        `json:"filters"`
-	Sorting AlertTimelineSortingOptions `json:"sorting"`
-	RawJSON []byte                      `json:"-"`
-}
-
-// Contains the filter fields available for the selected alert timeline view.
-type AlertTimelineFilters struct {
-	Fields []AlertTimelineFilterField `json:"fields"`
-}
-
-// Represents one alert timeline filter and its available values.
-type AlertTimelineFilterField struct {
-	Name    string                      `json:"name"`
-	Options []AlertTimelineFilterOption `json:"options"`
-}
-
-// Represents either a simple string option or an object option with an ID and display value.
-type AlertTimelineFilterOption struct {
-	ID    string `json:"-"`
-	Value string `json:"-"`
-}
-
-// Decodes the string and object forms used by the shared options API.
-func (option *AlertTimelineFilterOption) UnmarshalJSON(data []byte) error {
-	var value string
-	if err := json.Unmarshal(data, &value); err == nil {
-		option.ID = ""
-		option.Value = value
-		return nil
-	}
-
-	var object struct {
-		ID    string `json:"id"`
-		Value string `json:"value"`
-	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return fmt.Errorf("alert timeline filter option must be a string or object: %w", err)
-	}
-	option.ID = object.ID
-	option.Value = object.Value
-	return nil
-}
-
-// Preserves the option's original string or object shape when marshaling.
-func (option AlertTimelineFilterOption) MarshalJSON() ([]byte, error) {
-	if option.ID == "" {
-		return json.Marshal(option.Value)
-	}
-	return json.Marshal(struct {
-		ID    string `json:"id"`
-		Value string `json:"value"`
-	}{ID: option.ID, Value: option.Value})
-}
-
-// Describes the supported alert timeline sort fields, orders, and defaults.
-type AlertTimelineSortingOptions struct {
-	Fields   []string                     `json:"fields"`
-	Orders   []string                     `json:"orders"`
-	Defaults AlertTimelineSortingDefaults `json:"defaults"`
-}
-
-// Describes the default alert timeline sort.
-type AlertTimelineSortingDefaults struct {
-	Field string `json:"field"`
-	Order string `json:"order"`
-}
+// The alert timeline serves the same options envelope as the node and node
+// group endpoints, so these names are aliases of the shared types in
+// options.go rather than separate declarations.
+type (
+	// AlertTimelineFilterOptions represents the alert timeline filters and sorting choices available to the caller.
+	AlertTimelineFilterOptions = FilterOptions
+	// AlertTimelineFilters contains the filter fields available for the selected alert timeline view.
+	AlertTimelineFilters = Filters
+	// AlertTimelineFilterField represents one alert timeline filter and its available values.
+	AlertTimelineFilterField = FilterField
+	// AlertTimelineFilterOption represents one alert timeline filter value.
+	AlertTimelineFilterOption = FilterOption
+	// AlertTimelineSortingOptions describes the supported alert timeline sort fields, orders, and defaults.
+	AlertTimelineSortingOptions = SortingOptions
+	// AlertTimelineSortingDefaults reports the alert timeline sort defaults.
+	AlertTimelineSortingDefaults = SortingDefaults
+)
 
 // Represents request options for listing alerts
 type ListAlertsOptions struct {
@@ -382,22 +330,7 @@ func (c *Client) GetAlertTimelineFilterOptions(ctx context.Context, active bool)
 	if err != nil {
 		return AlertTimelineFilterOptions{}, err
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return AlertTimelineFilterOptions{}, fmt.Errorf("read alert timeline filter options: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return AlertTimelineFilterOptions{}, newAPIError(resp.StatusCode, resp.Status, body)
-	}
-
-	var options AlertTimelineFilterOptions
-	if err := json.Unmarshal(body, &options); err != nil {
-		return AlertTimelineFilterOptions{}, fmt.Errorf("decode alert timeline filter options: %w", err)
-	}
-	options.RawJSON = append([]byte(nil), body...)
-	return options, nil
+	return decodeFilterOptions(resp, "alert timeline")
 }
 
 // Lists nodes with alert timeline history

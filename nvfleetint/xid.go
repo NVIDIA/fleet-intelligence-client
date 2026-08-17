@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -350,4 +351,61 @@ func xidBurstDeviceIDsFromGenerated(devices *map[string][]int) map[string][]int 
 		out[device] = append([]int(nil), xids...)
 	}
 	return out
+}
+
+// Personas a suggested action can target. The API omits the persona when it has
+// already reduced actions to one, which for a tenant key means tenant.
+const (
+	ActionPersonaTenant  = "tenant"
+	ActionPersonaDCAdmin = "dc_admin"
+)
+
+// Types a suggested action can carry.
+const (
+	ActionTypeImmediate     = "immediate"
+	ActionTypeInvestigatory = "investigatory"
+)
+
+// XIDBurstFilterOptions represents the filter values available when listing XID
+// bursts. The XID endpoint returns per-field value lists rather than the shared
+// filters/sorting envelope the node and alert endpoints use, and publishes no
+// sorting metadata.
+type XIDBurstFilterOptions struct {
+	XIDNumbers                      []int             `json:"xidNumbers"`
+	Categories                      []string          `json:"categories"`
+	Subcategories                   []string          `json:"subcategories"`
+	JobDisruption                   []bool            `json:"jobDisruption"`
+	JobDisruptionDueToPlatformIssue []bool            `json:"jobDisruptionDueToPlatformIssue"`
+	SuggestedActions                []SuggestedAction `json:"suggestedActions"`
+	RawJSON                         []byte            `json:"-"`
+}
+
+// GetXIDBurstFilterOptions gets the filter values available when listing XID
+// bursts. Categories, subcategories, platform-disruption values, and DC-admin
+// actions are returned only to cloud-provider/NCP callers, so a tenant key sees
+// a reduced set.
+func (c *Client) GetXIDBurstFilterOptions(ctx context.Context) (XIDBurstFilterOptions, error) {
+	ctx, cancel := c.requestContext(ctx)
+	defer cancel()
+
+	resp, err := c.api.GetV1XIDBurstOptions(ctx)
+	if err != nil {
+		return XIDBurstFilterOptions{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return XIDBurstFilterOptions{}, fmt.Errorf("read XID burst filter options: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return XIDBurstFilterOptions{}, newAPIError(resp.StatusCode, resp.Status, body)
+	}
+
+	var options XIDBurstFilterOptions
+	if err := json.Unmarshal(body, &options); err != nil {
+		return XIDBurstFilterOptions{}, fmt.Errorf("decode XID burst filter options: %w", err)
+	}
+	options.RawJSON = append([]byte(nil), body...)
+	return options, nil
 }

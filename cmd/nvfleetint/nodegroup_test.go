@@ -208,3 +208,60 @@ func TestNodeGroupListRejectsInvalidFlags(t *testing.T) {
 		})
 	}
 }
+
+// Verifies node group options mark the shared computeZones field as having no
+// nodegroup list flag while still pointing at the nested node group IDs.
+func TestNodeGroupOptionsOutput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	body := `{"filters":{"fields":[` +
+		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +
+		`{"name":"healthStatuses","options":["Healthy","Degraded"]}` +
+		`]},"sorting":{"fields":["health","nodes"],"orders":["asc","desc"],"defaults":{"field":"health","order":"desc"}}}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/nodegroups/options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"nodegroup", "options"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("nodegroup options command failed: %v", err)
+	}
+
+	got := out.String()
+	for _, want := range []string{
+		"Filters for 'nodegroup list'",
+		"computeZones  (no flag on 'nodegroup list')",
+		// The zone itself has no nodegroup list flag, but its nested node groups
+		// are promoted into the flag that does exist.
+		"\n--nodegroup-ids\n  ng-1  Training  (in East)\n",
+		"--health",
+		"--sort-by  (default: health)", "\n  health\n  nodes\n",
+		"--order  (default: desc)", "\n  asc\n  desc\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("table output missing %q:\n%s", want, got)
+		}
+	}
+
+	var jsonOut bytes.Buffer
+	jsonCmd := newRootCmd()
+	jsonCmd.SetOut(&jsonOut)
+	jsonCmd.SetArgs([]string{"nodegroup", "options", "--output", "json"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatalf("nodegroup options JSON command failed: %v", err)
+	}
+	if strings.TrimSpace(jsonOut.String()) != body {
+		t.Fatalf("JSON output is not the raw payload:\n%s", jsonOut.String())
+	}
+}
