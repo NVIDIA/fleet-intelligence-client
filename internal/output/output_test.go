@@ -78,6 +78,8 @@ func TestFormatHelpers(t *testing.T) {
 	percentage := float32(95)
 	percentageDecimal := float32(95.5)
 	zeroPercentage := float32(0)
+	enabled := true
+	disabled := false
 	location := &nvfleetint.GeoLocation{City: "Santa Clara", Country: "US"}
 	regionalLocation := &nvfleetint.GeoLocation{Region: "us-west-1", City: "Ignored"}
 
@@ -99,6 +101,9 @@ func TestFormatHelpers(t *testing.T) {
 		{name: "name or id", got: FormatNameOrID("", "ng-1"), want: "ng-1"},
 		{name: "optional int", got: FormatOptionalInt(&count), want: "7"},
 		{name: "optional int nil", got: FormatOptionalInt(nil), want: "-"},
+		{name: "optional bool true", got: FormatOptionalBool(&enabled), want: "true"},
+		{name: "optional bool false", got: FormatOptionalBool(&disabled), want: "false"},
+		{name: "optional bool nil", got: FormatOptionalBool(nil), want: "-"},
 		{name: "optional percentage", got: FormatOptionalPercentage(&percentage), want: "95%"},
 		{name: "optional percentage decimal", got: FormatOptionalPercentage(&percentageDecimal), want: "95.5%"},
 		{name: "optional percentage zero", got: FormatOptionalPercentage(&zeroPercentage), want: "0%"},

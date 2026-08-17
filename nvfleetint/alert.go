@@ -35,7 +35,6 @@ const (
 	AlertTimelineNodeSortByComputeZone AlertTimelineNodeSortBy = "computeZone"
 	AlertTimelineNodeSortByLastUpdate  AlertTimelineNodeSortBy = "lastUpdate"
 
-	AlertTimelineAlertSortByComponent  AlertTimelineAlertSortBy = "component"
 	AlertTimelineAlertSortByStartTime  AlertTimelineAlertSortBy = "startTime"
 	AlertTimelineAlertSortByLastUpdate AlertTimelineAlertSortBy = "lastUpdate"
 

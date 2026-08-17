@@ -521,6 +521,8 @@ func TestAlertTimelineRejectsInvalidFlags(t *testing.T) {
 	}{
 		{name: "summary sort", args: []string{"alert", "summary", "--sort-by", "startTime"}, want: "invalid sort-by"},
 		{name: "node sort", args: []string{"alert", "node", "node-1", "--sort-by", "alert"}, want: "invalid sort-by"},
+		// The API dropped the component sort; only startTime and lastUpdate remain.
+		{name: "node component sort", args: []string{"alert", "node", "node-1", "--sort-by", "component"}, want: "expected startTime or lastUpdate"},
 		{name: "missing node", args: []string{"alert", "node"}, want: "node UUID is required"},
 		{name: "state", args: []string{"alert", "summary", "--alert-state", "Triggered"}, want: "invalid alert-state"},
 		{name: "describe page", args: []string{"alert", "describe", "alert-1", "--node", "node-1", "--page", "2"}, want: "requires --page-size"},

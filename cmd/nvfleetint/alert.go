@@ -176,7 +176,7 @@ func newAlertNodeCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: component, startTime, or lastUpdate")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime or lastUpdate")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
@@ -642,7 +642,7 @@ func validateAlertTimelineFlags(flags alertTimelineFlags, common resolvedCommonF
 	}
 	sortBy := nvfleetint.AlertTimelineAlertSortBy(strings.TrimSpace(flags.sortBy))
 	if sortBy != "" && !sortBy.Valid() {
-		return fmt.Errorf("invalid sort-by %q for node alerts: expected component, startTime, or lastUpdate", flags.sortBy)
+		return fmt.Errorf("invalid sort-by %q for node alerts: expected startTime or lastUpdate", flags.sortBy)
 	}
 	return nil
 }

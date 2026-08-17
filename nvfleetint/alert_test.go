@@ -265,6 +265,10 @@ func TestAlertTimelineRejectsInvalidOptions(t *testing.T) {
 	if _, err := client.ListNodeAlertTimeline(context.Background(), ListNodeAlertTimelineOptions{NodeUUID: "node-1", AlertStates: []AlertTimelineState{"Triggered"}}); err == nil || !strings.Contains(err.Error(), "invalid alert timeline state") {
 		t.Fatalf("unexpected timeline state error: %v", err)
 	}
+	// The API dropped the component sort; only startTime and lastUpdate remain.
+	if _, err := client.ListNodeAlertTimeline(context.Background(), ListNodeAlertTimelineOptions{NodeUUID: "node-1", SortBy: "component"}); err == nil || !strings.Contains(err.Error(), "invalid node alert timeline sort") {
+		t.Fatalf("unexpected node alert sort error: %v", err)
+	}
 	page := 1
 	if _, err := client.DescribeAlertTimelineWithOptions(context.Background(), "node-1", "alert-1", DescribeAlertTimelineOptions{Page: &page}); err == nil || !strings.Contains(err.Error(), "page requires page size") {
 		t.Fatalf("unexpected detail pagination error: %v", err)
