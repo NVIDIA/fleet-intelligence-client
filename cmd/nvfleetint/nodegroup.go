@@ -60,18 +60,21 @@ func newNodeGroupListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List node groups",
-		Args:  cobra.NoArgs,
+		Long: "List node groups.\n\n" +
+			optionsHelpNote("nvfleetint nodegroup options",
+				"--nodegroup-ids", "--health", "--gpu-type", "--sort-by", "--order"),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runNodeGroupList(cmd, flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
-	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
-	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
-	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: health or nodes")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order for --sort-by: asc or desc; node groups default --sort-by to health")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Node group IDs to filter")
+	cmd.Flags().StringVar(&flags.health, "health", "", "Health states to filter")
+	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "GPU types to filter")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order for --sort-by; node groups default --sort-by to health")
 	registerListCommonFlags(cmd, common)
 
 	return cmd

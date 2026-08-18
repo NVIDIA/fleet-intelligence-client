@@ -29,6 +29,26 @@ type optionFlag struct {
 // rendered as the left of two columns.
 const optionsPreamble = "Values are comma-separated; where two columns are shown, pass the left one."
 
+// Builds the command-level help note for flags whose values are discoverable
+// from an options endpoint. Keeping this out of every individual flag avoids
+// noisy repeated help text while still surfacing the discovery path.
+func optionsHelpNote(command string, flags ...string) string {
+	return fmt.Sprintf("Run '%s' to list accepted values for %s.", command, formatFlagList(flags))
+}
+
+func formatFlagList(flags []string) string {
+	switch len(flags) {
+	case 0:
+		return "available filters and sorting options"
+	case 1:
+		return flags[0]
+	case 2:
+		return flags[0] + " and " + flags[1]
+	default:
+		return strings.Join(flags[:len(flags)-1], ", ") + ", and " + flags[len(flags)-1]
+	}
+}
+
 // Renders a shared options envelope grouped by the flag that consumes each
 // filter, so the output reads as a list of things the user can type rather
 // than a dump of backend field names.

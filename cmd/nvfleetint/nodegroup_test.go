@@ -166,8 +166,8 @@ func TestNodeGroupListHelpExplainsOrderDefaultSort(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"Sort field: health or nodes",
-		"Sort order for --sort-by: asc or desc; node groups default --sort-by to health",
+		"Run 'nvfleetint nodegroup options' to list accepted values for --nodegroup-ids, --health, --gpu-type, --sort-by, and --order.",
+		"Sort order for --sort-by; node groups default --sort-by to health",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("help output missing %q: %q", want, got)

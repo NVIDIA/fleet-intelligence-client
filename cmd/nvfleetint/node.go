@@ -134,7 +134,11 @@ func newNodeListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List nodes",
-		Args:  cobra.NoArgs,
+		Long: "List nodes.\n\n" +
+			optionsHelpNote("nvfleetint node options",
+				"--health", "--compute-zone-ids", "--nodegroup-ids",
+				"--gpu-type", "--agent-status", "--sort-by", "--order"),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runNodeList(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -148,23 +152,23 @@ func newNodeListCmd() *cobra.Command {
 		"Agent type view: inband or oob (detail view defaults to both)",
 	)
 	cmd.Flags().StringVar(&flags.nodeUUIDs, "node-uuids", "", "Comma-separated node UUIDs to filter")
-	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
-	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.health, "health", "", "Health states to filter")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Compute zone IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneNames, "compute-zone-names", "", "Comma-separated compute zone names to filter (partial match)")
-	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Node group IDs to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupNames, "nodegroup-names", "", "Comma-separated node group names to filter (partial match)")
-	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
+	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "GPU types to filter")
 	cmd.Flags().StringVar(&flags.gpuCount, "gpu-count", "", "Comma-separated GPU counts to filter")
 	cmd.Flags().StringVar(&flags.publicIP, "public-ip", "", "Comma-separated public IP addresses to filter")
 	cmd.Flags().StringVar(&flags.privateIP, "private-ip", "", "Comma-separated private IP addresses to filter")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
-	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online, Offline, or Unknown")
+	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Agent statuses to filter")
 	// User-facing "verification check" maps to the backend "integrity check" API field.
 	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+nodeSortByList)
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field (including verificationCheck)")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
 	registerListCommonFlags(cmd, common)
 
 	return cmd

@@ -142,7 +142,11 @@ func newAlertSummaryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "summary",
 		Short: "Summarize impacted nodes and their alert counts",
-		Args:  cobra.NoArgs,
+		Long: "Summarize impacted nodes and their alert counts.\n\n" +
+			optionsHelpNote("nvfleetint alert options",
+				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
+				"--alert-state", "--component-type", "--sort-by", "--order"),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertSummary(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -150,13 +154,13 @@ func newAlertSummaryCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, alert, gpuType, nodeGroup, computeZone, or lastUpdate")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
-	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
-	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
-	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
-	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states: Critical, Warning, or Resolved")
-	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
+	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "GPU types to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Node group IDs to filter")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Timeline states to filter")
+	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Component types to include")
 	registerListCommonFlags(cmd, common)
 
 	return cmd
@@ -169,20 +173,24 @@ func newAlertNodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "node <nodeUUID>",
 		Short: "List alerts for one node",
-		Args:  requireSingleArg("node UUID"),
+		Long: "List alerts for one node.\n\n" +
+			optionsHelpNote("nvfleetint alert options",
+				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
+				"--alert-state", "--component-type", "--sort-by", "--order"),
+		Args: requireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAlertNode(cmd, args[0], flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime or lastUpdate")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
-	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
-	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
-	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
-	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states: Critical, Warning, or Resolved")
-	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
+	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "GPU types to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Node group IDs to filter")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Timeline states to filter")
+	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Component types to include")
 	cmd.Flags().BoolVar(&flags.withoutPSIRT, "without-psirt", false, "Exclude PSIRT alerts")
 	registerListCommonFlags(cmd, common)
 
