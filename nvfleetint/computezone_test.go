@@ -25,6 +25,9 @@ func TestListComputeZonesDetailSendsAuthAndParams(t *testing.T) {
 		if got := query.Get("view"); got != "detail" {
 			t.Fatalf("unexpected view: %q", got)
 		}
+		if got := query.Get("includeMetrics"); got != "false" {
+			t.Fatalf("unexpected includeMetrics: %q", got)
+		}
 		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
 			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
 		}
@@ -47,11 +50,13 @@ func TestListComputeZonesDetailSendsAuthAndParams(t *testing.T) {
 
 	page := 2
 	pageSize := 50
+	includeMetrics := false
 	got, err := client.ListComputeZones(context.Background(), ListComputeZonesOptions{
-		View:     ComputeZoneViewDetail,
-		ZoneIDs:  []string{"cz-1", "cz-2"},
-		Page:     &page,
-		PageSize: &pageSize,
+		View:           ComputeZoneViewDetail,
+		IncludeMetrics: &includeMetrics,
+		ZoneIDs:        []string{"cz-1", "cz-2"},
+		Page:           &page,
+		PageSize:       &pageSize,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
@@ -130,17 +135,31 @@ func TestListComputeZonesReturnsAPIError(t *testing.T) {
 }
 
 // Verifies local option validation
-func TestListComputeZonesRejectsInvalidView(t *testing.T) {
+func TestListComputeZonesRejectsInvalidOptions(t *testing.T) {
 	client, err := NewClient("https://fleet.example.com", "test-key")
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
 
-	_, err = client.ListComputeZones(context.Background(), ListComputeZonesOptions{View: "wide"})
-	if err == nil {
-		t.Fatal("expected invalid view error")
+	includeMetrics := false
+	tests := []struct {
+		name string
+		opts ListComputeZonesOptions
+		want string
+	}{
+		{name: "view", opts: ListComputeZonesOptions{View: "wide"}, want: "invalid compute zone view"},
+		{name: "basic include metrics", opts: ListComputeZonesOptions{View: ComputeZoneViewBasic, IncludeMetrics: &includeMetrics}, want: "basic compute zone view is incompatible with include metrics"},
 	}
-	if !strings.Contains(err.Error(), "invalid compute zone view") {
-		t.Fatalf("unexpected error: %v", err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := client.ListComputeZones(context.Background(), tt.opts)
+			if err == nil {
+				t.Fatal("expected invalid options error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
 	}
 }

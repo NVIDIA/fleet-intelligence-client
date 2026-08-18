@@ -779,9 +779,26 @@ var alertOptionsRenderer = optionsRenderer{
 		"componentTypes": {name: "--component-type"},
 		"alertStates":    {name: "--alert-state"},
 	},
+	// The endpoint advertises only the Level 1 nodes-list columns, which are
+	// `alert summary`'s. `alert node` takes its own two, so they are named
+	// separately instead of letting the summary's columns stand for both.
 	sortAccepted: func(field string) bool {
 		return nvfleetint.AlertTimelineNodeSortBy(field).Valid()
 	},
+	sortConsumers: []string{"alert summary"},
+	staticSorting: []staticSortSection{{
+		consumer: "alert node",
+		fields: []string{
+			string(nvfleetint.AlertTimelineAlertSortByStartTime),
+			string(nvfleetint.AlertTimelineAlertSortByLastUpdate),
+		},
+		defaultField: string(nvfleetint.AlertTimelineAlertSortByLastUpdate),
+		orders: []string{
+			string(nvfleetint.AlertTimelineOrderAsc),
+			string(nvfleetint.AlertTimelineOrderDesc),
+		},
+		defaultOrder: string(nvfleetint.AlertTimelineOrderDesc),
+	}},
 }
 
 // Writes alert timeline filter values grouped by the flag that accepts them,

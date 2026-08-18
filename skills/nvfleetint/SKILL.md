@@ -36,8 +36,9 @@ Use live `nvfleetint` JSON; never answer fleet-state questions from memory. Read
 ```bash
 nvfleetint overview --output json
 nvfleetint overview --include-metrics=false --output json
+nvfleetint computezone list --include-metrics=false --output json
 nvfleetint computezone list --output json
-nvfleetint nodegroup list --health Degraded,Unhealthy --output json
+nvfleetint nodegroup list --compute-zone-ids <zone-id> --health Degraded,Unhealthy --output json
 nvfleetint nodegroup list --gpu-type H100 --sort-by health --order desc --output json
 ```
 
@@ -102,14 +103,14 @@ Events require `--window` or both `--start`/`--end`. Durations use Go units thro
 ```bash
 nvfleetint tag list --prefix gpu --output json
 nvfleetint tag list --computezone <zone-id> --output json
-nvfleetint report inventory --all --output json
+nvfleetint report inventory --compute-zone-ids <zone-id> --nodegroup-ids <group-id> --all --output json
 nvfleetint report inventory --format csv --signed --output-path ./reports/
-nvfleetint report error --view list --group-by error --window 168h --output json
-nvfleetint report error --view graph --window 24h --output json
+nvfleetint report error --view list --group-by error --window 168h --severities Critical,Fatal --output json
+nvfleetint report error --view graph --window 24h --step 5m --output json
 nvfleetint report verify --csv report.csv --bundle report.sig.bundle
 ```
 
-Use at most one tag scope flag: `--node`, `--nodegroup`, or `--computezone`; tag list has no pagination. Report-error list requires `--group-by error|node`; only list supports `--all` and CSV. Signed inventory requires CSV.
+Use at most one tag scope flag: `--node`, `--nodegroup`, or `--computezone`; tag list has no pagination. Report-error list requires `--group-by error|node`; only list supports `--all` and CSV. Signed inventory requires CSV. Report filters accept compute zone IDs, node group IDs, and tags; error reports also accept `--errors`, `--severities`, and graph-only `--step`.
 
 ## Example
 

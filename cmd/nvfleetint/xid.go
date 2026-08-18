@@ -563,8 +563,9 @@ func writeXIDBurstOptionsTable(w io.Writer, options nvfleetint.XIDBurstFilterOpt
 // Splits suggested actions into the four persona/type flags that accept them.
 // The API omits persona when it has already reduced actions to one persona,
 // which for this endpoint means a tenant key, so a blank persona is read as
-// tenant. Actions whose type the API did not report are listed separately
-// rather than guessed into a flag.
+// tenant. Actions whose persona or type the CLI has no flag for are listed
+// separately rather than guessed into a flag or dropped, so a backend that
+// grows a persona still shows the codes its filters accept.
 func xidActionSections(actions []nvfleetint.SuggestedAction) []optionSection {
 	buckets := map[string][][]string{}
 	var unclassified [][]string
@@ -574,7 +575,7 @@ func xidActionSections(actions []nvfleetint.SuggestedAction) []optionSection {
 			persona = nvfleetint.ActionPersonaTenant
 		}
 		row := []string{action.Code, action.Action}
-		if action.Type != nvfleetint.ActionTypeImmediate && action.Type != nvfleetint.ActionTypeInvestigatory {
+		if !knownActionPersona(persona) || !knownActionType(action.Type) {
 			unclassified = append(unclassified, row)
 			continue
 		}
@@ -600,11 +601,21 @@ func xidActionSections(actions []nvfleetint.SuggestedAction) []optionSection {
 	}
 	if len(unclassified) > 0 {
 		sections = append(sections, optionSection{
-			heading: fmt.Sprintf("suggestedActions with no action type reported  (no flag on %s)", xidBurstOptionsConsumer),
+			heading: fmt.Sprintf("suggestedActions with no matching persona/type flag  (no flag on %s)", xidBurstOptionsConsumer),
 			rows:    unclassified,
 		})
 	}
 	return sections
+}
+
+// Reports whether a suggested-action persona has flags on `xidburst list`.
+func knownActionPersona(persona string) bool {
+	return persona == nvfleetint.ActionPersonaTenant || persona == nvfleetint.ActionPersonaDCAdmin
+}
+
+// Reports whether a suggested-action type has flags on `xidburst list`.
+func knownActionType(actionType string) bool {
+	return actionType == nvfleetint.ActionTypeImmediate || actionType == nvfleetint.ActionTypeInvestigatory
 }
 
 // Converts XID numbers into single-column rows.

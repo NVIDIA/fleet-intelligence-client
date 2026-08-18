@@ -42,6 +42,11 @@ const (
 	ErrorReportTimeModeAbsolute ErrorReportTimeMode = "absolute"
 	ErrorReportTimeModeRelative ErrorReportTimeMode = "relative"
 
+	ErrorSeverityCritical ErrorSeverity = "Critical"
+	ErrorSeverityFatal    ErrorSeverity = "Fatal"
+	ErrorSeverityInfo     ErrorSeverity = "Info"
+	ErrorSeverityWarning  ErrorSeverity = "Warning"
+
 	InventoryReportSortByHostname       InventoryReportSortBy = "hostname"
 	InventoryReportSortByNodeUUID       InventoryReportSortBy = "nodeUUID"
 	InventoryReportSortByNodeGroup      InventoryReportSortBy = "nodegroup"
@@ -97,6 +102,14 @@ func (mode ErrorReportTimeMode) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Represents supported error severities for error reports
+type ErrorSeverity string
+
+// Reports whether the error severity is accepted by the API
+func (severity ErrorSeverity) Valid() bool {
+	return fleetapi.ModelsEventSeverity(severity).Valid()
 }
 
 // Represents supported inventory report sort fields
@@ -178,6 +191,7 @@ type ErrorReportOptions struct {
 	NodeGroupIDs   []string
 	Tags           []string
 	Errors         []string
+	Severities     []ErrorSeverity
 	TimeMode       ErrorReportTimeMode
 	Window         string
 	StartTime      string
@@ -266,6 +280,8 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 	if err != nil {
 		return InventoryReport{}, err
 	}
+	opts.StartTime = strings.TrimSpace(opts.StartTime)
+	opts.EndTime = strings.TrimSpace(opts.EndTime)
 	if err := validateInventoryReportOptions(opts); err != nil {
 		return InventoryReport{}, err
 	}
@@ -370,8 +386,25 @@ func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, e
 	if opts.Format == ReportFormatCSV && opts.View != ErrorReportViewList {
 		return ErrorReportOptions{}, fmt.Errorf("csv format is only supported for error report list view")
 	}
+	if len(opts.Errors) > 0 && (opts.View != ErrorReportViewList || opts.GroupBy != ErrorReportGroupByNode) {
+		return ErrorReportOptions{}, fmt.Errorf("error filters are only supported for list view grouped by node")
+	}
 	if opts.TimeMode != "" && !opts.TimeMode.Valid() {
 		return ErrorReportOptions{}, fmt.Errorf("invalid error report time mode %q: expected absolute or relative", opts.TimeMode)
+	}
+	for _, severity := range opts.Severities {
+		if !severity.Valid() {
+			return ErrorReportOptions{}, fmt.Errorf("invalid error report severity %q: expected Critical, Fatal, Info, or Warning", severity)
+		}
+	}
+	opts.Step = strings.TrimSpace(opts.Step)
+	if opts.Step != "" && opts.View != ErrorReportViewGraph {
+		return ErrorReportOptions{}, fmt.Errorf("error report step is only supported for graph view")
+	}
+	if opts.Step != "" {
+		if err := validateReportStep(opts.Step); err != nil {
+			return ErrorReportOptions{}, err
+		}
 	}
 
 	opts.Window = strings.TrimSpace(opts.Window)
@@ -409,12 +442,12 @@ func validateErrorReportTime(opts ErrorReportOptions) error {
 		}
 	}
 	if opts.StartTime != "" {
-		if err := validateReportRFC3339("start time", opts.StartTime); err != nil {
+		if err := validateReportRFC3339("error report start time", opts.StartTime); err != nil {
 			return err
 		}
 	}
 	if opts.EndTime != "" {
-		if err := validateReportRFC3339("end time", opts.EndTime); err != nil {
+		if err := validateReportRFC3339("error report end time", opts.EndTime); err != nil {
 			return err
 		}
 	}
@@ -436,16 +469,42 @@ func validateReportWindow(window string) error {
 	return nil
 }
 
+// Checks a graph step value is a positive duration of at least one minute
+func validateReportStep(step string) error {
+	if !reportDurationPattern.MatchString(step) {
+		return fmt.Errorf("invalid step %q: %s", step, reportDurationUnitsMessage)
+	}
+	duration, err := time.ParseDuration(step)
+	if err != nil {
+		return fmt.Errorf("invalid step %q: duration is too large; maximum is %s", step, maxReportWindow)
+	}
+	if duration < time.Minute {
+		return fmt.Errorf("invalid step %q: expected at least 1m", step)
+	}
+	return nil
+}
+
 // Checks a timestamp value is RFC3339
 func validateReportRFC3339(name, value string) error {
 	if _, err := time.Parse(time.RFC3339, value); err != nil {
-		return fmt.Errorf("error report %s must be RFC3339", name)
+		return fmt.Errorf("%s must be RFC3339", name)
 	}
 	return nil
 }
 
 // Checks inventory report options before making the request
 func validateInventoryReportOptions(opts InventoryReportOptions) error {
+	if (opts.StartTime == "") != (opts.EndTime == "") {
+		return fmt.Errorf("inventory report start time and end time must be used together")
+	}
+	if opts.StartTime != "" {
+		if err := validateReportRFC3339("inventory report start time", opts.StartTime); err != nil {
+			return err
+		}
+		if err := validateReportRFC3339("inventory report end time", opts.EndTime); err != nil {
+			return err
+		}
+	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
 		return fmt.Errorf("invalid inventory report sort %q: expected hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation", opts.SortBy)
 	}
@@ -541,6 +600,13 @@ func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams
 	if len(opts.Errors) > 0 {
 		values := append([]string(nil), opts.Errors...)
 		params.Errors = &values
+	}
+	if len(opts.Severities) > 0 {
+		values := make([]fleetapi.ModelsEventSeverity, 0, len(opts.Severities))
+		for _, severity := range opts.Severities {
+			values = append(values, fleetapi.ModelsEventSeverity(severity))
+		}
+		params.Severities = &values
 	}
 	if opts.TimeMode != "" {
 		value := string(opts.TimeMode)

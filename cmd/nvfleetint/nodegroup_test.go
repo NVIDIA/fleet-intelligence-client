@@ -30,6 +30,15 @@ func TestNodeGroupListTableFiltersAndSort(t *testing.T) {
 		if got := query.Get("view"); got != "detail" {
 			t.Fatalf("unexpected view: %q", got)
 		}
+		if got := query.Get("includeMetrics"); got != "false" {
+			t.Fatalf("unexpected includeMetrics: %q", got)
+		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["computeZoneNames"]; !slices.Equal(got, []string{"East"}) {
+			t.Fatalf("unexpected computeZoneNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
 		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1", "ng-2"}) {
 			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
 		}
@@ -56,7 +65,7 @@ func TestNodeGroupListTableFiltersAndSort(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"nodegroup", "list", "--nodegroup-ids", "ng-1,ng-2", "--health", "Healthy,Degraded", "--gpu-type", "NVIDIA-H100,NVIDIA-A100", "--sort-by", "health", "--order", "asc"})
+	cmd.SetArgs([]string{"nodegroup", "list", "--include-metrics=false", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1,ng-2", "--health", "Healthy,Degraded", "--gpu-type", "NVIDIA-H100,NVIDIA-A100", "--sort-by", "health", "--order", "asc"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -166,7 +175,7 @@ func TestNodeGroupListHelpExplainsOrderDefaultSort(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"Run 'nvfleetint nodegroup options' to list accepted values for --nodegroup-ids, --health, --gpu-type, --sort-by, and --order.",
+		"Run 'nvfleetint nodegroup options' to list accepted values for --compute-zone-ids, --nodegroup-ids, --health, --gpu-type, --sort-by, and --order.",
 		"Sort order for --sort-by; node groups default --sort-by to health",
 	} {
 		if !strings.Contains(got, want) {
@@ -187,8 +196,11 @@ func TestNodeGroupListRejectsInvalidFlags(t *testing.T) {
 		{name: "sort", args: []string{"nodegroup", "list", "--sort-by", "name"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"nodegroup", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"nodegroup", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node group view is incompatible"},
+		{name: "basic compute zone name", args: []string{"nodegroup", "list", "--view", "basic", "--compute-zone-names", "East"}, want: "basic node group view is incompatible with compute zone name"},
+		{name: "basic include metrics", args: []string{"nodegroup", "list", "--view", "basic", "--include-metrics=false"}, want: "basic node group view is incompatible with --include-metrics"},
 		{name: "basic health sort", args: []string{"nodegroup", "list", "--view", "basic", "--sort-by", "health"}, want: "basic node group view is incompatible with sort"},
 		{name: "basic nodes sort", args: []string{"nodegroup", "list", "--view", "basic", "--sort-by", "nodes"}, want: "basic node group view is incompatible with sort"},
+		{name: "compute zone IDs", args: []string{"nodegroup", "list", "--compute-zone-ids", "cz-1,,cz-2"}, want: "empty values are not allowed"},
 		{name: "gpu types", args: []string{"nodegroup", "list", "--gpu-type", "NVIDIA-H100,,NVIDIA-A100"}, want: "empty values are not allowed"},
 	}
 
@@ -209,8 +221,8 @@ func TestNodeGroupListRejectsInvalidFlags(t *testing.T) {
 	}
 }
 
-// Verifies node group options mark the shared computeZones field as having no
-// nodegroup list flag while still pointing at the nested node group IDs.
+// Verifies node group options render compute zones under their new flag while
+// still pointing nested node groups at --nodegroup-ids.
 func TestNodeGroupOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -241,9 +253,8 @@ func TestNodeGroupOptionsOutput(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"Filters for 'nodegroup list'",
-		"computeZones  (no flag on 'nodegroup list')",
-		// The zone itself has no nodegroup list flag, but its nested node groups
-		// are promoted into the flag that does exist.
+		"\n--compute-zone-ids\n  cz-1  East\n",
+		// Nested node groups are promoted into the flag that accepts them.
 		"\n--nodegroup-ids\n  ng-1  Training  (in East)\n",
 		"--health",
 		"--sort-by  (default: health)", "\n  health\n  nodes\n",

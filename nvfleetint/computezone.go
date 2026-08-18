@@ -27,10 +27,11 @@ func (view ComputeZoneView) Valid() bool {
 
 // Represents request options for listing compute zones
 type ListComputeZonesOptions struct {
-	View     ComputeZoneView
-	ZoneIDs  []string
-	Page     *int
-	PageSize *int
+	View           ComputeZoneView
+	IncludeMetrics *bool
+	ZoneIDs        []string
+	Page           *int
+	PageSize       *int
 }
 
 // Represents a paginated compute zone response with the raw backend payload
@@ -64,6 +65,12 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 
 	params := fleetapi.GetV1ComputezonesParams{
 		View: computeZoneViewParam(view),
+	}
+	if view == ComputeZoneViewBasic && opts.IncludeMetrics != nil {
+		return ComputeZonesPage{}, fmt.Errorf("basic compute zone view is incompatible with include metrics")
+	}
+	if opts.IncludeMetrics != nil {
+		params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
 	}
 	if len(opts.ZoneIDs) > 0 {
 		zoneIDs := append([]string(nil), opts.ZoneIDs...)

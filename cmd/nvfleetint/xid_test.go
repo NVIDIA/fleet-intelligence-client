@@ -365,7 +365,8 @@ func TestXIDBurstOptionsOutput(t *testing.T) {
 		`{"code":"PULL_FROM_SERVICE","action":"Pull the node","persona":"dc_admin","type":"immediate"},` +
 		`{"code":"RUN_DIAGS","action":"Run diagnostics","persona":"dc_admin","type":"investigatory"},` +
 		`{"code":"NO_PERSONA","action":"Persona omitted for tenant keys","type":"immediate"},` +
-		`{"code":"NO_TYPE","action":"Type not reported"}` +
+		`{"code":"NO_TYPE","action":"Type not reported"},` +
+		`{"code":"NEW_PERSONA","action":"Persona the CLI has no flag for","persona":"operator","type":"immediate"}` +
 		`]}`
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -400,8 +401,9 @@ func TestXIDBurstOptionsOutput(t *testing.T) {
 		"--job-disruption  (boolean; pass --job-disruption=false to match false)",
 		"--platform-disruption",
 		"RESTART_APP", "CHECK_LOGS", "PULL_FROM_SERVICE", "RUN_DIAGS",
-		"suggestedActions with no action type reported  (no flag on 'xidburst list')",
+		"suggestedActions with no matching persona/type flag  (no flag on 'xidburst list')",
 		"NO_TYPE",
+		"NEW_PERSONA",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("table output missing %q:\n%s", want, got)
@@ -412,6 +414,15 @@ func TestXIDBurstOptionsOutput(t *testing.T) {
 	tenantActions := sectionBody(t, got, "--tenant-actions")
 	if !strings.Contains(tenantActions, "NO_PERSONA") || !strings.Contains(tenantActions, "RESTART_APP") {
 		t.Fatalf("unexpected tenant action section:\n%s", tenantActions)
+	}
+	// A persona no flag covers is listed as unclassified rather than dropped or
+	// folded into a persona it does not belong to.
+	if strings.Contains(tenantActions, "NEW_PERSONA") {
+		t.Fatalf("unknown persona leaked into the tenant section:\n%s", tenantActions)
+	}
+	unclassified := sectionBody(t, got, "suggestedActions with no matching persona/type flag  (no flag on 'xidburst list')")
+	if !strings.Contains(unclassified, "NEW_PERSONA") || !strings.Contains(unclassified, "NO_TYPE") {
+		t.Fatalf("unexpected unclassified action section:\n%s", unclassified)
 	}
 	if strings.Contains(sectionBody(t, got, "--dc-admin-actions"), "NO_PERSONA") {
 		t.Fatalf("persona-less action leaked into the dc-admin section:\n%s", got)

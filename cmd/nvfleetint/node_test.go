@@ -1047,4 +1047,14 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	if !strings.Contains(got, "\n    c-1") {
 		t.Fatalf("unpromotable nested value was dropped:\n%s", got)
 	}
+	// The node groups nested under the compute zone belong to --nodegroup-ids,
+	// so they must not be listed under --compute-zone-ids, where passing one
+	// silently matches nothing. The section points at the flag instead.
+	computeZones := sectionBody(t, got, "--compute-zone-ids")
+	if strings.Contains(computeZones, "ng-1") {
+		t.Fatalf("node group listed under --compute-zone-ids:\n%s", computeZones)
+	}
+	if !strings.Contains(computeZones, "Values nested under these are listed under --nodegroup-ids.") {
+		t.Fatalf("--compute-zone-ids section does not point at --nodegroup-ids:\n%s", computeZones)
+	}
 }

@@ -62,14 +62,17 @@ func (order NodeGroupSortOrder) Valid() bool {
 
 // Represents request options for listing node groups
 type ListNodeGroupsOptions struct {
-	View           NodeGroupView
-	NodeGroupIDs   []string
-	HealthStatuses []NodeGroupHealthStatus
-	GPUTypes       []string
-	SortBy         NodeGroupSortBy
-	Order          NodeGroupSortOrder
-	Page           *int
-	PageSize       *int
+	View             NodeGroupView
+	IncludeMetrics   *bool
+	ComputeZoneIDs   []string
+	ComputeZoneNames []string
+	NodeGroupIDs     []string
+	HealthStatuses   []NodeGroupHealthStatus
+	GPUTypes         []string
+	SortBy           NodeGroupSortBy
+	Order            NodeGroupSortOrder
+	Page             *int
+	PageSize         *int
 }
 
 // Represents a paginated node group response with the raw backend payload
@@ -108,6 +111,17 @@ func (c *Client) ListNodeGroups(ctx context.Context, opts ListNodeGroupsOptions)
 
 	params := fleetapi.GetV1NodegroupsParams{
 		View: nodeGroupViewParam(view),
+	}
+	if opts.IncludeMetrics != nil {
+		params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
+	}
+	if len(opts.ComputeZoneIDs) > 0 {
+		computeZoneIDs := append([]string(nil), opts.ComputeZoneIDs...)
+		params.ComputeZoneIds = &computeZoneIDs
+	}
+	if view == NodeGroupViewDetail && len(opts.ComputeZoneNames) > 0 {
+		computeZoneNames := append([]string(nil), opts.ComputeZoneNames...)
+		params.ComputeZoneNames = &computeZoneNames
 	}
 	if len(opts.NodeGroupIDs) > 0 {
 		nodeGroupIDs := append([]string(nil), opts.NodeGroupIDs...)
@@ -180,6 +194,12 @@ func validateNodeGroupOptions(view NodeGroupView, opts ListNodeGroupsOptions) er
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
 		return fmt.Errorf("invalid node group order %q: expected asc or desc", opts.Order)
+	}
+	if view == NodeGroupViewBasic && opts.IncludeMetrics != nil {
+		return fmt.Errorf("basic node group view is incompatible with include metrics")
+	}
+	if view == NodeGroupViewBasic && len(opts.ComputeZoneNames) > 0 {
+		return fmt.Errorf("basic node group view is incompatible with compute zone name filters")
 	}
 	if view == NodeGroupViewBasic && (len(opts.HealthStatuses) > 0 || len(opts.GPUTypes) > 0) {
 		return fmt.Errorf("basic node group view is incompatible with health and GPU type filters")

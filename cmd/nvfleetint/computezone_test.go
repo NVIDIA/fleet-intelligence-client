@@ -30,6 +30,9 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 		if got := query.Get("view"); got != "detail" {
 			t.Fatalf("unexpected view: %q", got)
 		}
+		if got := query.Get("includeMetrics"); got != "false" {
+			t.Fatalf("unexpected includeMetrics: %q", got)
+		}
 		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
 			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
 		}
@@ -51,7 +54,7 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"computezone", "list", "--zone-ids", "cz-1,cz-2", "--page", "2", "--page-size", "50"})
+	cmd.SetArgs([]string{"computezone", "list", "--include-metrics=false", "--zone-ids", "cz-1,cz-2", "--page", "2", "--page-size", "50"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -156,6 +159,7 @@ func TestComputeZoneListRejectsInvalidFlags(t *testing.T) {
 		want string
 	}{
 		{name: "view", args: []string{"computezone", "list", "--view", "wide"}, want: "invalid view"},
+		{name: "basic include metrics", args: []string{"computezone", "list", "--view", "basic", "--include-metrics=false"}, want: "basic compute zone view is incompatible with --include-metrics"},
 		{name: "zone ids", args: []string{"computezone", "list", "--zone-ids", "cz-1,,cz-2"}, want: "empty values are not allowed"},
 		{name: "page size", args: []string{"computezone", "list", "--page-size", "0"}, want: "--page-size must be between"},
 	}

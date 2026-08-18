@@ -65,6 +65,25 @@ type optionsRenderer struct {
 	// Backends return sort fields for views the CLI cannot request, and those
 	// are called out rather than presented as usable.
 	sortAccepted func(field string) bool
+	// sortConsumers names the commands the endpoint's sorting block describes,
+	// when that is narrower than consumers. An endpoint can advertise the
+	// columns of one view while its filters apply to several.
+	sortConsumers []string
+	// staticSorting documents a consumer whose sort fields the endpoint does
+	// not advertise at all, so the CLI prints its own allowlist rather than
+	// leaving the user with another command's columns.
+	staticSorting []staticSortSection
+}
+
+// Describes the --sort-by/--order a command accepts when the options endpoint
+// does not advertise them. Values come from the CLI's own allowlist, which is
+// generated from the same OpenAPI enums the command validates against.
+type staticSortSection struct {
+	consumer     string
+	fields       []string
+	defaultField string
+	orders       []string
+	defaultOrder string
 }
 
 // Groups the values one flag accepts under a heading that names it.
@@ -90,20 +109,30 @@ func (renderer optionsRenderer) write(w io.Writer, options nvfleetint.FilterOpti
 
 	for _, field := range options.Filters.Fields {
 		flag := renderer.filters[field.Name]
-		promoting := flag.promote != "" && !claimed[flag.promote] && hasNestedOptions(field.Options)
+		nested := flag.promote != "" && hasNestedOptions(field.Options)
+		promoting := nested && !claimed[flag.promote]
 
+		// Nested children belong to another flag either way, so they are never
+		// left indented under this field's heading, where they would read as
+		// values this flag accepts.
 		rows := optionRows(field.Options, 0)
-		if promoting {
+		if nested {
 			rows = flatOptionRows(field.Options)
 		}
 		if err := writeOptionSection(w, renderer.heading(field), rows); err != nil {
 			return err
 		}
-		if !promoting {
-			continue
-		}
-		if err := writeOptionSection(w, flag.promote, promotedRows(field.Options)); err != nil {
-			return err
+		switch {
+		case promoting:
+			if err := writeOptionSection(w, flag.promote, promotedRows(field.Options)); err != nil {
+				return err
+			}
+		case nested:
+			// The claiming field already renders a section for that flag, so
+			// point at it instead of printing the values twice.
+			if _, err := fmt.Fprintf(w, "  Values nested under these are listed under %s.\n", flag.promote); err != nil {
+				return err
+			}
 		}
 	}
 	return renderer.writeSorting(w, options.Sorting)
@@ -165,7 +194,8 @@ func (renderer optionsRenderer) writeSorting(w io.Writer, sorting nvfleetint.Sor
 		rejected = append(rejected, translated)
 	}
 
-	if _, err := fmt.Fprintf(w, "\nSorting for %s\n", renderer.consumerList()); err != nil {
+	sortConsumers := quotedList(renderer.sortConsumers, renderer.consumerList())
+	if _, err := fmt.Fprintf(w, "\nSorting for %s\n", sortConsumers); err != nil {
 		return err
 	}
 	sortByHeading := sortHeading("--sort-by", renderer.translateSortField(sorting.Defaults.Field))
@@ -175,12 +205,29 @@ func (renderer optionsRenderer) writeSorting(w io.Writer, sorting nvfleetint.Sor
 	if err := writeOptionSection(w, sortHeading("--order", sorting.Defaults.Order), valueRows(sorting.Orders)); err != nil {
 		return err
 	}
-	if len(rejected) == 0 {
-		return nil
+	if len(rejected) > 0 {
+		if _, err := fmt.Fprintf(w, "\n  Returned by the API but not accepted by %s --sort-by: %s\n",
+			sortConsumers, strings.Join(rejected, ", ")); err != nil {
+			return err
+		}
 	}
-	_, err := fmt.Fprintf(w, "\n  Returned by the API but not accepted by %s --sort-by: %s\n",
-		renderer.consumerList(), strings.Join(rejected, ", "))
-	return err
+	for _, section := range renderer.staticSorting {
+		if err := section.write(w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Writes the sorting flags of a consumer the endpoint says nothing about.
+func (section staticSortSection) write(w io.Writer) error {
+	if _, err := fmt.Fprintf(w, "\nSorting for '%s'\n", section.consumer); err != nil {
+		return err
+	}
+	if err := writeOptionSection(w, sortHeading("--sort-by", section.defaultField), valueRows(section.fields)); err != nil {
+		return err
+	}
+	return writeOptionSection(w, sortHeading("--order", section.defaultOrder), valueRows(section.orders))
 }
 
 // Builds a sorting section heading, noting the default the backend applies.
@@ -201,13 +248,18 @@ func (renderer optionsRenderer) translateSortField(field string) string {
 
 // Renders the consuming commands as a quoted list.
 func (renderer optionsRenderer) consumerList() string {
-	quoted := make([]string, 0, len(renderer.consumers))
-	for _, consumer := range renderer.consumers {
-		quoted = append(quoted, "'"+consumer+"'")
+	return quotedList(renderer.consumers, "this command")
+}
+
+// Renders command names as a quoted list, falling back when there are none.
+func quotedList(commands []string, fallback string) string {
+	quoted := make([]string, 0, len(commands))
+	for _, command := range commands {
+		quoted = append(quoted, "'"+command+"'")
 	}
 	switch len(quoted) {
 	case 0:
-		return "this command"
+		return fallback
 	case 1:
 		return quoted[0]
 	default:

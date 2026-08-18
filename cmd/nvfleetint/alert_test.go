@@ -310,6 +310,24 @@ func TestAlertTimelineOptionsOutput(t *testing.T) {
 			t.Fatalf("table output missing %q:\n%s", want, tableOut.String())
 		}
 	}
+
+	// The endpoint advertises the summary's columns only; `alert node` rejects
+	// them, so its section must list its own two instead.
+	summarySorting, nodeSorting, found := strings.Cut(tableOut.String(), "Sorting for 'alert node'")
+	if !found {
+		t.Fatalf("missing 'alert node' sorting section:\n%s", tableOut.String())
+	}
+	if !strings.Contains(summarySorting, "Sorting for 'alert summary'") {
+		t.Fatalf("missing 'alert summary' sorting section:\n%s", tableOut.String())
+	}
+	if strings.Contains(nodeSorting, "hostname") {
+		t.Fatalf("'alert node' sorting offers a summary-only column:\n%s", nodeSorting)
+	}
+	for _, want := range []string{"startTime", "lastUpdate"} {
+		if !strings.Contains(nodeSorting, want) {
+			t.Fatalf("'alert node' sorting missing %q:\n%s", want, nodeSorting)
+		}
+	}
 }
 
 // Verifies filter fields with no matching flag, empty option lists, and absent
@@ -331,8 +349,19 @@ func TestAlertTimelineOptionsTableFallbacks(t *testing.T) {
 			t.Fatalf("output missing %q:\n%s", want, out.String())
 		}
 	}
-	if strings.Contains(out.String(), "default:") {
-		t.Fatalf("absent sorting defaults should not render:\n%s", out.String())
+	// `alert node` sort fields come from the CLI's own allowlist, so they are
+	// rendered with their defaults regardless of what the endpoint reports.
+	endpointSorting, staticSorting, found := strings.Cut(out.String(), "Sorting for 'alert node'")
+	if !found {
+		t.Fatalf("missing 'alert node' sorting section:\n%s", out.String())
+	}
+	if strings.Contains(endpointSorting, "default:") {
+		t.Fatalf("absent sorting defaults should not render:\n%s", endpointSorting)
+	}
+	for _, want := range []string{"startTime", "lastUpdate", "(default: lastUpdate)", "(default: desc)"} {
+		if !strings.Contains(staticSorting, want) {
+			t.Fatalf("'alert node' sorting missing %q:\n%s", want, staticSorting)
+		}
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -48,6 +49,28 @@ func TestReportInventoryTable(t *testing.T) {
 		if got := r.URL.Query().Get("format"); got != "json" {
 			t.Fatalf("unexpected format: %q", got)
 		}
+		query := r.URL.Query()
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["tags"]; !slices.Equal(got, []string{"prod", "h100"}) {
+			t.Fatalf("unexpected tags: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query.Get("startTime"); got != "2026-05-01T00:00:00Z" {
+			t.Fatalf("unexpected startTime: %q", got)
+		}
+		if got := query.Get("endTime"); got != "2026-05-02T00:00:00Z" {
+			t.Fatalf("unexpected endTime: %q", got)
+		}
+		if got := query.Get("sortBy"); got != "hostname" {
+			t.Fatalf("unexpected sortBy: %q", got)
+		}
+		if got := query.Get("order"); got != "asc" {
+			t.Fatalf("unexpected order: %q", got)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","gpuType":"NVIDIA-H100","gpuCount":8,"integrityCheck":"Verified","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10"}],"hasMore":false,"page":0,"pageSize":10,"total":1}`))
@@ -59,7 +82,7 @@ func TestReportInventoryTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory"})
+	cmd.SetArgs([]string{"report", "inventory", "--compute-zone-ids", "cz-1,cz-2", "--nodegroup-ids", "ng-1", "--tags", "prod,h100", "--start", "2026-05-01T00:00:00Z", "--end", "2026-05-02T00:00:00Z", "--sort-by", "hostname", "--order", "asc"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -127,6 +150,37 @@ func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), "--output cannot be used with --format csv") {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies local inventory report flag validation
+func TestReportInventoryRejectsInvalidFlags(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "compute zone IDs", args: []string{"report", "inventory", "--compute-zone-ids", "cz-1,,cz-2"}, want: "empty values are not allowed"},
+		{name: "start alone", args: []string{"report", "inventory", "--start", "2026-05-01T00:00:00Z"}, want: "--start and --end must be used together"},
+		{name: "bad start", args: []string{"report", "inventory", "--start", "yesterday", "--end", "2026-05-02T00:00:00Z"}, want: "--start must be RFC3339"},
+		{name: "bad sort", args: []string{"report", "inventory", "--sort-by", "name"}, want: "invalid sort-by"},
+		{name: "bad order", args: []string{"report", "inventory", "--order", "up"}, want: "invalid order"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
 			}
 		})
 	}
@@ -329,7 +383,7 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 		if got := query.Get("view"); got != "list" {
 			t.Fatalf("unexpected view: %q", got)
 		}
-		if got := query.Get("groupBy"); got != "error" {
+		if got := query.Get("groupBy"); got != "node" {
 			t.Fatalf("unexpected groupBy: %q", got)
 		}
 		if got := query.Get("timeMode"); got != "relative" {
@@ -341,15 +395,30 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 		if got := query.Get("pageSize"); got != "1" {
 			t.Fatalf("unexpected pageSize: %q", got)
 		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["tags"]; !slices.Equal(got, []string{"prod"}) {
+			t.Fatalf("unexpected tags: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["errors"]; !slices.Equal(got, []string{"xid_154"}) {
+			t.Fatalf("unexpected errors: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["severities"]; !slices.Equal(got, []string{"Critical", "Fatal"}) {
+			t.Fatalf("unexpected severities: %#v raw query %q", got, r.URL.RawQuery)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		switch query.Get("page") {
 		case "0":
 			requests++
-			_, _ = w.Write([]byte(`{"errors":[{"name":"xid_154","count":1,"extra":"kept"}],"hasMore":true,"page":0,"pageSize":1,"total":2}`))
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","errors":["xid_154"],"extra":"kept"}],"hasMore":true,"page":0,"pageSize":1,"total":2}`))
 		case "1":
 			requests++
-			_, _ = w.Write([]byte(`{"errors":[{"name":"NVSwitch Fatal Error","count":2}],"hasMore":false,"page":1,"pageSize":1,"total":2}`))
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-2","hostname":"gpu-002","errors":["NVSwitch Fatal Error"]}],"hasMore":false,"page":1,"pageSize":1,"total":2}`))
 		default:
 			t.Fatalf("unexpected page: %q", query.Get("page"))
 		}
@@ -361,7 +430,7 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "error", "--view", "list", "--group-by", "error", "--window", "24h", "--all", "--output", "json", "--page-size", "1"})
+	cmd.SetArgs([]string{"report", "error", "--view", "list", "--group-by", "node", "--window", "24h", "--compute-zone-ids", "cz-1", "--nodegroup-ids", "ng-1", "--tags", "prod", "--errors", "xid_154", "--severities", "Critical,Fatal", "--all", "--output", "json", "--page-size", "1"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -383,7 +452,7 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 	if requests != 2 {
 		t.Fatalf("unexpected request count: %d", requests)
 	}
-	if len(got.Items) != 2 || got.Items[0]["name"] != "xid_154" || got.Items[0]["extra"] != "kept" {
+	if len(got.Items) != 2 || got.Items[0]["nodeUUID"] != "node-1" || got.Items[0]["extra"] != "kept" {
 		t.Fatalf("unexpected merged items: %#v", got.Items)
 	}
 	if got.Pagination.Page != 1 || got.Pagination.PageSize != 1 || got.Pagination.Total != 2 || got.Pagination.HasMore || got.Pagination.PagesFetched != 2 {
@@ -497,6 +566,9 @@ func TestReportErrorGraphSevenDayHourWindow(t *testing.T) {
 		if got := query.Get("window"); got != "168h" {
 			t.Fatalf("unexpected window: %q", got)
 		}
+		if got := query.Get("step"); got != "5m" {
+			t.Fatalf("unexpected step: %q", got)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"result":[{"label":{"error":"xid_154"},"values":[[1716153600,5]]}],"timeRange":{"start":"2026-05-01T00:00:00Z","end":"2026-05-08T00:00:00Z"}}`))
@@ -508,7 +580,7 @@ func TestReportErrorGraphSevenDayHourWindow(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "error", "--view", "graph", "--window", "168h"})
+	cmd.SetArgs([]string{"report", "error", "--view", "graph", "--window", "168h", "--step", "5m"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -586,6 +658,11 @@ func TestReportErrorRejectsInvalidFlags(t *testing.T) {
 		{name: "bad window", args: []string{"report", "error", "--view", "overview", "--window", "soon"}, want: "invalid window"},
 		{name: "day window", args: []string{"report", "error", "--view", "overview", "--window", "7d"}, want: "invalid window"},
 		{name: "huge window", args: []string{"report", "error", "--view", "overview", "--window", "22342394090s"}, want: "duration is too large"},
+		{name: "bad compute zone IDs", args: []string{"report", "error", "--view", "overview", "--window", "24h", "--compute-zone-ids", "cz-1,,cz-2"}, want: "empty values are not allowed"},
+		{name: "bad severities", args: []string{"report", "error", "--view", "overview", "--window", "24h", "--severities", "Critical,Broken"}, want: "invalid severity"},
+		{name: "errors with group by error", args: []string{"report", "error", "--view", "list", "--group-by", "error", "--window", "24h", "--errors", "xid_154"}, want: "--errors can only be used"},
+		{name: "step overview", args: []string{"report", "error", "--view", "overview", "--window", "24h", "--step", "5m"}, want: "--step can only be used with --view graph"},
+		{name: "short step", args: []string{"report", "error", "--view", "graph", "--window", "24h", "--step", "30s"}, want: "expected at least 1m"},
 		{name: "start alone", args: []string{"report", "error", "--view", "overview", "--start", "2026-05-01T00:00:00Z"}, want: "--start and --end"},
 		{name: "bad start", args: []string{"report", "error", "--view", "overview", "--start", "yesterday", "--end", "2026-05-01T00:00:00Z"}, want: "--start must be RFC3339"},
 		{name: "graph page", args: []string{"report", "error", "--view", "graph", "--page", "1"}, want: "pagination flags"},
