@@ -173,10 +173,13 @@ func newAlertNodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "node <nodeUUID>",
 		Short: "List alerts for one node",
+		// The options endpoint advertises `alert summary`'s sort columns only,
+		// so --sort-by/--order are spelled out on the flags here rather than
+		// pointed at a command that would list the wrong values.
 		Long: "List alerts for one node.\n\n" +
 			optionsHelpNote("nvfleetint alert options",
 				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
-				"--alert-state", "--component-type", "--sort-by", "--order"),
+				"--alert-state", "--component-type"),
 		Args: requireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAlertNode(cmd, args[0], flags, resolveCommonFlags(cmd, common))
@@ -184,8 +187,8 @@ func newAlertNodeCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime or lastUpdate (default: lastUpdate)")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc (default: desc)")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "GPU types to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Compute zone IDs to filter")
@@ -780,25 +783,13 @@ var alertOptionsRenderer = optionsRenderer{
 		"alertStates":    {name: "--alert-state"},
 	},
 	// The endpoint advertises only the Level 1 nodes-list columns, which are
-	// `alert summary`'s. `alert node` takes its own two, so they are named
-	// separately instead of letting the summary's columns stand for both.
+	// `alert summary`'s, so the sorting block is labelled as that command's
+	// alone. `alert node`'s own columns are not restated here — only what the
+	// endpoint actually returns is shown; see `alert node --help` for those.
 	sortAccepted: func(field string) bool {
 		return nvfleetint.AlertTimelineNodeSortBy(field).Valid()
 	},
 	sortConsumers: []string{"alert summary"},
-	staticSorting: []staticSortSection{{
-		consumer: "alert node",
-		fields: []string{
-			string(nvfleetint.AlertTimelineAlertSortByStartTime),
-			string(nvfleetint.AlertTimelineAlertSortByLastUpdate),
-		},
-		defaultField: string(nvfleetint.AlertTimelineAlertSortByLastUpdate),
-		orders: []string{
-			string(nvfleetint.AlertTimelineOrderAsc),
-			string(nvfleetint.AlertTimelineOrderDesc),
-		},
-		defaultOrder: string(nvfleetint.AlertTimelineOrderDesc),
-	}},
 }
 
 // Writes alert timeline filter values grouped by the flag that accepts them,

@@ -69,21 +69,6 @@ type optionsRenderer struct {
 	// when that is narrower than consumers. An endpoint can advertise the
 	// columns of one view while its filters apply to several.
 	sortConsumers []string
-	// staticSorting documents a consumer whose sort fields the endpoint does
-	// not advertise at all, so the CLI prints its own allowlist rather than
-	// leaving the user with another command's columns.
-	staticSorting []staticSortSection
-}
-
-// Describes the --sort-by/--order a command accepts when the options endpoint
-// does not advertise them. Values come from the CLI's own allowlist, which is
-// generated from the same OpenAPI enums the command validates against.
-type staticSortSection struct {
-	consumer     string
-	fields       []string
-	defaultField string
-	orders       []string
-	defaultOrder string
 }
 
 // Groups the values one flag accepts under a heading that names it.
@@ -211,23 +196,7 @@ func (renderer optionsRenderer) writeSorting(w io.Writer, sorting nvfleetint.Sor
 			return err
 		}
 	}
-	for _, section := range renderer.staticSorting {
-		if err := section.write(w); err != nil {
-			return err
-		}
-	}
 	return nil
-}
-
-// Writes the sorting flags of a consumer the endpoint says nothing about.
-func (section staticSortSection) write(w io.Writer) error {
-	if _, err := fmt.Fprintf(w, "\nSorting for '%s'\n", section.consumer); err != nil {
-		return err
-	}
-	if err := writeOptionSection(w, sortHeading("--sort-by", section.defaultField), valueRows(section.fields)); err != nil {
-		return err
-	}
-	return writeOptionSection(w, sortHeading("--order", section.defaultOrder), valueRows(section.orders))
 }
 
 // Builds a sorting section heading, noting the default the backend applies.

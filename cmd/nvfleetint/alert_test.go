@@ -311,22 +311,17 @@ func TestAlertTimelineOptionsOutput(t *testing.T) {
 		}
 	}
 
-	// The endpoint advertises the summary's columns only; `alert node` rejects
-	// them, so its section must list its own two instead.
-	summarySorting, nodeSorting, found := strings.Cut(tableOut.String(), "Sorting for 'alert node'")
-	if !found {
-		t.Fatalf("missing 'alert node' sorting section:\n%s", tableOut.String())
-	}
-	if !strings.Contains(summarySorting, "Sorting for 'alert summary'") {
+	// The endpoint advertises the summary's columns only, so that is the one
+	// sorting section rendered; `alert node`'s columns are documented on its
+	// own flags rather than invented here.
+	if !strings.Contains(tableOut.String(), "Sorting for 'alert summary'") {
 		t.Fatalf("missing 'alert summary' sorting section:\n%s", tableOut.String())
 	}
-	if strings.Contains(nodeSorting, "hostname") {
-		t.Fatalf("'alert node' sorting offers a summary-only column:\n%s", nodeSorting)
+	if strings.Contains(tableOut.String(), "Sorting for 'alert node'") {
+		t.Fatalf("'alert node' sorting is not advertised by the endpoint:\n%s", tableOut.String())
 	}
-	for _, want := range []string{"startTime", "lastUpdate"} {
-		if !strings.Contains(nodeSorting, want) {
-			t.Fatalf("'alert node' sorting missing %q:\n%s", want, nodeSorting)
-		}
+	if strings.Contains(tableOut.String(), "startTime") {
+		t.Fatalf("options table invents a sort column the endpoint never returned:\n%s", tableOut.String())
 	}
 }
 
@@ -349,19 +344,29 @@ func TestAlertTimelineOptionsTableFallbacks(t *testing.T) {
 			t.Fatalf("output missing %q:\n%s", want, out.String())
 		}
 	}
-	// `alert node` sort fields come from the CLI's own allowlist, so they are
-	// rendered with their defaults regardless of what the endpoint reports.
-	endpointSorting, staticSorting, found := strings.Cut(out.String(), "Sorting for 'alert node'")
-	if !found {
-		t.Fatalf("missing 'alert node' sorting section:\n%s", out.String())
+	if strings.Contains(out.String(), "default:") {
+		t.Fatalf("absent sorting defaults should not render:\n%s", out.String())
 	}
-	if strings.Contains(endpointSorting, "default:") {
-		t.Fatalf("absent sorting defaults should not render:\n%s", endpointSorting)
+}
+
+// Verifies `alert node` documents its own sort columns on its flags. The
+// options endpoint advertises `alert summary`'s columns only, so --help is the
+// sole discovery path for these two.
+func TestAlertNodeHelpDocumentsSortColumns(t *testing.T) {
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"alert", "node", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("alert node --help failed: %v", err)
 	}
-	for _, want := range []string{"startTime", "lastUpdate", "(default: lastUpdate)", "(default: desc)"} {
-		if !strings.Contains(staticSorting, want) {
-			t.Fatalf("'alert node' sorting missing %q:\n%s", want, staticSorting)
+	for _, want := range []string{"startTime or lastUpdate", "default: lastUpdate", "asc or desc", "default: desc"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("alert node help missing %q:\n%s", want, out.String())
 		}
+	}
+	if strings.Contains(out.String(), "--sort-by, and --order") {
+		t.Fatalf("alert node help still points --sort-by at the options command:\n%s", out.String())
 	}
 }
 
