@@ -18,12 +18,15 @@ import (
 
 // Stores local flag values for nodegroup list
 type nodeGroupListFlags struct {
-	view         string
-	nodeGroupIDs string
-	health       string
-	gpuType      string
-	sortBy       string
-	order        string
+	view             string
+	includeMetrics   bool
+	computeZoneIDs   string
+	computeZoneNames string
+	nodeGroupIDs     string
+	health           string
+	gpuType          string
+	sortBy           string
+	order            string
 }
 
 // Stores data ready for nodegroup list rendering
@@ -44,6 +47,7 @@ func newNodeGroupCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newNodeGroupListCmd())
+	cmd.AddCommand(newNodeGroupOptionsCmd())
 	rejectUnknownSubcommands(cmd)
 
 	return cmd
@@ -52,25 +56,33 @@ func newNodeGroupCmd() *cobra.Command {
 // Creates the node group list command
 func newNodeGroupListCmd() *cobra.Command {
 	flags := nodeGroupListFlags{
-		view: string(nvfleetint.NodeGroupViewDetail),
+		view:           string(nvfleetint.NodeGroupViewDetail),
+		includeMetrics: true,
 	}
 	common := newCommonFlags()
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List node groups",
-		Args:  cobra.NoArgs,
+		Long: "List node groups.\n\n" +
+			optionsHelpNote("nvfleetint nodegroup options",
+				"--compute-zone-ids", "--nodegroup-ids", "--health",
+				"--gpu-type", "--sort-by", "--order"),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runNodeGroupList(cmd, flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
+	cmd.Flags().BoolVar(&flags.includeMetrics, "include-metrics", flags.includeMetrics, "Include metrics in detail view; use --include-metrics=false to omit")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.computeZoneNames, "compute-zone-names", "", "Comma-separated compute zone names to filter (partial match)")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
-	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
+	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: health or nodes")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order for --sort-by: asc or desc; node groups default --sort-by to health")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order for --sort-by; node groups default --sort-by to health")
 	registerListCommonFlags(cmd, common)
 
 	return cmd
@@ -81,7 +93,18 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 	if err := validateNodeGroupListFlags(flags, common); err != nil {
 		return err
 	}
+	if nvfleetint.NodeGroupView(flags.view) == nvfleetint.NodeGroupViewBasic && cmd.Flags().Changed("include-metrics") {
+		return errors.New("basic node group view is incompatible with --include-metrics")
+	}
 
+	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
+	if err != nil {
+		return err
+	}
+	computeZoneNames, err := clihelpers.ParseCommaList(flags.computeZoneNames)
+	if err != nil {
+		return err
+	}
 	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
 	if err != nil {
 		return err
@@ -101,12 +124,17 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 	}
 
 	opts := nvfleetint.ListNodeGroupsOptions{
-		View:         nvfleetint.NodeGroupView(flags.view),
-		NodeGroupIDs: nodeGroupIDs,
-		SortBy:       nvfleetint.NodeGroupSortBy(flags.sortBy),
-		Order:        nvfleetint.NodeGroupSortOrder(flags.order),
+		View:           nvfleetint.NodeGroupView(flags.view),
+		ComputeZoneIDs: computeZoneIDs,
+		NodeGroupIDs:   nodeGroupIDs,
+		SortBy:         nvfleetint.NodeGroupSortBy(flags.sortBy),
+		Order:          nvfleetint.NodeGroupSortOrder(flags.order),
+	}
+	if cmd.Flags().Changed("include-metrics") {
+		opts.IncludeMetrics = &flags.includeMetrics
 	}
 	if nvfleetint.NodeGroupView(flags.view) == nvfleetint.NodeGroupViewDetail {
+		opts.ComputeZoneNames = computeZoneNames
 		opts.HealthStatuses = healthStatuses
 		opts.GPUTypes = gpuTypes
 	}
@@ -165,6 +193,19 @@ func validateNodeGroupListFlags(flags nodeGroupListFlags, common resolvedCommonF
 	if !nvfleetint.NodeGroupView(flags.view).Valid() {
 		return fmt.Errorf("invalid view %q: expected basic or detail", flags.view)
 	}
+	for _, value := range []struct {
+		name string
+		raw  string
+	}{
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
+		{name: "compute-zone-names", raw: flags.computeZoneNames},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
+		{name: "gpu-type", raw: flags.gpuType},
+	} {
+		if _, err := clihelpers.ParseCommaList(value.raw); err != nil {
+			return fmt.Errorf("invalid %s: %w", value.name, err)
+		}
+	}
 	if _, err := parseNodeGroupHealthList(flags.health); err != nil {
 		return err
 	}
@@ -175,6 +216,9 @@ func validateNodeGroupListFlags(flags nodeGroupListFlags, common resolvedCommonF
 		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
 	}
 	if nvfleetint.NodeGroupView(flags.view) == nvfleetint.NodeGroupViewBasic {
+		if strings.TrimSpace(flags.computeZoneNames) != "" {
+			return errors.New("basic node group view is incompatible with compute zone name filters")
+		}
 		if strings.TrimSpace(flags.health) != "" || strings.TrimSpace(flags.gpuType) != "" {
 			return errors.New("basic node group view is incompatible with health and gpu-type filters")
 		}
@@ -253,4 +297,58 @@ func detailNodeGroupRows(groups []nvfleetint.NodeGroup) [][]string {
 		})
 	}
 	return rows
+}
+
+// Maps each filter field returned by the node group options endpoint to the
+// flag on `nodegroup list` that consumes it. The endpoint is shared with
+// nodes, so nested node group values under computeZones are promoted into the
+// flag that accepts them.
+var nodeGroupOptionsRenderer = optionsRenderer{
+	consumers: []string{"nodegroup list"},
+	filters: map[string]optionFlag{
+		"computeZones":   {name: "--compute-zone-ids", promote: "--nodegroup-ids"},
+		"nodeGroups":     {name: "--nodegroup-ids"},
+		"gpuTypes":       {name: "--gpu-type"},
+		"healthStatuses": {name: "--health"},
+	},
+	sortAccepted: func(field string) bool {
+		return nvfleetint.NodeGroupSortBy(field).Valid()
+	},
+}
+
+// Creates the node group options command
+func newNodeGroupOptionsCmd() *cobra.Command {
+	common := newCommonFlags()
+	cmd := &cobra.Command{
+		Use:   "options",
+		Short: "List available node group filters and sorting options",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runNodeGroupOptions(cmd, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	registerReadCommonFlags(cmd, common)
+
+	return cmd
+}
+
+// Gets and renders the filters and sorting choices available for node group queries.
+func runNodeGroupOptions(cmd *cobra.Command, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+	options, err := client.GetNodeGroupFilterOptions(cmd.Context())
+	if err != nil {
+		return err
+	}
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
+	}
+	return nodeGroupOptionsRenderer.write(cmd.OutOrStdout(), options)
 }

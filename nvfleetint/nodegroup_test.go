@@ -26,6 +26,15 @@ func TestListNodeGroupsDetailSendsAuthAndParams(t *testing.T) {
 		if got := query.Get("view"); got != "detail" {
 			t.Fatalf("unexpected view: %q", got)
 		}
+		if got := query.Get("includeMetrics"); got != "false" {
+			t.Fatalf("unexpected includeMetrics: %q", got)
+		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["computeZoneNames"]; !slices.Equal(got, []string{"East"}) {
+			t.Fatalf("unexpected computeZoneNames: %#v raw query %q", got, r.URL.RawQuery)
+		}
 		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1", "ng-2"}) {
 			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
 		}
@@ -60,15 +69,19 @@ func TestListNodeGroupsDetailSendsAuthAndParams(t *testing.T) {
 
 	page := 2
 	pageSize := 50
+	includeMetrics := false
 	got, err := client.ListNodeGroups(context.Background(), ListNodeGroupsOptions{
-		View:           NodeGroupViewDetail,
-		NodeGroupIDs:   []string{"ng-1", "ng-2"},
-		HealthStatuses: []NodeGroupHealthStatus{NodeGroupHealthHealthy, NodeGroupHealthDegraded},
-		GPUTypes:       []string{"NVIDIA-H100", "NVIDIA-A100"},
-		SortBy:         NodeGroupSortByHealth,
-		Order:          NodeGroupOrderAsc,
-		Page:           &page,
-		PageSize:       &pageSize,
+		View:             NodeGroupViewDetail,
+		IncludeMetrics:   &includeMetrics,
+		ComputeZoneIDs:   []string{"cz-1", "cz-2"},
+		ComputeZoneNames: []string{"East"},
+		NodeGroupIDs:     []string{"ng-1", "ng-2"},
+		HealthStatuses:   []NodeGroupHealthStatus{NodeGroupHealthHealthy, NodeGroupHealthDegraded},
+		GPUTypes:         []string{"NVIDIA-H100", "NVIDIA-A100"},
+		SortBy:           NodeGroupSortByHealth,
+		Order:            NodeGroupOrderAsc,
+		Page:             &page,
+		PageSize:         &pageSize,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
@@ -160,6 +173,7 @@ func TestListNodeGroupsRejectsInvalidOptions(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 
+	includeMetrics := false
 	tests := []struct {
 		name string
 		opts ListNodeGroupsOptions
@@ -169,6 +183,8 @@ func TestListNodeGroupsRejectsInvalidOptions(t *testing.T) {
 		{name: "health", opts: ListNodeGroupsOptions{HealthStatuses: []NodeGroupHealthStatus{"Broken"}}, want: "invalid node group health"},
 		{name: "sort", opts: ListNodeGroupsOptions{SortBy: "name"}, want: "invalid node group sort"},
 		{name: "order", opts: ListNodeGroupsOptions{Order: "up"}, want: "invalid node group order"},
+		{name: "basic include metrics", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, IncludeMetrics: &includeMetrics}, want: "basic node group view is incompatible with include metrics"},
+		{name: "basic compute zone names", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, ComputeZoneNames: []string{"East"}}, want: "basic node group view is incompatible with compute zone name filters"},
 		{name: "basic health", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, HealthStatuses: []NodeGroupHealthStatus{NodeGroupHealthHealthy}}, want: "basic node group view is incompatible"},
 		{name: "basic GPU type", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, GPUTypes: []string{"NVIDIA-H100"}}, want: "basic node group view is incompatible"},
 		{name: "basic health sort", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, SortBy: NodeGroupSortByHealth}, want: "basic node group view is incompatible with sort"},

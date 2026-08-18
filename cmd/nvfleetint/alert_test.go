@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 // Verifies all-page alert JSON output
@@ -299,10 +301,72 @@ func TestAlertTimelineOptionsOutput(t *testing.T) {
 	if err := tableCmd.Execute(); err != nil {
 		t.Fatalf("alert options table command failed: %v", err)
 	}
-	for _, want := range []string{"FILTER", "gpuTypes", "H100", "nodeGroups", "ng-1", "Training", "SORTING", "DEFAULT FIELD", "alert"} {
+	for _, want := range []string{
+		"--gpu-type", "H100",
+		"--nodegroup-ids", "ng-1", "Training",
+		"--sort-by", "hostname", "--order", "(default: alert)", "(default: desc)",
+	} {
 		if !strings.Contains(tableOut.String(), want) {
 			t.Fatalf("table output missing %q:\n%s", want, tableOut.String())
 		}
+	}
+
+	// The endpoint advertises the summary's columns only, so that is the one
+	// sorting section rendered; `alert node`'s columns are documented on its
+	// own flags rather than invented here.
+	if !strings.Contains(tableOut.String(), "Sorting for 'alert summary'") {
+		t.Fatalf("missing 'alert summary' sorting section:\n%s", tableOut.String())
+	}
+	if strings.Contains(tableOut.String(), "Sorting for 'alert node'") {
+		t.Fatalf("'alert node' sorting is not advertised by the endpoint:\n%s", tableOut.String())
+	}
+	if strings.Contains(tableOut.String(), "startTime") {
+		t.Fatalf("options table invents a sort column the endpoint never returned:\n%s", tableOut.String())
+	}
+}
+
+// Verifies filter fields with no matching flag, empty option lists, and absent
+// sorting defaults still render rather than being dropped.
+func TestAlertTimelineOptionsTableFallbacks(t *testing.T) {
+	var out bytes.Buffer
+	err := writeAlertTimelineOptionsTable(&out, nvfleetint.AlertTimelineFilterOptions{
+		Filters: nvfleetint.AlertTimelineFilters{Fields: []nvfleetint.AlertTimelineFilterField{
+			{Name: "newBackendFilter", Options: []nvfleetint.AlertTimelineFilterOption{{Value: "somevalue"}}},
+			{Name: "alertStates"},
+		}},
+		Sorting: nvfleetint.AlertTimelineSortingOptions{Fields: []string{"alert"}, Orders: []string{"asc"}},
+	})
+	if err != nil {
+		t.Fatalf("render options table failed: %v", err)
+	}
+	for _, want := range []string{"newBackendFilter", "no flag on", "somevalue", "--alert-state", "(none)"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("output missing %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "default:") {
+		t.Fatalf("absent sorting defaults should not render:\n%s", out.String())
+	}
+}
+
+// Verifies `alert node` documents its own sort columns on its flags. The
+// options endpoint advertises `alert summary`'s columns only, so --help is the
+// sole discovery path for these two.
+func TestAlertNodeHelpDocumentsSortColumns(t *testing.T) {
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"alert", "node", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("alert node --help failed: %v", err)
+	}
+	for _, want := range []string{"startTime or lastUpdate", "default: lastUpdate", "asc or desc", "default: desc"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("alert node help missing %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "--sort-by, and --order") {
+		t.Fatalf("alert node help still points --sort-by at the options command:\n%s", out.String())
 	}
 }
 

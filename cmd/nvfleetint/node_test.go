@@ -906,3 +906,155 @@ func TestListAllRejectsPage(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// Verifies node options render nested compute zones under the flags that accept
+// them, and that JSON output stays the raw backend payload.
+func TestNodeOptionsOutput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	body := `{"filters":{"fields":[` +
+		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +
+		`{"name":"gpuTypes","options":["NVIDIA-H100"]},` +
+		`{"name":"brandNewFilter","options":["surprise"]}` +
+		`]},"sorting":{"fields":["hostname","nodeGroup","computeZone","integrityCheck"],"orders":["asc","desc"],"defaults":{"field":"hostname","order":"asc"}}}`
+
+	var agentTypes []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/nodes/options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		agentTypes = append(agentTypes, r.URL.Query().Get("agentType"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	var tableOut bytes.Buffer
+	tableCmd := newRootCmd()
+	tableCmd.SetOut(&tableOut)
+	tableCmd.SetArgs([]string{"node", "options", "--agent-type", "oob"})
+	if err := tableCmd.Execute(); err != nil {
+		t.Fatalf("node options command failed: %v", err)
+	}
+
+	got := tableOut.String()
+	for _, want := range []string{
+		"Filters for 'node list'",
+		"--compute-zone-ids",
+		// Nested node groups are promoted into their own section, tagged with
+		// the compute zone they belong to.
+		"\n--nodegroup-ids\n  ng-1  Training  (in East)\n",
+		"cz-1", "East",
+		"--gpu-type",
+		"brandNewFilter  (no flag on 'node list')",
+		// The backend spells three sort fields differently from the CLI.
+		"nodegroup", "computezone", "verificationCheck",
+		"(default: hostname)", "(default: asc)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("table output missing %q:\n%s", want, got)
+		}
+	}
+	for _, unwanted := range []string{"nodeGroup,", "computeZone,", "integrityCheck"} {
+		if strings.Contains(got, unwanted) {
+			t.Fatalf("table output should not offer backend spelling %q:\n%s", unwanted, got)
+		}
+	}
+	// The compute zone section lists only zones; the node group is not left
+	// nested beneath its parent.
+	if strings.Contains(got, "\n    ng-1") {
+		t.Fatalf("node group should be promoted, not nested:\n%s", got)
+	}
+
+	var jsonOut bytes.Buffer
+	jsonCmd := newRootCmd()
+	jsonCmd.SetOut(&jsonOut)
+	jsonCmd.SetArgs([]string{"node", "options", "--output", "json"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatalf("node options JSON command failed: %v", err)
+	}
+	if strings.TrimSpace(jsonOut.String()) != body {
+		t.Fatalf("JSON output is not the raw payload:\n%s", jsonOut.String())
+	}
+	if len(agentTypes) != 2 || agentTypes[0] != "oob" || agentTypes[1] != "" {
+		t.Fatalf("unexpected agentType values: %#v", agentTypes)
+	}
+}
+
+// Verifies an unsupported agent type is rejected before any request.
+func TestNodeOptionsRejectsAgentType(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		requests++
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+	cmd := newRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"node", "options", "--agent-type", "bmc"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "invalid agent-type") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if requests != 0 {
+		t.Fatalf("expected no requests, got %d", requests)
+	}
+}
+
+// Verifies a backend that returns the child list as its own field wins over
+// promotion, so one flag never gets two sections, and that nested values under
+// a field with no promotion target are still shown rather than dropped.
+func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	body := `{"filters":{"fields":[` +
+		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +
+		`{"name":"nodeGroups","options":[{"id":"ng-1","value":"Training"},{"id":"ng-2","value":"Serving"}]},` +
+		`{"name":"brandNewFilter","options":[{"id":"p-1","value":"Parent","options":[{"id":"c-1","value":"Child"}]}]}` +
+		`]},"sorting":{"fields":["hostname"],"orders":["asc"],"defaults":{"field":"hostname","order":"asc"}}}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "options"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("node options command failed: %v", err)
+	}
+
+	got := out.String()
+	if count := strings.Count(got, "\n--nodegroup-ids\n"); count != 1 {
+		t.Fatalf("expected exactly one --nodegroup-ids section, got %d:\n%s", count, got)
+	}
+	// The flat field supplied it, so the section carries ng-2 and no membership
+	// column promoted from the compute zone.
+	if !strings.Contains(got, "ng-2") || strings.Contains(got, "(in East)") {
+		t.Fatalf("flat nodeGroups field should win over promotion:\n%s", got)
+	}
+	// A nested value with nowhere to be promoted stays indented under its parent.
+	if !strings.Contains(got, "\n    c-1") {
+		t.Fatalf("unpromotable nested value was dropped:\n%s", got)
+	}
+	// The node groups nested under the compute zone belong to --nodegroup-ids,
+	// so they must not be listed under --compute-zone-ids, where passing one
+	// silently matches nothing. The section points at the flag instead.
+	computeZones := sectionBody(t, got, "--compute-zone-ids")
+	if strings.Contains(computeZones, "ng-1") {
+		t.Fatalf("node group listed under --compute-zone-ids:\n%s", computeZones)
+	}
+	if !strings.Contains(computeZones, "Values nested under these are listed under --nodegroup-ids.") {
+		t.Fatalf("--compute-zone-ids section does not point at --nodegroup-ids:\n%s", computeZones)
+	}
+}

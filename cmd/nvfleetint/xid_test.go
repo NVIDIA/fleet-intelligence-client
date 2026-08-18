@@ -351,3 +351,142 @@ func TestXIDBurstPageHasMore(t *testing.T) {
 		})
 	}
 }
+
+// Verifies XID burst options split suggested actions across the four
+// persona/type flags, default a missing persona to tenant, and set aside
+// actions whose type the API did not report.
+func TestXIDBurstOptionsOutput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	body := `{"xidNumbers":[43],"categories":["User-App"],"subcategories":["Illegal Memory Access"],` +
+		`"jobDisruption":[true,false],"jobDisruptionDueToPlatformIssue":[true,false],"suggestedActions":[` +
+		`{"code":"RESTART_APP","action":"Restart the application","persona":"tenant","type":"immediate"},` +
+		`{"code":"CHECK_LOGS","action":"Inspect application logs","persona":"tenant","type":"investigatory"},` +
+		`{"code":"PULL_FROM_SERVICE","action":"Pull the node","persona":"dc_admin","type":"immediate"},` +
+		`{"code":"RUN_DIAGS","action":"Run diagnostics","persona":"dc_admin","type":"investigatory"},` +
+		`{"code":"NO_PERSONA","action":"Persona omitted for tenant keys","type":"immediate"},` +
+		`{"code":"NO_TYPE","action":"Type not reported"},` +
+		`{"code":"NEW_PERSONA","action":"Persona the CLI has no flag for","persona":"operator","type":"immediate"}` +
+		`]}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/xid/bursts/options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"xidburst", "options"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("xid burst options command failed: %v", err)
+	}
+
+	got := out.String()
+	for _, want := range []string{
+		"Filters for 'xidburst list'",
+		"--xid-numbers",
+		"--categories",
+		"--subcategories",
+		"--tenant-actions",
+		"--tenant-investigations",
+		"--dc-admin-actions",
+		"--dc-admin-investigations",
+		"--job-disruption  (boolean; pass --job-disruption=false to match false)",
+		"--platform-disruption",
+		"RESTART_APP", "CHECK_LOGS", "PULL_FROM_SERVICE", "RUN_DIAGS",
+		"suggestedActions with no matching persona/type flag  (no flag on 'xidburst list')",
+		"NO_TYPE",
+		"NEW_PERSONA",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("table output missing %q:\n%s", want, got)
+		}
+	}
+
+	// A persona-less immediate action belongs to the tenant bucket, not dc-admin.
+	tenantActions := sectionBody(t, got, "--tenant-actions")
+	if !strings.Contains(tenantActions, "NO_PERSONA") || !strings.Contains(tenantActions, "RESTART_APP") {
+		t.Fatalf("unexpected tenant action section:\n%s", tenantActions)
+	}
+	// A persona no flag covers is listed as unclassified rather than dropped or
+	// folded into a persona it does not belong to.
+	if strings.Contains(tenantActions, "NEW_PERSONA") {
+		t.Fatalf("unknown persona leaked into the tenant section:\n%s", tenantActions)
+	}
+	unclassified := sectionBody(t, got, "suggestedActions with no matching persona/type flag  (no flag on 'xidburst list')")
+	if !strings.Contains(unclassified, "NEW_PERSONA") || !strings.Contains(unclassified, "NO_TYPE") {
+		t.Fatalf("unexpected unclassified action section:\n%s", unclassified)
+	}
+	if strings.Contains(sectionBody(t, got, "--dc-admin-actions"), "NO_PERSONA") {
+		t.Fatalf("persona-less action leaked into the dc-admin section:\n%s", got)
+	}
+	if section := sectionBody(t, got, "--dc-admin-investigations"); !strings.Contains(section, "RUN_DIAGS") {
+		t.Fatalf("unexpected dc-admin investigation section:\n%s", section)
+	}
+
+	var jsonOut bytes.Buffer
+	jsonCmd := newRootCmd()
+	jsonCmd.SetOut(&jsonOut)
+	jsonCmd.SetArgs([]string{"xidburst", "options", "--output", "json"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatalf("xid burst options JSON command failed: %v", err)
+	}
+	if strings.TrimSpace(jsonOut.String()) != body {
+		t.Fatalf("JSON output is not the raw payload:\n%s", jsonOut.String())
+	}
+}
+
+// Verifies filters the backend returns empty are still listed, so a tenant key
+// sees which flags exist rather than a silently shortened list.
+func TestXIDBurstOptionsRendersEmptyFilters(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jobDisruption":[true,false],"xidNumbers":[],"suggestedActions":[]}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"xidburst", "options"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("xid burst options command failed: %v", err)
+	}
+	got := out.String()
+	// Every filter except jobDisruption is absent or empty in this payload.
+	if strings.Count(got, "(none)") != 8 {
+		t.Fatalf("expected every empty filter to render as (none):\n%s", got)
+	}
+	if !strings.Contains(got, "--dc-admin-actions") {
+		t.Fatalf("empty sections should still name their flag:\n%s", got)
+	}
+}
+
+// Returns the indented body of one rendered options section.
+func sectionBody(t *testing.T, output, heading string) string {
+	t.Helper()
+	// A heading is either the bare flag or the flag plus a parenthesized note.
+	start := strings.Index(output, "\n"+heading+"\n")
+	if start < 0 {
+		start = strings.Index(output, "\n"+heading+" ")
+	}
+	if start < 0 {
+		t.Fatalf("section %q not found in:\n%s", heading, output)
+	}
+	rest := output[start+1:]
+	if end := strings.Index(rest, "\n\n"); end >= 0 {
+		return rest[:end]
+	}
+	return rest
+}

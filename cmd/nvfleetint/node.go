@@ -118,6 +118,7 @@ func newNodeCmd() *cobra.Command {
 	cmd.AddCommand(newNodeListCmd())
 	cmd.AddCommand(newNodeDescribeCmd())
 	cmd.AddCommand(newNodeHealthCmd())
+	cmd.AddCommand(newNodeOptionsCmd())
 	rejectUnknownSubcommands(cmd)
 
 	return cmd
@@ -133,7 +134,11 @@ func newNodeListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List nodes",
-		Args:  cobra.NoArgs,
+		Long: "List nodes.\n\n" +
+			optionsHelpNote("nvfleetint node options",
+				"--health", "--compute-zone-ids", "--nodegroup-ids",
+				"--gpu-type", "--agent-status", "--sort-by", "--order"),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runNodeList(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -147,7 +152,7 @@ func newNodeListCmd() *cobra.Command {
 		"Agent type view: inband or oob (detail view defaults to both)",
 	)
 	cmd.Flags().StringVar(&flags.nodeUUIDs, "node-uuids", "", "Comma-separated node UUIDs to filter")
-	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter: Healthy, Degraded, Unhealthy, or Unknown")
+	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneNames, "compute-zone-names", "", "Comma-separated compute zone names to filter (partial match)")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
@@ -158,12 +163,12 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.privateIP, "private-ip", "", "Comma-separated private IP addresses to filter")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
-	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online, Offline, or Unknown")
+	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter")
 	// User-facing "verification check" maps to the backend "integrity check" API field.
 	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+nodeSortByList)
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field (including verificationCheck)")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
 	registerListCommonFlags(cmd, common)
 
 	return cmd
@@ -1394,4 +1399,76 @@ func systemInfoRows(system *nvfleetint.SystemInfo) [][]string {
 		{"BOOT ID", clioutput.DisplayString(system.BootID)},
 		{"STARTED AT", clioutput.DisplayString(system.StartedAt)},
 	}
+}
+
+// Stores local flag values for node options.
+type nodeOptionsFlags struct {
+	agentType string
+}
+
+// Maps each filter field returned by the node options endpoint to the flag on
+// `node list` that consumes it. The CLI spells three sort fields differently
+// from the backend, and a sort field the CLI's allowlist does not take is
+// reported as unusable rather than offered.
+var nodeOptionsRenderer = optionsRenderer{
+	consumers: []string{"node list"},
+	filters: map[string]optionFlag{
+		"computeZones":   {name: "--compute-zone-ids", promote: "--nodegroup-ids"},
+		"nodeGroups":     {name: "--nodegroup-ids"},
+		"gpuTypes":       {name: "--gpu-type"},
+		"healthStatuses": {name: "--health"},
+		"agentStatuses":  {name: "--agent-status"},
+	},
+	sortFields: map[string]string{
+		"nodeGroup":      "nodegroup",
+		"computeZone":    "computezone",
+		"integrityCheck": nodeSortByVerificationCheck,
+	},
+	sortAccepted: func(field string) bool {
+		sortBy, err := normalizeNodeSortBy(field)
+		return err == nil && sortBy.Valid()
+	},
+}
+
+// Creates the node options command
+func newNodeOptionsCmd() *cobra.Command {
+	flags := nodeOptionsFlags{}
+	common := newCommonFlags()
+	cmd := &cobra.Command{
+		Use:   "options",
+		Short: "List available node filters and sorting options",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runNodeOptions(cmd, flags, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.agentType, "agent-type", "", "Agent type view: inband or oob; oob returns a reduced set")
+	registerReadCommonFlags(cmd, common)
+
+	return cmd
+}
+
+// Gets and renders the filters and sorting choices available for node queries.
+func runNodeOptions(cmd *cobra.Command, flags nodeOptionsFlags, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+	agentType := nvfleetint.NodeAgentType(strings.TrimSpace(flags.agentType))
+	if agentType != "" && !agentType.Valid() {
+		return fmt.Errorf("invalid agent-type %q: expected inband or oob", flags.agentType)
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+	options, err := client.GetNodeFilterOptions(cmd.Context(), agentType)
+	if err != nil {
+		return err
+	}
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
+	}
+	return nodeOptionsRenderer.write(cmd.OutOrStdout(), options)
 }

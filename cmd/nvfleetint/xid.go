@@ -71,11 +71,13 @@ func newXIDBurstCmd() *cobra.Command {
 			"impacted devices, XID catalog details, and suggested actions.",
 		Example: "  nvfleetint xidburst list --window 24h\n" +
 			"  nvfleetint xidburst list --window 168h --job-disruption --sort-by startTime\n" +
-			"  nvfleetint xidburst describe <burst-id>",
+			"  nvfleetint xidburst describe <burst-id>\n" +
+			"  nvfleetint xidburst options",
 	}
 
 	cmd.AddCommand(newXIDBurstListCmd())
 	cmd.AddCommand(newXIDBurstDescribeCmd())
+	cmd.AddCommand(newXIDBurstOptionsCmd())
 	rejectUnknownSubcommands(cmd)
 
 	return cmd
@@ -97,7 +99,12 @@ A time range is required: use --window for a relative range, or --start and
 --end for an absolute range. The range applies to each burst's start time.
 
 Some filters and response fields are only available to cloud-provider/NCP
-callers; for tenant callers the backend rejects them.`,
+callers; for tenant callers the backend rejects them.
+
+` + optionsHelpNote("nvfleetint xidburst options",
+			"--xid-numbers", "--categories", "--subcategories", "--tenant-actions",
+			"--tenant-investigations", "--dc-admin-actions", "--dc-admin-investigations",
+			"--job-disruption", "--platform-disruption"),
 		Example: `  nvfleetint xidburst list --window 24h
   nvfleetint xidburst list --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z
   nvfleetint xidburst list --window 168h --xid-numbers 48,94 --job-disruption`,
@@ -478,4 +485,153 @@ func nonEmptyValues(values ...string) []string {
 		}
 	}
 	return out
+}
+
+// The command whose flags the XID burst options describe.
+const xidBurstOptionsConsumer = "'xidburst list'"
+
+// Creates the xid burst options command
+func newXIDBurstOptionsCmd() *cobra.Command {
+	common := newCommonFlags()
+	cmd := &cobra.Command{
+		Use:   "options",
+		Short: "List available XID burst filters",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runXIDBurstOptions(cmd, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	registerReadCommonFlags(cmd, common)
+
+	return cmd
+}
+
+// Gets and renders the filter values available for XID burst queries.
+func runXIDBurstOptions(cmd *cobra.Command, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+	options, err := client.GetXIDBurstFilterOptions(cmd.Context())
+	if err != nil {
+		return err
+	}
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
+	}
+	return writeXIDBurstOptionsTable(cmd.OutOrStdout(), options)
+}
+
+// Writes XID burst filter values grouped by the flag that accepts them. The XID
+// endpoint returns per-field value lists rather than the shared filters/sorting
+// envelope, and publishes no sorting metadata, so this renders filters only.
+func writeXIDBurstOptionsTable(w io.Writer, options nvfleetint.XIDBurstFilterOptions) error {
+	if _, err := fmt.Fprintf(w, "Filters for %s\n%s\n", xidBurstOptionsConsumer, optionsPreamble); err != nil {
+		return err
+	}
+
+	sections := []optionSection{
+		{heading: "--xid-numbers", rows: xidNumberRows(options.XIDNumbers)},
+		{heading: "--categories", rows: valueRows(options.Categories)},
+		{heading: "--subcategories", rows: valueRows(options.Subcategories)},
+	}
+	sections = append(sections, xidActionSections(options.SuggestedActions)...)
+	sections = append(sections,
+		optionSection{
+			heading: "--job-disruption  (boolean; pass --job-disruption=false to match false)",
+			rows:    boolRows(options.JobDisruption),
+		},
+		optionSection{
+			heading: "--platform-disruption  (boolean; pass --platform-disruption=false to match false)",
+			rows:    boolRows(options.JobDisruptionDueToPlatformIssue),
+		},
+	)
+
+	for _, section := range sections {
+		if err := writeOptionSection(w, section.heading, section.rows); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Splits suggested actions into the four persona/type flags that accept them.
+// The API omits persona when it has already reduced actions to one persona,
+// which for this endpoint means a tenant key, so a blank persona is read as
+// tenant. Actions whose persona or type the CLI has no flag for are listed
+// separately rather than guessed into a flag or dropped, so a backend that
+// grows a persona still shows the codes its filters accept.
+func xidActionSections(actions []nvfleetint.SuggestedAction) []optionSection {
+	buckets := map[string][][]string{}
+	var unclassified [][]string
+	for _, action := range actions {
+		persona := action.Persona
+		if persona == "" {
+			persona = nvfleetint.ActionPersonaTenant
+		}
+		row := []string{action.Code, action.Action}
+		if !knownActionPersona(persona) || !knownActionType(action.Type) {
+			unclassified = append(unclassified, row)
+			continue
+		}
+		buckets[persona+"/"+action.Type] = append(buckets[persona+"/"+action.Type], row)
+	}
+
+	ordered := []struct {
+		key  string
+		flag string
+	}{
+		{nvfleetint.ActionPersonaTenant + "/" + nvfleetint.ActionTypeImmediate, "--tenant-actions"},
+		{nvfleetint.ActionPersonaTenant + "/" + nvfleetint.ActionTypeInvestigatory, "--tenant-investigations"},
+		{nvfleetint.ActionPersonaDCAdmin + "/" + nvfleetint.ActionTypeImmediate, "--dc-admin-actions"},
+		{nvfleetint.ActionPersonaDCAdmin + "/" + nvfleetint.ActionTypeInvestigatory, "--dc-admin-investigations"},
+	}
+
+	sections := make([]optionSection, 0, len(ordered)+1)
+	for _, entry := range ordered {
+		sections = append(sections, optionSection{
+			heading: entry.flag,
+			rows:    buckets[entry.key],
+		})
+	}
+	if len(unclassified) > 0 {
+		sections = append(sections, optionSection{
+			heading: fmt.Sprintf("suggestedActions with no matching persona/type flag  (no flag on %s)", xidBurstOptionsConsumer),
+			rows:    unclassified,
+		})
+	}
+	return sections
+}
+
+// Reports whether a suggested-action persona has flags on `xidburst list`.
+func knownActionPersona(persona string) bool {
+	return persona == nvfleetint.ActionPersonaTenant || persona == nvfleetint.ActionPersonaDCAdmin
+}
+
+// Reports whether a suggested-action type has flags on `xidburst list`.
+func knownActionType(actionType string) bool {
+	return actionType == nvfleetint.ActionTypeImmediate || actionType == nvfleetint.ActionTypeInvestigatory
+}
+
+// Converts XID numbers into single-column rows.
+func xidNumberRows(numbers []int) [][]string {
+	rows := make([][]string, 0, len(numbers))
+	for _, number := range numbers {
+		rows = append(rows, []string{strconv.Itoa(number)})
+	}
+	return rows
+}
+
+// Converts booleans into single-column rows.
+func boolRows(values []bool) [][]string {
+	rows := make([][]string, 0, len(values))
+	for _, value := range values {
+		rows = append(rows, []string{strconv.FormatBool(value)})
+	}
+	return rows
 }

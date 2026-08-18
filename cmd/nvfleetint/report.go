@@ -22,6 +22,8 @@ import (
 
 const reportDurationUnitsMessage = "expected a positive duration using units ns, us, µs, ms, s, m, or h"
 
+const reportInventorySortByList = "hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation"
+
 var (
 	maxReportWindow       = time.Duration(1<<63 - 1)
 	reportDurationPattern = regexp.MustCompile(`^\+?(?:(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:ns|us|µs|ms|s|m|h))+$`)
@@ -29,19 +31,32 @@ var (
 
 // Stores local flag values for inventory reports
 type reportInventoryFlags struct {
-	format     string
-	signed     bool
-	outputPath string
+	format         string
+	signed         bool
+	outputPath     string
+	computeZoneIDs string
+	nodeGroupIDs   string
+	tags           string
+	start          string
+	end            string
+	sortBy         string
+	order          string
 }
 
 // Stores local flag values for error reports
 type reportErrorFlags struct {
-	view    string
-	groupBy string
-	format  string
-	window  string
-	start   string
-	end     string
+	view           string
+	groupBy        string
+	format         string
+	computeZoneIDs string
+	nodeGroupIDs   string
+	tags           string
+	errors         string
+	severities     string
+	step           string
+	window         string
+	start          string
+	end            string
 }
 
 // Stores local flag values for report verification
@@ -123,6 +138,13 @@ written to the current directory unless --output-path is provided.`,
 	cmd.Flags().StringVar(&flags.format, "format", flags.format, "Report format: json or csv")
 	cmd.Flags().BoolVar(&flags.signed, "signed", false, "Download a signed CSV bundle (zip of CSV plus signature); requires --format csv")
 	cmd.Flags().StringVar(&flags.outputPath, "output-path", "", "Destination file or directory for the signed bundle; defaults to the current directory")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
+	cmd.Flags().StringVar(&flags.tags, "tags", "", "Comma-separated tags to filter")
+	cmd.Flags().StringVar(&flags.start, "start", "", "Absolute start time in RFC3339 format")
+	cmd.Flags().StringVar(&flags.end, "end", "", "Absolute end time in RFC3339 format")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+reportInventorySortByList)
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	registerListCommonFlags(cmd, common)
 
 	return cmd
@@ -168,6 +190,12 @@ A time range is always required: use --window for a relative range, or
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "Report view: list, graph, or overview")
 	cmd.Flags().StringVar(&flags.groupBy, "group-by", "", "Group list view by: error or node")
 	cmd.Flags().StringVar(&flags.format, "format", flags.format, "Report format: json or csv")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
+	cmd.Flags().StringVar(&flags.tags, "tags", "", "Comma-separated tags to filter")
+	cmd.Flags().StringVar(&flags.errors, "errors", "", "Comma-separated error types to filter")
+	cmd.Flags().StringVar(&flags.severities, "severities", "", "Comma-separated severities to filter: Critical, Fatal, Info, or Warning")
+	cmd.Flags().StringVar(&flags.step, "step", "", "Graph query step width; minimum 1m")
 	cmd.Flags().StringVar(&flags.window, "window", "", "Relative time window; valid units: ns, us, µs, ms, s, m, h")
 	cmd.Flags().StringVar(&flags.start, "start", "", "Absolute start time in RFC3339 format")
 	cmd.Flags().StringVar(&flags.end, "end", "", "Absolute end time in RFC3339 format")
@@ -324,14 +352,34 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 		return err
 	}
 
+	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
+	if err != nil {
+		return err
+	}
+	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
+	if err != nil {
+		return err
+	}
+	tags, err := clihelpers.ParseCommaList(flags.tags)
+	if err != nil {
+		return err
+	}
+
 	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
 	}
 
 	opts := nvfleetint.InventoryReportOptions{
-		Format: nvfleetint.ReportFormat(flags.format),
-		Signed: flags.signed,
+		Format:         nvfleetint.ReportFormat(flags.format),
+		Signed:         flags.signed,
+		ComputeZoneIDs: computeZoneIDs,
+		NodeGroupIDs:   nodeGroupIDs,
+		Tags:           tags,
+		StartTime:      strings.TrimSpace(flags.start),
+		EndTime:        strings.TrimSpace(flags.end),
+		SortBy:         nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:          nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)),
 	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
@@ -497,12 +545,51 @@ func validateReportInventoryFlags(flags reportInventoryFlags, common resolvedCom
 	if flags.outputPath != "" && !flags.signed {
 		return errors.New("--output-path can only be used with --signed")
 	}
+	for _, value := range []struct {
+		name string
+		raw  string
+	}{
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
+		{name: "tags", raw: flags.tags},
+	} {
+		if _, err := clihelpers.ParseCommaList(value.raw); err != nil {
+			return fmt.Errorf("invalid %s: %w", value.name, err)
+		}
+	}
+	if err := validateReportInventoryTimeFlags(flags); err != nil {
+		return err
+	}
+	if strings.TrimSpace(flags.sortBy) != "" && !nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)).Valid() {
+		return fmt.Errorf("invalid sort-by %q: expected %s", flags.sortBy, reportInventorySortByList)
+	}
+	if strings.TrimSpace(flags.order) != "" && !nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)).Valid() {
+		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
+	}
 	if nvfleetint.ReportFormat(flags.format) == nvfleetint.ReportFormatCSV && !flags.signed {
 		if common.outputSet {
 			return errors.New("--output cannot be used with --format csv; use --signed to download a signed bundle (returns JSON status), or omit --format csv to get a JSON inventory report")
 		}
 		if common.allSet || common.pageSet || common.pageSizeSet {
 			return errors.New("pagination flags cannot be used with --format csv")
+		}
+	}
+	return nil
+}
+
+// Checks inventory report absolute time flags
+func validateReportInventoryTimeFlags(flags reportInventoryFlags) error {
+	hasStart := strings.TrimSpace(flags.start) != ""
+	hasEnd := strings.TrimSpace(flags.end) != ""
+	if hasStart != hasEnd {
+		return errors.New("--start and --end must be used together")
+	}
+	if hasStart {
+		if err := validateRFC3339Flag("--start", flags.start); err != nil {
+			return err
+		}
+		if err := validateRFC3339Flag("--end", flags.end); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -529,6 +616,33 @@ func validateReportErrorFlags(flags reportErrorFlags, common resolvedCommonFlags
 	}
 	if strings.TrimSpace(flags.groupBy) != "" && !groupBy.Valid() {
 		return fmt.Errorf("invalid group-by %q: expected error or node", flags.groupBy)
+	}
+	for _, value := range []struct {
+		name string
+		raw  string
+	}{
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
+		{name: "tags", raw: flags.tags},
+		{name: "errors", raw: flags.errors},
+	} {
+		if _, err := clihelpers.ParseCommaList(value.raw); err != nil {
+			return fmt.Errorf("invalid %s: %w", value.name, err)
+		}
+	}
+	if _, err := parseErrorSeverityList(flags.severities); err != nil {
+		return err
+	}
+	if strings.TrimSpace(flags.step) != "" {
+		if view != nvfleetint.ErrorReportViewGraph {
+			return errors.New("--step can only be used with --view graph")
+		}
+		if err := validateReportStepFlag(flags.step); err != nil {
+			return err
+		}
+	}
+	if strings.TrimSpace(flags.errors) != "" && (view != nvfleetint.ErrorReportViewList || groupBy != nvfleetint.ErrorReportGroupByNode) {
+		return errors.New("--errors can only be used with --view list --group-by node")
 	}
 
 	if err := validateReportErrorViewFlags(view, groupBy, format, flags, common); err != nil {
@@ -613,6 +727,12 @@ func errorReportOptions(flags reportErrorFlags) nvfleetint.ErrorReportOptions {
 		GroupBy: nvfleetint.ErrorReportGroupBy(flags.groupBy),
 		Format:  nvfleetint.ReportFormat(flags.format),
 	}
+	opts.ComputeZoneIDs, _ = clihelpers.ParseCommaList(flags.computeZoneIDs)
+	opts.NodeGroupIDs, _ = clihelpers.ParseCommaList(flags.nodeGroupIDs)
+	opts.Tags, _ = clihelpers.ParseCommaList(flags.tags)
+	opts.Errors, _ = clihelpers.ParseCommaList(flags.errors)
+	opts.Severities, _ = parseErrorSeverityList(flags.severities)
+	opts.Step = strings.TrimSpace(flags.step)
 	if opts.View == nvfleetint.ErrorReportViewGraph && opts.GroupBy == "" {
 		opts.GroupBy = nvfleetint.ErrorReportGroupByError
 	}
@@ -644,6 +764,40 @@ func reportWindowBackendValue(window string) (string, error) {
 		return "", fmt.Errorf("invalid window %q: %s", window, reportDurationUnitsMessage)
 	}
 	return window, nil
+}
+
+// Validates a graph step width flag
+func validateReportStepFlag(step string) error {
+	step = strings.TrimSpace(step)
+	if !reportDurationPattern.MatchString(step) {
+		return fmt.Errorf("invalid step %q: %s", step, reportDurationUnitsMessage)
+	}
+
+	duration, err := time.ParseDuration(step)
+	if err != nil {
+		return fmt.Errorf("invalid step %q: duration is too large; maximum is %s", step, maxReportWindow)
+	}
+	if duration < time.Minute {
+		return fmt.Errorf("invalid step %q: expected at least 1m", step)
+	}
+	return nil
+}
+
+// Parses comma-separated severities for error reports
+func parseErrorSeverityList(raw string) ([]nvfleetint.ErrorSeverity, error) {
+	values, err := clihelpers.ParseCommaList(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid severities: %w", err)
+	}
+	severities := make([]nvfleetint.ErrorSeverity, 0, len(values))
+	for _, value := range values {
+		severity := nvfleetint.ErrorSeverity(value)
+		if !severity.Valid() {
+			return nil, fmt.Errorf("invalid severity %q: expected Critical, Fatal, Info, or Warning", value)
+		}
+		severities = append(severities, severity)
+	}
+	return severities, nil
 }
 
 // Validates a timestamp flag as RFC3339

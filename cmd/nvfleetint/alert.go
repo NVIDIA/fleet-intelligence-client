@@ -142,7 +142,11 @@ func newAlertSummaryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "summary",
 		Short: "Summarize impacted nodes and their alert counts",
-		Args:  cobra.NoArgs,
+		Long: "Summarize impacted nodes and their alert counts.\n\n" +
+			optionsHelpNote("nvfleetint alert options",
+				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
+				"--alert-state", "--component-type", "--sort-by", "--order"),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertSummary(cmd, flags, resolveCommonFlags(cmd, common))
 		},
@@ -150,12 +154,12 @@ func newAlertSummaryCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: hostname, alert, gpuType, nodeGroup, computeZone, or lastUpdate")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
-	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states: Critical, Warning, or Resolved")
+	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states to filter")
 	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
 	registerListCommonFlags(cmd, common)
 
@@ -169,19 +173,26 @@ func newAlertNodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "node <nodeUUID>",
 		Short: "List alerts for one node",
-		Args:  requireSingleArg("node UUID"),
+		// The options endpoint advertises `alert summary`'s sort columns only,
+		// so --sort-by/--order are spelled out on the flags here rather than
+		// pointed at a command that would list the wrong values.
+		Long: "List alerts for one node.\n\n" +
+			optionsHelpNote("nvfleetint alert options",
+				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
+				"--alert-state", "--component-type"),
+		Args: requireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAlertNode(cmd, args[0], flags, resolveCommonFlags(cmd, common))
 		},
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime or lastUpdate")
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime or lastUpdate (default: lastUpdate)")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc (default: desc)")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
-	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states: Critical, Warning, or Resolved")
+	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states to filter")
 	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
 	cmd.Flags().BoolVar(&flags.withoutPSIRT, "without-psirt", false, "Exclude PSIRT alerts")
 	registerListCommonFlags(cmd, common)
@@ -760,26 +771,31 @@ func writeAlertTimelineOutput(w io.Writer, common resolvedCommonFlags, result al
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-// Writes alert timeline filter values and sorting metadata as readable tables.
+// Maps each filter field returned by the alert options endpoint to the flag on
+// `alert summary` / `alert node` that consumes it.
+var alertOptionsRenderer = optionsRenderer{
+	consumers: []string{"alert summary", "alert node"},
+	filters: map[string]optionFlag{
+		"gpuTypes":       {name: "--gpu-type"},
+		"nodeGroups":     {name: "--nodegroup-ids"},
+		"computeZones":   {name: "--compute-zone-ids", promote: "--nodegroup-ids"},
+		"componentTypes": {name: "--component-type"},
+		"alertStates":    {name: "--alert-state"},
+	},
+	// The endpoint advertises only the Level 1 nodes-list columns, which are
+	// `alert summary`'s, so the sorting block is labelled as that command's
+	// alone. `alert node`'s own columns are not restated here — only what the
+	// endpoint actually returns is shown; see `alert node --help` for those.
+	sortAccepted: func(field string) bool {
+		return nvfleetint.AlertTimelineNodeSortBy(field).Valid()
+	},
+	sortConsumers: []string{"alert summary"},
+}
+
+// Writes alert timeline filter values grouped by the flag that accepts them,
+// followed by the sorting flags.
 func writeAlertTimelineOptionsTable(w io.Writer, options nvfleetint.AlertTimelineFilterOptions) error {
-	rows := make([][]string, 0)
-	for _, field := range options.Filters.Fields {
-		for _, option := range field.Options {
-			rows = append(rows, []string{field.Name, option.ID, option.Value})
-		}
-	}
-	if err := clioutput.WriteTable(w, []string{"FILTER", "ID", "VALUE"}, rows); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(w); err != nil {
-		return err
-	}
-	return clioutput.WriteTable(w, []string{"SORTING", "VALUE"}, [][]string{
-		{"FIELDS", strings.Join(options.Sorting.Fields, ", ")},
-		{"ORDERS", strings.Join(options.Sorting.Orders, ", ")},
-		{"DEFAULT FIELD", options.Sorting.Defaults.Field},
-		{"DEFAULT ORDER", options.Sorting.Defaults.Order},
-	})
+	return alertOptionsRenderer.write(w, options)
 }
 
 // Renders alert timeline events as a table

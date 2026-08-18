@@ -95,6 +95,37 @@ func TestGetInventoryReportSendsParamsAndDecodes(t *testing.T) {
 	}
 }
 
+// Verifies inventory report option validation before requests
+func TestGetInventoryReportRejectsInvalidOptions(t *testing.T) {
+	client, err := NewClient("https://fleet.example.com", "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		opts InventoryReportOptions
+		want string
+	}{
+		{name: "start alone", opts: InventoryReportOptions{StartTime: "2026-05-01T00:00:00Z"}, want: "start time and end time must be used together"},
+		{name: "bad start", opts: InventoryReportOptions{StartTime: "yesterday", EndTime: "2026-05-02T00:00:00Z"}, want: "start time must be RFC3339"},
+		{name: "bad sort", opts: InventoryReportOptions{SortBy: "name"}, want: "invalid inventory report sort"},
+		{name: "bad order", opts: InventoryReportOptions{Order: "up"}, want: "invalid inventory report order"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := client.GetInventoryReport(context.Background(), tt.opts)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
+	}
+}
+
 // Verifies inventory CSV report downloads
 func TestGetInventoryReportCSV(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -238,6 +269,18 @@ func TestGetErrorReportListByError(t *testing.T) {
 		if got := query.Get("window"); got != "24h" {
 			t.Fatalf("unexpected window: %q", got)
 		}
+		if got := query["computeZoneIds"]; !slices.Equal(got, []string{"cz-1", "cz-2"}) {
+			t.Fatalf("unexpected computeZoneIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["nodeGroupIds"]; !slices.Equal(got, []string{"ng-1"}) {
+			t.Fatalf("unexpected nodeGroupIds: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["tags"]; !slices.Equal(got, []string{"prod", "h100"}) {
+			t.Fatalf("unexpected tags: %#v raw query %q", got, r.URL.RawQuery)
+		}
+		if got := query["severities"]; !slices.Equal(got, []string{"Critical", "Fatal"}) {
+			t.Fatalf("unexpected severities: %#v raw query %q", got, r.URL.RawQuery)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"errors":[{"name":"NVSwitch Fatal Error","count":10,"nodeCount":5,"suggestedAction":{"action":"Drain node","code":"DRAIN","persona":"dc_admin","type":"immediate"}}],"hasMore":false,"page":0,"pageSize":10,"total":1}`))
@@ -250,16 +293,62 @@ func TestGetErrorReportListByError(t *testing.T) {
 	}
 
 	got, err := client.GetErrorReport(context.Background(), ErrorReportOptions{
-		View:     ErrorReportViewList,
-		GroupBy:  ErrorReportGroupByError,
-		TimeMode: ErrorReportTimeModeRelative,
-		Window:   "24h",
+		View:           ErrorReportViewList,
+		GroupBy:        ErrorReportGroupByError,
+		ComputeZoneIDs: []string{"cz-1", "cz-2"},
+		NodeGroupIDs:   []string{"ng-1"},
+		Tags:           []string{"prod", "h100"},
+		Severities:     []ErrorSeverity{ErrorSeverityCritical, ErrorSeverityFatal},
+		TimeMode:       ErrorReportTimeModeRelative,
+		Window:         "24h",
 	})
 	if err != nil {
 		t.Fatalf("error report failed: %v", err)
 	}
 	if len(got.Errors) != 1 || got.Errors[0].Name != "NVSwitch Fatal Error" || got.Errors[0].SuggestedAction == nil || got.Errors[0].SuggestedAction.Code != "DRAIN" {
 		t.Fatalf("unexpected errors: %#v", got.Errors)
+	}
+}
+
+// Verifies error filters are sent for list reports grouped by node.
+func TestGetErrorReportListByNodeSendsErrorFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/reports/error" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		query := r.URL.Query()
+		if got := query.Get("view"); got != "list" {
+			t.Fatalf("unexpected view: %q", got)
+		}
+		if got := query.Get("groupBy"); got != "node" {
+			t.Fatalf("unexpected groupBy: %q", got)
+		}
+		if got := query["errors"]; !slices.Equal(got, []string{"NVSwitch Fatal Error", "xid_154"}) {
+			t.Fatalf("unexpected errors: %#v raw query %q", got, r.URL.RawQuery)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","errors":["xid_154"]}],"hasMore":false,"page":0,"pageSize":10,"total":1}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	got, err := client.GetErrorReport(context.Background(), ErrorReportOptions{
+		View:     ErrorReportViewList,
+		GroupBy:  ErrorReportGroupByNode,
+		Errors:   []string{"NVSwitch Fatal Error", "xid_154"},
+		TimeMode: ErrorReportTimeModeRelative,
+		Window:   "24h",
+	})
+	if err != nil {
+		t.Fatalf("error report failed: %v", err)
+	}
+	if len(got.Nodes) != 1 || got.Nodes[0].NodeUUID != "node-1" || !slices.Equal(got.Nodes[0].Errors, []string{"xid_154"}) {
+		t.Fatalf("unexpected nodes: %#v", got.Nodes)
 	}
 }
 
@@ -275,6 +364,9 @@ func TestGetErrorReportGraphDefaultsGroupByError(t *testing.T) {
 		if got := r.URL.Query().Get("groupBy"); got != "error" {
 			t.Fatalf("unexpected groupBy: %q", got)
 		}
+		if got := r.URL.Query().Get("step"); got != "5m" {
+			t.Fatalf("unexpected step: %q", got)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"result":[{"label":{"error":"xid_154"},"values":[[1716153600,5]]}],"timeRange":{"start":"2026-05-01T00:00:00Z","end":"2026-05-02T00:00:00Z"}}`))
@@ -286,7 +378,7 @@ func TestGetErrorReportGraphDefaultsGroupByError(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 
-	got, err := client.GetErrorReport(context.Background(), ErrorReportOptions{View: ErrorReportViewGraph})
+	got, err := client.GetErrorReport(context.Background(), ErrorReportOptions{View: ErrorReportViewGraph, Step: "5m"})
 	if err != nil {
 		t.Fatalf("graph report failed: %v", err)
 	}
@@ -311,6 +403,7 @@ func TestGetErrorReportRejectsInvalidOptions(t *testing.T) {
 		{name: "missing group", opts: ErrorReportOptions{View: ErrorReportViewList}, want: "group-by is required"},
 		{name: "csv overview", opts: ErrorReportOptions{View: ErrorReportViewOverview, Format: ReportFormatCSV}, want: "csv format"},
 		{name: "graph node group", opts: ErrorReportOptions{View: ErrorReportViewGraph, GroupBy: ErrorReportGroupByNode}, want: "graph view"},
+		{name: "errors with group by error", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Errors: []string{"xid_154"}}, want: "error filters are only supported"},
 		{name: "relative time missing window", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeRelative}, want: "relative time mode requires window"},
 		{name: "absolute time missing end", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "2026-05-01T00:00:00Z"}, want: "absolute time mode requires start time and end time"},
 		{name: "absolute time missing start", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, EndTime: "2026-05-02T00:00:00Z"}, want: "absolute time mode requires start time and end time"},
@@ -320,6 +413,10 @@ func TestGetErrorReportRejectsInvalidOptions(t *testing.T) {
 		{name: "zero window", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeRelative, Window: "0s"}, want: "invalid window"},
 		{name: "malformed start", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "not-a-date", EndTime: "2026-05-02T00:00:00Z"}, want: "start time must be RFC3339"},
 		{name: "malformed end", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "2026-05-01T00:00:00Z", EndTime: "not-a-date"}, want: "end time must be RFC3339"},
+		{name: "bad severity", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Severities: []ErrorSeverity{"Broken"}}, want: "invalid error report severity"},
+		{name: "step with list", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Step: "5m"}, want: "step is only supported for graph view"},
+		{name: "short step", opts: ErrorReportOptions{View: ErrorReportViewGraph, Step: "30s"}, want: "expected at least 1m"},
+		{name: "malformed step", opts: ErrorReportOptions{View: ErrorReportViewGraph, Step: "bananas"}, want: "invalid step"},
 	}
 
 	for _, tt := range tests {

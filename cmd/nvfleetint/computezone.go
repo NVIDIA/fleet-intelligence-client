@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -16,8 +17,9 @@ import (
 
 // Stores local flag values for computezone list
 type computeZoneListFlags struct {
-	view    string
-	zoneIDs string
+	view           string
+	includeMetrics bool
+	zoneIDs        string
 }
 
 // Stores data ready for computezone list rendering
@@ -46,7 +48,8 @@ func newComputeZoneCmd() *cobra.Command {
 // Creates the compute zone list command
 func newComputeZoneListCmd() *cobra.Command {
 	flags := computeZoneListFlags{
-		view: string(nvfleetint.ComputeZoneViewDetail),
+		view:           string(nvfleetint.ComputeZoneViewDetail),
+		includeMetrics: true,
 	}
 	common := newCommonFlags()
 
@@ -60,6 +63,7 @@ func newComputeZoneListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
+	cmd.Flags().BoolVar(&flags.includeMetrics, "include-metrics", flags.includeMetrics, "Include metrics in detail view; use --include-metrics=false to omit")
 	cmd.Flags().StringVar(&flags.zoneIDs, "zone-ids", "", "Comma-separated compute zone IDs to filter")
 	registerListCommonFlags(cmd, common)
 
@@ -70,6 +74,9 @@ func newComputeZoneListCmd() *cobra.Command {
 func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common resolvedCommonFlags) error {
 	if err := validateComputeZoneListFlags(flags, common); err != nil {
 		return err
+	}
+	if nvfleetint.ComputeZoneView(flags.view) == nvfleetint.ComputeZoneViewBasic && cmd.Flags().Changed("include-metrics") {
+		return errors.New("basic compute zone view is incompatible with --include-metrics")
 	}
 
 	zoneIDs, err := clihelpers.ParseCommaList(flags.zoneIDs)
@@ -85,6 +92,9 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 	opts := nvfleetint.ListComputeZonesOptions{
 		View:    nvfleetint.ComputeZoneView(flags.view),
 		ZoneIDs: zoneIDs,
+	}
+	if cmd.Flags().Changed("include-metrics") {
+		opts.IncludeMetrics = &flags.includeMetrics
 	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
