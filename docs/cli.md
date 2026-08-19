@@ -109,6 +109,7 @@ prints the resulting current profile either way.
 # Fleet summary and inventory
 nvfleetint overview
 nvfleetint computezone list
+nvfleetint computezone update <compute-zone-id> --contact-email ops@example.com
 nvfleetint nodegroup list
 nvfleetint node list
 nvfleetint node list --agent-type oob --bmc-hostname bmc-01
@@ -140,6 +141,17 @@ nvfleetint report error --window 24h
 
 List commands support shared flags including `--all`, `--page`, `--page-size`,
 `--timeout`, and `--output json`.
+
+`computezone update` changes compute-zone metadata: `--type`,
+`--contact-email`, `--contact-pic`, `--geo-city`, `--geo-country`,
+`--geo-region`, `--geo-latitude`, and `--geo-longitude`. It reads the current
+compute zone first, keeps any fields whose flags were not provided, then sends
+the merged update. Passing an empty value to any of these flags clears that
+field. Coordinates are validated as text (`--geo-latitude` between -90 and 90,
+`--geo-longitude` between -180 and 180) so an untouched location is echoed back
+to the backend exactly as stored. The command asks for confirmation unless
+`--yes` is passed; use `--dry-run -o json` to inspect the request body without
+sending the write.
 
 Detailed node list and describe commands query both in-band and out-of-band
 (OOB) views by default. Table output labels the two sections; JSON output uses

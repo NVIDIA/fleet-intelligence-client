@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -148,6 +149,156 @@ func TestWriteComputeZoneBasicTable(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
+	}
+}
+
+// Verifies update reads current state before writing a merged body
+func TestComputeZoneUpdatePreservesUnchangedBackendFields(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var sawPut bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			if r.URL.Path != "/v1/computezones" {
+				t.Fatalf("unexpected path: %s", r.URL.Path)
+			}
+			if got := r.URL.Query()["computeZoneIds"]; !slices.Equal(got, []string{"cz-1"}) {
+				t.Fatalf("unexpected computeZoneIds: %#v", got)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","type":"datacenter","contact":{"email":"old@example.com","pic":"Grace"},"geoLocation":{"city":"Santa Clara","country":"US","region":"us-west"}}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		case http.MethodPut:
+			sawPut = true
+			data, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read body failed: %v", err)
+			}
+			body := string(data)
+			for _, want := range []string{`"id":"cz-1"`, `"type":"datacenter"`, `"email":"new@example.com"`, `"pic":"Grace"`, `"city":"Santa Clara"`, `"country":"CA"`, `"region":"us-west"`} {
+				if !strings.Contains(body, want) {
+					t.Fatalf("body missing %q: %s", want, body)
+				}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":"cz-1"}`))
+		default:
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	stdout, stderr := runCLI(t, "computezone", "update", "cz-1", "--contact-email", "new@example.com", "--geo-country", "CA", "--yes")
+	if !sawPut {
+		t.Fatal("expected PUT request")
+	}
+	if !strings.Contains(stdout, `Compute zone "cz-1" updated.`) {
+		t.Fatalf("unexpected stdout: %q", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("unexpected stderr: %q", stderr)
+	}
+}
+
+// Verifies dry-run reads current state and prints the merged request without writing
+func TestComputeZoneUpdateDryRunJSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("dry-run should not write, got %s", r.Method)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","type":"datacenter","contact":{"email":"old@example.com","pic":"Grace"}}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	stdout, stderr := runCLI(t, "computezone", "update", "cz-1", "--contact-email", "new@example.com", "--dry-run", "-o", "json")
+	if stderr != "" {
+		t.Fatalf("unexpected stderr: %q", stderr)
+	}
+
+	var got nvfleetint.RequestPreview
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("decode preview failed: %v\n%s", err, stdout)
+	}
+	if got.Method != http.MethodPut || got.URL != server.URL+"/v1/computezones" {
+		t.Fatalf("unexpected preview: %#v", got)
+	}
+	if !strings.Contains(string(got.Body), `"email":"new@example.com"`) || !strings.Contains(string(got.Body), `"pic":"Grace"`) {
+		t.Fatalf("preview body did not merge fields: %s", string(got.Body))
+	}
+}
+
+// Verifies coordinate flags are validated before any request is made
+func TestComputeZoneUpdateRejectsInvalidCoordinates(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid coordinates should not reach the backend: %s %s", r.Method, r.URL.Path)
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "latitude range", args: []string{"--geo-latitude", "1000"}, want: `--geo-latitude: invalid latitude "1000": must be between -90 and 90`},
+		{name: "longitude range", args: []string{"--geo-longitude", "-400"}, want: `--geo-longitude: invalid longitude "-400": must be between -180 and 180`},
+		{name: "latitude text", args: []string{"--geo-latitude", "north"}, want: "expected a decimal number"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			cmd.SetArgs(append([]string{"computezone", "update", "cz-1", "--yes"}, tt.args...))
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+// Verifies an empty coordinate clears the stored value
+func TestComputeZoneUpdateClearsCoordinates(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var body string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","geoLocation":{"city":"Santa Clara","latitude":37.4,"longitude":-121.9}}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+			return
+		}
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read body failed: %v", err)
+		}
+		body = string(data)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"cz-1"}`))
+	}))
+	defer server.Close()
+
+	saveTestConfig(t, server.URL, "test-key")
+
+	runCLI(t, "computezone", "update", "cz-1", "--geo-latitude", "", "--geo-longitude", "", "--yes")
+	if !strings.Contains(body, `"geoLocation":{"city":"Santa Clara"}`) {
+		t.Fatalf("coordinates were not cleared: %s", body)
 	}
 }
 
