@@ -358,7 +358,7 @@ func writeComputeZoneUpdatePreview(w io.Writer, common resolvedCommonFlags, prev
 		prettyBody = formatted.Bytes()
 	}
 
-	if _, err := fmt.Fprintf(w, "Dry run: no request sent.\nMETHOD: %s\nURL: %s\nBODY:\n%s\n", preview.Method, preview.URL, prettyBody); err != nil {
+	if _, err := fmt.Fprintf(w, "Dry run: no write request sent.\nMETHOD: %s\nURL: %s\nBODY:\n%s\n", preview.Method, preview.URL, prettyBody); err != nil {
 		return err
 	}
 	return nil

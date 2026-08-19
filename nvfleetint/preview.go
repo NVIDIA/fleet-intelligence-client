@@ -20,7 +20,9 @@ type RequestPreview struct {
 }
 
 // PreviewUpdateComputeZone returns the update request after applying the same
-// read-modify-write merge as UpdateComputeZone, without sending the write.
+// read-modify-write merge as UpdateComputeZone, without sending the write. The
+// API has no conditional-update mechanism, so a later update can overwrite
+// concurrent changes made after this preview's read.
 func (c *Client) PreviewUpdateComputeZone(ctx context.Context, opts UpdateComputeZoneOptions) (RequestPreview, error) {
 	body, err := c.buildUpdateComputeZoneRequest(ctx, opts)
 	if err != nil {

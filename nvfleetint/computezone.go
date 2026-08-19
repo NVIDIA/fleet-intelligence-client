@@ -143,7 +143,9 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 }
 
 // Updates a compute zone by first reading its current backend state and then
-// preserving fields the caller left nil.
+// preserving fields the caller left nil. The API has no conditional-update
+// mechanism, so this read-modify-write flow is last-write-wins and can
+// overwrite concurrent changes made after the read.
 func (c *Client) UpdateComputeZone(ctx context.Context, opts UpdateComputeZoneOptions) (UpdateComputeZoneResult, error) {
 	body, err := c.buildUpdateComputeZoneRequest(ctx, opts)
 	if err != nil {
@@ -236,7 +238,11 @@ type currentComputeZonesResponse struct {
 }
 
 // Builds the request body shared by UpdateComputeZone and
-// PreviewUpdateComputeZone so a dry run can never disagree with the write
+// PreviewUpdateComputeZone so a dry run can never disagree with the write.
+// The request body includes values read from the backend for fields the caller
+// left nil; because the API has no ETag, version, or If-Match equivalent,
+// preview-then-update and direct update flows are last-write-wins and can
+// overwrite concurrent changes made after the read.
 func (c *Client) buildUpdateComputeZoneRequest(ctx context.Context, opts UpdateComputeZoneOptions) (updateComputeZoneBody, error) {
 	opts.ID = strings.TrimSpace(opts.ID)
 	if err := validateUpdateComputeZoneOptions(opts); err != nil {

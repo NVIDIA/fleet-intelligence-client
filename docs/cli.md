@@ -146,12 +146,14 @@ List commands support shared flags including `--all`, `--page`, `--page-size`,
 `--contact-email`, `--contact-pic`, `--geo-city`, `--geo-country`,
 `--geo-region`, `--geo-latitude`, and `--geo-longitude`. It reads the current
 compute zone first, keeps any fields whose flags were not provided, then sends
-the merged update. Passing an empty value to any of these flags clears that
+the merged update. Passing an empty value to a contact or geo flag clears that
 field. Coordinates are validated as text (`--geo-latitude` between -90 and 90,
 `--geo-longitude` between -180 and 180) so an untouched location is echoed back
 to the backend exactly as stored. The command asks for confirmation unless
 `--yes` is passed; use `--dry-run -o json` to inspect the request body without
-sending the write.
+sending the write. Because the API has no conditional-update mechanism, this
+read-modify-write flow is last-write-wins: an update, including one sent after
+a dry-run preview, can overwrite concurrent changes made after the read.
 
 Detailed node list and describe commands query both in-band and out-of-band
 (OOB) views by default. Table output labels the two sections; JSON output uses
