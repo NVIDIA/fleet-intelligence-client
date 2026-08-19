@@ -24,6 +24,46 @@ type GeoLocation struct {
 	Longitude *float32 `json:"longitude,omitempty"`
 }
 
+// Reports whether value is a latitude the API accepts: a decimal number
+// between -90 and 90. Coordinates are validated as text so a stored value can
+// be echoed back to the backend verbatim.
+func ValidateLatitude(value string) error {
+	return validateCoordinate("latitude", value, 90)
+}
+
+// Reports whether value is a longitude the API accepts: a decimal number
+// between -180 and 180. See ValidateLatitude on why coordinates stay text.
+func ValidateLongitude(value string) error {
+	return validateCoordinate("longitude", value, 180)
+}
+
+// Checks that value is a JSON number literal within the given symmetric range
+func validateCoordinate(name, value string, limit float64) error {
+	trimmed := strings.TrimSpace(value)
+	invalid := fmt.Errorf("invalid %s %q: expected a decimal number", name, value)
+	if trimmed == "" {
+		return fmt.Errorf("%s cannot be empty", name)
+	}
+	// Reject anything that is not a bare JSON number before decoding, so
+	// quoted values and literals like null never reach the backend.
+	if first := trimmed[0]; first != '-' && (first < '0' || first > '9') {
+		return invalid
+	}
+	var number json.Number
+	if err := json.Unmarshal([]byte(trimmed), &number); err != nil {
+		return invalid
+	}
+	parsed, err := number.Float64()
+	if err != nil {
+		return invalid
+	}
+	if parsed < -limit || parsed > limit {
+		return fmt.Errorf("invalid %s %q: must be between %g and %g", name, value, -limit, limit)
+	}
+
+	return nil
+}
+
 // Represents a non-success API response
 type APIError struct {
 	StatusCode int
@@ -128,6 +168,24 @@ func boolValue(value *bool) bool {
 
 // Copies optional integers without sharing pointers
 func cloneInt(value *int) *int {
+	if value == nil {
+		return nil
+	}
+	out := *value
+	return &out
+}
+
+// Copies optional strings without sharing pointers
+func cloneString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	out := *value
+	return &out
+}
+
+// Copies optional JSON numbers without sharing pointers
+func cloneJSONNumber(value *json.Number) *json.Number {
 	if value == nil {
 		return nil
 	}
