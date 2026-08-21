@@ -171,6 +171,9 @@ func TestSetNodeTagsClearsWithEmptyList(t *testing.T) {
 	if len(got.Tags) != 0 {
 		t.Fatalf("unexpected tags: %#v", got.Tags)
 	}
+	if got.Tags == nil {
+		t.Fatal("expected explicit empty tags response to decode as non-nil")
+	}
 }
 
 // Verifies the node UUID is echoed from the request when the backend omits it
@@ -194,6 +197,30 @@ func TestSetNodeTagsFallsBackToRequestedNodeUUID(t *testing.T) {
 	}
 	if got.NodeUUID != "node-1" {
 		t.Fatalf("unexpected node UUID: %q", got.NodeUUID)
+	}
+}
+
+// Verifies omitted response tags fall back to the set that was written
+func TestSetNodeTagsFallsBackToWrittenTags(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodeUUID":"node-1"}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	got, err := client.SetNodeTags(context.Background(), "node-1", SetNodeTagsOptions{
+		Tags: []string{"gpu-health"},
+	})
+	if err != nil {
+		t.Fatalf("set node tags failed: %v", err)
+	}
+	if !slices.Equal(got.Tags, []string{"gpu-health"}) {
+		t.Fatalf("unexpected tags: %#v", got.Tags)
 	}
 }
 

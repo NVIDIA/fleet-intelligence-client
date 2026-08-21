@@ -167,7 +167,9 @@ func cloneStringSlice(values *[]string) []string {
 	if values == nil {
 		return nil
 	}
-	return append([]string(nil), (*values)...)
+	out := make([]string, len(*values))
+	copy(out, *values)
+	return out
 }
 
 // Converts a slice into an optional query parameter, omitting it when empty
