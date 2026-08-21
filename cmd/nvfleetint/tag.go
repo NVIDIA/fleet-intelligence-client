@@ -5,14 +5,23 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
+	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
 	"github.com/spf13/cobra"
 )
+
+// Stores local flag values for tag set
+type tagSetFlags struct {
+	tags  string
+	clear bool
+	yes   bool
+}
 
 // Stores local flag values for tag list
 type tagListFlags struct {
@@ -26,10 +35,11 @@ type tagListFlags struct {
 func newTagCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tag",
-		Short: "Inspect tags",
+		Short: "Inspect and set tags",
 	}
 
 	cmd.AddCommand(newTagListCmd())
+	cmd.AddCommand(newTagSetCmd())
 	rejectUnknownSubcommands(cmd)
 
 	return cmd
@@ -121,4 +131,125 @@ func writeTagListTable(w io.Writer, tags []string) error {
 		rows = append(rows, []string{clioutput.DisplayString(tag)})
 	}
 	return clioutput.WriteTable(w, []string{"TAG"}, rows)
+}
+
+// Creates the tag set command
+func newTagSetCmd() *cobra.Command {
+	flags := tagSetFlags{}
+	common := newCommonFlags()
+
+	cmd := &cobra.Command{
+		Use:   "set <node-uuid>",
+		Short: "Replace a node's tags",
+		Args:  requireSingleArg("node UUID"),
+		Long: `Replace every tag on a node with the tags given.
+
+This replaces rather than adds: a tag the node already carries that is not
+listed in --tags is removed. Use --clear to remove all of them. Exactly one of
+--tags or --clear is required, and the command confirms before writing unless
+--yes is passed.
+
+Tags use lowercase letters, digits, hyphens, and underscores. They must start
+and end with a letter or digit, cannot contain consecutive separators, and are
+at most 50 characters. The names null, none, undefined, true, and false are
+reserved.
+
+Run 'nvfleetint tag list --node <node-uuid>' to see a node's current tags.`,
+		Example: `  nvfleetint tag set 1e9c0d2a-0000-4a1b-9c3d-000000000001 --tags gpu-health,burn_in
+  nvfleetint tag set 1e9c0d2a-0000-4a1b-9c3d-000000000001 --clear --yes`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runTagSet(cmd, args[0], flags, resolveCommonFlags(cmd, common))
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.tags, "tags", "", "Comma-separated tags the node should carry, replacing its current tags")
+	cmd.Flags().BoolVar(&flags.clear, "clear", false, "Remove every tag from the node")
+	cmd.Flags().BoolVar(&flags.yes, "yes", false, "Skip the confirmation prompt")
+	registerReadCommonFlags(cmd, common)
+
+	return cmd
+}
+
+// Validates flags, confirms the replacement, calls the SDK, and writes output
+func runTagSet(cmd *cobra.Command, nodeUUID string, flags tagSetFlags, common resolvedCommonFlags) error {
+	if err := validateReadCommonFlags(common); err != nil {
+		return err
+	}
+	tags, err := resolveTagSetTags(cmd, flags)
+	if err != nil {
+		return err
+	}
+
+	nodeUUID = strings.TrimSpace(nodeUUID)
+	if nodeUUID == "" {
+		return errors.New("node UUID is required")
+	}
+
+	client, err := newConfiguredClient(common)
+	if err != nil {
+		return err
+	}
+
+	// Confirm after the client is built so a bad profile fails before the
+	// question rather than after it.
+	if !flags.yes {
+		summary := tagSetSummary(nodeUUID, tags)
+		if err := clihelpers.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), summary); err != nil {
+			return err
+		}
+	}
+
+	result, err := client.SetNodeTags(cmd.Context(), nodeUUID, nvfleetint.SetNodeTagsOptions{Tags: tags})
+	if err != nil {
+		return err
+	}
+
+	if common.output == clioutput.FormatJSON {
+		return clioutput.WriteRawJSON(cmd.OutOrStdout(), result.RawJSON)
+	}
+	return writeNodeTagsTable(cmd.OutOrStdout(), result)
+}
+
+// Resolves --tags and --clear into the tag set to write. Requiring one of the
+// two makes clearing a node's tags something the user asks for by name: an
+// empty --tags would otherwise be a wipe that looks like a no-op.
+func resolveTagSetTags(cmd *cobra.Command, flags tagSetFlags) ([]string, error) {
+	tagsSet := cmd.Flags().Changed("tags")
+	switch {
+	case tagsSet && flags.clear:
+		return nil, errors.New("--tags cannot be used with --clear")
+	case flags.clear:
+		return nil, nil
+	case !tagsSet:
+		return nil, errors.New("exactly one of --tags or --clear is required")
+	}
+
+	tags, err := clihelpers.ParseCommaList(flags.tags)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --tags: %w", err)
+	}
+	if len(tags) == 0 {
+		return nil, errors.New("--tags requires at least one tag; use --clear to remove every tag")
+	}
+
+	return tags, nil
+}
+
+// Describes the pending write for the confirmation prompt
+func tagSetSummary(nodeUUID string, tags []string) string {
+	if len(tags) == 0 {
+		return fmt.Sprintf("This removes every tag from node %s.", nodeUUID)
+	}
+	return fmt.Sprintf(
+		"This replaces every tag on node %s with: %s",
+		nodeUUID, strings.Join(tags, ", "),
+	)
+}
+
+// Renders one node's resulting tags
+func writeNodeTagsTable(w io.Writer, result nvfleetint.NodeTags) error {
+	return clioutput.WriteTable(w,
+		[]string{"NODE UUID", "TAGS"},
+		[][]string{{clioutput.DisplayString(result.NodeUUID), clioutput.FormatStringList(result.Tags)}},
+	)
 }

@@ -8,6 +8,7 @@ Read this before querying live data.
 - `--timeout` is per request (default 2m). Don't lower it. Use 3m–5m for demonstrated slow node pulls above 1,000 rows and 5m–10m for demonstrated slow alert pulls; still bound the whole workflow separately.
 - The client retries idempotent GET/HEAD requests up to three attempts for transient network failures and HTTP 408, 429, 500, 502, 503, and 504. During `--all`, only the failed page retries. Never retry the whole command in a loop.
 - Exit 127 means not installed; use a release from <https://github.com/NVIDIA/fleet-intelligence-client/releases>.
+- These workflows are read-only. `tag set` is the one command that writes to the fleet: never run it to gather data, and run it only when the user asks for that change by name, with `--yes` and the exact tag list they gave. It replaces a node's tags rather than adding to them.
 
 ## Auth and profiles
 

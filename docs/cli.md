@@ -134,6 +134,7 @@ nvfleetint xidburst describe <burst-id>
 
 # Tags and reports
 nvfleetint tag list --prefix gpu
+nvfleetint tag set <node-uuid> --tags gpu-health,burn_in
 nvfleetint report inventory
 nvfleetint report error --window 24h
 ```
@@ -164,6 +165,16 @@ callers. Node groups and compute zones can be filtered inclusively
 (`--exclude-nodegroup-ids`, `--exclude-compute-zone-ids`), but not both for the
 same dimension. `xidburst describe` adds the impacted GPU device IDs, per-XID
 catalog details, and suggested actions.
+
+`tag set` replaces a node's tags rather than adding to them: a tag the node
+already carries that is not listed in `--tags` is removed, and `--clear`
+removes every tag. It asks for confirmation before writing, so scripts and CI
+runs need `--yes`. Tags use lowercase letters, digits, hyphens, and
+underscores; they must start and end with a letter or digit, cannot contain
+consecutive separators, and are at most 50 characters. The names `null`,
+`none`, `undefined`, `true`, and `false` are reserved. Run
+`nvfleetint tag list --node <node-uuid>` to see a node's current tags before
+replacing them.
 
 ## CSV reports
 
