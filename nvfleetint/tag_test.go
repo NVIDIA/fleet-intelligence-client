@@ -256,10 +256,16 @@ func TestSetNodeTagsAcceptsMaximumLengthTag(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 
-	if _, err := client.SetNodeTags(context.Background(), "node-1", SetNodeTagsOptions{
-		Tags: []string{strings.Repeat("a", MaxTagLength)},
-	}); err != nil {
+	tag := strings.Repeat("a", MaxTagLength)
+	result, err := client.SetNodeTags(context.Background(), "node-1", SetNodeTagsOptions{
+		Tags: []string{tag},
+	})
+	if err != nil {
 		t.Fatalf("set node tags failed: %v", err)
+	}
+	// The response omits tags, so the result falls back to what was requested.
+	if len(result.Tags) != 1 || result.Tags[0] != tag {
+		t.Fatalf("unexpected tags: %v", result.Tags)
 	}
 }
 

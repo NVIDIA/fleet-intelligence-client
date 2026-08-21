@@ -168,9 +168,17 @@ func (c *Client) SetNodeTags(ctx context.Context, nodeUUID string, opts SetNodeT
 		uuid = nodeUUID
 	}
 
+	// Likewise fall back to the tags that were just written when the field is
+	// omitted. An explicit empty list still reports a cleared node, since that
+	// arrives as a non-nil pointer to an empty slice.
+	written := cloneStringSlice(data.Tags)
+	if data.Tags == nil {
+		written = tags
+	}
+
 	return NodeTags{
 		NodeUUID: uuid,
-		Tags:     cloneStringSlice(data.Tags),
+		Tags:     written,
 		RawJSON:  append([]byte(nil), resp.Body...),
 	}, nil
 }
