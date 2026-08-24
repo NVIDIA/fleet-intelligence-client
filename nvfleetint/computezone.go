@@ -69,19 +69,10 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 	if view == ComputeZoneViewBasic && opts.IncludeMetrics != nil {
 		return ComputeZonesPage{}, fmt.Errorf("basic compute zone view is incompatible with include metrics")
 	}
-	if opts.IncludeMetrics != nil {
-		params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
-	}
-	if len(opts.ZoneIDs) > 0 {
-		zoneIDs := append([]string(nil), opts.ZoneIDs...)
-		params.ComputeZoneIds = &zoneIDs
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
+	params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
+	params.ComputeZoneIds = optionalSlice(opts.ZoneIDs)
+	params.Page = cloneInt(opts.Page)
+	params.PageSize = cloneInt(opts.PageSize)
 
 	resp, err := c.api.GetV1ComputezonesWithResponse(ctx, &params)
 	if err != nil {

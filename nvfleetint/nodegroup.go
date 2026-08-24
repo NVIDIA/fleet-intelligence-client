@@ -110,49 +110,21 @@ func (c *Client) ListNodeGroups(ctx context.Context, opts ListNodeGroupsOptions)
 	}
 
 	params := fleetapi.GetV1NodegroupsParams{
-		View: nodeGroupViewParam(view),
+		View:           nodeGroupViewParam(view),
+		IncludeMetrics: cloneBool(opts.IncludeMetrics),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		SortBy:         optionalEnum[fleetapi.GetV1NodegroupsParamsSortBy](opts.SortBy),
+		Order:          optionalEnum[fleetapi.GetV1NodegroupsParamsOrder](opts.Order),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
 	}
-	if opts.IncludeMetrics != nil {
-		params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		computeZoneIDs := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &computeZoneIDs
-	}
-	if view == NodeGroupViewDetail && len(opts.ComputeZoneNames) > 0 {
-		computeZoneNames := append([]string(nil), opts.ComputeZoneNames...)
-		params.ComputeZoneNames = &computeZoneNames
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		nodeGroupIDs := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &nodeGroupIDs
-	}
+	// Basic view rejects these three filters (validateNodeGroupOptions enforces
+	// it), so they are only ever sent for the detail view.
 	if view == NodeGroupViewDetail {
-		if len(opts.HealthStatuses) > 0 {
-			statuses := make([]fleetapi.GetV1NodegroupsParamsHealthStatuses, 0, len(opts.HealthStatuses))
-			for _, status := range opts.HealthStatuses {
-				statuses = append(statuses, fleetapi.GetV1NodegroupsParamsHealthStatuses(status))
-			}
-			params.HealthStatuses = &statuses
-		}
-		if len(opts.GPUTypes) > 0 {
-			gpuTypes := append([]string(nil), opts.GPUTypes...)
-			params.GpuTypes = &gpuTypes
-		}
-	}
-	if opts.SortBy != "" {
-		sortBy := fleetapi.GetV1NodegroupsParamsSortBy(opts.SortBy)
-		params.SortBy = &sortBy
-	}
-	if opts.Order != "" {
-		order := fleetapi.GetV1NodegroupsParamsOrder(opts.Order)
-		params.Order = &order
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
+		params.ComputeZoneNames = optionalSlice(opts.ComputeZoneNames)
+		params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodegroupsParamsHealthStatuses](opts.HealthStatuses)
+		params.GpuTypes = optionalSlice(opts.GPUTypes)
 	}
 
 	resp, err := c.api.GetV1NodegroupsWithResponse(ctx, &params)

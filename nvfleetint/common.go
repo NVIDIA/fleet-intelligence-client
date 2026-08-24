@@ -172,12 +172,52 @@ func cloneStringSlice(values *[]string) []string {
 	return out
 }
 
-// Converts a slice into an optional query parameter, omitting it when empty
-func optionalStringSlice(values []string) *[]string {
+// Converts a slice into an optional query parameter, omitting it when empty.
+// The values are copied so the request never shares a backing array with the
+// caller's options.
+func optionalSlice[T any](values []T) *[]T {
 	if len(values) == 0 {
 		return nil
 	}
-	out := append([]string(nil), values...)
+	out := append([]T(nil), values...)
+	return &out
+}
+
+// Converts a slice of SDK enum values into the generated parameter's own enum
+// type, omitting the parameter when the slice is empty. The target type is
+// given explicitly and the source type is inferred:
+//
+//	params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodesParamsHealthStatuses](opts.HealthStatuses)
+func optionalEnumSlice[U ~string, T ~string](values []T) *[]U {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]U, 0, len(values))
+	for _, value := range values {
+		out = append(out, U(value))
+	}
+	return &out
+}
+
+// Converts an SDK enum value into the generated parameter's own enum type,
+// omitting the parameter when the value is empty. As with optionalEnumSlice the
+// target type is given explicitly and the source type is inferred.
+func optionalEnum[U ~string, T ~string](value T) *U {
+	if value == "" {
+		return nil
+	}
+	out := U(value)
+	return &out
+}
+
+// Converts a string into an optional query parameter, omitting it when empty.
+// The value is passed through verbatim, for fields the caller has already
+// normalized; use optionalTrimmedString to trim as well.
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	out := value
 	return &out
 }
 
@@ -188,6 +228,15 @@ func optionalTrimmedString(value string) *string {
 		return nil
 	}
 	return &trimmed
+}
+
+// Converts a flag into an optional query parameter, omitting it when false so
+// that an unset flag is left to the backend default rather than sent as false.
+func optionalTrueBool(value bool) *bool {
+	if !value {
+		return nil
+	}
+	return boolPointer(value)
 }
 
 // Returns a pointer to a copied boolean value

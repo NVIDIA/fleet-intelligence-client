@@ -376,97 +376,31 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	}
 
 	params := fleetapi.GetV1NodesParams{
-		View: nodeViewParam(view),
+		View:             nodeViewParam(view),
+		AgentType:        optionalEnum[fleetapi.GetV1NodesParamsAgentType](opts.AgentType),
+		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
+		Hostname:         optionalString(opts.Hostname),
+		BmcHostname:      optionalString(opts.BMCHostname),
+		ComputeZoneIds:   optionalSlice(opts.ComputeZoneIDs),
+		ComputeZoneNames: optionalSlice(opts.ComputeZoneNames),
+		NodeGroupIds:     optionalSlice(opts.NodeGroupIDs),
+		NodeGroupNames:   optionalSlice(opts.NodeGroupNames),
+		GpuTypes:         optionalSlice(opts.GPUTypes),
+		GpuCounts:        optionalSlice(opts.GPUCounts),
+		PublicIPs:        optionalSlice(opts.PublicIPs),
+		PrivateIPs:       optionalSlice(opts.PrivateIPs),
+		SortBy:           optionalEnum[fleetapi.GetV1NodesParamsSortBy](opts.SortBy),
+		Order:            optionalEnum[fleetapi.GetV1NodesParamsOrder](opts.Order),
+		Page:             cloneInt(opts.Page),
+		PageSize:         cloneInt(opts.PageSize),
 	}
-	if opts.AgentType != "" {
-		agentType := fleetapi.GetV1NodesParamsAgentType(opts.AgentType)
-		params.AgentType = &agentType
-	}
-	if len(opts.NodeUUIDs) > 0 {
-		nodeUUIDs := append([]string(nil), opts.NodeUUIDs...)
-		params.NodeUUIDs = &nodeUUIDs
-	}
-	if opts.Hostname != "" {
-		params.Hostname = &opts.Hostname
-	}
-	if opts.BMCHostname != "" {
-		params.BmcHostname = &opts.BMCHostname
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		computeZoneIDs := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &computeZoneIDs
-	}
-	if len(opts.ComputeZoneNames) > 0 {
-		computeZoneNames := append([]string(nil), opts.ComputeZoneNames...)
-		params.ComputeZoneNames = &computeZoneNames
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		nodeGroupIDs := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &nodeGroupIDs
-	}
-	if len(opts.NodeGroupNames) > 0 {
-		nodeGroupNames := append([]string(nil), opts.NodeGroupNames...)
-		params.NodeGroupNames = &nodeGroupNames
-	}
-	if len(opts.GPUTypes) > 0 {
-		gpuTypes := append([]string(nil), opts.GPUTypes...)
-		params.GpuTypes = &gpuTypes
-	}
-	if len(opts.GPUCounts) > 0 {
-		gpuCounts := append([]int(nil), opts.GPUCounts...)
-		params.GpuCounts = &gpuCounts
-	}
-	if len(opts.PublicIPs) > 0 {
-		publicIPs := append([]string(nil), opts.PublicIPs...)
-		params.PublicIPs = &publicIPs
-	}
-	if len(opts.PrivateIPs) > 0 {
-		privateIPs := append([]string(nil), opts.PrivateIPs...)
-		params.PrivateIPs = &privateIPs
-	}
+	// Basic view rejects these four filters (validateNodeOptions enforces it),
+	// so they are only ever sent for the detail view.
 	if view == NodeViewDetail {
-		if len(opts.HealthStatuses) > 0 {
-			statuses := make([]fleetapi.GetV1NodesParamsHealthStatuses, 0, len(opts.HealthStatuses))
-			for _, status := range opts.HealthStatuses {
-				statuses = append(statuses, fleetapi.GetV1NodesParamsHealthStatuses(status))
-			}
-			params.HealthStatuses = &statuses
-		}
-		if len(opts.AgentStatuses) > 0 {
-			statuses := make([]fleetapi.ModelsAgentStatus, 0, len(opts.AgentStatuses))
-			for _, status := range opts.AgentStatuses {
-				statuses = append(statuses, fleetapi.ModelsAgentStatus(status))
-			}
-			params.AgentStatuses = &statuses
-		}
-		if len(opts.IntegrityChecks) > 0 {
-			checks := make([]fleetapi.ModelsIntegrityCheck, 0, len(opts.IntegrityChecks))
-			for _, check := range opts.IntegrityChecks {
-				checks = append(checks, fleetapi.ModelsIntegrityCheck(check))
-			}
-			params.IntegrityChecks = &checks
-		}
-		if len(opts.FirmwareChecks) > 0 {
-			checks := make([]fleetapi.ModelsFirmwareCheck, 0, len(opts.FirmwareChecks))
-			for _, check := range opts.FirmwareChecks {
-				checks = append(checks, fleetapi.ModelsFirmwareCheck(check))
-			}
-			params.FirmwareChecks = &checks
-		}
-	}
-	if opts.SortBy != "" {
-		sortBy := fleetapi.GetV1NodesParamsSortBy(opts.SortBy)
-		params.SortBy = &sortBy
-	}
-	if opts.Order != "" {
-		order := fleetapi.GetV1NodesParamsOrder(opts.Order)
-		params.Order = &order
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
+		params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodesParamsHealthStatuses](opts.HealthStatuses)
+		params.AgentStatuses = optionalEnumSlice[fleetapi.ModelsAgentStatus](opts.AgentStatuses)
+		params.IntegrityChecks = optionalEnumSlice[fleetapi.ModelsIntegrityCheck](opts.IntegrityChecks)
+		params.FirmwareChecks = optionalEnumSlice[fleetapi.ModelsFirmwareCheck](opts.FirmwareChecks)
 	}
 
 	resp, err := c.api.GetV1NodesWithResponse(ctx, &params)
@@ -508,10 +442,8 @@ func (c *Client) DescribeNodeWithOptions(
 		return NodeDetails{}, fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
 	}
 
-	params := fleetapi.GetV1NodesNodeUuidParams{}
-	if opts.AgentType != "" {
-		agentType := fleetapi.GetV1NodesNodeUuidParamsAgentType(opts.AgentType)
-		params.AgentType = &agentType
+	params := fleetapi.GetV1NodesNodeUuidParams{
+		AgentType: optionalEnum[fleetapi.GetV1NodesNodeUuidParamsAgentType](opts.AgentType),
 	}
 	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, &params)
 	if err != nil {

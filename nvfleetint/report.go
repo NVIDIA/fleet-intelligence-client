@@ -516,115 +516,40 @@ func validateInventoryReportOptions(opts InventoryReportOptions) error {
 
 // Builds generated inventory report query parameters
 func inventoryReportParams(opts InventoryReportOptions, format ReportFormat) fleetapi.GetV1ReportsInventoryParams {
-	params := fleetapi.GetV1ReportsInventoryParams{}
-	if format != "" {
-		param := fleetapi.GetV1ReportsInventoryParamsFormat(format)
-		params.Format = &param
+	return fleetapi.GetV1ReportsInventoryParams{
+		Format:         optionalEnum[fleetapi.GetV1ReportsInventoryParamsFormat](format),
+		Signed:         optionalTrueBool(opts.Signed),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		Tags:           optionalSlice(opts.Tags),
+		StartTime:      optionalString(opts.StartTime),
+		EndTime:        optionalString(opts.EndTime),
+		SortBy:         optionalEnum[fleetapi.GetV1ReportsInventoryParamsSortBy](opts.SortBy),
+		Order:          optionalEnum[fleetapi.GetV1ReportsInventoryParamsOrder](opts.Order),
 	}
-	if opts.Signed {
-		signed := true
-		params.Signed = &signed
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		values := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &values
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		values := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &values
-	}
-	if len(opts.Tags) > 0 {
-		values := append([]string(nil), opts.Tags...)
-		params.Tags = &values
-	}
-	if opts.StartTime != "" {
-		value := opts.StartTime
-		params.StartTime = &value
-	}
-	if opts.EndTime != "" {
-		value := opts.EndTime
-		params.EndTime = &value
-	}
-	if opts.SortBy != "" {
-		value := fleetapi.GetV1ReportsInventoryParamsSortBy(opts.SortBy)
-		params.SortBy = &value
-	}
-	if opts.Order != "" {
-		value := fleetapi.GetV1ReportsInventoryParamsOrder(opts.Order)
-		params.Order = &value
-	}
-	return params
 }
 
 // Builds generated error report query parameters
 func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams {
-	params := fleetapi.GetV1ReportsErrorParams{
-		View: fleetapi.GetV1ReportsErrorParamsView(opts.View),
+	return fleetapi.GetV1ReportsErrorParams{
+		View:           fleetapi.GetV1ReportsErrorParamsView(opts.View),
+		GroupBy:        optionalEnum[fleetapi.GetV1ReportsErrorParamsGroupBy](opts.GroupBy),
+		Format:         optionalEnum[fleetapi.GetV1ReportsErrorParamsFormat](opts.Format),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
+		Step:           optionalString(opts.Step),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		Tags:           optionalSlice(opts.Tags),
+		Errors:         optionalSlice(opts.Errors),
+		Severities:     optionalEnumSlice[fleetapi.ModelsEventSeverity](opts.Severities),
+		TimeMode:       optionalEnum[string](opts.TimeMode),
+		Window:         optionalString(opts.Window),
+		StartTime:      optionalString(opts.StartTime),
+		EndTime:        optionalString(opts.EndTime),
 	}
-	if opts.GroupBy != "" {
-		value := fleetapi.GetV1ReportsErrorParamsGroupBy(opts.GroupBy)
-		params.GroupBy = &value
-	}
-	if opts.Format != "" {
-		value := fleetapi.GetV1ReportsErrorParamsFormat(opts.Format)
-		params.Format = &value
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
-	if opts.Step != "" {
-		value := opts.Step
-		params.Step = &value
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		values := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &values
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		values := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &values
-	}
-	if len(opts.Tags) > 0 {
-		values := append([]string(nil), opts.Tags...)
-		params.Tags = &values
-	}
-	if len(opts.Errors) > 0 {
-		values := append([]string(nil), opts.Errors...)
-		params.Errors = &values
-	}
-	if len(opts.Severities) > 0 {
-		values := make([]fleetapi.ModelsEventSeverity, 0, len(opts.Severities))
-		for _, severity := range opts.Severities {
-			values = append(values, fleetapi.ModelsEventSeverity(severity))
-		}
-		params.Severities = &values
-	}
-	if opts.TimeMode != "" {
-		value := string(opts.TimeMode)
-		params.TimeMode = &value
-	}
-	if opts.Window != "" {
-		value := opts.Window
-		params.Window = &value
-	}
-	if opts.StartTime != "" {
-		value := opts.StartTime
-		params.StartTime = &value
-	}
-	if opts.EndTime != "" {
-		value := opts.EndTime
-		params.EndTime = &value
-	}
-	return params
 }
 
 // Overrides the request Accept header for CSV and signed report downloads

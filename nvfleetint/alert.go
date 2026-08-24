@@ -287,26 +287,13 @@ func (c *Client) ListAlerts(ctx context.Context, opts ListAlertsOptions) (Alerts
 		return AlertsPage{}, err
 	}
 
-	params := fleetapi.GetV1AlertsParams{}
-	if opts.NodeUUID != "" {
-		params.NodeUUID = &opts.NodeUUID
-	}
-	if opts.Component != "" {
-		params.Component = &opts.Component
-	}
-	if opts.State != "" {
-		state := string(opts.State)
-		params.State = &state
-	}
-	if opts.Severity != "" {
-		severity := string(opts.Severity)
-		params.Severity = &severity
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
+	params := fleetapi.GetV1AlertsParams{
+		NodeUUID:  optionalString(opts.NodeUUID),
+		Component: optionalString(opts.Component),
+		State:     optionalEnum[string](opts.State),
+		Severity:  optionalEnum[string](opts.Severity),
+		Page:      cloneInt(opts.Page),
+		PageSize:  cloneInt(opts.PageSize),
 	}
 
 	resp, err := c.api.GetV1AlertsWithResponse(ctx, &params)
@@ -341,49 +328,18 @@ func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimel
 		return AlertTimelineNodesPage{}, err
 	}
 
-	params := fleetapi.GetV1AlertTimelineNodesParams{}
-	if opts.Active {
-		params.Active = boolPointer(opts.Active)
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
-	if opts.Hostname != "" {
-		params.Hostname = &opts.Hostname
-	}
-	if opts.SortBy != "" {
-		sortBy := fleetapi.GetV1AlertTimelineNodesParamsSortBy(opts.SortBy)
-		params.SortBy = &sortBy
-	}
-	if opts.Order != "" {
-		order := fleetapi.GetV1AlertTimelineNodesParamsOrder(opts.Order)
-		params.Order = &order
-	}
-	if len(opts.GPUTypes) > 0 {
-		values := append([]string(nil), opts.GPUTypes...)
-		params.GpuTypes = &values
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		values := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &values
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		values := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &values
-	}
-	if len(opts.AlertStates) > 0 {
-		values := make([]fleetapi.GetV1AlertTimelineNodesParamsAlertStates, 0, len(opts.AlertStates))
-		for _, state := range opts.AlertStates {
-			values = append(values, fleetapi.GetV1AlertTimelineNodesParamsAlertStates(state))
-		}
-		params.AlertStates = &values
-	}
-	if len(opts.ComponentTypes) > 0 {
-		values := append([]string(nil), opts.ComponentTypes...)
-		params.ComponentTypes = &values
+	params := fleetapi.GetV1AlertTimelineNodesParams{
+		Active:         optionalTrueBool(opts.Active),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
+		Hostname:       optionalString(opts.Hostname),
+		SortBy:         optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsSortBy](opts.SortBy),
+		Order:          optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsOrder](opts.Order),
+		GpuTypes:       optionalSlice(opts.GPUTypes),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		AlertStates:    optionalEnumSlice[fleetapi.GetV1AlertTimelineNodesParamsAlertStates](opts.AlertStates),
+		ComponentTypes: optionalSlice(opts.ComponentTypes),
 	}
 
 	resp, err := c.api.GetV1AlertTimelineNodesWithResponse(ctx, &params)
@@ -409,49 +365,18 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 		return NodeAlertTimelinePage{}, err
 	}
 
-	params := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParams{}
-	if opts.Active {
-		params.Active = boolPointer(opts.Active)
-	}
-	if opts.WithoutPSIRT {
-		params.WithoutPsirt = boolPointer(opts.WithoutPSIRT)
-	}
-	if opts.SortBy != "" {
-		sortBy := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy(opts.SortBy)
-		params.SortBy = &sortBy
-	}
-	if opts.Order != "" {
-		order := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder(opts.Order)
-		params.Order = &order
-	}
-	if len(opts.AlertStates) > 0 {
-		values := make([]fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates, 0, len(opts.AlertStates))
-		for _, state := range opts.AlertStates {
-			values = append(values, fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates(state))
-		}
-		params.AlertStates = &values
-	}
-	if len(opts.ComponentTypes) > 0 {
-		values := append([]string(nil), opts.ComponentTypes...)
-		params.ComponentTypes = &values
-	}
-	if len(opts.GPUTypes) > 0 {
-		values := append([]string(nil), opts.GPUTypes...)
-		params.GpuTypes = &values
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		values := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &values
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		values := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &values
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
+	params := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParams{
+		Active:         optionalTrueBool(opts.Active),
+		WithoutPsirt:   optionalTrueBool(opts.WithoutPSIRT),
+		SortBy:         optionalEnum[fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy](opts.SortBy),
+		Order:          optionalEnum[fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder](opts.Order),
+		AlertStates:    optionalEnumSlice[fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates](opts.AlertStates),
+		ComponentTypes: optionalSlice(opts.ComponentTypes),
+		GpuTypes:       optionalSlice(opts.GPUTypes),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
 	}
 
 	resp, err := c.api.GetV1AlertTimelineNodesNodeUuidAlertsWithResponse(ctx, opts.NodeUUID, &params)
