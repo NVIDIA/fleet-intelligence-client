@@ -348,19 +348,10 @@ func validateReportVerifyFlags(flags reportVerifyFlags, common resolvedCommonFla
 
 // Validates flags, calls the SDK, and writes inventory report output
 func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common resolvedCommonFlags) error {
-	if err := validateReportInventoryFlags(flags, common); err != nil {
+	if err := validateListCommonFlags(common); err != nil {
 		return err
 	}
-
-	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
-	if err != nil {
-		return err
-	}
-	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
-	if err != nil {
-		return err
-	}
-	tags, err := clihelpers.ParseCommaList(flags.tags)
+	opts, err := inventoryReportOptions(flags, common)
 	if err != nil {
 		return err
 	}
@@ -368,18 +359,6 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 	client, err := newConfiguredClient(common)
 	if err != nil {
 		return err
-	}
-
-	opts := nvfleetint.InventoryReportOptions{
-		Format:         nvfleetint.ReportFormat(flags.format),
-		Signed:         flags.signed,
-		ComputeZoneIDs: computeZoneIDs,
-		NodeGroupIDs:   nodeGroupIDs,
-		Tags:           tags,
-		StartTime:      strings.TrimSpace(flags.start),
-		EndTime:        strings.TrimSpace(flags.end),
-		SortBy:         nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)),
-		Order:          nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)),
 	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
@@ -447,7 +426,11 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 
 // Validates flags, calls the SDK, and writes error report output
 func runReportError(cmd *cobra.Command, flags reportErrorFlags, common resolvedCommonFlags) error {
-	if err := validateReportErrorFlags(flags, common); err != nil {
+	if err := validateListCommonFlags(common); err != nil {
+		return err
+	}
+	opts, err := errorReportOptions(flags, common)
+	if err != nil {
 		return err
 	}
 
@@ -455,8 +438,6 @@ func runReportError(cmd *cobra.Command, flags reportErrorFlags, common resolvedC
 	if err != nil {
 		return err
 	}
-
-	opts := errorReportOptions(flags)
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if nvfleetint.ReportFormat(flags.format) == nvfleetint.ReportFormatCSV {
@@ -515,157 +496,107 @@ func runReportErrorAll(cmd *cobra.Command, client *nvfleetint.Client, opts nvfle
 	})
 }
 
-// Checks inventory report flags
-func validateReportInventoryFlags(flags reportInventoryFlags, common resolvedCommonFlags) error {
-	if err := validateListCommonFlags(common); err != nil {
-		return err
+// inventoryReportOptions reads every inventory report flag exactly once,
+// checking each value as it is parsed and then applying the rules that span
+// flags. See errorReportOptions for why parsing and validation are one pass.
+func inventoryReportOptions(flags reportInventoryFlags, common resolvedCommonFlags) (nvfleetint.InventoryReportOptions, error) {
+	opts := nvfleetint.InventoryReportOptions{
+		Format:    nvfleetint.ReportFormat(flags.format),
+		Signed:    flags.signed,
+		StartTime: strings.TrimSpace(flags.start),
+		EndTime:   strings.TrimSpace(flags.end),
+		SortBy:    nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:     nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)),
 	}
-	if !nvfleetint.ReportFormat(flags.format).Valid() {
-		return fmt.Errorf("invalid format %q: expected json or csv", flags.format)
+
+	if !opts.Format.Valid() {
+		return opts, fmt.Errorf("invalid format %q: expected json or csv", flags.format)
 	}
-	if flags.signed && nvfleetint.ReportFormat(flags.format) != nvfleetint.ReportFormatCSV {
-		return errors.New("--signed requires --format csv")
+	if opts.Signed && opts.Format != nvfleetint.ReportFormatCSV {
+		return opts, errors.New("--signed requires --format csv")
 	}
-	if flags.outputPath != "" && !flags.signed {
-		return errors.New("--output-path can only be used with --signed")
+	if flags.outputPath != "" && !opts.Signed {
+		return opts, errors.New("--output-path can only be used with --signed")
 	}
-	for _, value := range []struct {
+
+	for _, list := range []struct {
 		name string
 		raw  string
+		dest *[]string
 	}{
-		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
-		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
-		{name: "tags", raw: flags.tags},
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs, dest: &opts.ComputeZoneIDs},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, dest: &opts.NodeGroupIDs},
+		{name: "tags", raw: flags.tags, dest: &opts.Tags},
 	} {
-		if _, err := clihelpers.ParseCommaList(value.raw); err != nil {
-			return fmt.Errorf("invalid %s: %w", value.name, err)
+		values, err := clihelpers.ParseCommaList(list.raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid %s: %w", list.name, err)
 		}
+		*list.dest = values
 	}
-	if err := validateReportInventoryTimeFlags(flags); err != nil {
-		return err
-	}
-	if strings.TrimSpace(flags.sortBy) != "" && !nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)).Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected %s", flags.sortBy, reportInventorySortByList)
-	}
-	if strings.TrimSpace(flags.order) != "" && !nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)).Valid() {
-		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
-	}
-	if nvfleetint.ReportFormat(flags.format) == nvfleetint.ReportFormatCSV && !flags.signed {
-		if common.outputSet {
-			return errors.New("--output cannot be used with --format csv; use --signed to download a signed bundle (returns JSON status), or omit --format csv to get a JSON inventory report")
-		}
-		if common.allSet || common.pageSet || common.pageSizeSet {
-			return errors.New("pagination flags cannot be used with --format csv")
-		}
-	}
-	return nil
-}
 
-// Checks inventory report absolute time flags
-func validateReportInventoryTimeFlags(flags reportInventoryFlags) error {
-	hasStart := strings.TrimSpace(flags.start) != ""
-	hasEnd := strings.TrimSpace(flags.end) != ""
-	if hasStart != hasEnd {
-		return errors.New("--start and --end must be used together")
+	if (opts.StartTime == "") != (opts.EndTime == "") {
+		return opts, errors.New("--start and --end must be used together")
 	}
-	if hasStart {
+	if opts.StartTime != "" {
 		if err := validateRFC3339Flag("--start", flags.start); err != nil {
-			return err
+			return opts, err
 		}
 		if err := validateRFC3339Flag("--end", flags.end); err != nil {
-			return err
+			return opts, err
 		}
 	}
-	return nil
-}
-
-// Checks error report flags
-func validateReportErrorFlags(flags reportErrorFlags, common resolvedCommonFlags) error {
-	if err := validateListCommonFlags(common); err != nil {
-		return err
+	if opts.SortBy != "" && !opts.SortBy.Valid() {
+		return opts, fmt.Errorf("invalid sort-by %q: expected %s", flags.sortBy, reportInventorySortByList)
 	}
-
-	view := nvfleetint.ErrorReportView(flags.view)
-	groupBy := nvfleetint.ErrorReportGroupBy(flags.groupBy)
-	format := nvfleetint.ReportFormat(flags.format)
-
-	if strings.TrimSpace(flags.view) == "" {
-		return errors.New("--view is required")
+	if opts.Order != "" && !opts.Order.Valid() {
+		return opts, fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
 	}
-	if !view.Valid() {
-		return fmt.Errorf("invalid view %q: expected list, graph, or overview", flags.view)
-	}
-	if !format.Valid() {
-		return fmt.Errorf("invalid format %q: expected json or csv", flags.format)
-	}
-	if strings.TrimSpace(flags.groupBy) != "" && !groupBy.Valid() {
-		return fmt.Errorf("invalid group-by %q: expected error or node", flags.groupBy)
-	}
-	for _, value := range []struct {
-		name string
-		raw  string
-	}{
-		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
-		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
-		{name: "tags", raw: flags.tags},
-		{name: "errors", raw: flags.errors},
-	} {
-		if _, err := clihelpers.ParseCommaList(value.raw); err != nil {
-			return fmt.Errorf("invalid %s: %w", value.name, err)
+	if opts.Format == nvfleetint.ReportFormatCSV && !opts.Signed {
+		if common.outputSet {
+			return opts, errors.New("--output cannot be used with --format csv; use --signed to download a signed bundle (returns JSON status), or omit --format csv to get a JSON inventory report")
+		}
+		if common.allSet || common.pageSet || common.pageSizeSet {
+			return opts, errors.New("pagination flags cannot be used with --format csv")
 		}
 	}
-	if _, err := parseErrorSeverityList(flags.severities); err != nil {
-		return err
-	}
-	if strings.TrimSpace(flags.step) != "" {
-		if view != nvfleetint.ErrorReportViewGraph {
-			return errors.New("--step can only be used with --view graph")
-		}
-		if err := validateReportStepFlag(flags.step); err != nil {
-			return err
-		}
-	}
-	if strings.TrimSpace(flags.errors) != "" && (view != nvfleetint.ErrorReportViewList || groupBy != nvfleetint.ErrorReportGroupByNode) {
-		return errors.New("--errors can only be used with --view list --group-by node")
-	}
 
-	if err := validateReportErrorViewFlags(view, groupBy, format, flags, common); err != nil {
-		return err
-	}
-	return validateReportTimeFlags(flags)
+	return opts, nil
 }
 
 // Checks view-specific error report flags
-func validateReportErrorViewFlags(view nvfleetint.ErrorReportView, groupBy nvfleetint.ErrorReportGroupBy, format nvfleetint.ReportFormat, flags reportErrorFlags, common resolvedCommonFlags) error {
-	if format == nvfleetint.ReportFormatCSV {
+func validateReportErrorViewFlags(opts nvfleetint.ErrorReportOptions, common resolvedCommonFlags) error {
+	groupBySet := strings.TrimSpace(string(opts.GroupBy)) != ""
+
+	if opts.Format == nvfleetint.ReportFormatCSV {
 		if common.outputSet {
 			return errors.New("--output cannot be used with --format csv")
 		}
 		if common.allSet || common.pageSet || common.pageSizeSet {
 			return errors.New("pagination flags cannot be used with --format csv")
 		}
-		if view != nvfleetint.ErrorReportViewList {
+		if opts.View != nvfleetint.ErrorReportViewList {
 			return errors.New("--format csv is only supported with --view list")
 		}
 	}
 
-	switch view {
+	switch opts.View {
 	case nvfleetint.ErrorReportViewList:
-		if strings.TrimSpace(flags.groupBy) == "" {
+		if !groupBySet {
 			return errors.New("--group-by is required for --view list")
 		}
 	case nvfleetint.ErrorReportViewGraph:
 		if common.allSet || common.pageSet || common.pageSizeSet {
 			return errors.New("pagination flags cannot be used with --view graph")
 		}
-		if strings.TrimSpace(flags.groupBy) != "" && groupBy != nvfleetint.ErrorReportGroupByError {
+		if groupBySet && opts.GroupBy != nvfleetint.ErrorReportGroupByError {
 			return errors.New("--view graph only supports --group-by error")
 		}
 	case nvfleetint.ErrorReportViewOverview:
 		if common.allSet || common.pageSet || common.pageSizeSet {
 			return errors.New("pagination flags cannot be used with --view overview")
 		}
-		if strings.TrimSpace(flags.groupBy) != "" {
+		if groupBySet {
 			return errors.New("--group-by cannot be used with --view overview")
 		}
 	}
@@ -673,8 +604,9 @@ func validateReportErrorViewFlags(view nvfleetint.ErrorReportView, groupBy nvfle
 	return nil
 }
 
-// Checks relative and absolute error report time flags
-func validateReportTimeFlags(flags reportErrorFlags) error {
+// Reads the relative or absolute time range into opts. The error report needs
+// one or the other, so a missing range is as much an error as a conflicting one.
+func applyErrorReportTime(opts *nvfleetint.ErrorReportOptions, flags reportErrorFlags) error {
 	hasWindow := strings.TrimSpace(flags.window) != ""
 	hasStart := strings.TrimSpace(flags.start) != ""
 	hasEnd := strings.TrimSpace(flags.end) != ""
@@ -686,51 +618,107 @@ func validateReportTimeFlags(flags reportErrorFlags) error {
 		return errors.New("--window cannot be used with --start or --end")
 	}
 	if hasWindow {
-		if _, err := reportWindowBackendValue(flags.window); err != nil {
+		window, err := reportWindowBackendValue(flags.window)
+		if err != nil {
 			return err
 		}
+		opts.TimeMode = nvfleetint.ErrorReportTimeModeRelative
+		opts.Window = window
+		return nil
 	}
 	if hasStart != hasEnd {
 		return errors.New("--start and --end must be used together")
 	}
-	if hasStart {
-		if err := validateRFC3339Flag("--start", flags.start); err != nil {
-			return err
-		}
-		if err := validateRFC3339Flag("--end", flags.end); err != nil {
-			return err
-		}
+	if err := validateRFC3339Flag("--start", flags.start); err != nil {
+		return err
 	}
+	if err := validateRFC3339Flag("--end", flags.end); err != nil {
+		return err
+	}
+	opts.TimeMode = nvfleetint.ErrorReportTimeModeAbsolute
+	opts.StartTime = strings.TrimSpace(flags.start)
+	opts.EndTime = strings.TrimSpace(flags.end)
 	return nil
 }
 
-// Builds SDK options from validated error report flags
-func errorReportOptions(flags reportErrorFlags) nvfleetint.ErrorReportOptions {
+// errorReportOptions reads every error report flag exactly once, checking each
+// value as it is parsed and then applying the rules that span flags.
+//
+// Parsing and validation are a single pass on purpose. They used to be split
+// between a validate step and a build step, which meant the build step re-read
+// every flag and discarded the parse error — correct only for as long as the
+// two steps agreed on which flags to cover, and silently producing an empty
+// filter the moment they did not.
+func errorReportOptions(flags reportErrorFlags, common resolvedCommonFlags) (nvfleetint.ErrorReportOptions, error) {
 	opts := nvfleetint.ErrorReportOptions{
 		View:    nvfleetint.ErrorReportView(flags.view),
 		GroupBy: nvfleetint.ErrorReportGroupBy(flags.groupBy),
 		Format:  nvfleetint.ReportFormat(flags.format),
 	}
-	opts.ComputeZoneIDs, _ = clihelpers.ParseCommaList(flags.computeZoneIDs)
-	opts.NodeGroupIDs, _ = clihelpers.ParseCommaList(flags.nodeGroupIDs)
-	opts.Tags, _ = clihelpers.ParseCommaList(flags.tags)
-	opts.Errors, _ = clihelpers.ParseCommaList(flags.errors)
-	opts.Severities, _ = parseErrorSeverityList(flags.severities)
+
+	if strings.TrimSpace(flags.view) == "" {
+		return opts, errors.New("--view is required")
+	}
+	if !opts.View.Valid() {
+		return opts, fmt.Errorf("invalid view %q: expected list, graph, or overview", flags.view)
+	}
+	if !opts.Format.Valid() {
+		return opts, fmt.Errorf("invalid format %q: expected json or csv", flags.format)
+	}
+	if strings.TrimSpace(flags.groupBy) != "" && !opts.GroupBy.Valid() {
+		return opts, fmt.Errorf("invalid group-by %q: expected error or node", flags.groupBy)
+	}
+
+	for _, list := range []struct {
+		name string
+		raw  string
+		dest *[]string
+	}{
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs, dest: &opts.ComputeZoneIDs},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, dest: &opts.NodeGroupIDs},
+		{name: "tags", raw: flags.tags, dest: &opts.Tags},
+		{name: "errors", raw: flags.errors, dest: &opts.Errors},
+	} {
+		values, err := clihelpers.ParseCommaList(list.raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid %s: %w", list.name, err)
+		}
+		*list.dest = values
+	}
+
+	severities, err := parseErrorSeverityList(flags.severities)
+	if err != nil {
+		return opts, err
+	}
+	opts.Severities = severities
+
 	opts.Step = strings.TrimSpace(flags.step)
+	if opts.Step != "" {
+		if opts.View != nvfleetint.ErrorReportViewGraph {
+			return opts, errors.New("--step can only be used with --view graph")
+		}
+		if err := validateReportStepFlag(opts.Step); err != nil {
+			return opts, err
+		}
+	}
+	if len(opts.Errors) > 0 &&
+		(opts.View != nvfleetint.ErrorReportViewList || opts.GroupBy != nvfleetint.ErrorReportGroupByNode) {
+		return opts, errors.New("--errors can only be used with --view list --group-by node")
+	}
+	if err := validateReportErrorViewFlags(opts, common); err != nil {
+		return opts, err
+	}
+	if err := applyErrorReportTime(&opts, flags); err != nil {
+		return opts, err
+	}
+
+	// The backend requires an explicit group-by for a graph. The CLI leaves the
+	// flag optional there because error is the only value the view accepts.
 	if opts.View == nvfleetint.ErrorReportViewGraph && opts.GroupBy == "" {
 		opts.GroupBy = nvfleetint.ErrorReportGroupByError
 	}
-	if strings.TrimSpace(flags.window) != "" {
-		opts.TimeMode = nvfleetint.ErrorReportTimeModeRelative
-		window, _ := reportWindowBackendValue(flags.window)
-		opts.Window = window
-	}
-	if strings.TrimSpace(flags.start) != "" {
-		opts.TimeMode = nvfleetint.ErrorReportTimeModeAbsolute
-		opts.StartTime = strings.TrimSpace(flags.start)
-		opts.EndTime = strings.TrimSpace(flags.end)
-	}
-	return opts
+
+	return opts, nil
 }
 
 // Validates and normalizes a backend duration value
