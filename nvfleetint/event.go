@@ -57,6 +57,18 @@ type EventsPage struct {
 	RawJSON  []byte  `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page EventsPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Event represents a single fleet event
 type Event struct {
 	EventID          string            `json:"eventId,omitempty"`

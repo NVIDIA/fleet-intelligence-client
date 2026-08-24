@@ -6,6 +6,8 @@ package clihelpers
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 const (
@@ -64,6 +66,34 @@ func OneBasedPage(page, pageSize, total int) int {
 		return totalPages
 	}
 	return page + 1
+}
+
+// FetchAllPages fetches every page of a paginated SDK list response, handing
+// each page to collect and merging the raw payloads into one JSON document.
+// Commands use this rather than FetchAllRawPages so that the pagination
+// envelope is read from the response itself instead of being restated, field
+// by field, at every call site.
+func FetchAllPages[P nvfleetint.Paginated](
+	itemKey string,
+	fetch func(page int) (P, error),
+	collect func(P),
+) (MergedJSONResult, error) {
+	return FetchAllRawPages(itemKey, 0, func(pageNumber int) (RawPage, error) {
+		page, err := fetch(pageNumber)
+		if err != nil {
+			return RawPage{}, err
+		}
+		collect(page)
+
+		info := page.PageInfo()
+		return RawPage{
+			RawJSON:  info.RawJSON,
+			Page:     info.Page,
+			PageSize: info.PageSize,
+			Total:    info.Total,
+			HasMore:  info.HasMore,
+		}, nil
+	})
 }
 
 // Fetches and merges raw API item payloads across pages

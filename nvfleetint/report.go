@@ -159,6 +159,18 @@ type InventoryReport struct {
 	Filename string `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page InventoryReport) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
 	NodeUUID               string       `json:"nodeUUID"`
@@ -212,6 +224,18 @@ type ErrorReport struct {
 	Total    int                  `json:"total"`
 	RawJSON  []byte               `json:"-"`
 	RawCSV   []byte               `json:"-"`
+}
+
+// PageInfo reports the pagination envelope of the response.
+func (page ErrorReport) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
 }
 
 // Represents one error grouping row in an error list report

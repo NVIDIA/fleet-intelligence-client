@@ -269,23 +269,13 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 
 	if common.all {
 		var alerts []nvfleetint.Alert
-		result, err := clihelpers.FetchAllRawPages("alerts", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListAlerts(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			alerts = append(alerts, currentPage.Alerts...)
-			hasMore := alertPageHasMore(currentPage)
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("alerts",
+			func(pageNumber int) (nvfleetint.AlertsPage, error) {
+				opts.Page = &pageNumber
+				return client.ListAlerts(cmd.Context(), opts)
+			},
+			func(page nvfleetint.AlertsPage) { alerts = append(alerts, page.Alerts...) },
+		)
 		if err != nil {
 			return err
 		}
@@ -425,27 +415,21 @@ func runAlertTimelineNodes(cmd *cobra.Command, client *nvfleetint.Client, flags 
 		var nodes []nvfleetint.AlertTimelineNode
 		var aggregates nvfleetint.AlertTimelineNodesPage
 		haveAggregates := false
-		result, err := clihelpers.FetchAllRawPages("nodes", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListAlertTimelineNodes(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			nodes = append(nodes, currentPage.Nodes...)
-			if !haveAggregates {
-				aggregates = currentPage
-				haveAggregates = true
-			}
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("nodes",
+			func(pageNumber int) (nvfleetint.AlertTimelineNodesPage, error) {
+				opts.Page = &pageNumber
+				return client.ListAlertTimelineNodes(cmd.Context(), opts)
+			},
+			func(page nvfleetint.AlertTimelineNodesPage) {
+				nodes = append(nodes, page.Nodes...)
+				// The fleet-wide counts are the same on every page; keep the
+				// first so they survive into the merged output.
+				if !haveAggregates {
+					aggregates = page
+					haveAggregates = true
+				}
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -518,23 +502,13 @@ func runNodeAlertTimeline(cmd *cobra.Command, client *nvfleetint.Client, flags a
 
 	if common.all {
 		var alerts []nvfleetint.AlertTimelineNodeAlert
-		result, err := clihelpers.FetchAllRawPages("alerts", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListNodeAlertTimeline(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			alerts = append(alerts, currentPage.Alerts...)
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("alerts",
+			func(pageNumber int) (nvfleetint.NodeAlertTimelinePage, error) {
+				opts.Page = &pageNumber
+				return client.ListNodeAlertTimeline(cmd.Context(), opts)
+			},
+			func(page nvfleetint.NodeAlertTimelinePage) { alerts = append(alerts, page.Alerts...) },
+		)
 		if err != nil {
 			return err
 		}
@@ -680,19 +654,7 @@ func validateAlertDescribeFlags(cmd *cobra.Command, flags alertDescribeFlags, co
 
 // Converts comma-separated alert timeline states into API values
 func parseAlertTimelineStateList(raw string) ([]nvfleetint.AlertTimelineState, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	states := make([]nvfleetint.AlertTimelineState, 0, len(values))
-	for _, value := range values {
-		state := nvfleetint.AlertTimelineState(value)
-		if !state.Valid() {
-			return nil, fmt.Errorf("invalid alert-state %q: expected Critical, Warning, or Resolved", value)
-		}
-		states = append(states, state)
-	}
-	return states, nil
+	return clihelpers.ParseEnumList[nvfleetint.AlertTimelineState]("alert-state", raw, "Critical, Warning, or Resolved")
 }
 
 // Converts a state flag into an API value
@@ -719,18 +681,6 @@ func parseAlertSeverity(raw string) (nvfleetint.AlertSeverity, error) {
 		return "", fmt.Errorf("invalid severity %q: expected Critical or Warning", raw)
 	}
 	return severity, nil
-}
-
-// Reports whether a list alert response has another page
-func alertPageHasMore(page nvfleetint.AlertsPage) bool {
-	if strings.TrimSpace(page.PageCursorNext) != "" {
-		return true
-	}
-	if page.Page < 0 || page.PageSize <= 0 || page.Total <= 0 {
-		return false
-	}
-	// Page is 0-indexed, so the first (page+1) pages have been seen so far.
-	return (page.Page+1)*page.PageSize < page.Total
 }
 
 // Writes JSON or table output for alert list results

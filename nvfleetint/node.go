@@ -163,6 +163,18 @@ type NodesPage struct {
 	RawJSON  []byte `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page NodesPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents a node
 type Node struct {
 	UUID                    string                   `json:"nodeUUID"`

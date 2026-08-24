@@ -357,23 +357,13 @@ func fetchNodeList(
 ) (nodeListOutput, error) {
 	if common.all {
 		var nodes []nvfleetint.Node
-		result, err := clihelpers.FetchAllRawPages("nodes", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListNodes(ctx, opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			nodes = append(nodes, currentPage.Nodes...)
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("nodes",
+			func(pageNumber int) (nvfleetint.NodesPage, error) {
+				opts.Page = &pageNumber
+				return client.ListNodes(ctx, opts)
+			},
+			func(page nvfleetint.NodesPage) { nodes = append(nodes, page.Nodes...) },
+		)
 		if err != nil {
 			return nodeListOutput{}, err
 		}
@@ -656,118 +646,38 @@ func normalizeNodeSortBy(raw string) (nvfleetint.NodeSortBy, error) {
 	return nvfleetint.NodeSortBy(trimmed), nil
 }
 
+// The accepted values named in each filter's error message
+const (
+	nodeHealthValues         = "Healthy, Degraded, Unhealthy, or Unknown"
+	nodeAgentStatusValues    = "Online, Offline, or Unknown"
+	nodeIntegrityCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
+	nodeFirmwareCheckValues  = "Passed, Failed, or Unknown"
+)
+
 // Converts comma-separated health filters into API values
 func parseNodeHealthList(raw string) ([]nvfleetint.NodeHealthStatus, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-
-	statuses := make([]nvfleetint.NodeHealthStatus, 0, len(values))
-	for _, value := range values {
-		status := nvfleetint.NodeHealthStatus(value)
-		if !status.Valid() {
-			return nil, fmt.Errorf("invalid health %q: expected Healthy, Degraded, Unhealthy, or Unknown", value)
-		}
-		statuses = append(statuses, status)
-	}
-
-	return statuses, nil
+	return clihelpers.ParseEnumList[nvfleetint.NodeHealthStatus]("health", raw, nodeHealthValues)
 }
 
 // Converts comma-separated agent filters into API values
 func parseNodeAgentStatusList(raw string) ([]nvfleetint.NodeAgentStatus, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-
-	statuses := make([]nvfleetint.NodeAgentStatus, 0, len(values))
-	for _, value := range values {
-		status := nvfleetint.NodeAgentStatus(value)
-		if !status.Valid() {
-			return nil, fmt.Errorf("invalid agent-status %q: expected Online, Offline, or Unknown", value)
-		}
-		statuses = append(statuses, status)
-	}
-
-	return statuses, nil
+	return clihelpers.ParseEnumList[nvfleetint.NodeAgentStatus]("agent-status", raw, nodeAgentStatusValues)
 }
 
 // Converts comma-separated verification filters into API values.
 // Verification check is the user-facing name for the backend integrity check.
 func parseNodeIntegrityCheckList(raw string) ([]nvfleetint.NodeIntegrityCheck, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-
-	checks := make([]nvfleetint.NodeIntegrityCheck, 0, len(values))
-	for _, value := range values {
-		check := nvfleetint.NodeIntegrityCheck(value)
-		if !check.Valid() {
-			return nil, fmt.Errorf("invalid verification-check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", value)
-		}
-		checks = append(checks, check)
-	}
-
-	return checks, nil
+	return clihelpers.ParseEnumList[nvfleetint.NodeIntegrityCheck]("verification-check", raw, nodeIntegrityCheckValues)
 }
 
 // Converts comma-separated GPU count filters into API values
 func parseNodeGPUCountList(raw string) ([]int, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-
-	counts := make([]int, 0, len(values))
-	for _, value := range values {
-		count, err := strconv.Atoi(value)
-		if err != nil {
-			return nil, fmt.Errorf("invalid gpu-count %q: expected an integer", value)
-		}
-		if count < 0 {
-			return nil, fmt.Errorf("invalid gpu-count %q: expected a non-negative integer", value)
-		}
-		counts = append(counts, count)
-	}
-
-	return counts, nil
+	return clihelpers.ParseIntList("gpu-count", raw)
 }
 
 // Converts comma-separated firmware filters into API values
 func parseNodeFirmwareCheckList(raw string) ([]nvfleetint.NodeFirmwareCheck, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-
-	checks := make([]nvfleetint.NodeFirmwareCheck, 0, len(values))
-	for _, value := range values {
-		check := nvfleetint.NodeFirmwareCheck(value)
-		if !check.Valid() {
-			return nil, fmt.Errorf("invalid firmware-check %q: expected Passed, Failed, or Unknown", value)
-		}
-		checks = append(checks, check)
-	}
-
-	return checks, nil
+	return clihelpers.ParseEnumList[nvfleetint.NodeFirmwareCheck]("firmware-check", raw, nodeFirmwareCheckValues)
 }
 
 // Writes JSON or table output for node list results

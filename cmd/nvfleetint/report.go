@@ -412,23 +412,13 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common r
 
 	if common.all {
 		var nodes []nvfleetint.InventoryNode
-		result, err := clihelpers.FetchAllRawPages("nodes", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.GetInventoryReport(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			nodes = append(nodes, currentPage.Nodes...)
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("nodes",
+			func(pageNumber int) (nvfleetint.InventoryReport, error) {
+				opts.Page = &pageNumber
+				return client.GetInventoryReport(cmd.Context(), opts)
+			},
+			func(page nvfleetint.InventoryReport) { nodes = append(nodes, page.Nodes...) },
+		)
 		if err != nil {
 			return err
 		}
@@ -498,24 +488,18 @@ func runReportErrorAll(cmd *cobra.Command, client *nvfleetint.Client, opts nvfle
 	var nodes []nvfleetint.ErrorReportNode
 	itemKey := errorReportItemKey(nvfleetint.ErrorReportGroupBy(flags.groupBy))
 
-	result, err := clihelpers.FetchAllRawPages(itemKey, 0, func(pageNumber int) (clihelpers.RawPage, error) {
-		page := pageNumber
-		opts.Page = &page
-		currentPage, err := client.GetErrorReport(cmd.Context(), opts)
-		if err != nil {
-			return clihelpers.RawPage{}, err
-		}
-		errorsByType = append(errorsByType, currentPage.Errors...)
-		nodes = append(nodes, currentPage.Nodes...)
-		hasMore := currentPage.HasMore
-		return clihelpers.RawPage{
-			RawJSON:  currentPage.RawJSON,
-			Page:     currentPage.Page,
-			PageSize: currentPage.PageSize,
-			Total:    currentPage.Total,
-			HasMore:  &hasMore,
-		}, nil
-	})
+	// Only the slice matching itemKey is ever populated for a given group-by,
+	// so both are collected and the empty one falls away.
+	result, err := clihelpers.FetchAllPages(itemKey,
+		func(pageNumber int) (nvfleetint.ErrorReport, error) {
+			opts.Page = &pageNumber
+			return client.GetErrorReport(cmd.Context(), opts)
+		},
+		func(page nvfleetint.ErrorReport) {
+			errorsByType = append(errorsByType, page.Errors...)
+			nodes = append(nodes, page.Nodes...)
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -785,19 +769,7 @@ func validateReportStepFlag(step string) error {
 
 // Parses comma-separated severities for error reports
 func parseErrorSeverityList(raw string) ([]nvfleetint.ErrorSeverity, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, fmt.Errorf("invalid severities: %w", err)
-	}
-	severities := make([]nvfleetint.ErrorSeverity, 0, len(values))
-	for _, value := range values {
-		severity := nvfleetint.ErrorSeverity(value)
-		if !severity.Valid() {
-			return nil, fmt.Errorf("invalid severity %q: expected Critical, Fatal, Info, or Warning", value)
-		}
-		severities = append(severities, severity)
-	}
-	return severities, nil
+	return clihelpers.ParseEnumList[nvfleetint.ErrorSeverity]("severity", raw, "Critical, Fatal, Info, or Warning")
 }
 
 // Validates a timestamp flag as RFC3339

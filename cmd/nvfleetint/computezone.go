@@ -100,23 +100,13 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 
 	if common.all {
 		var zones []nvfleetint.ComputeZone
-		result, err := clihelpers.FetchAllRawPages("computezones", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListComputeZones(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			zones = append(zones, currentPage.ComputeZones...)
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("computezones",
+			func(pageNumber int) (nvfleetint.ComputeZonesPage, error) {
+				opts.Page = &pageNumber
+				return client.ListComputeZones(cmd.Context(), opts)
+			},
+			func(page nvfleetint.ComputeZonesPage) { zones = append(zones, page.ComputeZones...) },
+		)
 		if err != nil {
 			return err
 		}

@@ -463,3 +463,51 @@ func TestGetXIDBurstFilterOptionsAPIError(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// Verifies the derived has-more signal, which the endpoint does not report
+func TestXIDBurstsPageInfoHasMore(t *testing.T) {
+	tests := []struct {
+		name     string
+		page     int
+		pageSize int
+		total    int
+		want     bool
+	}{
+		{"more pages remain", 0, 20, 45, true},
+		{"last page", 2, 20, 45, false},
+		{"exact fit", 1, 20, 40, false},
+		{"empty result", 0, 20, 0, false},
+		{"unreported page size", 0, 0, 45, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := XIDBurstsPage{
+				Page:     tt.page,
+				PageSize: tt.pageSize,
+				Total:    tt.total,
+			}.PageInfo()
+			if info.HasMore == nil {
+				t.Fatal("expected a reported has-more signal")
+			}
+			if *info.HasMore != tt.want {
+				t.Fatalf("hasMore = %v, want %v", *info.HasMore, tt.want)
+			}
+		})
+	}
+}
+
+// Verifies the alerts endpoint's cursor takes priority over the page counters
+func TestAlertsPageInfoHasMore(t *testing.T) {
+	cursorPage := AlertsPage{PageCursorNext: "next", Page: 2, PageSize: 20, Total: 40}
+	if info := cursorPage.PageInfo(); info.HasMore == nil || !*info.HasMore {
+		t.Fatal("expected a cursor to report a further page")
+	}
+	countedPage := AlertsPage{Page: 0, PageSize: 20, Total: 45}
+	if info := countedPage.PageInfo(); info.HasMore == nil || !*info.HasMore {
+		t.Fatal("expected the counters to report a further page")
+	}
+	lastPage := AlertsPage{Page: 2, PageSize: 20, Total: 45}
+	if info := lastPage.PageInfo(); info.HasMore == nil || *info.HasMore {
+		t.Fatal("expected the last page to report no further page")
+	}
+}

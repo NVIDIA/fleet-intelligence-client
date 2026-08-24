@@ -44,6 +44,18 @@ type ComputeZonesPage struct {
 	RawJSON      []byte        `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page ComputeZonesPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents a compute zone
 type ComputeZone struct {
 	ID          string       `json:"id"`

@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 const xidBurstsBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostname":"gpu-01","nodeGroup":"ng","nodeGroupId":"ng-1","computeZone":"cz","computeZoneId":"cz-1","startTime":"2026-05-01T00:00:00Z","endTime":"2026-05-01T00:05:00Z","burstDurationSeconds":300,"xidCount":2,"xidNumbers":[{"xidNumber":48,"mnemonic":"DBE","description":"Double Bit ECC"},{"xidNumber":94,"mnemonic":"CE"}],"deviceIds":{"0000:0f:00.0":[48,94]},"jobDisruption":true,"category":"GPU","subcategory":"Memory","stickyXidsSuppressed":1,"suggestedActions":[{"action":"Drain the node","code":"DRAIN","persona":"tenant","type":"immediate"}]}],"page":0,"pageSize":20,"total":1}`
@@ -320,35 +318,6 @@ func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
 	got := out.String()
 	if !strings.Contains(got, "burst-1") || !strings.Contains(got, "burst-2") {
 		t.Fatalf("expected both pages in output:\n%s", got)
-	}
-}
-
-// Verifies the derived has-more signal, which the endpoint does not report
-func TestXIDBurstPageHasMore(t *testing.T) {
-	tests := []struct {
-		name     string
-		page     int
-		pageSize int
-		total    int
-		want     bool
-	}{
-		{"more pages remain", 0, 20, 45, true},
-		{"last page", 2, 20, 45, false},
-		{"exact fit", 1, 20, 40, false},
-		{"empty result", 0, 20, 0, false},
-		{"unreported page size", 0, 0, 45, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := xidBurstPageHasMore(nvfleetint.XIDBurstsPage{
-				Page:     tt.page,
-				PageSize: tt.pageSize,
-				Total:    tt.total,
-			})
-			if got != tt.want {
-				t.Fatalf("hasMore = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
 

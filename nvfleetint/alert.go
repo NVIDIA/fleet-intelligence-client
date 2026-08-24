@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
@@ -132,6 +133,21 @@ type AlertsPage struct {
 	RawJSON        []byte  `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response. The alerts endpoint
+// sends no hasMore field: it signals a further page with a cursor, and where
+// there is none the counters have to be compared.
+func (page AlertsPage) PageInfo() PageInfo {
+	hasMore := strings.TrimSpace(page.PageCursorNext) != "" ||
+		hasMoreFromCounts(page.Page, page.PageSize, page.Total)
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents an alert
 type Alert struct {
 	UUID                 string `json:"alertUUID"`
@@ -180,6 +196,18 @@ type AlertTimelineNodesPage struct {
 	RawJSON                  []byte              `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page AlertTimelineNodesPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents a node that has alert timeline history
 type AlertTimelineNode struct {
 	NodeUUID      string `json:"nodeUuid"`
@@ -220,6 +248,18 @@ type NodeAlertTimelinePage struct {
 	PageSize int                      `json:"pageSize"`
 	Total    int                      `json:"total"`
 	RawJSON  []byte                   `json:"-"`
+}
+
+// PageInfo reports the pagination envelope of the response.
+func (page NodeAlertTimelinePage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
 }
 
 // Represents one alert in a node's timeline history

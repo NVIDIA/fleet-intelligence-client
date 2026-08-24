@@ -245,23 +245,13 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common resolve
 
 	if common.all {
 		var bursts []nvfleetint.XIDBurst
-		result, err := clihelpers.FetchAllRawPages("items", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListXIDBursts(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			bursts = append(bursts, currentPage.Bursts...)
-			hasMore := xidBurstPageHasMore(currentPage)
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("items",
+			func(pageNumber int) (nvfleetint.XIDBurstsPage, error) {
+				opts.Page = &pageNumber
+				return client.ListXIDBursts(cmd.Context(), opts)
+			},
+			func(page nvfleetint.XIDBurstsPage) { bursts = append(bursts, page.Bursts...) },
+		)
 		if err != nil {
 			return err
 		}
@@ -334,14 +324,6 @@ func parseXIDNumberList(raw string) ([]int, error) {
 
 // Reports whether an XID burst list response has another page. The endpoint
 // reports no hasMore flag, so it is derived from the page counters.
-func xidBurstPageHasMore(page nvfleetint.XIDBurstsPage) bool {
-	if page.Page < 0 || page.PageSize <= 0 || page.Total <= 0 {
-		return false
-	}
-	// Page is 0-indexed, so the first (page+1) pages have been seen so far.
-	return (page.Page+1)*page.PageSize < page.Total
-}
-
 // Writes JSON or table output for xidburst list results
 func writeXIDBurstListOutput(w io.Writer, common resolvedCommonFlags, result xidBurstListOutput) error {
 	if common.output == clioutput.FormatJSON {

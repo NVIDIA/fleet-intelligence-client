@@ -142,23 +142,13 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 
 	if common.all {
 		var groups []nvfleetint.NodeGroup
-		result, err := clihelpers.FetchAllRawPages("nodeGroups", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListNodeGroups(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			groups = append(groups, currentPage.NodeGroups...)
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("nodeGroups",
+			func(pageNumber int) (nvfleetint.NodeGroupsPage, error) {
+				opts.Page = &pageNumber
+				return client.ListNodeGroups(cmd.Context(), opts)
+			},
+			func(page nvfleetint.NodeGroupsPage) { groups = append(groups, page.NodeGroups...) },
+		)
 		if err != nil {
 			return err
 		}
@@ -231,24 +221,7 @@ func validateNodeGroupListFlags(flags nodeGroupListFlags, common resolvedCommonF
 
 // Converts comma-separated health filters into API values
 func parseNodeGroupHealthList(raw string) ([]nvfleetint.NodeGroupHealthStatus, error) {
-	values, err := clihelpers.ParseCommaList(raw)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-
-	statuses := make([]nvfleetint.NodeGroupHealthStatus, 0, len(values))
-	for _, value := range values {
-		status := nvfleetint.NodeGroupHealthStatus(value)
-		if !status.Valid() {
-			return nil, fmt.Errorf("invalid health %q: expected Healthy, Degraded, Unhealthy, or Unknown", value)
-		}
-		statuses = append(statuses, status)
-	}
-
-	return statuses, nil
+	return clihelpers.ParseEnumList[nvfleetint.NodeGroupHealthStatus]("health", raw, nodeHealthValues)
 }
 
 // Writes JSON or table output for node group list results

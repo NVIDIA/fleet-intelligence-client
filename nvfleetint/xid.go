@@ -107,6 +107,19 @@ type XIDBurstsPage struct {
 	RawJSON  []byte     `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response. The XID burst
+// endpoint sends no hasMore field, so it is derived from the counters.
+func (page XIDBurstsPage) PageInfo() PageInfo {
+	hasMore := hasMoreFromCounts(page.Page, page.PageSize, page.Total)
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // XIDBurst represents one finalized XID burst. Fields are shaped server-side by
 // the caller's persona: category, subcategory, platform-attributed disruption,
 // XID descriptions, and DC-admin actions are omitted for tenant callers.

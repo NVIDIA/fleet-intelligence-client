@@ -148,23 +148,13 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common resolvedCommo
 
 	if common.all {
 		var events []nvfleetint.Event
-		result, err := clihelpers.FetchAllRawPages("events", 0, func(pageNumber int) (clihelpers.RawPage, error) {
-			page := pageNumber
-			opts.Page = &page
-			currentPage, err := client.ListEvents(cmd.Context(), opts)
-			if err != nil {
-				return clihelpers.RawPage{}, err
-			}
-			events = append(events, currentPage.Events...)
-			hasMore := currentPage.HasMore
-			return clihelpers.RawPage{
-				RawJSON:  currentPage.RawJSON,
-				Page:     currentPage.Page,
-				PageSize: currentPage.PageSize,
-				Total:    currentPage.Total,
-				HasMore:  &hasMore,
-			}, nil
-		})
+		result, err := clihelpers.FetchAllPages("events",
+			func(pageNumber int) (nvfleetint.EventsPage, error) {
+				opts.Page = &pageNumber
+				return client.ListEvents(cmd.Context(), opts)
+			},
+			func(page nvfleetint.EventsPage) { events = append(events, page.Events...) },
+		)
 		if err != nil {
 			return err
 		}
