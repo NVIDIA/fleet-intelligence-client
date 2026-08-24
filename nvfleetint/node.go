@@ -6,8 +6,10 @@ package nvfleetint
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
@@ -379,11 +381,8 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	view, err := normalizeNodeView(opts.View)
+	view, err := opts.normalize()
 	if err != nil {
-		return NodesPage{}, err
-	}
-	if err := validateNodeOptions(view, opts); err != nil {
 		return NodesPage{}, err
 	}
 
@@ -451,7 +450,7 @@ func (c *Client) DescribeNodeWithOptions(
 		return NodeDetails{}, fmt.Errorf("node UUID is required")
 	}
 	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return NodeDetails{}, fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
+		return NodeDetails{}, invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
 	}
 
 	params := fleetapi.GetV1NodesNodeUuidParams{
@@ -484,73 +483,93 @@ func (c *Client) DescribeNodeWithOptions(
 	return node, nil
 }
 
-// Defaults an omitted view and rejects unsupported values
-func normalizeNodeView(view NodeView) (NodeView, error) {
+// The accepted values named in each node option's error
+const (
+	nodeViewValues           = "basic or detail"
+	nodeAgentTypeValues      = "inband or oob"
+	nodeHealthValues         = "Healthy, Degraded, Unhealthy, or Unknown"
+	nodeAgentStatusValues    = "Online, Offline, or Unknown"
+	nodeIntegrityCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
+	nodeFirmwareCheckValues  = "Passed, Failed, or Unknown"
+	nodeOrderValues          = "asc or desc"
+)
+
+// Validate reports whether the options describe a request the API accepts.
+// ListNodes calls it, and a caller can call it first to reject a bad request
+// without opening a connection.
+func (opts ListNodesOptions) Validate() error {
+	_, err := opts.normalize()
+	return err
+}
+
+// Defaults an omitted view and checks every option against it
+func (opts ListNodesOptions) normalize() (NodeView, error) {
+	view := opts.View
 	if view == "" {
-		return NodeViewDetail, nil
+		view = NodeViewDetail
+	} else if !view.Valid() {
+		return "", invalidOption("view", "node view", string(view), nodeViewValues)
 	}
-	if !view.Valid() {
-		return "", fmt.Errorf("invalid node view %q: expected basic or detail", view)
+
+	if opts.AgentType != "" && !opts.AgentType.Valid() {
+		return "", invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
+	}
+	for _, status := range opts.HealthStatuses {
+		if !status.Valid() {
+			return "", invalidOption("health", "node health", string(status), nodeHealthValues)
+		}
+	}
+	for _, status := range opts.AgentStatuses {
+		if !status.Valid() {
+			return "", invalidOption("agentStatus", "node agent status", string(status), nodeAgentStatusValues)
+		}
+	}
+	for _, check := range opts.IntegrityChecks {
+		if !check.Valid() {
+			return "", invalidOption("integrityCheck", "node verification check", string(check), nodeIntegrityCheckValues)
+		}
+	}
+	for _, check := range opts.FirmwareChecks {
+		if !check.Valid() {
+			return "", invalidOption("firmwareCheck", "node firmware check", string(check), nodeFirmwareCheckValues)
+		}
+	}
+	for _, count := range opts.GPUCounts {
+		if count < 0 {
+			return "", invalidOption("gpuCount", "node GPU count", strconv.Itoa(count), "a non-negative integer")
+		}
+	}
+	if opts.SortBy != "" && !opts.SortBy.Valid() {
+		return "", invalidOption("sortBy", "node sort", string(opts.SortBy), "")
+	}
+	if opts.Order != "" && !opts.Order.Valid() {
+		return "", invalidOption("order", "node order", string(opts.Order), nodeOrderValues)
+	}
+
+	if view == NodeViewBasic {
+		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.IntegrityChecks) > 0 || len(opts.FirmwareChecks) > 0 {
+			return "", errors.New("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
+		}
+		// The rule is stated rather than echoing the rejected value, because
+		// the value here is the backend spelling of a sort field a front end
+		// may name differently, as the CLI does with integrityCheck.
+		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
+			return "", errors.New("basic node view supports sorting only by hostname, nodeUUID, or bmcHostname")
+		}
 	}
 
 	return view, nil
 }
 
-// Checks node list options before making the request
-func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
-	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
-	}
-	for _, status := range opts.HealthStatuses {
-		if !status.Valid() {
-			return fmt.Errorf("invalid node health %q: expected Healthy, Degraded, Unhealthy, or Unknown", status)
-		}
-	}
-	for _, status := range opts.AgentStatuses {
-		if !status.Valid() {
-			return fmt.Errorf("invalid node agent status %q: expected Online, Offline, or Unknown", status)
-		}
-	}
-	for _, check := range opts.IntegrityChecks {
-		if !check.Valid() {
-			return fmt.Errorf("invalid node verification check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", check)
-		}
-	}
-	for _, check := range opts.FirmwareChecks {
-		if !check.Valid() {
-			return fmt.Errorf("invalid node firmware check %q: expected Passed, Failed, or Unknown", check)
-		}
-	}
-	for _, count := range opts.GPUCounts {
-		if count < 0 {
-			return fmt.Errorf("invalid node GPU count %d: expected a non-negative integer", count)
-		}
-	}
-	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node sort %q", opts.SortBy)
-	}
-	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid node order %q: expected asc or desc", opts.Order)
-	}
-	if view == NodeViewBasic {
-		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.IntegrityChecks) > 0 || len(opts.FirmwareChecks) > 0 {
-			return fmt.Errorf("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
-		}
-		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
-			return fmt.Errorf("basic node view is incompatible with sort %q", opts.SortBy)
-		}
-	}
-
-	return nil
-}
-
-// Reports whether a sort field works with basic view
+// Reports whether a sort field works with basic view. Basic responses carry
+// only the identity columns, so those are the only fields there is anything to
+// sort on.
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHealthStatus, NodeSortByIntegrityCheck, NodeSortByAgentStatus:
-		return false
-	default:
+	case NodeSortByHostname, NodeSortByUUID, NodeSortByBMCHostname:
 		return true
+	default:
+		return false
 	}
 }
 

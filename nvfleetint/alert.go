@@ -323,7 +323,7 @@ func (c *Client) ListAlerts(ctx context.Context, opts ListAlertsOptions) (Alerts
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	if err := validateAlertOptions(opts); err != nil {
+	if err := opts.Validate(); err != nil {
 		return AlertsPage{}, err
 	}
 
@@ -364,7 +364,7 @@ func (c *Client) GetAlertTimelineFilterOptions(ctx context.Context, active bool)
 func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimelineNodesOptions) (AlertTimelineNodesPage, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
-	if err := validateAlertTimelineNodeOptions(opts); err != nil {
+	if err := opts.Validate(); err != nil {
 		return AlertTimelineNodesPage{}, err
 	}
 
@@ -401,7 +401,7 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 	if opts.NodeUUID == "" {
 		return NodeAlertTimelinePage{}, fmt.Errorf("node UUID is required")
 	}
-	if err := validateNodeAlertTimelineOptions(opts); err != nil {
+	if err := opts.Validate(); err != nil {
 		return NodeAlertTimelinePage{}, err
 	}
 
@@ -480,35 +480,52 @@ func (c *Client) DescribeAlertTimelineWithOptions(ctx context.Context, nodeUUID,
 	return details, nil
 }
 
-// Checks alert list options before making the request
-func validateAlertOptions(opts ListAlertsOptions) error {
+// The accepted values named in each alert option's error
+const (
+	alertSeverityValues      = "Critical or Warning"
+	alertStateValues         = "Detected, Triggered, or Resolved"
+	alertTimelineStateValues = "Critical, Warning, or Resolved"
+	alertTimelineOrderValues = "asc or desc"
+)
+
+// Validate reports whether the options describe a request the API accepts.
+// ListAlerts calls it, and a caller can call it first to reject a bad request
+// without opening a connection.
+func (opts ListAlertsOptions) Validate() error {
 	if opts.Severity != "" && !opts.Severity.Valid() {
-		return fmt.Errorf("invalid alert severity %q: expected Critical or Warning", opts.Severity)
+		return invalidOption("severity", "alert severity", string(opts.Severity), alertSeverityValues)
 	}
 	if opts.State != "" && !opts.State.Valid() {
-		return fmt.Errorf("invalid alert state %q: expected Detected, Triggered, or Resolved", opts.State)
+		return invalidOption("state", "alert state", string(opts.State), alertStateValues)
 	}
 	return nil
 }
 
-// Checks level-1 alert timeline options before making the request
-func validateAlertTimelineNodeOptions(opts ListAlertTimelineNodesOptions) error {
+// Validate reports whether the options describe a request the API accepts.
+// ListAlertTimelineNodes calls it, and a caller can call it first to reject a
+// bad request without opening a connection.
+func (opts ListAlertTimelineNodesOptions) Validate() error {
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid alert timeline node sort %q", opts.SortBy)
+		return invalidOption("sortBy", "alert timeline node sort", string(opts.SortBy), "")
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid alert timeline order %q: expected asc or desc", opts.Order)
+		return invalidOption("order", "alert timeline order", string(opts.Order), alertTimelineOrderValues)
 	}
 	return validateAlertTimelineStates(opts.AlertStates)
 }
 
-// Checks level-2 alert timeline options before making the request
-func validateNodeAlertTimelineOptions(opts ListNodeAlertTimelineOptions) error {
+// Validate reports whether the options describe a request the API accepts.
+// ListNodeAlertTimeline calls it, and a caller can call it first to reject a
+// bad request without opening a connection.
+func (opts ListNodeAlertTimelineOptions) Validate() error {
+	if opts.NodeUUID == "" {
+		return fmt.Errorf("node UUID is required")
+	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node alert timeline sort %q", opts.SortBy)
+		return invalidOption("sortBy", "node alert timeline sort", string(opts.SortBy), "")
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid alert timeline order %q: expected asc or desc", opts.Order)
+		return invalidOption("order", "alert timeline order", string(opts.Order), alertTimelineOrderValues)
 	}
 	return validateAlertTimelineStates(opts.AlertStates)
 }
@@ -516,7 +533,7 @@ func validateNodeAlertTimelineOptions(opts ListNodeAlertTimelineOptions) error {
 // Checks level-3 alert timeline options before making the request
 func validateDescribeAlertTimelineOptions(opts DescribeAlertTimelineOptions) error {
 	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid alert timeline order %q: expected asc or desc", opts.Order)
+		return invalidOption("order", "alert timeline order", string(opts.Order), alertTimelineOrderValues)
 	}
 	if opts.Page != nil && opts.PageSize == nil {
 		return fmt.Errorf("alert timeline page requires page size")
@@ -538,7 +555,7 @@ func validateDescribeAlertTimelineOptions(opts DescribeAlertTimelineOptions) err
 func validateAlertTimelineStates(states []AlertTimelineState) error {
 	for _, state := range states {
 		if !state.Valid() {
-			return fmt.Errorf("invalid alert timeline state %q: expected Critical, Warning, or Resolved", state)
+			return invalidOption("alertState", "alert timeline state", string(state), alertTimelineStateValues)
 		}
 	}
 	return nil

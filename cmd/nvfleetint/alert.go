@@ -242,13 +242,14 @@ func newAlertDescribeCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommonFlags) error {
-	state, err := parseAlertState(flags.state)
-	if err != nil {
-		return err
+	opts := nvfleetint.ListAlertsOptions{
+		NodeUUID:  strings.TrimSpace(flags.node),
+		Component: strings.TrimSpace(flags.component),
+		State:     nvfleetint.AlertState(strings.TrimSpace(flags.state)),
+		Severity:  nvfleetint.AlertSeverity(strings.TrimSpace(flags.severity)),
 	}
-	severity, err := parseAlertSeverity(flags.severity)
-	if err != nil {
-		return err
+	if err := opts.Validate(); err != nil {
+		return renderOptionError(err, alertListFlagNames)
 	}
 	if err := validateListCommonFlags(common); err != nil {
 		return err
@@ -259,12 +260,6 @@ func runAlertList(cmd *cobra.Command, flags alertListFlags, common resolvedCommo
 		return err
 	}
 
-	opts := nvfleetint.ListAlertsOptions{
-		NodeUUID:  strings.TrimSpace(flags.node),
-		Component: strings.TrimSpace(flags.component),
-		State:     state,
-		Severity:  severity,
-	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.all {
@@ -307,7 +302,14 @@ func runAlertSummary(cmd *cobra.Command, flags alertTimelineFlags, common resolv
 		return err
 	}
 	flags.active = active
-	if err := validateAlertTimelineFlags(flags, common); err != nil {
+	if err := validateListCommonFlags(common); err != nil {
+		return err
+	}
+	if err := validateAlertTimelineFlags(flags); err != nil {
+		return err
+	}
+	opts, err := alertTimelineNodesOptions(flags)
+	if err != nil {
 		return err
 	}
 
@@ -316,7 +318,7 @@ func runAlertSummary(cmd *cobra.Command, flags alertTimelineFlags, common resolv
 		return err
 	}
 
-	return runAlertTimelineNodes(cmd, client, flags, common)
+	return runAlertTimelineNodes(cmd, client, opts, common)
 }
 
 // Validates node flags, calls timeline level 2, and writes output.
@@ -327,7 +329,14 @@ func runAlertNode(cmd *cobra.Command, nodeUUID string, flags alertTimelineFlags,
 	}
 	flags.active = active
 	flags.node = strings.TrimSpace(nodeUUID)
-	if err := validateAlertTimelineFlags(flags, common); err != nil {
+	if err := validateListCommonFlags(common); err != nil {
+		return err
+	}
+	if err := validateAlertTimelineFlags(flags); err != nil {
+		return err
+	}
+	opts, err := nodeAlertTimelineOptions(flags)
+	if err != nil {
 		return err
 	}
 
@@ -335,7 +344,7 @@ func runAlertNode(cmd *cobra.Command, nodeUUID string, flags alertTimelineFlags,
 	if err != nil {
 		return err
 	}
-	return runNodeAlertTimeline(cmd, client, flags, flags.node, common)
+	return runNodeAlertTimeline(cmd, client, opts, common)
 }
 
 // Gets and renders the filters and sorting choices available for an alert timeline view.
@@ -377,38 +386,7 @@ func resolveAlertView(view string) (bool, error) {
 }
 
 // Lists nodes with alert timeline history
-func runAlertTimelineNodes(cmd *cobra.Command, client *nvfleetint.Client, flags alertTimelineFlags, common resolvedCommonFlags) error {
-	alertStates, err := parseAlertTimelineStateList(flags.alertState)
-	if err != nil {
-		return err
-	}
-	gpuTypes, err := clihelpers.ParseCommaList(flags.gpuType)
-	if err != nil {
-		return err
-	}
-	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
-	if err != nil {
-		return err
-	}
-	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
-	if err != nil {
-		return err
-	}
-	componentTypes, err := clihelpers.ParseCommaList(flags.componentType)
-	if err != nil {
-		return err
-	}
-	opts := nvfleetint.ListAlertTimelineNodesOptions{
-		Active:         flags.active,
-		Hostname:       strings.TrimSpace(flags.hostname),
-		SortBy:         nvfleetint.AlertTimelineNodeSortBy(strings.TrimSpace(flags.sortBy)),
-		Order:          nvfleetint.AlertTimelineSortOrder(strings.TrimSpace(flags.order)),
-		GPUTypes:       gpuTypes,
-		NodeGroupIDs:   nodeGroupIDs,
-		ComputeZoneIDs: computeZoneIDs,
-		AlertStates:    alertStates,
-		ComponentTypes: componentTypes,
-	}
+func runAlertTimelineNodes(cmd *cobra.Command, client *nvfleetint.Client, opts nvfleetint.ListAlertTimelineNodesOptions, common resolvedCommonFlags) error {
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.all {
@@ -465,39 +443,7 @@ func runAlertTimelineNodes(cmd *cobra.Command, client *nvfleetint.Client, flags 
 }
 
 // Lists alert timeline history for one node
-func runNodeAlertTimeline(cmd *cobra.Command, client *nvfleetint.Client, flags alertTimelineFlags, nodeUUID string, common resolvedCommonFlags) error {
-	alertStates, err := parseAlertTimelineStateList(flags.alertState)
-	if err != nil {
-		return err
-	}
-	gpuTypes, err := clihelpers.ParseCommaList(flags.gpuType)
-	if err != nil {
-		return err
-	}
-	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
-	if err != nil {
-		return err
-	}
-	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
-	if err != nil {
-		return err
-	}
-	componentTypes, err := clihelpers.ParseCommaList(flags.componentType)
-	if err != nil {
-		return err
-	}
-	opts := nvfleetint.ListNodeAlertTimelineOptions{
-		NodeUUID:       nodeUUID,
-		Active:         flags.active,
-		WithoutPSIRT:   flags.withoutPSIRT,
-		SortBy:         nvfleetint.AlertTimelineAlertSortBy(strings.TrimSpace(flags.sortBy)),
-		Order:          nvfleetint.AlertTimelineSortOrder(strings.TrimSpace(flags.order)),
-		AlertStates:    alertStates,
-		ComponentTypes: componentTypes,
-		GPUTypes:       gpuTypes,
-		NodeGroupIDs:   nodeGroupIDs,
-		ComputeZoneIDs: computeZoneIDs,
-	}
+func runNodeAlertTimeline(cmd *cobra.Command, client *nvfleetint.Client, opts nvfleetint.ListNodeAlertTimelineOptions, common resolvedCommonFlags) error {
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.all {
@@ -587,15 +533,47 @@ func runAlertDescribe(cmd *cobra.Command, alertUUID string, flags alertDescribeF
 	})
 }
 
-// Checks alert timeline flags
-func validateAlertTimelineFlags(flags alertTimelineFlags, common resolvedCommonFlags) error {
-	if err := validateListCommonFlags(common); err != nil {
-		return err
+// Checks the alert timeline rules that are about which flags were combined
+// rather than about a value. Value checks live in the SDK, reached through the
+// option builders below.
+func validateAlertTimelineFlags(flags alertTimelineFlags) error {
+	if strings.TrimSpace(flags.node) == "" {
+		if flags.withoutPSIRT {
+			return errors.New("--without-psirt requires --node")
+		}
+		return nil
 	}
-	if _, err := parseAlertTimelineStateList(flags.alertState); err != nil {
-		return err
+	if strings.TrimSpace(flags.hostname) != "" {
+		return errors.New("--hostname cannot be used with --node")
 	}
-	for _, filter := range []struct {
+	return nil
+}
+
+// Names the flag carrying each alert timeline option. The two timeline levels
+// accept different sort fields, so each names its own.
+var (
+	alertTimelineNodesFlagNames = map[string]optionFlagName{
+		"order":      {flag: "order"},
+		"alertState": {flag: "alert-state"},
+		"sortBy": {
+			flag:     "sort-by",
+			expected: "hostname, alert, gpuType, nodeGroup, computeZone, or lastUpdate",
+		},
+	}
+	nodeAlertTimelineFlagNames = map[string]optionFlagName{
+		"order":      {flag: "order"},
+		"alertState": {flag: "alert-state"},
+		"sortBy":     {flag: "sort-by", expected: "startTime or lastUpdate"},
+	}
+)
+
+// Reads the filters shared by both alert timeline levels
+func alertTimelineFilters(flags alertTimelineFlags) (states []nvfleetint.AlertTimelineState, lists [4][]string, err error) {
+	states, err = clihelpers.ParseTypedList[nvfleetint.AlertTimelineState]("alert-state", flags.alertState)
+	if err != nil {
+		return nil, lists, err
+	}
+	for index, filter := range [4]struct {
 		name string
 		raw  string
 	}{
@@ -604,32 +582,66 @@ func validateAlertTimelineFlags(flags alertTimelineFlags, common resolvedCommonF
 		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
 		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
 	} {
-		if _, err := clihelpers.ParseCommaList(filter.raw); err != nil {
-			return fmt.Errorf("invalid --%s: %w", filter.name, err)
+		values, parseErr := clihelpers.ParseCommaList(filter.raw)
+		if parseErr != nil {
+			return nil, lists, fmt.Errorf("invalid --%s: %w", filter.name, parseErr)
 		}
+		lists[index] = values
 	}
-	if flags.order != "" && !nvfleetint.AlertTimelineSortOrder(strings.TrimSpace(flags.order)).Valid() {
-		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
+	return states, lists, nil
+}
+
+// alertTimelineNodesOptions reads the level-1 timeline flags exactly once and
+// hands the result to the SDK to validate.
+func alertTimelineNodesOptions(flags alertTimelineFlags) (nvfleetint.ListAlertTimelineNodesOptions, error) {
+	states, lists, err := alertTimelineFilters(flags)
+	if err != nil {
+		return nvfleetint.ListAlertTimelineNodesOptions{}, err
 	}
-	nodeUUID := strings.TrimSpace(flags.node)
-	if nodeUUID == "" {
-		if flags.withoutPSIRT {
-			return errors.New("--without-psirt requires --node")
-		}
-		sortBy := nvfleetint.AlertTimelineNodeSortBy(strings.TrimSpace(flags.sortBy))
-		if sortBy != "" && !sortBy.Valid() {
-			return fmt.Errorf("invalid sort-by %q for impacted nodes: expected hostname, alert, gpuType, nodeGroup, computeZone, or lastUpdate", flags.sortBy)
-		}
-		return nil
+
+	opts := nvfleetint.ListAlertTimelineNodesOptions{
+		Active:         flags.active,
+		Hostname:       strings.TrimSpace(flags.hostname),
+		SortBy:         nvfleetint.AlertTimelineNodeSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:          nvfleetint.AlertTimelineSortOrder(strings.TrimSpace(flags.order)),
+		AlertStates:    states,
+		ComponentTypes: lists[0],
+		GPUTypes:       lists[1],
+		NodeGroupIDs:   lists[2],
+		ComputeZoneIDs: lists[3],
 	}
-	if strings.TrimSpace(flags.hostname) != "" {
-		return errors.New("--hostname cannot be used with --node")
+	if err := opts.Validate(); err != nil {
+		return opts, renderOptionError(err, alertTimelineNodesFlagNames)
 	}
-	sortBy := nvfleetint.AlertTimelineAlertSortBy(strings.TrimSpace(flags.sortBy))
-	if sortBy != "" && !sortBy.Valid() {
-		return fmt.Errorf("invalid sort-by %q for node alerts: expected startTime or lastUpdate", flags.sortBy)
+
+	return opts, nil
+}
+
+// nodeAlertTimelineOptions reads the level-2 timeline flags exactly once and
+// hands the result to the SDK to validate.
+func nodeAlertTimelineOptions(flags alertTimelineFlags) (nvfleetint.ListNodeAlertTimelineOptions, error) {
+	states, lists, err := alertTimelineFilters(flags)
+	if err != nil {
+		return nvfleetint.ListNodeAlertTimelineOptions{}, err
 	}
-	return nil
+
+	opts := nvfleetint.ListNodeAlertTimelineOptions{
+		NodeUUID:       strings.TrimSpace(flags.node),
+		Active:         flags.active,
+		WithoutPSIRT:   flags.withoutPSIRT,
+		SortBy:         nvfleetint.AlertTimelineAlertSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:          nvfleetint.AlertTimelineSortOrder(strings.TrimSpace(flags.order)),
+		AlertStates:    states,
+		ComponentTypes: lists[0],
+		GPUTypes:       lists[1],
+		NodeGroupIDs:   lists[2],
+		ComputeZoneIDs: lists[3],
+	}
+	if err := opts.Validate(); err != nil {
+		return opts, renderOptionError(err, nodeAlertTimelineFlagNames)
+	}
+
+	return opts, nil
 }
 
 // Checks alert describe flags
@@ -652,35 +664,11 @@ func validateAlertDescribeFlags(cmd *cobra.Command, flags alertDescribeFlags, co
 	return nil
 }
 
-// Converts comma-separated alert timeline states into API values
-func parseAlertTimelineStateList(raw string) ([]nvfleetint.AlertTimelineState, error) {
-	return clihelpers.ParseEnumList[nvfleetint.AlertTimelineState]("alert-state", raw, "Critical, Warning, or Resolved")
-}
-
-// Converts a state flag into an API value
-func parseAlertState(raw string) (nvfleetint.AlertState, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", nil
-	}
-	state := nvfleetint.AlertState(raw)
-	if !state.Valid() {
-		return "", fmt.Errorf("invalid state %q: expected Detected, Triggered, or Resolved", raw)
-	}
-	return state, nil
-}
-
-// Converts a severity flag into an API value
-func parseAlertSeverity(raw string) (nvfleetint.AlertSeverity, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", nil
-	}
-	severity := nvfleetint.AlertSeverity(raw)
-	if !severity.Valid() {
-		return "", fmt.Errorf("invalid severity %q: expected Critical or Warning", raw)
-	}
-	return severity, nil
+// Names the flag carrying each alert list option, for rendering SDK validation
+// errors against what the user typed.
+var alertListFlagNames = map[string]optionFlagName{
+	"state":    {flag: "state"},
+	"severity": {flag: "severity"},
 }
 
 // Writes JSON or table output for alert list results

@@ -125,13 +125,22 @@ func TestNodeListSortHelpUsesVerificationCheck(t *testing.T) {
 		t.Fatalf("sort-by usage still mentions integrityCheck: %q", usage)
 	}
 
-	common := resolvedCommonFlags{output: "table", pageSize: 20, timeout: nvfleetint.DefaultTimeout}
-	err := validateNodeListFlags(nodeListFlags{view: "detail", sortBy: "bogus"}, "bogus", common)
+	_, err := nodeListOptions(nodeListFlags{view: "detail", sortBy: "bogus"})
 	if err == nil {
 		t.Fatal("expected invalid sort-by error")
 	}
 	if !strings.Contains(err.Error(), "verificationCheck") || strings.Contains(err.Error(), "integrityCheck") {
 		t.Fatalf("unexpected sort-by error: %v", err)
+	}
+
+	// Basic view rejects the sort after the CLI has translated it, so this is
+	// the path where the backend spelling could leak back to the user.
+	_, err = nodeListOptions(nodeListFlags{view: "basic", sortBy: nodeSortByVerificationCheck})
+	if err == nil {
+		t.Fatal("expected basic view sort error")
+	}
+	if strings.Contains(err.Error(), "integrityCheck") {
+		t.Fatalf("basic view sort error mentions integrityCheck: %v", err)
 	}
 }
 
@@ -872,7 +881,7 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "sort", args: []string{"node", "list", "--sort-by", "bad"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
-		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view is incompatible"},
+		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view supports sorting only by"},
 	}
 
 	for _, tt := range tests {

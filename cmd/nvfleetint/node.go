@@ -206,63 +206,10 @@ func newNodeDescribeCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonFlags) error {
-	sortBy, err := normalizeNodeSortBy(flags.sortBy)
-	if err != nil {
+	if err := validateListCommonFlags(common); err != nil {
 		return err
 	}
-	if err := validateNodeListFlags(flags, sortBy, common); err != nil {
-		return err
-	}
-
-	nodeUUIDs, err := clihelpers.ParseCommaList(flags.nodeUUIDs)
-	if err != nil {
-		return err
-	}
-	healthStatuses, err := parseNodeHealthList(flags.health)
-	if err != nil {
-		return err
-	}
-	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
-	if err != nil {
-		return err
-	}
-	computeZoneNames, err := clihelpers.ParseCommaList(flags.computeZoneNames)
-	if err != nil {
-		return err
-	}
-	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
-	if err != nil {
-		return err
-	}
-	nodeGroupNames, err := clihelpers.ParseCommaList(flags.nodeGroupNames)
-	if err != nil {
-		return err
-	}
-	gpuTypes, err := clihelpers.ParseCommaList(flags.gpuType)
-	if err != nil {
-		return err
-	}
-	gpuCounts, err := parseNodeGPUCountList(flags.gpuCount)
-	if err != nil {
-		return err
-	}
-	publicIPs, err := clihelpers.ParseCommaList(flags.publicIP)
-	if err != nil {
-		return err
-	}
-	privateIPs, err := clihelpers.ParseCommaList(flags.privateIP)
-	if err != nil {
-		return err
-	}
-	agentStatuses, err := parseNodeAgentStatusList(flags.agentStatus)
-	if err != nil {
-		return err
-	}
-	integrityChecks, err := parseNodeIntegrityCheckList(flags.integrityCheck)
-	if err != nil {
-		return err
-	}
-	firmwareChecks, err := parseNodeFirmwareCheckList(flags.firmwareCheck)
+	opts, err := nodeListOptions(flags)
 	if err != nil {
 		return err
 	}
@@ -272,27 +219,6 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common resolvedCommonF
 		return err
 	}
 
-	opts := nvfleetint.ListNodesOptions{
-		View:             nvfleetint.NodeView(flags.view),
-		AgentType:        nvfleetint.NodeAgentType(flags.agentType),
-		NodeUUIDs:        nodeUUIDs,
-		HealthStatuses:   healthStatuses,
-		ComputeZoneIDs:   computeZoneIDs,
-		ComputeZoneNames: computeZoneNames,
-		NodeGroupIDs:     nodeGroupIDs,
-		NodeGroupNames:   nodeGroupNames,
-		GPUTypes:         gpuTypes,
-		GPUCounts:        gpuCounts,
-		PublicIPs:        publicIPs,
-		PrivateIPs:       privateIPs,
-		Hostname:         strings.TrimSpace(flags.hostname),
-		BMCHostname:      strings.TrimSpace(flags.bmcHostname),
-		AgentStatuses:    agentStatuses,
-		IntegrityChecks:  integrityChecks,
-		FirmwareChecks:   firmwareChecks,
-		SortBy:           sortBy,
-		Order:            nvfleetint.NodeSortOrder(flags.order),
-	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 	agentType := nvfleetint.NodeAgentType(flags.agentType)
 	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewDetail && agentType == "" {
@@ -581,57 +507,91 @@ func parseOOBInventorySections(
 	return options, nil
 }
 
-// Checks node list flags
-func validateNodeListFlags(flags nodeListFlags, sortBy nvfleetint.NodeSortBy, common resolvedCommonFlags) error {
-	if err := validateListCommonFlags(common); err != nil {
-		return err
-	}
-	if !nvfleetint.NodeView(flags.view).Valid() {
-		return fmt.Errorf("invalid view %q: expected basic or detail", flags.view)
-	}
-	if flags.agentType != "" && !nvfleetint.NodeAgentType(flags.agentType).Valid() {
-		return fmt.Errorf("invalid agent-type %q: expected inband or oob", flags.agentType)
-	}
-	if _, err := parseNodeHealthList(flags.health); err != nil {
-		return err
-	}
-	if _, err := parseNodeAgentStatusList(flags.agentStatus); err != nil {
-		return err
-	}
-	if _, err := parseNodeIntegrityCheckList(flags.integrityCheck); err != nil {
-		return err
-	}
-	if _, err := parseNodeFirmwareCheckList(flags.firmwareCheck); err != nil {
-		return err
-	}
-	if _, err := parseNodeGPUCountList(flags.gpuCount); err != nil {
-		return err
-	}
-	if sortBy != "" && !sortBy.Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected %s", flags.sortBy, nodeSortByList)
-	}
-	if flags.order != "" && !nvfleetint.NodeSortOrder(flags.order).Valid() {
-		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
-	}
-	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewBasic {
-		if strings.TrimSpace(flags.health) != "" || strings.TrimSpace(flags.agentStatus) != "" || strings.TrimSpace(flags.integrityCheck) != "" || strings.TrimSpace(flags.firmwareCheck) != "" {
-			return errors.New("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
-		}
-		if sortBy != "" && !basicNodeSortCompatible(sortBy) {
-			return fmt.Errorf("basic node view is incompatible with sort %q", flags.sortBy)
-		}
-	}
-	return nil
+// Names the flag carrying each node list option, for rendering SDK validation
+// errors against what the user typed.
+var nodeListFlagNames = map[string]optionFlagName{
+	"view":           {flag: "view"},
+	"agentType":      {flag: "agent-type"},
+	"health":         {flag: "health"},
+	"agentStatus":    {flag: "agent-status"},
+	"integrityCheck": {flag: "verification-check"},
+	"firmwareCheck":  {flag: "firmware-check"},
+	"gpuCount":       {flag: "gpu-count"},
+	"order":          {flag: "order"},
+	// The CLI spells the backend's integrityCheck sort field verificationCheck,
+	// so it lists the sort fields itself rather than echoing the backend's.
+	"sortBy": {flag: "sort-by", expected: nodeSortByList},
 }
 
-// Reports whether a sort field works with basic view
-func basicNodeSortCompatible(sortBy nvfleetint.NodeSortBy) bool {
-	switch sortBy {
-	case nvfleetint.NodeSortByHostname, nvfleetint.NodeSortByUUID, nvfleetint.NodeSortByBMCHostname:
-		return true
-	default:
-		return false
+// nodeListOptions reads every node list flag exactly once and hands the result
+// to the SDK to validate, so the accepted values and the view compatibility
+// rules are stated in one place rather than in both layers.
+func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
+	sortBy, err := normalizeNodeSortBy(flags.sortBy)
+	if err != nil {
+		return nvfleetint.ListNodesOptions{}, err
 	}
+
+	opts := nvfleetint.ListNodesOptions{
+		View:        nvfleetint.NodeView(flags.view),
+		AgentType:   nvfleetint.NodeAgentType(flags.agentType),
+		Hostname:    strings.TrimSpace(flags.hostname),
+		BMCHostname: strings.TrimSpace(flags.bmcHostname),
+		SortBy:      sortBy,
+		Order:       nvfleetint.NodeSortOrder(flags.order),
+	}
+
+	if opts.HealthStatuses, err = clihelpers.ParseTypedList[nvfleetint.NodeHealthStatus](
+		"health", flags.health); err != nil {
+		return opts, err
+	}
+	if opts.AgentStatuses, err = clihelpers.ParseTypedList[nvfleetint.NodeAgentStatus](
+		"agent-status", flags.agentStatus); err != nil {
+		return opts, err
+	}
+	if opts.IntegrityChecks, err = clihelpers.ParseTypedList[nvfleetint.NodeIntegrityCheck](
+		"verification-check", flags.integrityCheck); err != nil {
+		return opts, err
+	}
+	if opts.FirmwareChecks, err = clihelpers.ParseTypedList[nvfleetint.NodeFirmwareCheck](
+		"firmware-check", flags.firmwareCheck); err != nil {
+		return opts, err
+	}
+
+	for _, list := range []struct {
+		name string
+		raw  string
+		dest *[]string
+	}{
+		{name: "node-uuids", raw: flags.nodeUUIDs, dest: &opts.NodeUUIDs},
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs, dest: &opts.ComputeZoneIDs},
+		{name: "compute-zone-names", raw: flags.computeZoneNames, dest: &opts.ComputeZoneNames},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, dest: &opts.NodeGroupIDs},
+		{name: "nodegroup-names", raw: flags.nodeGroupNames, dest: &opts.NodeGroupNames},
+		{name: "gpu-type", raw: flags.gpuType, dest: &opts.GPUTypes},
+		{name: "public-ip", raw: flags.publicIP, dest: &opts.PublicIPs},
+		{name: "private-ip", raw: flags.privateIP, dest: &opts.PrivateIPs},
+	} {
+		values, err := clihelpers.ParseCommaList(list.raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid %s: %w", list.name, err)
+		}
+		*list.dest = values
+	}
+
+	// GPU counts are the one filter the SDK cannot check on its own: it takes
+	// integers, so a non-numeric value has to be rejected here.
+	gpuCounts, err := clihelpers.ParseIntList("gpu-count", flags.gpuCount)
+	if err != nil {
+		return opts, err
+	}
+	opts.GPUCounts = gpuCounts
+
+	if err := opts.Validate(); err != nil {
+		return opts, renderOptionError(err, nodeListFlagNames)
+	}
+
+	return opts, nil
 }
 
 // Normalizes the raw sort-by flag into an API sort field.
@@ -644,40 +604,6 @@ func normalizeNodeSortBy(raw string) (nvfleetint.NodeSortBy, error) {
 	}
 
 	return nvfleetint.NodeSortBy(trimmed), nil
-}
-
-// The accepted values named in each filter's error message
-const (
-	nodeHealthValues         = "Healthy, Degraded, Unhealthy, or Unknown"
-	nodeAgentStatusValues    = "Online, Offline, or Unknown"
-	nodeIntegrityCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
-	nodeFirmwareCheckValues  = "Passed, Failed, or Unknown"
-)
-
-// Converts comma-separated health filters into API values
-func parseNodeHealthList(raw string) ([]nvfleetint.NodeHealthStatus, error) {
-	return clihelpers.ParseEnumList[nvfleetint.NodeHealthStatus]("health", raw, nodeHealthValues)
-}
-
-// Converts comma-separated agent filters into API values
-func parseNodeAgentStatusList(raw string) ([]nvfleetint.NodeAgentStatus, error) {
-	return clihelpers.ParseEnumList[nvfleetint.NodeAgentStatus]("agent-status", raw, nodeAgentStatusValues)
-}
-
-// Converts comma-separated verification filters into API values.
-// Verification check is the user-facing name for the backend integrity check.
-func parseNodeIntegrityCheckList(raw string) ([]nvfleetint.NodeIntegrityCheck, error) {
-	return clihelpers.ParseEnumList[nvfleetint.NodeIntegrityCheck]("verification-check", raw, nodeIntegrityCheckValues)
-}
-
-// Converts comma-separated GPU count filters into API values
-func parseNodeGPUCountList(raw string) ([]int, error) {
-	return clihelpers.ParseIntList("gpu-count", raw)
-}
-
-// Converts comma-separated firmware filters into API values
-func parseNodeFirmwareCheckList(raw string) ([]nvfleetint.NodeFirmwareCheck, error) {
-	return clihelpers.ParseEnumList[nvfleetint.NodeFirmwareCheck]("firmware-check", raw, nodeFirmwareCheckValues)
 }
 
 // Writes JSON or table output for node list results

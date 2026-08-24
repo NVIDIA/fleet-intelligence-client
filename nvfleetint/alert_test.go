@@ -286,3 +286,11 @@ func TestAlertTimelineRejectsInvalidOptions(t *testing.T) {
 		}
 	}
 }
+
+// Verifies node alert timeline options reject requests before opening a connection
+func TestListNodeAlertTimelineOptionsValidateRequiresNodeUUID(t *testing.T) {
+	err := (ListNodeAlertTimelineOptions{}).Validate()
+	if err == nil || !strings.Contains(err.Error(), "node UUID is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

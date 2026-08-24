@@ -509,8 +509,10 @@ func inventoryReportOptions(flags reportInventoryFlags, common resolvedCommonFla
 		Order:     nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)),
 	}
 
-	if !opts.Format.Valid() {
-		return opts, fmt.Errorf("invalid format %q: expected json or csv", flags.format)
+	// Values are the SDK's to judge; the rules below are about which flags were
+	// combined, which only the CLI can phrase in terms of flags.
+	if err := opts.ValidateValues(); err != nil {
+		return opts, renderOptionError(err, reportInventoryFlagNames)
 	}
 	if opts.Signed && opts.Format != nvfleetint.ReportFormatCSV {
 		return opts, errors.New("--signed requires --format csv")
@@ -545,12 +547,6 @@ func inventoryReportOptions(flags reportInventoryFlags, common resolvedCommonFla
 		if err := validateRFC3339Flag("--end", flags.end); err != nil {
 			return opts, err
 		}
-	}
-	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return opts, fmt.Errorf("invalid sort-by %q: expected %s", flags.sortBy, reportInventorySortByList)
-	}
-	if opts.Order != "" && !opts.Order.Valid() {
-		return opts, fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
 	}
 	if opts.Format == nvfleetint.ReportFormatCSV && !opts.Signed {
 		if common.outputSet {
@@ -659,15 +655,6 @@ func errorReportOptions(flags reportErrorFlags, common resolvedCommonFlags) (nvf
 	if strings.TrimSpace(flags.view) == "" {
 		return opts, errors.New("--view is required")
 	}
-	if !opts.View.Valid() {
-		return opts, fmt.Errorf("invalid view %q: expected list, graph, or overview", flags.view)
-	}
-	if !opts.Format.Valid() {
-		return opts, fmt.Errorf("invalid format %q: expected json or csv", flags.format)
-	}
-	if strings.TrimSpace(flags.groupBy) != "" && !opts.GroupBy.Valid() {
-		return opts, fmt.Errorf("invalid group-by %q: expected error or node", flags.groupBy)
-	}
 
 	for _, list := range []struct {
 		name string
@@ -686,11 +673,17 @@ func errorReportOptions(flags reportErrorFlags, common resolvedCommonFlags) (nvf
 		*list.dest = values
 	}
 
-	severities, err := parseErrorSeverityList(flags.severities)
+	severities, err := clihelpers.ParseTypedList[nvfleetint.ErrorSeverity]("severity", flags.severities)
 	if err != nil {
 		return opts, err
 	}
 	opts.Severities = severities
+
+	// Values are the SDK's to judge; the rules below are about which flags were
+	// combined, which only the CLI can phrase in terms of flags.
+	if err := opts.ValidateValues(); err != nil {
+		return opts, renderOptionError(err, reportErrorFlagNames)
+	}
 
 	opts.Step = strings.TrimSpace(flags.step)
 	if opts.Step != "" {
@@ -755,10 +748,21 @@ func validateReportStepFlag(step string) error {
 	return nil
 }
 
-// Parses comma-separated severities for error reports
-func parseErrorSeverityList(raw string) ([]nvfleetint.ErrorSeverity, error) {
-	return clihelpers.ParseEnumList[nvfleetint.ErrorSeverity]("severity", raw, "Critical, Fatal, Info, or Warning")
-}
+// Names the flag carrying each report option, for rendering SDK validation
+// errors against what the user typed.
+var (
+	reportErrorFlagNames = map[string]optionFlagName{
+		"view":     {flag: "view"},
+		"format":   {flag: "format"},
+		"groupBy":  {flag: "group-by"},
+		"severity": {flag: "severity"},
+	}
+	reportInventoryFlagNames = map[string]optionFlagName{
+		"format": {flag: "format"},
+		"sortBy": {flag: "sort-by", expected: reportInventorySortByList},
+		"order":  {flag: "order"},
+	}
+)
 
 // Validates a timestamp flag as RFC3339
 func validateRFC3339Flag(name, value string) error {

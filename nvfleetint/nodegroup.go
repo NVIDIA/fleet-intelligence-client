@@ -6,6 +6,7 @@ package nvfleetint
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -113,11 +114,8 @@ func (c *Client) ListNodeGroups(ctx context.Context, opts ListNodeGroupsOptions)
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	view, err := normalizeNodeGroupView(opts.View)
+	view, err := opts.normalize()
 	if err != nil {
-		return NodeGroupsPage{}, err
-	}
-	if err := validateNodeGroupOptions(view, opts); err != nil {
 		return NodeGroupsPage{}, err
 	}
 
@@ -154,48 +152,59 @@ func (c *Client) ListNodeGroups(ctx context.Context, opts ListNodeGroupsOptions)
 	return decodeDetailNodeGroups(resp.Body)
 }
 
-// Defaults an omitted view and rejects unsupported values
-func normalizeNodeGroupView(view NodeGroupView) (NodeGroupView, error) {
-	if view == "" {
-		return NodeGroupViewDetail, nil
-	}
-	if !view.Valid() {
-		return "", fmt.Errorf("invalid node group view %q: expected basic or detail", view)
-	}
+// The accepted values named in each node group option's error
+const (
+	nodeGroupViewValues   = "basic or detail"
+	nodeGroupHealthValues = "Healthy, Degraded, Unhealthy, or Unknown"
+	nodeGroupSortByValues = "health or nodes"
+	nodeGroupOrderValues  = "asc or desc"
+)
 
-	return view, nil
+// Validate reports whether the options describe a request the API accepts.
+// ListNodeGroups calls it, and a caller can call it first to reject a bad
+// request without opening a connection.
+func (opts ListNodeGroupsOptions) Validate() error {
+	_, err := opts.normalize()
+	return err
 }
 
-// Checks node group list options before making the request
-func validateNodeGroupOptions(view NodeGroupView, opts ListNodeGroupsOptions) error {
+// Defaults an omitted view and checks every option against it
+func (opts ListNodeGroupsOptions) normalize() (NodeGroupView, error) {
+	view := opts.View
+	if view == "" {
+		view = NodeGroupViewDetail
+	} else if !view.Valid() {
+		return "", invalidOption("view", "node group view", string(view), nodeGroupViewValues)
+	}
+
 	for _, status := range opts.HealthStatuses {
 		if !status.Valid() {
-			return fmt.Errorf("invalid node group health %q: expected Healthy, Degraded, Unhealthy, or Unknown", status)
+			return "", invalidOption("health", "node group health", string(status), nodeGroupHealthValues)
 		}
 	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node group sort %q: expected health or nodes", opts.SortBy)
+		return "", invalidOption("sortBy", "node group sort", string(opts.SortBy), nodeGroupSortByValues)
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid node group order %q: expected asc or desc", opts.Order)
-	}
-	if view == NodeGroupViewBasic && opts.IncludeMetrics != nil {
-		return fmt.Errorf("basic node group view is incompatible with include metrics")
-	}
-	if view == NodeGroupViewBasic && len(opts.ComputeZoneNames) > 0 {
-		return fmt.Errorf("basic node group view is incompatible with compute zone name filters")
-	}
-	if view == NodeGroupViewBasic && (len(opts.HealthStatuses) > 0 || len(opts.GPUTypes) > 0) {
-		return fmt.Errorf("basic node group view is incompatible with health and GPU type filters")
-	}
-	if view == NodeGroupViewBasic && opts.SortBy != "" {
-		return fmt.Errorf("basic node group view is incompatible with sort %q", opts.SortBy)
-	}
-	if view == NodeGroupViewBasic && opts.Order != "" {
-		return fmt.Errorf("basic node group view is incompatible with sort order %q", opts.Order)
+		return "", invalidOption("order", "node group order", string(opts.Order), nodeGroupOrderValues)
 	}
 
-	return nil
+	if view == NodeGroupViewBasic {
+		switch {
+		case opts.IncludeMetrics != nil:
+			return "", errors.New("basic node group view is incompatible with include metrics")
+		case len(opts.ComputeZoneNames) > 0:
+			return "", errors.New("basic node group view is incompatible with compute zone name filters")
+		case len(opts.HealthStatuses) > 0 || len(opts.GPUTypes) > 0:
+			return "", errors.New("basic node group view is incompatible with health and GPU type filters")
+		case opts.SortBy != "":
+			return "", fmt.Errorf("basic node group view is incompatible with sort %q", opts.SortBy)
+		case opts.Order != "":
+			return "", fmt.Errorf("basic node group view is incompatible with sort order %q", opts.Order)
+		}
+	}
+
+	return view, nil
 }
 
 // Converts a normalized view into the generated parameter type

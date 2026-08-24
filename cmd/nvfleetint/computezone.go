@@ -5,7 +5,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
@@ -72,14 +71,10 @@ func newComputeZoneListCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common resolvedCommonFlags) error {
-	if err := validateComputeZoneListFlags(flags, common); err != nil {
+	if err := validateListCommonFlags(common); err != nil {
 		return err
 	}
-	if nvfleetint.ComputeZoneView(flags.view) == nvfleetint.ComputeZoneViewBasic && cmd.Flags().Changed("include-metrics") {
-		return errors.New("basic compute zone view is incompatible with --include-metrics")
-	}
-
-	zoneIDs, err := clihelpers.ParseCommaList(flags.zoneIDs)
+	opts, err := computeZoneListOptions(flags, cmd.Flags().Changed("include-metrics"))
 	if err != nil {
 		return err
 	}
@@ -89,13 +84,6 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 		return err
 	}
 
-	opts := nvfleetint.ListComputeZonesOptions{
-		View:    nvfleetint.ComputeZoneView(flags.view),
-		ZoneIDs: zoneIDs,
-	}
-	if cmd.Flags().Changed("include-metrics") {
-		opts.IncludeMetrics = &flags.includeMetrics
-	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.all {
@@ -133,15 +121,40 @@ func runComputeZoneList(cmd *cobra.Command, flags computeZoneListFlags, common r
 	})
 }
 
-// Checks compute zone list flags
-func validateComputeZoneListFlags(flags computeZoneListFlags, common resolvedCommonFlags) error {
-	if err := validateListCommonFlags(common); err != nil {
-		return err
+// Names the flag carrying each compute zone list option, for rendering SDK
+// validation errors against what the user typed.
+var computeZoneListFlagNames = map[string]optionFlagName{
+	"view": {flag: "view"},
+}
+
+// computeZoneListOptions reads every compute zone list flag exactly once and
+// hands the result to the SDK to validate. includeMetricsSet reports whether
+// --include-metrics was given at all, which is the difference between asking
+// for the backend default and asking for false.
+func computeZoneListOptions(flags computeZoneListFlags, includeMetricsSet bool) (nvfleetint.ListComputeZonesOptions, error) {
+	opts := nvfleetint.ListComputeZonesOptions{
+		View: nvfleetint.ComputeZoneView(flags.view),
 	}
-	if !nvfleetint.ComputeZoneView(flags.view).Valid() {
-		return fmt.Errorf("invalid view %q: expected basic or detail", flags.view)
+	if includeMetricsSet {
+		opts.IncludeMetrics = &flags.includeMetrics
 	}
-	return nil
+
+	zoneIDs, err := clihelpers.ParseCommaList(flags.zoneIDs)
+	if err != nil {
+		return opts, err
+	}
+	opts.ZoneIDs = zoneIDs
+
+	// The SDK enforces this too; naming the flag is the only reason it is
+	// restated here, since the SDK sees a pointer rather than a flag.
+	if opts.View == nvfleetint.ComputeZoneViewBasic && includeMetricsSet {
+		return opts, errors.New("basic compute zone view is incompatible with --include-metrics")
+	}
+	if err := opts.Validate(); err != nil {
+		return opts, renderOptionError(err, computeZoneListFlagNames)
+	}
+
+	return opts, nil
 }
 
 // Writes JSON or table output for compute zone list results

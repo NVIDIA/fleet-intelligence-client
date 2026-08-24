@@ -232,6 +232,43 @@ func applyPagination(flags resolvedCommonFlags, setPage func(*int), setPageSize 
 	}
 }
 
+// Names the flag that carries an SDK option, and optionally the accepted
+// values to list when the CLI spells them differently from the backend.
+type optionFlagName struct {
+	flag string
+	// expected overrides the SDK's list of accepted values. It is set only
+	// where the CLI's vocabulary differs, as it does for the node sort field
+	// the CLI calls verificationCheck.
+	expected string
+}
+
+// Re-renders an SDK option error against the flag that carries the option, so
+// that a message names what the user typed rather than the SDK field.
+//
+// Validation itself lives in the SDK: this maps its vocabulary onto the CLI's
+// instead of restating the rules, which is what let the two drift apart.
+// Errors that are not about one option value pass through unchanged; their
+// wording already reads as CLI prose.
+func renderOptionError(err error, names map[string]optionFlagName) error {
+	var optionErr *nvfleetint.InvalidOptionError
+	if !errors.As(err, &optionErr) {
+		return err
+	}
+	name, ok := names[optionErr.Option]
+	if !ok {
+		return err
+	}
+
+	expected := optionErr.Expected
+	if name.expected != "" {
+		expected = name.expected
+	}
+	if expected == "" {
+		return fmt.Errorf("invalid %s %q", name.flag, optionErr.Value)
+	}
+	return fmt.Errorf("invalid %s %q: expected %s", name.flag, optionErr.Value, expected)
+}
+
 // Writes paginated list output as JSON, presenting the page number with the
 // CLI's 1-based contract. rawJSON is a single API page; jsonValue is the merged
 // result produced for --all.

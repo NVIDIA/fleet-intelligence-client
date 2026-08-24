@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
@@ -90,30 +89,10 @@ func newNodeGroupListCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resolvedCommonFlags) error {
-	if err := validateNodeGroupListFlags(flags, common); err != nil {
+	if err := validateListCommonFlags(common); err != nil {
 		return err
 	}
-	if nvfleetint.NodeGroupView(flags.view) == nvfleetint.NodeGroupViewBasic && cmd.Flags().Changed("include-metrics") {
-		return errors.New("basic node group view is incompatible with --include-metrics")
-	}
-
-	computeZoneIDs, err := clihelpers.ParseCommaList(flags.computeZoneIDs)
-	if err != nil {
-		return err
-	}
-	computeZoneNames, err := clihelpers.ParseCommaList(flags.computeZoneNames)
-	if err != nil {
-		return err
-	}
-	nodeGroupIDs, err := clihelpers.ParseCommaList(flags.nodeGroupIDs)
-	if err != nil {
-		return err
-	}
-	healthStatuses, err := parseNodeGroupHealthList(flags.health)
-	if err != nil {
-		return err
-	}
-	gpuTypes, err := clihelpers.ParseCommaList(flags.gpuType)
+	opts, err := nodeGroupListOptions(flags, cmd.Flags().Changed("include-metrics"))
 	if err != nil {
 		return err
 	}
@@ -123,21 +102,6 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 		return err
 	}
 
-	opts := nvfleetint.ListNodeGroupsOptions{
-		View:           nvfleetint.NodeGroupView(flags.view),
-		ComputeZoneIDs: computeZoneIDs,
-		NodeGroupIDs:   nodeGroupIDs,
-		SortBy:         nvfleetint.NodeGroupSortBy(flags.sortBy),
-		Order:          nvfleetint.NodeGroupSortOrder(flags.order),
-	}
-	if cmd.Flags().Changed("include-metrics") {
-		opts.IncludeMetrics = &flags.includeMetrics
-	}
-	if nvfleetint.NodeGroupView(flags.view) == nvfleetint.NodeGroupViewDetail {
-		opts.ComputeZoneNames = computeZoneNames
-		opts.HealthStatuses = healthStatuses
-		opts.GPUTypes = gpuTypes
-	}
 	applyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.all {
@@ -175,53 +139,62 @@ func runNodeGroupList(cmd *cobra.Command, flags nodeGroupListFlags, common resol
 	})
 }
 
-// Checks node group list flags
-func validateNodeGroupListFlags(flags nodeGroupListFlags, common resolvedCommonFlags) error {
-	if err := validateListCommonFlags(common); err != nil {
-		return err
-	}
-	if !nvfleetint.NodeGroupView(flags.view).Valid() {
-		return fmt.Errorf("invalid view %q: expected basic or detail", flags.view)
-	}
-	for _, value := range []struct {
-		name string
-		raw  string
-	}{
-		{name: "compute-zone-ids", raw: flags.computeZoneIDs},
-		{name: "compute-zone-names", raw: flags.computeZoneNames},
-		{name: "nodegroup-ids", raw: flags.nodeGroupIDs},
-		{name: "gpu-type", raw: flags.gpuType},
-	} {
-		if _, err := clihelpers.ParseCommaList(value.raw); err != nil {
-			return fmt.Errorf("invalid %s: %w", value.name, err)
-		}
-	}
-	if _, err := parseNodeGroupHealthList(flags.health); err != nil {
-		return err
-	}
-	if flags.sortBy != "" && !nvfleetint.NodeGroupSortBy(flags.sortBy).Valid() {
-		return fmt.Errorf("invalid sort-by %q: expected health or nodes", flags.sortBy)
-	}
-	if flags.order != "" && !nvfleetint.NodeGroupSortOrder(flags.order).Valid() {
-		return fmt.Errorf("invalid order %q: expected asc or desc", flags.order)
-	}
-	if nvfleetint.NodeGroupView(flags.view) == nvfleetint.NodeGroupViewBasic {
-		if strings.TrimSpace(flags.computeZoneNames) != "" {
-			return errors.New("basic node group view is incompatible with compute zone name filters")
-		}
-		if strings.TrimSpace(flags.health) != "" || strings.TrimSpace(flags.gpuType) != "" {
-			return errors.New("basic node group view is incompatible with health and gpu-type filters")
-		}
-		if strings.TrimSpace(flags.sortBy) != "" {
-			return fmt.Errorf("basic node group view is incompatible with sort %q", flags.sortBy)
-		}
-	}
-	return nil
+// Names the flag carrying each node group list option, for rendering SDK
+// validation errors against what the user typed.
+var nodeGroupListFlagNames = map[string]optionFlagName{
+	"view":   {flag: "view"},
+	"health": {flag: "health"},
+	"sortBy": {flag: "sort-by"},
+	"order":  {flag: "order"},
 }
 
-// Converts comma-separated health filters into API values
-func parseNodeGroupHealthList(raw string) ([]nvfleetint.NodeGroupHealthStatus, error) {
-	return clihelpers.ParseEnumList[nvfleetint.NodeGroupHealthStatus]("health", raw, nodeHealthValues)
+// nodeGroupListOptions reads every node group list flag exactly once and hands
+// the result to the SDK to validate. includeMetricsSet reports whether
+// --include-metrics was given at all, which is the difference between asking
+// for the backend default and asking for false.
+func nodeGroupListOptions(flags nodeGroupListFlags, includeMetricsSet bool) (nvfleetint.ListNodeGroupsOptions, error) {
+	opts := nvfleetint.ListNodeGroupsOptions{
+		View:   nvfleetint.NodeGroupView(flags.view),
+		SortBy: nvfleetint.NodeGroupSortBy(flags.sortBy),
+		Order:  nvfleetint.NodeGroupSortOrder(flags.order),
+	}
+	if includeMetricsSet {
+		opts.IncludeMetrics = &flags.includeMetrics
+	}
+
+	for _, list := range []struct {
+		name string
+		raw  string
+		dest *[]string
+	}{
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs, dest: &opts.ComputeZoneIDs},
+		{name: "compute-zone-names", raw: flags.computeZoneNames, dest: &opts.ComputeZoneNames},
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, dest: &opts.NodeGroupIDs},
+		{name: "gpu-type", raw: flags.gpuType, dest: &opts.GPUTypes},
+	} {
+		values, err := clihelpers.ParseCommaList(list.raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid %s: %w", list.name, err)
+		}
+		*list.dest = values
+	}
+
+	healthStatuses, err := clihelpers.ParseTypedList[nvfleetint.NodeGroupHealthStatus]("health", flags.health)
+	if err != nil {
+		return opts, err
+	}
+	opts.HealthStatuses = healthStatuses
+
+	// The SDK enforces this too; naming the flag is the only reason it is
+	// restated here, since the SDK sees a pointer rather than a flag.
+	if opts.View == nvfleetint.NodeGroupViewBasic && includeMetricsSet {
+		return opts, errors.New("basic node group view is incompatible with --include-metrics")
+	}
+	if err := opts.Validate(); err != nil {
+		return opts, renderOptionError(err, nodeGroupListFlagNames)
+	}
+
+	return opts, nil
 }
 
 // Writes JSON or table output for node group list results

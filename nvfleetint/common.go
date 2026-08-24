@@ -54,6 +54,42 @@ func hasMoreFromCounts(page, pageSize, total int) bool {
 	return (page+1)*pageSize < total
 }
 
+// InvalidOptionError reports an option value the API will not accept.
+//
+// The Validate methods on the list option types return it so that a front end
+// can re-render the rule in its own vocabulary rather than restating the rule
+// itself. The CLI uses Option to look up the flag that carries the option, so
+// its errors name the flag the user typed while the rule lives here only.
+type InvalidOptionError struct {
+	// Option is a stable key for the rejected option, such as "view",
+	// "sortBy", or "health". It is deliberately not the prose in Description:
+	// callers match on it, so it does not change when wording does.
+	Option string
+	// Description names the option in the SDK's own terms, e.g. "node health".
+	Description string
+	Value       string
+	// Expected lists the accepted values, empty when the option has no short
+	// list to offer.
+	Expected string
+}
+
+func (e *InvalidOptionError) Error() string {
+	if e.Expected == "" {
+		return fmt.Sprintf("invalid %s %q", e.Description, e.Value)
+	}
+	return fmt.Sprintf("invalid %s %q: expected %s", e.Description, e.Value, e.Expected)
+}
+
+// Builds an InvalidOptionError for a rejected option value
+func invalidOption(option, description, value, expected string) error {
+	return &InvalidOptionError{
+		Option:      option,
+		Description: description,
+		Value:       value,
+		Expected:    expected,
+	}
+}
+
 // Represents a non-success API response
 type APIError struct {
 	StatusCode int

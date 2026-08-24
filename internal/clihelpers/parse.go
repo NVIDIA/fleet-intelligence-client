@@ -30,18 +30,12 @@ func ParseCommaList(raw string) ([]string, error) {
 	return values, nil
 }
 
-// Enum is a CLI-facing API enum: a string type that can report whether the
-// backend accepts a given value.
-type Enum interface {
-	~string
-	Valid() bool
-}
-
-// ParseEnumList splits a comma-separated flag value and converts each entry
-// into T, rejecting any value the API does not accept. flag names the flag in
-// the error and expected lists the accepted values, so the message reads in the
-// CLI's own vocabulary rather than the backend's.
-func ParseEnumList[T Enum](flag, raw, expected string) ([]T, error) {
+// ParseTypedList splits a comma-separated flag value into a string-based API
+// type. flag names the flag when the list itself is malformed.
+//
+// It deliberately does not check the values: the SDK validates them, so the
+// accepted values are stated in one place and the two layers cannot drift.
+func ParseTypedList[T ~string](flag, raw string) ([]T, error) {
 	values, err := ParseCommaList(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid %s: %w", flag, err)
@@ -52,11 +46,7 @@ func ParseEnumList[T Enum](flag, raw, expected string) ([]T, error) {
 
 	out := make([]T, 0, len(values))
 	for _, value := range values {
-		converted := T(value)
-		if !converted.Valid() {
-			return nil, fmt.Errorf("invalid %s %q: expected %s", flag, value, expected)
-		}
-		out = append(out, converted)
+		out = append(out, T(value))
 	}
 
 	return out, nil
