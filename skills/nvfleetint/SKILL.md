@@ -110,7 +110,7 @@ nvfleetint report error --view graph --window 24h --step 5m --output json
 nvfleetint report verify --csv report.csv --bundle report.sig.bundle
 ```
 
-Use at most one tag scope flag: `--node`, `--nodegroup`, or `--computezone`; tag list has no pagination. Report-error list requires `--group-by error|node`; only list supports `--all` and CSV. Signed inventory requires CSV. Report filters accept compute zone IDs, node group IDs, and tags; error reports also accept `--errors`, `--severities`, and graph-only `--step`.
+Use at most one tag scope flag: `--node`, `--nodegroup`, or `--computezone`; tag list has no pagination. `tag set <node-uuid> --tags <list>` is the one command here that writes: it replaces a node's tags rather than adding to them, so run it only when the user asks for that change by name, pass `--yes`, and never use it to gather data. Report-error list requires `--group-by error|node`; only list supports `--all` and CSV. Signed inventory requires CSV. Report filters accept compute zone IDs, node group IDs, and tags; error reports also accept `--errors`, `--severities`, and graph-only `--step`.
 
 ## Example
 

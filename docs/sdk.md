@@ -86,3 +86,23 @@ Alert timeline filter values and sorting choices are available through
 ```go
 options, err := client.GetAlertTimelineFilterOptions(ctx, true)
 ```
+
+## Writes
+
+`SetNodeTags` replaces a node's tags with the set given. It is a replacement
+rather than a merge — a tag the node already carries that is absent from
+`Tags` is removed, and an empty `Tags` clears them all:
+
+```go
+result, err := client.SetNodeTags(ctx, nodeUUID, nvfleetint.SetNodeTagsOptions{
+	Tags: []string{"gpu-health", "burn_in"},
+})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Println(result.Tags)
+```
+
+Tags are validated before the request is sent, so a malformed tag is named
+locally instead of returning an opaque 400. Unlike the read methods, a failed
+write is never retried.
