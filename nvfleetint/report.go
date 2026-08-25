@@ -12,7 +12,6 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -21,13 +20,6 @@ import (
 
 // Default filename for signed inventory report downloads
 const defaultSignedInventoryFilename = "inventory-report.zip"
-
-const reportDurationUnitsMessage = "expected a positive duration using units ns, us, µs, ms, s, m, or h"
-
-var (
-	maxReportWindow       = time.Duration(1<<63 - 1)
-	reportDurationPattern = regexp.MustCompile(`^\+?(?:(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:ns|us|µs|ms|s|m|h))+$`)
-)
 
 const (
 	ReportFormatJSON ReportFormat = "json"
@@ -454,7 +446,7 @@ func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, e
 		return ErrorReportOptions{}, fmt.Errorf("error report step is only supported for graph view")
 	}
 	if opts.Step != "" {
-		if err := validateReportStep(opts.Step); err != nil {
+		if err := ValidateStep(opts.Step); err != nil {
 			return ErrorReportOptions{}, err
 		}
 	}
@@ -489,7 +481,7 @@ func validateErrorReportTime(opts ErrorReportOptions) error {
 	}
 
 	if opts.Window != "" {
-		if err := validateReportWindow(opts.Window); err != nil {
+		if err := ValidateWindow(opts.Window); err != nil {
 			return err
 		}
 	}
@@ -502,36 +494,6 @@ func validateErrorReportTime(opts ErrorReportOptions) error {
 		if err := validateReportRFC3339("error report end time", opts.EndTime); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// Checks a relative window value is a positive Go duration
-func validateReportWindow(window string) error {
-	if !reportDurationPattern.MatchString(window) {
-		return fmt.Errorf("invalid window %q: %s", window, reportDurationUnitsMessage)
-	}
-	duration, err := time.ParseDuration(window)
-	if err != nil {
-		return fmt.Errorf("invalid window %q: duration is too large; maximum is %s", window, maxReportWindow)
-	}
-	if duration <= 0 {
-		return fmt.Errorf("invalid window %q: %s", window, reportDurationUnitsMessage)
-	}
-	return nil
-}
-
-// Checks a graph step value is a positive duration of at least one minute
-func validateReportStep(step string) error {
-	if !reportDurationPattern.MatchString(step) {
-		return fmt.Errorf("invalid step %q: %s", step, reportDurationUnitsMessage)
-	}
-	duration, err := time.ParseDuration(step)
-	if err != nil {
-		return fmt.Errorf("invalid step %q: duration is too large; maximum is %s", step, maxReportWindow)
-	}
-	if duration < time.Minute {
-		return fmt.Errorf("invalid step %q: expected at least 1m", step)
 	}
 	return nil
 }

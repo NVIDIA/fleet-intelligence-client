@@ -237,7 +237,7 @@ func normalizeEventTimeRange(window, startTime, endTime string) (eventTimeRange,
 	case hasWindow && (hasStart || hasEnd):
 		return eventTimeRange{}, fmt.Errorf("window cannot be combined with start time or end time")
 	case hasWindow:
-		if err := validateReportWindow(window); err != nil {
+		if err := ValidateWindow(window); err != nil {
 			return eventTimeRange{}, err
 		}
 		return eventTimeRange{timeMode: eventTimeModeRelative, window: window}, nil

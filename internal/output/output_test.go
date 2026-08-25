@@ -8,8 +8,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-
-	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 // Returns an error for every write
@@ -80,8 +78,6 @@ func TestFormatHelpers(t *testing.T) {
 	zeroPercentage := float32(0)
 	enabled := true
 	disabled := false
-	location := &nvfleetint.GeoLocation{City: "Santa Clara", Country: "US"}
-	regionalLocation := &nvfleetint.GeoLocation{Region: "us-west-1", City: "Ignored"}
 
 	tests := []struct {
 		name string
@@ -110,9 +106,6 @@ func TestFormatHelpers(t *testing.T) {
 		{name: "optional percentage nil", got: FormatOptionalPercentage(nil), want: "-"},
 		{name: "string list", got: FormatStringList([]string{"prod", " ", "h100"}), want: "prod, h100"},
 		{name: "string list empty", got: FormatStringList(nil), want: "-"},
-		{name: "geolocation city country", got: FormatGeoLocation(location), want: "Santa Clara, US"},
-		{name: "geolocation region", got: FormatGeoLocation(regionalLocation), want: "us-west-1"},
-		{name: "geolocation nil", got: FormatGeoLocation(nil), want: "-"},
 	}
 
 	for _, tt := range tests {
