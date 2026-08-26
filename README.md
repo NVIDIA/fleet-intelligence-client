@@ -37,9 +37,11 @@ see [Verify release artifacts](docs/verify-releases.md).
 Install `nvfleetint`:
 
 ```powershell
-Invoke-WebRequest https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.ps1 -OutFile install.ps1
-.\install.ps1
+irm https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.ps1 | iex
 ```
+
+The installer adds `nvfleetint` to both your user PATH and the current
+PowerShell session, so the command is available immediately.
 
 #### Staying current
 

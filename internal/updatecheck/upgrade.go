@@ -250,8 +250,12 @@ func (p UpgradePlan) installerCommand(ctx context.Context, scriptPath string) *e
 // ManualUpgradeCommand returns the documented install command for this
 // platform, for the paths where the CLI cannot upgrade itself.
 func ManualUpgradeCommand() string {
-	if runtime.GOOS == "windows" {
-		return "Invoke-WebRequest " + releasesPage + "/latest/download/install.ps1 -OutFile install.ps1; .\\install.ps1"
+	return manualUpgradeCommand(runtime.GOOS)
+}
+
+func manualUpgradeCommand(goos string) string {
+	if goos == "windows" {
+		return "irm " + releasesPage + "/latest/download/install.ps1 | iex"
 	}
 	return "curl -fsSL " + releasesPage + "/latest/download/install.sh | bash"
 }
