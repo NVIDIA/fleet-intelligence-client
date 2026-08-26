@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package output formats nvfleetint command responses.
+// Package output formats nvfleetint command responses. It deals in plain
+// values only: formatters that take SDK models live in internal/cmdutil.
 package output
 
 import (
@@ -13,9 +14,6 @@ import (
 	"strings"
 	"text/tabwriter"
 	"unicode/utf8"
-
-	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
-	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
 const (
@@ -143,29 +141,6 @@ func FormatStringList(values []string) string {
 		return "-"
 	}
 	return strings.Join(cleaned, ", ")
-}
-
-// Formats the most useful location label available
-func FormatGeoLocation(location *nvfleetint.GeoLocation) string {
-	if location == nil {
-		return "-"
-	}
-	if strings.TrimSpace(location.Region) != "" {
-		return location.Region
-	}
-
-	parts := make([]string, 0, 2)
-	if strings.TrimSpace(location.City) != "" {
-		parts = append(parts, location.City)
-	}
-	if strings.TrimSpace(location.Country) != "" {
-		parts = append(parts, location.Country)
-	}
-	if len(parts) > 0 {
-		return strings.Join(parts, ", ")
-	}
-
-	return "-"
 }
 
 // Spaces separating one rendered column from the next. Shared so the tables
@@ -427,8 +402,8 @@ func displayWidth(value string) int {
 // Writes the standard single-page pagination footer. Page carries the SDK's
 // 0-based page number and is presented as the CLI's 1-based page.
 func WritePaginationFooter(w io.Writer, page Pagination) error {
-	totalPages := clihelpers.TotalPages(page.Total, page.PageSize)
-	displayPage := clihelpers.OneBasedPage(page.Page, page.PageSize, page.Total)
+	totalPages := TotalPages(page.Total, page.PageSize)
+	displayPage := OneBasedPage(page.Page, page.PageSize, page.Total)
 	_, err := fmt.Fprintf(w, "Page: %d  Total Pages: %d  Page Size: %d  Total Entries: %d\n", displayPage, totalPages, page.PageSize, page.Total)
 	return err
 }

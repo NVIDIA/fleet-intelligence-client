@@ -7,11 +7,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime"
 	"net/http"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -20,13 +20,6 @@ import (
 
 // Default filename for signed inventory report downloads
 const defaultSignedInventoryFilename = "inventory-report.zip"
-
-const reportDurationUnitsMessage = "expected a positive duration using units ns, us, µs, ms, s, m, or h"
-
-var (
-	maxReportWindow       = time.Duration(1<<63 - 1)
-	reportDurationPattern = regexp.MustCompile(`^\+?(?:(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:ns|us|µs|ms|s|m|h))+$`)
-)
 
 const (
 	ReportFormatJSON ReportFormat = "json"
@@ -159,6 +152,18 @@ type InventoryReport struct {
 	Filename string `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page InventoryReport) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
 	NodeUUID               string       `json:"nodeUUID"`
@@ -212,6 +217,18 @@ type ErrorReport struct {
 	Total    int                  `json:"total"`
 	RawJSON  []byte               `json:"-"`
 	RawCSV   []byte               `json:"-"`
+}
+
+// PageInfo reports the pagination envelope of the response.
+func (page ErrorReport) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
 }
 
 // Represents one error grouping row in an error list report
@@ -276,28 +293,20 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	format, err := normalizeReportFormat(opts.Format)
+	normalized, err := normalizeInventoryReportOptions(opts)
 	if err != nil {
 		return InventoryReport{}, err
 	}
-	opts.StartTime = strings.TrimSpace(opts.StartTime)
-	opts.EndTime = strings.TrimSpace(opts.EndTime)
-	if err := validateInventoryReportOptions(opts); err != nil {
-		return InventoryReport{}, err
-	}
-	if opts.Signed && format != ReportFormatCSV {
-		return InventoryReport{}, fmt.Errorf("signed inventory reports require csv format")
-	}
 
-	params := inventoryReportParams(opts, format)
-	resp, err := c.api.GetV1ReportsInventoryWithResponse(ctx, &params, acceptReportFormat(format, opts.Signed))
+	params := inventoryReportParams(normalized)
+	resp, err := c.api.GetV1ReportsInventoryWithResponse(ctx, &params, acceptReportFormat(normalized.Format, normalized.Signed))
 	if err != nil {
 		return InventoryReport{}, err
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return InventoryReport{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
-	if opts.Signed {
+	if normalized.Signed {
 		if err := validateSignedReportContentType(resp.HTTPResponse); err != nil {
 			return InventoryReport{}, err
 		}
@@ -306,7 +315,7 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 			Filename:  signedReportFilename(resp.HTTPResponse),
 		}, nil
 	}
-	if format == ReportFormatCSV {
+	if normalized.Format == ReportFormatCSV {
 		return InventoryReport{RawCSV: append([]byte(nil), resp.Body...)}, nil
 	}
 
@@ -342,24 +351,70 @@ func (c *Client) GetErrorReport(ctx context.Context, opts ErrorReportOptions) (E
 	return decodeErrorReport(resp.Body, normalized.View, normalized.GroupBy)
 }
 
+// The accepted values named in each report option's error
+const (
+	reportFormatValues          = "json or csv"
+	errorReportViewValues       = "list, graph, or overview"
+	errorReportGroupByValues    = "error or node"
+	errorReportTimeModeValues   = "absolute or relative"
+	errorReportSeverityValues   = "Critical, Fatal, Info, or Warning"
+	inventoryReportOrderValues  = "asc or desc"
+	inventoryReportSortByValues = "hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation"
+)
+
 // Defaults an omitted report format and rejects unsupported values
 func normalizeReportFormat(format ReportFormat) (ReportFormat, error) {
 	if format == "" {
 		return ReportFormatJSON, nil
 	}
 	if !format.Valid() {
-		return "", fmt.Errorf("invalid report format %q: expected json or csv", format)
+		return "", invalidOption("format", "report format", string(format), reportFormatValues)
 	}
 	return format, nil
 }
 
-// Defaults and checks error report options before making the request
-func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, error) {
+// Validate reports whether the options describe a request the API accepts.
+// GetErrorReport calls it; ValidateValues is the narrower check a front end
+// wants when it applies its own rules for how flags combine.
+func (opts ErrorReportOptions) Validate() error {
+	_, err := normalizeErrorReportOptions(opts)
+	return err
+}
+
+// ValidateValues reports whether each option value on its own is one the API
+// accepts, without checking how the options combine.
+//
+// A front end calls this to reject a bad value before applying its own
+// combination rules, which it phrases in its own vocabulary: the CLI names the
+// flag the user typed. Validate covers both and is what the request path uses.
+func (opts ErrorReportOptions) ValidateValues() error {
 	if opts.View == "" {
-		return ErrorReportOptions{}, fmt.Errorf("error report view is required")
+		return errors.New("error report view is required")
 	}
 	if !opts.View.Valid() {
-		return ErrorReportOptions{}, fmt.Errorf("invalid error report view %q: expected list, graph, or overview", opts.View)
+		return invalidOption("view", "error report view", string(opts.View), errorReportViewValues)
+	}
+	if _, err := normalizeReportFormat(opts.Format); err != nil {
+		return err
+	}
+	if opts.GroupBy != "" && !opts.GroupBy.Valid() {
+		return invalidOption("groupBy", "error report group-by", string(opts.GroupBy), errorReportGroupByValues)
+	}
+	if opts.TimeMode != "" && !opts.TimeMode.Valid() {
+		return invalidOption("timeMode", "error report time mode", string(opts.TimeMode), errorReportTimeModeValues)
+	}
+	for _, severity := range opts.Severities {
+		if !severity.Valid() {
+			return invalidOption("severity", "error report severity", string(severity), errorReportSeverityValues)
+		}
+	}
+	return nil
+}
+
+// Defaults and checks error report options before making the request
+func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, error) {
+	if err := opts.ValidateValues(); err != nil {
+		return ErrorReportOptions{}, err
 	}
 
 	format, err := normalizeReportFormat(opts.Format)
@@ -368,9 +423,6 @@ func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, e
 	}
 	opts.Format = format
 
-	if opts.GroupBy != "" && !opts.GroupBy.Valid() {
-		return ErrorReportOptions{}, fmt.Errorf("invalid error report group-by %q: expected error or node", opts.GroupBy)
-	}
 	if opts.View == ErrorReportViewList && opts.GroupBy == "" {
 		return ErrorReportOptions{}, fmt.Errorf("error report group-by is required for list view")
 	}
@@ -389,20 +441,12 @@ func normalizeErrorReportOptions(opts ErrorReportOptions) (ErrorReportOptions, e
 	if len(opts.Errors) > 0 && (opts.View != ErrorReportViewList || opts.GroupBy != ErrorReportGroupByNode) {
 		return ErrorReportOptions{}, fmt.Errorf("error filters are only supported for list view grouped by node")
 	}
-	if opts.TimeMode != "" && !opts.TimeMode.Valid() {
-		return ErrorReportOptions{}, fmt.Errorf("invalid error report time mode %q: expected absolute or relative", opts.TimeMode)
-	}
-	for _, severity := range opts.Severities {
-		if !severity.Valid() {
-			return ErrorReportOptions{}, fmt.Errorf("invalid error report severity %q: expected Critical, Fatal, Info, or Warning", severity)
-		}
-	}
 	opts.Step = strings.TrimSpace(opts.Step)
 	if opts.Step != "" && opts.View != ErrorReportViewGraph {
 		return ErrorReportOptions{}, fmt.Errorf("error report step is only supported for graph view")
 	}
 	if opts.Step != "" {
-		if err := validateReportStep(opts.Step); err != nil {
+		if err := ValidateStep(opts.Step); err != nil {
 			return ErrorReportOptions{}, err
 		}
 	}
@@ -437,7 +481,7 @@ func validateErrorReportTime(opts ErrorReportOptions) error {
 	}
 
 	if opts.Window != "" {
-		if err := validateReportWindow(opts.Window); err != nil {
+		if err := ValidateWindow(opts.Window); err != nil {
 			return err
 		}
 	}
@@ -454,36 +498,6 @@ func validateErrorReportTime(opts ErrorReportOptions) error {
 	return nil
 }
 
-// Checks a relative window value is a positive Go duration
-func validateReportWindow(window string) error {
-	if !reportDurationPattern.MatchString(window) {
-		return fmt.Errorf("invalid window %q: %s", window, reportDurationUnitsMessage)
-	}
-	duration, err := time.ParseDuration(window)
-	if err != nil {
-		return fmt.Errorf("invalid window %q: duration is too large; maximum is %s", window, maxReportWindow)
-	}
-	if duration <= 0 {
-		return fmt.Errorf("invalid window %q: %s", window, reportDurationUnitsMessage)
-	}
-	return nil
-}
-
-// Checks a graph step value is a positive duration of at least one minute
-func validateReportStep(step string) error {
-	if !reportDurationPattern.MatchString(step) {
-		return fmt.Errorf("invalid step %q: %s", step, reportDurationUnitsMessage)
-	}
-	duration, err := time.ParseDuration(step)
-	if err != nil {
-		return fmt.Errorf("invalid step %q: duration is too large; maximum is %s", step, maxReportWindow)
-	}
-	if duration < time.Minute {
-		return fmt.Errorf("invalid step %q: expected at least 1m", step)
-	}
-	return nil
-}
-
 // Checks a timestamp value is RFC3339
 func validateReportRFC3339(name, value string) error {
 	if _, err := time.Parse(time.RFC3339, value); err != nil {
@@ -492,139 +506,99 @@ func validateReportRFC3339(name, value string) error {
 	return nil
 }
 
-// Checks inventory report options before making the request
-func validateInventoryReportOptions(opts InventoryReportOptions) error {
-	if (opts.StartTime == "") != (opts.EndTime == "") {
-		return fmt.Errorf("inventory report start time and end time must be used together")
-	}
-	if opts.StartTime != "" {
-		if err := validateReportRFC3339("inventory report start time", opts.StartTime); err != nil {
-			return err
-		}
-		if err := validateReportRFC3339("inventory report end time", opts.EndTime); err != nil {
-			return err
-		}
+// Validate reports whether the options describe a request the API accepts.
+// GetInventoryReport calls it; ValidateValues is the narrower check a front end
+// wants when it applies its own rules for how flags combine.
+func (opts InventoryReportOptions) Validate() error {
+	_, err := normalizeInventoryReportOptions(opts)
+	return err
+}
+
+// ValidateValues reports whether each option value on its own is one the API
+// accepts, without checking how the options combine. See
+// ErrorReportOptions.ValidateValues for why the two are separate.
+func (opts InventoryReportOptions) ValidateValues() error {
+	if _, err := normalizeReportFormat(opts.Format); err != nil {
+		return err
 	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid inventory report sort %q: expected hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation", opts.SortBy)
+		return invalidOption("sortBy", "inventory report sort", string(opts.SortBy), inventoryReportSortByValues)
 	}
 	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid inventory report order %q: expected asc or desc", opts.Order)
+		return invalidOption("order", "inventory report order", string(opts.Order), inventoryReportOrderValues)
 	}
 	return nil
 }
 
-// Builds generated inventory report query parameters
-func inventoryReportParams(opts InventoryReportOptions, format ReportFormat) fleetapi.GetV1ReportsInventoryParams {
-	params := fleetapi.GetV1ReportsInventoryParams{}
-	if format != "" {
-		param := fleetapi.GetV1ReportsInventoryParamsFormat(format)
-		params.Format = &param
+// Defaults and checks inventory report options before making the request
+func normalizeInventoryReportOptions(opts InventoryReportOptions) (InventoryReportOptions, error) {
+	if err := opts.ValidateValues(); err != nil {
+		return InventoryReportOptions{}, err
 	}
-	if opts.Signed {
-		signed := true
-		params.Signed = &signed
+
+	format, err := normalizeReportFormat(opts.Format)
+	if err != nil {
+		return InventoryReportOptions{}, err
 	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		values := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &values
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		values := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &values
-	}
-	if len(opts.Tags) > 0 {
-		values := append([]string(nil), opts.Tags...)
-		params.Tags = &values
+	opts.Format = format
+
+	opts.StartTime = strings.TrimSpace(opts.StartTime)
+	opts.EndTime = strings.TrimSpace(opts.EndTime)
+	if (opts.StartTime == "") != (opts.EndTime == "") {
+		return InventoryReportOptions{}, fmt.Errorf("inventory report start time and end time must be used together")
 	}
 	if opts.StartTime != "" {
-		value := opts.StartTime
-		params.StartTime = &value
+		if err := validateReportRFC3339("inventory report start time", opts.StartTime); err != nil {
+			return InventoryReportOptions{}, err
+		}
+		if err := validateReportRFC3339("inventory report end time", opts.EndTime); err != nil {
+			return InventoryReportOptions{}, err
+		}
 	}
-	if opts.EndTime != "" {
-		value := opts.EndTime
-		params.EndTime = &value
+
+	if opts.Signed && opts.Format != ReportFormatCSV {
+		return InventoryReportOptions{}, fmt.Errorf("signed inventory reports require csv format")
 	}
-	if opts.SortBy != "" {
-		value := fleetapi.GetV1ReportsInventoryParamsSortBy(opts.SortBy)
-		params.SortBy = &value
+
+	return opts, nil
+}
+
+// Builds generated inventory report query parameters
+func inventoryReportParams(opts InventoryReportOptions) fleetapi.GetV1ReportsInventoryParams {
+	return fleetapi.GetV1ReportsInventoryParams{
+		Format:         optionalEnum[fleetapi.GetV1ReportsInventoryParamsFormat](opts.Format),
+		Signed:         optionalTrueBool(opts.Signed),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		Tags:           optionalSlice(opts.Tags),
+		StartTime:      optionalString(opts.StartTime),
+		EndTime:        optionalString(opts.EndTime),
+		SortBy:         optionalEnum[fleetapi.GetV1ReportsInventoryParamsSortBy](opts.SortBy),
+		Order:          optionalEnum[fleetapi.GetV1ReportsInventoryParamsOrder](opts.Order),
 	}
-	if opts.Order != "" {
-		value := fleetapi.GetV1ReportsInventoryParamsOrder(opts.Order)
-		params.Order = &value
-	}
-	return params
 }
 
 // Builds generated error report query parameters
 func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams {
-	params := fleetapi.GetV1ReportsErrorParams{
-		View: fleetapi.GetV1ReportsErrorParamsView(opts.View),
+	return fleetapi.GetV1ReportsErrorParams{
+		View:           fleetapi.GetV1ReportsErrorParamsView(opts.View),
+		GroupBy:        optionalEnum[fleetapi.GetV1ReportsErrorParamsGroupBy](opts.GroupBy),
+		Format:         optionalEnum[fleetapi.GetV1ReportsErrorParamsFormat](opts.Format),
+		Page:           cloneInt(opts.Page),
+		PageSize:       cloneInt(opts.PageSize),
+		Step:           optionalString(opts.Step),
+		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
+		Tags:           optionalSlice(opts.Tags),
+		Errors:         optionalSlice(opts.Errors),
+		Severities:     optionalEnumSlice[fleetapi.ModelsEventSeverity](opts.Severities),
+		TimeMode:       optionalEnum[string](opts.TimeMode),
+		Window:         optionalString(opts.Window),
+		StartTime:      optionalString(opts.StartTime),
+		EndTime:        optionalString(opts.EndTime),
 	}
-	if opts.GroupBy != "" {
-		value := fleetapi.GetV1ReportsErrorParamsGroupBy(opts.GroupBy)
-		params.GroupBy = &value
-	}
-	if opts.Format != "" {
-		value := fleetapi.GetV1ReportsErrorParamsFormat(opts.Format)
-		params.Format = &value
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
-	if opts.Step != "" {
-		value := opts.Step
-		params.Step = &value
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		values := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &values
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		values := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &values
-	}
-	if len(opts.Tags) > 0 {
-		values := append([]string(nil), opts.Tags...)
-		params.Tags = &values
-	}
-	if len(opts.Errors) > 0 {
-		values := append([]string(nil), opts.Errors...)
-		params.Errors = &values
-	}
-	if len(opts.Severities) > 0 {
-		values := make([]fleetapi.ModelsEventSeverity, 0, len(opts.Severities))
-		for _, severity := range opts.Severities {
-			values = append(values, fleetapi.ModelsEventSeverity(severity))
-		}
-		params.Severities = &values
-	}
-	if opts.TimeMode != "" {
-		value := string(opts.TimeMode)
-		params.TimeMode = &value
-	}
-	if opts.Window != "" {
-		value := opts.Window
-		params.Window = &value
-	}
-	if opts.StartTime != "" {
-		value := opts.StartTime
-		params.StartTime = &value
-	}
-	if opts.EndTime != "" {
-		value := opts.EndTime
-		params.EndTime = &value
-	}
-	return params
 }
 
 // Overrides the request Accept header for CSV and signed report downloads

@@ -5,6 +5,7 @@ package nvfleetint
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -391,7 +392,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		{name: "sort", opts: ListNodesOptions{SortBy: "bad"}, want: "invalid node sort"},
 		{name: "order", opts: ListNodesOptions{Order: "up"}, want: "invalid node order"},
 		{name: "basic health", opts: ListNodesOptions{View: NodeViewBasic, HealthStatuses: []NodeHealthStatus{NodeHealthHealthy}}, want: "basic node view is incompatible"},
-		{name: "basic sort", opts: ListNodesOptions{View: NodeViewBasic, SortBy: NodeSortByHealthStatus}, want: "basic node view is incompatible"},
+		{name: "basic sort", opts: ListNodesOptions{View: NodeViewBasic, SortBy: NodeSortByHealthStatus}, want: "basic node view supports sorting only by"},
 	}
 
 	for _, tt := range tests {
@@ -462,5 +463,84 @@ func TestDescribeNodeRejectsMissingUUID(t *testing.T) {
 	_, err = client.DescribeNode(context.Background(), "")
 	if err == nil || !strings.Contains(err.Error(), "node UUID is required") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Verifies the options validate without a client, so a front end can reject a
+// bad request before resolving credentials
+func TestListNodesOptionsValidate(t *testing.T) {
+	tests := []struct {
+		name string
+		opts ListNodesOptions
+		want string
+	}{
+		{name: "valid", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{NodeHealthHealthy}}},
+		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
+		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
+		{name: "gpu count", opts: ListNodesOptions{GPUCounts: []int{-1}}, want: "invalid node GPU count"},
+		{
+			name: "basic filter",
+			opts: ListNodesOptions{View: NodeViewBasic, HealthStatuses: []NodeHealthStatus{NodeHealthHealthy}},
+			want: "basic node view is incompatible",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.opts.Validate()
+			if tt.want == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("got %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+// Verifies basic view accepts only the columns it actually returns. The CLI and
+// the SDK used to answer this differently, so it is pinned on both sides.
+func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
+	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByUUID, NodeSortByBMCHostname}
+	rejected := []NodeSortBy{
+		NodeSortByHealthStatus, NodeSortByIntegrityCheck, NodeSortByAgentStatus,
+		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone,
+	}
+
+	for _, sortBy := range accepted {
+		if err := (ListNodesOptions{View: NodeViewBasic, SortBy: sortBy}).Validate(); err != nil {
+			t.Fatalf("sort %q should be accepted by basic view: %v", sortBy, err)
+		}
+	}
+	for _, sortBy := range rejected {
+		err := (ListNodesOptions{View: NodeViewBasic, SortBy: sortBy}).Validate()
+		if err == nil || !strings.Contains(err.Error(), "basic node view supports sorting only by") {
+			t.Fatalf("sort %q should be rejected by basic view, got %v", sortBy, err)
+		}
+		// A front end may spell the field differently, so the message states
+		// the rule instead of quoting back the backend name.
+		if strings.Contains(err.Error(), string(sortBy)) {
+			t.Fatalf("sort %q should not appear in the rejection: %v", sortBy, err)
+		}
+	}
+}
+
+// Verifies a rejected value carries the structured detail a front end needs to
+// re-render the message against its own name for the option
+func TestInvalidOptionErrorCarriesOption(t *testing.T) {
+	err := (ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}).Validate()
+
+	var optionErr *InvalidOptionError
+	if !errors.As(err, &optionErr) {
+		t.Fatalf("expected InvalidOptionError, got %T", err)
+	}
+	if optionErr.Option != "integrityCheck" || optionErr.Value != "Missing" {
+		t.Fatalf("unexpected option error: %#v", optionErr)
+	}
+	if !strings.Contains(optionErr.Expected, "Verified") {
+		t.Fatalf("expected accepted values, got %q", optionErr.Expected)
 	}
 }

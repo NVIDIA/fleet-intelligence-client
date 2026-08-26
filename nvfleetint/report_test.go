@@ -126,6 +126,41 @@ func TestGetInventoryReportRejectsInvalidOptions(t *testing.T) {
 	}
 }
 
+// Verifies inventory report options reject incompatible flags before a request
+func TestInventoryReportOptionsValidateRejectsSignedJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		opts InventoryReportOptions
+	}{
+		{name: "default format", opts: InventoryReportOptions{Signed: true}},
+		{name: "json format", opts: InventoryReportOptions{Format: ReportFormatJSON, Signed: true}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.opts.Validate()
+			if err == nil || !strings.Contains(err.Error(), "signed inventory reports require csv format") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// Verifies Validate answers exactly what the request path enforces, since the
+// two used to apply their own copies of the rules and disagreed about padding
+func TestInventoryReportOptionsValidateMatchesRequestPath(t *testing.T) {
+	opts := InventoryReportOptions{StartTime: "  ", EndTime: "  "}
+	if err := opts.Validate(); err != nil {
+		t.Fatalf("blank times should normalize away: %v", err)
+	}
+
+	opts = InventoryReportOptions{StartTime: " 2026-01-01T00:00:00Z "}
+	if err := opts.Validate(); err == nil ||
+		!strings.Contains(err.Error(), "start time and end time must be used together") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // Verifies inventory CSV report downloads
 func TestGetInventoryReportCSV(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

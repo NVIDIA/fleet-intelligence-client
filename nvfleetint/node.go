@@ -6,8 +6,10 @@ package nvfleetint
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
@@ -161,6 +163,18 @@ type NodesPage struct {
 	PageSize int    `json:"pageSize"`
 	Total    int    `json:"total"`
 	RawJSON  []byte `json:"-"`
+}
+
+// PageInfo reports the pagination envelope of the response.
+func (page NodesPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
 }
 
 // Represents a node
@@ -367,106 +381,37 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	view, err := normalizeNodeView(opts.View)
+	view, err := opts.normalize()
 	if err != nil {
-		return NodesPage{}, err
-	}
-	if err := validateNodeOptions(view, opts); err != nil {
 		return NodesPage{}, err
 	}
 
 	params := fleetapi.GetV1NodesParams{
-		View: nodeViewParam(view),
+		View:             nodeViewParam(view),
+		AgentType:        optionalEnum[fleetapi.GetV1NodesParamsAgentType](opts.AgentType),
+		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
+		Hostname:         optionalString(opts.Hostname),
+		BmcHostname:      optionalString(opts.BMCHostname),
+		ComputeZoneIds:   optionalSlice(opts.ComputeZoneIDs),
+		ComputeZoneNames: optionalSlice(opts.ComputeZoneNames),
+		NodeGroupIds:     optionalSlice(opts.NodeGroupIDs),
+		NodeGroupNames:   optionalSlice(opts.NodeGroupNames),
+		GpuTypes:         optionalSlice(opts.GPUTypes),
+		GpuCounts:        optionalSlice(opts.GPUCounts),
+		PublicIPs:        optionalSlice(opts.PublicIPs),
+		PrivateIPs:       optionalSlice(opts.PrivateIPs),
+		SortBy:           optionalEnum[fleetapi.GetV1NodesParamsSortBy](opts.SortBy),
+		Order:            optionalEnum[fleetapi.GetV1NodesParamsOrder](opts.Order),
+		Page:             cloneInt(opts.Page),
+		PageSize:         cloneInt(opts.PageSize),
 	}
-	if opts.AgentType != "" {
-		agentType := fleetapi.GetV1NodesParamsAgentType(opts.AgentType)
-		params.AgentType = &agentType
-	}
-	if len(opts.NodeUUIDs) > 0 {
-		nodeUUIDs := append([]string(nil), opts.NodeUUIDs...)
-		params.NodeUUIDs = &nodeUUIDs
-	}
-	if opts.Hostname != "" {
-		params.Hostname = &opts.Hostname
-	}
-	if opts.BMCHostname != "" {
-		params.BmcHostname = &opts.BMCHostname
-	}
-	if len(opts.ComputeZoneIDs) > 0 {
-		computeZoneIDs := append([]string(nil), opts.ComputeZoneIDs...)
-		params.ComputeZoneIds = &computeZoneIDs
-	}
-	if len(opts.ComputeZoneNames) > 0 {
-		computeZoneNames := append([]string(nil), opts.ComputeZoneNames...)
-		params.ComputeZoneNames = &computeZoneNames
-	}
-	if len(opts.NodeGroupIDs) > 0 {
-		nodeGroupIDs := append([]string(nil), opts.NodeGroupIDs...)
-		params.NodeGroupIds = &nodeGroupIDs
-	}
-	if len(opts.NodeGroupNames) > 0 {
-		nodeGroupNames := append([]string(nil), opts.NodeGroupNames...)
-		params.NodeGroupNames = &nodeGroupNames
-	}
-	if len(opts.GPUTypes) > 0 {
-		gpuTypes := append([]string(nil), opts.GPUTypes...)
-		params.GpuTypes = &gpuTypes
-	}
-	if len(opts.GPUCounts) > 0 {
-		gpuCounts := append([]int(nil), opts.GPUCounts...)
-		params.GpuCounts = &gpuCounts
-	}
-	if len(opts.PublicIPs) > 0 {
-		publicIPs := append([]string(nil), opts.PublicIPs...)
-		params.PublicIPs = &publicIPs
-	}
-	if len(opts.PrivateIPs) > 0 {
-		privateIPs := append([]string(nil), opts.PrivateIPs...)
-		params.PrivateIPs = &privateIPs
-	}
+	// Basic view rejects these four filters (validateNodeOptions enforces it),
+	// so they are only ever sent for the detail view.
 	if view == NodeViewDetail {
-		if len(opts.HealthStatuses) > 0 {
-			statuses := make([]fleetapi.GetV1NodesParamsHealthStatuses, 0, len(opts.HealthStatuses))
-			for _, status := range opts.HealthStatuses {
-				statuses = append(statuses, fleetapi.GetV1NodesParamsHealthStatuses(status))
-			}
-			params.HealthStatuses = &statuses
-		}
-		if len(opts.AgentStatuses) > 0 {
-			statuses := make([]fleetapi.ModelsAgentStatus, 0, len(opts.AgentStatuses))
-			for _, status := range opts.AgentStatuses {
-				statuses = append(statuses, fleetapi.ModelsAgentStatus(status))
-			}
-			params.AgentStatuses = &statuses
-		}
-		if len(opts.IntegrityChecks) > 0 {
-			checks := make([]fleetapi.ModelsIntegrityCheck, 0, len(opts.IntegrityChecks))
-			for _, check := range opts.IntegrityChecks {
-				checks = append(checks, fleetapi.ModelsIntegrityCheck(check))
-			}
-			params.IntegrityChecks = &checks
-		}
-		if len(opts.FirmwareChecks) > 0 {
-			checks := make([]fleetapi.ModelsFirmwareCheck, 0, len(opts.FirmwareChecks))
-			for _, check := range opts.FirmwareChecks {
-				checks = append(checks, fleetapi.ModelsFirmwareCheck(check))
-			}
-			params.FirmwareChecks = &checks
-		}
-	}
-	if opts.SortBy != "" {
-		sortBy := fleetapi.GetV1NodesParamsSortBy(opts.SortBy)
-		params.SortBy = &sortBy
-	}
-	if opts.Order != "" {
-		order := fleetapi.GetV1NodesParamsOrder(opts.Order)
-		params.Order = &order
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
+		params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodesParamsHealthStatuses](opts.HealthStatuses)
+		params.AgentStatuses = optionalEnumSlice[fleetapi.ModelsAgentStatus](opts.AgentStatuses)
+		params.IntegrityChecks = optionalEnumSlice[fleetapi.ModelsIntegrityCheck](opts.IntegrityChecks)
+		params.FirmwareChecks = optionalEnumSlice[fleetapi.ModelsFirmwareCheck](opts.FirmwareChecks)
 	}
 
 	resp, err := c.api.GetV1NodesWithResponse(ctx, &params)
@@ -505,13 +450,11 @@ func (c *Client) DescribeNodeWithOptions(
 		return NodeDetails{}, fmt.Errorf("node UUID is required")
 	}
 	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return NodeDetails{}, fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
+		return NodeDetails{}, invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
 	}
 
-	params := fleetapi.GetV1NodesNodeUuidParams{}
-	if opts.AgentType != "" {
-		agentType := fleetapi.GetV1NodesNodeUuidParamsAgentType(opts.AgentType)
-		params.AgentType = &agentType
+	params := fleetapi.GetV1NodesNodeUuidParams{
+		AgentType: optionalEnum[fleetapi.GetV1NodesNodeUuidParamsAgentType](opts.AgentType),
 	}
 	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, &params)
 	if err != nil {
@@ -540,73 +483,93 @@ func (c *Client) DescribeNodeWithOptions(
 	return node, nil
 }
 
-// Defaults an omitted view and rejects unsupported values
-func normalizeNodeView(view NodeView) (NodeView, error) {
+// The accepted values named in each node option's error
+const (
+	nodeViewValues           = "basic or detail"
+	nodeAgentTypeValues      = "inband or oob"
+	nodeHealthValues         = "Healthy, Degraded, Unhealthy, or Unknown"
+	nodeAgentStatusValues    = "Online, Offline, or Unknown"
+	nodeIntegrityCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
+	nodeFirmwareCheckValues  = "Passed, Failed, or Unknown"
+	nodeOrderValues          = "asc or desc"
+)
+
+// Validate reports whether the options describe a request the API accepts.
+// ListNodes calls it, and a caller can call it first to reject a bad request
+// without opening a connection.
+func (opts ListNodesOptions) Validate() error {
+	_, err := opts.normalize()
+	return err
+}
+
+// Defaults an omitted view and checks every option against it
+func (opts ListNodesOptions) normalize() (NodeView, error) {
+	view := opts.View
 	if view == "" {
-		return NodeViewDetail, nil
+		view = NodeViewDetail
+	} else if !view.Valid() {
+		return "", invalidOption("view", "node view", string(view), nodeViewValues)
 	}
-	if !view.Valid() {
-		return "", fmt.Errorf("invalid node view %q: expected basic or detail", view)
+
+	if opts.AgentType != "" && !opts.AgentType.Valid() {
+		return "", invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
+	}
+	for _, status := range opts.HealthStatuses {
+		if !status.Valid() {
+			return "", invalidOption("health", "node health", string(status), nodeHealthValues)
+		}
+	}
+	for _, status := range opts.AgentStatuses {
+		if !status.Valid() {
+			return "", invalidOption("agentStatus", "node agent status", string(status), nodeAgentStatusValues)
+		}
+	}
+	for _, check := range opts.IntegrityChecks {
+		if !check.Valid() {
+			return "", invalidOption("integrityCheck", "node verification check", string(check), nodeIntegrityCheckValues)
+		}
+	}
+	for _, check := range opts.FirmwareChecks {
+		if !check.Valid() {
+			return "", invalidOption("firmwareCheck", "node firmware check", string(check), nodeFirmwareCheckValues)
+		}
+	}
+	for _, count := range opts.GPUCounts {
+		if count < 0 {
+			return "", invalidOption("gpuCount", "node GPU count", strconv.Itoa(count), "a non-negative integer")
+		}
+	}
+	if opts.SortBy != "" && !opts.SortBy.Valid() {
+		return "", invalidOption("sortBy", "node sort", string(opts.SortBy), "")
+	}
+	if opts.Order != "" && !opts.Order.Valid() {
+		return "", invalidOption("order", "node order", string(opts.Order), nodeOrderValues)
+	}
+
+	if view == NodeViewBasic {
+		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.IntegrityChecks) > 0 || len(opts.FirmwareChecks) > 0 {
+			return "", errors.New("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
+		}
+		// The rule is stated rather than echoing the rejected value, because
+		// the value here is the backend spelling of a sort field a front end
+		// may name differently, as the CLI does with integrityCheck.
+		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
+			return "", errors.New("basic node view supports sorting only by hostname, nodeUUID, or bmcHostname")
+		}
 	}
 
 	return view, nil
 }
 
-// Checks node list options before making the request
-func validateNodeOptions(view NodeView, opts ListNodesOptions) error {
-	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return fmt.Errorf("invalid node agent type %q: expected inband or oob", opts.AgentType)
-	}
-	for _, status := range opts.HealthStatuses {
-		if !status.Valid() {
-			return fmt.Errorf("invalid node health %q: expected Healthy, Degraded, Unhealthy, or Unknown", status)
-		}
-	}
-	for _, status := range opts.AgentStatuses {
-		if !status.Valid() {
-			return fmt.Errorf("invalid node agent status %q: expected Online, Offline, or Unknown", status)
-		}
-	}
-	for _, check := range opts.IntegrityChecks {
-		if !check.Valid() {
-			return fmt.Errorf("invalid node verification check %q: expected Verified, Unverified, Degraded, Pending, Unsupported, or Unknown", check)
-		}
-	}
-	for _, check := range opts.FirmwareChecks {
-		if !check.Valid() {
-			return fmt.Errorf("invalid node firmware check %q: expected Passed, Failed, or Unknown", check)
-		}
-	}
-	for _, count := range opts.GPUCounts {
-		if count < 0 {
-			return fmt.Errorf("invalid node GPU count %d: expected a non-negative integer", count)
-		}
-	}
-	if opts.SortBy != "" && !opts.SortBy.Valid() {
-		return fmt.Errorf("invalid node sort %q", opts.SortBy)
-	}
-	if opts.Order != "" && !opts.Order.Valid() {
-		return fmt.Errorf("invalid node order %q: expected asc or desc", opts.Order)
-	}
-	if view == NodeViewBasic {
-		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.IntegrityChecks) > 0 || len(opts.FirmwareChecks) > 0 {
-			return fmt.Errorf("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
-		}
-		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
-			return fmt.Errorf("basic node view is incompatible with sort %q", opts.SortBy)
-		}
-	}
-
-	return nil
-}
-
-// Reports whether a sort field works with basic view
+// Reports whether a sort field works with basic view. Basic responses carry
+// only the identity columns, so those are the only fields there is anything to
+// sort on.
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHealthStatus, NodeSortByIntegrityCheck, NodeSortByAgentStatus:
-		return false
-	default:
+	case NodeSortByHostname, NodeSortByUUID, NodeSortByBMCHostname:
 		return true
+	default:
+		return false
 	}
 }
 

@@ -24,6 +24,42 @@ type GeoLocation struct {
 	Longitude *float32 `json:"longitude,omitempty"`
 }
 
+// InvalidOptionError reports an option value the API will not accept.
+//
+// The Validate methods on the list option types return it so that a front end
+// can re-render the rule in its own vocabulary rather than restating the rule
+// itself. The CLI uses Option to look up the flag that carries the option, so
+// its errors name the flag the user typed while the rule lives here only.
+type InvalidOptionError struct {
+	// Option is a stable key for the rejected option, such as "view",
+	// "sortBy", or "health". It is deliberately not the prose in Description:
+	// callers match on it, so it does not change when wording does.
+	Option string
+	// Description names the option in the SDK's own terms, e.g. "node health".
+	Description string
+	Value       string
+	// Expected lists the accepted values, empty when the option has no short
+	// list to offer.
+	Expected string
+}
+
+func (e *InvalidOptionError) Error() string {
+	if e.Expected == "" {
+		return fmt.Sprintf("invalid %s %q", e.Description, e.Value)
+	}
+	return fmt.Sprintf("invalid %s %q: expected %s", e.Description, e.Value, e.Expected)
+}
+
+// Builds an InvalidOptionError for a rejected option value
+func invalidOption(option, description, value, expected string) error {
+	return &InvalidOptionError{
+		Option:      option,
+		Description: description,
+		Value:       value,
+		Expected:    expected,
+	}
+}
+
 // Represents a non-success API response
 type APIError struct {
 	StatusCode int
@@ -172,12 +208,52 @@ func cloneStringSlice(values *[]string) []string {
 	return out
 }
 
-// Converts a slice into an optional query parameter, omitting it when empty
-func optionalStringSlice(values []string) *[]string {
+// Converts a slice into an optional query parameter, omitting it when empty.
+// The values are copied so the request never shares a backing array with the
+// caller's options.
+func optionalSlice[T any](values []T) *[]T {
 	if len(values) == 0 {
 		return nil
 	}
-	out := append([]string(nil), values...)
+	out := append([]T(nil), values...)
+	return &out
+}
+
+// Converts a slice of SDK enum values into the generated parameter's own enum
+// type, omitting the parameter when the slice is empty. The target type is
+// given explicitly and the source type is inferred:
+//
+//	params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodesParamsHealthStatuses](opts.HealthStatuses)
+func optionalEnumSlice[U ~string, T ~string](values []T) *[]U {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]U, 0, len(values))
+	for _, value := range values {
+		out = append(out, U(value))
+	}
+	return &out
+}
+
+// Converts an SDK enum value into the generated parameter's own enum type,
+// omitting the parameter when the value is empty. As with optionalEnumSlice the
+// target type is given explicitly and the source type is inferred.
+func optionalEnum[U ~string, T ~string](value T) *U {
+	if value == "" {
+		return nil
+	}
+	out := U(value)
+	return &out
+}
+
+// Converts a string into an optional query parameter, omitting it when empty.
+// The value is passed through verbatim, for fields the caller has already
+// normalized; use optionalTrimmedString to trim as well.
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	out := value
 	return &out
 }
 
@@ -188,6 +264,15 @@ func optionalTrimmedString(value string) *string {
 		return nil
 	}
 	return &trimmed
+}
+
+// Converts a flag into an optional query parameter, omitting it when false so
+// that an unset flag is left to the backend default rather than sent as false.
+func optionalTrueBool(value bool) *bool {
+	if !value {
+		return nil
+	}
+	return boolPointer(value)
 }
 
 // Returns a pointer to a copied boolean value

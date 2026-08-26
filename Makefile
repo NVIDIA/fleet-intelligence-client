@@ -15,8 +15,9 @@ OPENAPI_CODEGEN_CONFIG := api/openapi/oapi-codegen.yaml
 OPENAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 COVERAGE_FILE := coverage.out
 COVERAGE_THRESHOLD := 80
-# Packages excluded from coverage (generated code is not hand-tested).
-COVERAGE_EXCLUDE_PATTERN := internal/generated
+# Packages excluded from coverage: generated code is not hand-tested, and
+# cmdtest is fixtures for the other packages' tests rather than shipped code.
+COVERAGE_EXCLUDE_PATTERN := internal/generated|internal/cmdtest
 
 LDFLAGS := -s -w \
 	-X 'main.version=$(VERSION)' \

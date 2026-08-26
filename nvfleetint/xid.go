@@ -107,6 +107,19 @@ type XIDBurstsPage struct {
 	RawJSON  []byte     `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response. The XID burst
+// endpoint sends no hasMore field, so it is derived from the counters.
+func (page XIDBurstsPage) PageInfo() PageInfo {
+	hasMore := hasMoreFromCounts(page.Page, page.PageSize, page.Total)
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // XIDBurst represents one finalized XID burst. Fields are shaped server-side by
 // the caller's persona: category, subcategory, platform-attributed disruption,
 // XID descriptions, and DC-admin actions are omitted for tenant callers.
@@ -160,31 +173,17 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 
 	mode := fleetapi.GetV1XIDBurstsParamsTimeMode(timeRange.timeMode)
 	params := fleetapi.GetV1XIDBurstsParams{TimeMode: &mode}
-	if timeRange.window != "" {
-		value := timeRange.window
-		params.Window = &value
-	}
-	if timeRange.startTime != "" {
-		value := timeRange.startTime
-		params.StartTime = &value
-	}
-	if timeRange.endTime != "" {
-		value := timeRange.endTime
-		params.EndTime = &value
-	}
-	if node := strings.TrimSpace(opts.NodeUUID); node != "" {
-		params.NodeUUID = &node
-	}
-	params.NodeGroupIds = optionalStringSlice(opts.NodeGroupIDs)
-	params.ComputeZoneIds = optionalStringSlice(opts.ComputeZoneIDs)
-	params.ExcludeNodeGroupIds = optionalStringSlice(opts.ExcludeNodeGroupIDs)
-	params.ExcludeComputeZoneIds = optionalStringSlice(opts.ExcludeComputeZoneIDs)
+	params.Window = optionalString(timeRange.window)
+	params.StartTime = optionalString(timeRange.startTime)
+	params.EndTime = optionalString(timeRange.endTime)
+	params.NodeUUID = optionalTrimmedString(opts.NodeUUID)
+	params.NodeGroupIds = optionalSlice(opts.NodeGroupIDs)
+	params.ComputeZoneIds = optionalSlice(opts.ComputeZoneIDs)
+	params.ExcludeNodeGroupIds = optionalSlice(opts.ExcludeNodeGroupIDs)
+	params.ExcludeComputeZoneIds = optionalSlice(opts.ExcludeComputeZoneIDs)
 	params.JobDisruption = cloneBool(opts.JobDisruption)
 	params.JobDisruptionDueToPlatformIssue = cloneBool(opts.JobDisruptionDueToPlatformIssue)
-	if len(opts.XIDNumbers) > 0 {
-		values := append([]int(nil), opts.XIDNumbers...)
-		params.XidNumbers = &values
-	}
+	params.XidNumbers = optionalSlice(opts.XIDNumbers)
 	params.HostnameSearch = optionalTrimmedString(opts.HostnameSearch)
 	params.CategorySearch = optionalTrimmedString(opts.CategorySearch)
 	params.SubcategorySearch = optionalTrimmedString(opts.SubcategorySearch)
@@ -192,26 +191,16 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 	params.TenantInvestigationSearch = optionalTrimmedString(opts.TenantInvestigationSearch)
 	params.DcAdminActionSearch = optionalTrimmedString(opts.DCAdminActionSearch)
 	params.DcAdminInvestigationSearch = optionalTrimmedString(opts.DCAdminInvestigationSearch)
-	params.Categories = optionalStringSlice(opts.Categories)
-	params.Subcategories = optionalStringSlice(opts.Subcategories)
-	params.TenantActions = optionalStringSlice(opts.TenantActions)
-	params.TenantInvestigations = optionalStringSlice(opts.TenantInvestigations)
-	params.DcAdminActions = optionalStringSlice(opts.DCAdminActions)
-	params.DcAdminInvestigations = optionalStringSlice(opts.DCAdminInvestigations)
-	if opts.SortBy != "" {
-		sortBy := fleetapi.GetV1XIDBurstsParamsSortBy(opts.SortBy)
-		params.SortBy = &sortBy
-	}
-	if opts.SortOrder != "" {
-		sortOrder := fleetapi.GetV1XIDBurstsParamsSortOrder(opts.SortOrder)
-		params.SortOrder = &sortOrder
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
+	params.Categories = optionalSlice(opts.Categories)
+	params.Subcategories = optionalSlice(opts.Subcategories)
+	params.TenantActions = optionalSlice(opts.TenantActions)
+	params.TenantInvestigations = optionalSlice(opts.TenantInvestigations)
+	params.DcAdminActions = optionalSlice(opts.DCAdminActions)
+	params.DcAdminInvestigations = optionalSlice(opts.DCAdminInvestigations)
+	params.SortBy = optionalEnum[fleetapi.GetV1XIDBurstsParamsSortBy](opts.SortBy)
+	params.SortOrder = optionalEnum[fleetapi.GetV1XIDBurstsParamsSortOrder](opts.SortOrder)
+	params.Page = cloneInt(opts.Page)
+	params.PageSize = cloneInt(opts.PageSize)
 
 	resp, err := c.api.GetV1XIDBurstsWithResponse(ctx, &params)
 	if err != nil {

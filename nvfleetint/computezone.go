@@ -6,7 +6,7 @@ package nvfleetint
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
@@ -44,6 +44,18 @@ type ComputeZonesPage struct {
 	RawJSON      []byte        `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page ComputeZonesPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Represents a compute zone
 type ComputeZone struct {
 	ID          string       `json:"id"`
@@ -58,7 +70,7 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	view, err := normalizeComputeZoneView(opts.View)
+	view, err := opts.normalize()
 	if err != nil {
 		return ComputeZonesPage{}, err
 	}
@@ -66,22 +78,10 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 	params := fleetapi.GetV1ComputezonesParams{
 		View: computeZoneViewParam(view),
 	}
-	if view == ComputeZoneViewBasic && opts.IncludeMetrics != nil {
-		return ComputeZonesPage{}, fmt.Errorf("basic compute zone view is incompatible with include metrics")
-	}
-	if opts.IncludeMetrics != nil {
-		params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
-	}
-	if len(opts.ZoneIDs) > 0 {
-		zoneIDs := append([]string(nil), opts.ZoneIDs...)
-		params.ComputeZoneIds = &zoneIDs
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
-	}
+	params.IncludeMetrics = cloneBool(opts.IncludeMetrics)
+	params.ComputeZoneIds = optionalSlice(opts.ZoneIDs)
+	params.Page = cloneInt(opts.Page)
+	params.PageSize = cloneInt(opts.PageSize)
 
 	resp, err := c.api.GetV1ComputezonesWithResponse(ctx, &params)
 	if err != nil {
@@ -98,13 +98,28 @@ func (c *Client) ListComputeZones(ctx context.Context, opts ListComputeZonesOpti
 	return decodeDetailComputeZones(resp.Body)
 }
 
-// Defaults an omitted view and rejects unsupported values
-func normalizeComputeZoneView(view ComputeZoneView) (ComputeZoneView, error) {
+// The accepted values named in each compute zone option's error
+const computeZoneViewValues = "basic or detail"
+
+// Validate reports whether the options describe a request the API accepts.
+// ListComputeZones calls it, and a caller can call it first to reject a bad
+// request without opening a connection.
+func (opts ListComputeZonesOptions) Validate() error {
+	_, err := opts.normalize()
+	return err
+}
+
+// Defaults an omitted view and checks every option against it
+func (opts ListComputeZonesOptions) normalize() (ComputeZoneView, error) {
+	view := opts.View
 	if view == "" {
-		return ComputeZoneViewDetail, nil
+		view = ComputeZoneViewDetail
+	} else if !view.Valid() {
+		return "", invalidOption("view", "compute zone view", string(view), computeZoneViewValues)
 	}
-	if !view.Valid() {
-		return "", fmt.Errorf("invalid compute zone view %q: expected basic or detail", view)
+
+	if view == ComputeZoneViewBasic && opts.IncludeMetrics != nil {
+		return "", errors.New("basic compute zone view is incompatible with include metrics")
 	}
 
 	return view, nil

@@ -6,44 +6,28 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/internal/clihelpers"
-	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/cmd/release"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
 
 	"github.com/spf13/cobra"
 )
 
-// Verifies merged empty-list JSON uses page 0 when there are no pages.
-func TestWritePaginatedListJSONEmpty(t *testing.T) {
-	var out bytes.Buffer
-	result := clihelpers.MergedJSONResult{
-		Items: []json.RawMessage{},
-		Pagination: clihelpers.MergedPagination{
-			Page: 1, PageSize: 20, Total: 0, PagesFetched: 1,
-		},
-	}
-	if err := writePaginatedListJSON(&out, nil, result); err != nil {
-		t.Fatalf("write paginated JSON failed: %v", err)
-	}
+// testBuild stands in for the values the linker stamps into a real build.
+var testBuild = release.BuildInfo{Version: "dev", Commit: "unknown", BuildDate: "unknown"}
 
-	var got clihelpers.MergedJSONResult
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("decode paginated JSON failed: %v", err)
-	}
-	if got.Pagination.Page != 0 {
-		t.Fatalf("unexpected page: got %d want 0", got.Pagination.Page)
-	}
+// newTestRootCmd assembles the full command tree the binary ships.
+func newTestRootCmd() *cobra.Command {
+	return newRootCmd(testBuild)
 }
 
 func TestHelpCommand(t *testing.T) {
-	cmd := newRootCmd()
+	cmd := newTestRootCmd()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{"--help"})
@@ -73,7 +57,7 @@ func TestCommandsRejectUnsupportedCommonFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := newRootCmd()
+			cmd := newTestRootCmd()
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetArgs(tt.args)
 
@@ -101,7 +85,7 @@ func TestCommandsRejectNonPositiveTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := newRootCmd()
+			cmd := newTestRootCmd()
 			cmd.SetOut(&bytes.Buffer{})
 			cmd.SetArgs(tt.args)
 
@@ -147,7 +131,7 @@ func TestClientCommandsAcceptProfileFlag(t *testing.T) {
 			t.Errorf("%s does not accept --profile", path)
 		}
 	}
-	walk(newRootCmd())
+	walk(newTestRootCmd())
 }
 
 // The mirror image of the above: on the auth CRUD commands the profile is the
@@ -158,7 +142,7 @@ func TestClientCommandsAcceptProfileFlag(t *testing.T) {
 func TestAuthProfileCommandsRejectProfileFlag(t *testing.T) {
 	for _, name := range []string{"add", "remove", "use"} {
 		t.Run(name, func(t *testing.T) {
-			cmd, _, err := newRootCmd().Find([]string{"auth", name})
+			cmd, _, err := newTestRootCmd().Find([]string{"auth", name})
 			if err != nil {
 				t.Fatalf("find auth %s failed: %v", name, err)
 			}
@@ -172,85 +156,11 @@ func TestAuthProfileCommandsRejectProfileFlag(t *testing.T) {
 	}
 }
 
-// Verifies the top-level execute helper
+// Verifies the top-level execute helper. testBuild is a dev build, which skips
+// the release lookup, so this reaches the network no more than `--help` does.
 func TestExecuteRunsRootCommand(t *testing.T) {
-	server, _ := releaseServer(t, "v1.2.0")
-	setUpdateChecker(t, server.URL)
-
-	if err := execute(context.Background(), []string{"version"}); err != nil {
+	if err := execute(context.Background(), testBuild, []string{"version"}); err != nil {
 		t.Fatalf("execute failed: %v", err)
-	}
-}
-
-func TestWriteCLIErrorJSON(t *testing.T) {
-	var out bytes.Buffer
-	writeCLIError(&out, []string{"node", "list", "--output", "json"}, errors.New("bad input"))
-
-	var got errorOutput
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("decode error JSON failed: %v", err)
-	}
-	if got.Error.Code != "command_error" || got.Error.Message != "bad input" {
-		t.Fatalf("unexpected error JSON: %#v", got)
-	}
-}
-
-func TestWriteCLIErrorJSONForParseErrorArgs(t *testing.T) {
-	var out bytes.Buffer
-	writeCLIError(&out, []string{"version", "--output", "json", "--badflag"}, errors.New("unknown flag: --badflag"))
-
-	var got errorOutput
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("decode error JSON failed: %v", err)
-	}
-	if got.Error.Code != "command_error" || got.Error.Message != "unknown flag: --badflag" {
-		t.Fatalf("unexpected error JSON: %#v", got)
-	}
-}
-
-func TestWriteCLIErrorIncludesAPIDetails(t *testing.T) {
-	var out bytes.Buffer
-	err := &nvfleetint.APIError{
-		StatusCode: 403,
-		Status:     "Forbidden",
-		Message:    "permission denied",
-		Details:    "missing role",
-	}
-	writeCLIError(&out, []string{"node", "list", "--output", "json"}, err)
-
-	var got errorOutput
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("decode error JSON failed: %v", err)
-	}
-	if got.Error.Code != "api_error" || got.Error.StatusCode != 403 || got.Error.Status != "Forbidden" || got.Error.Message != "permission denied" || got.Error.Details != "missing role" {
-		t.Fatalf("unexpected error JSON: %#v", got)
-	}
-}
-
-func TestExitCodeForPermissionErrors(t *testing.T) {
-	if got := exitCodeFor(&nvfleetint.APIError{StatusCode: 403}); got != exitNoPermission {
-		t.Fatalf("unexpected permission exit code: %d", got)
-	}
-	if got := exitCodeFor(&nvfleetint.APIError{StatusCode: 500}); got != exitError {
-		t.Fatalf("unexpected general exit code: %d", got)
-	}
-}
-
-func TestRequireSingleArg(t *testing.T) {
-	validate := requireSingleArg("node UUID")
-
-	if err := validate(nil, []string{"only-one"}); err != nil {
-		t.Fatalf("expected exactly one arg to pass, got: %v", err)
-	}
-
-	err := validate(nil, nil)
-	if err == nil || !strings.Contains(err.Error(), "node UUID is required") {
-		t.Fatalf("expected missing-arg error, got: %v", err)
-	}
-
-	err = validate(nil, []string{"a", "b"})
-	if err == nil || !strings.Contains(err.Error(), "only one node UUID may be given, got 2") {
-		t.Fatalf("expected too-many-args error, got: %v", err)
 	}
 }
 
@@ -271,7 +181,7 @@ func TestEveryCommandDeclaresArgsValidator(t *testing.T) {
 		}
 	}
 
-	root := newRootCmd()
+	root := newTestRootCmd()
 	for _, child := range root.Commands() {
 		walk(child)
 	}
@@ -307,9 +217,9 @@ func TestCommandsRejectUnexpectedArguments(t *testing.T) {
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			defer server.Close()
-			saveTestConfig(t, server.URL, "test-key")
+			cmdtest.SaveConfig(t, server.URL, "test-key")
 
-			cmd := newRootCmd()
+			cmd := newTestRootCmd()
 			var out bytes.Buffer
 			cmd.SetOut(&out)
 			cmd.SetErr(&out)
@@ -355,7 +265,7 @@ func TestEveryCommandRejectsWrongArgCount(t *testing.T) {
 			collect(child)
 		}
 	}
-	for _, child := range newRootCmd().Commands() {
+	for _, child := range newTestRootCmd().Commands() {
 		collect(child)
 	}
 
@@ -374,14 +284,14 @@ func TestEveryCommandRejectsWrongArgCount(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 				}))
 				defer server.Close()
-				saveTestConfig(t, server.URL, "test-key")
+				cmdtest.SaveConfig(t, server.URL, "test-key")
 
 				args := append([]string{}, path...)
 				for i := 0; i < count; i++ {
 					args = append(args, fmt.Sprintf("extra%d", i))
 				}
 
-				root := newRootCmd()
+				root := newTestRootCmd()
 				var out bytes.Buffer
 				root.SetOut(&out)
 				root.SetErr(&out)

@@ -57,6 +57,18 @@ type EventsPage struct {
 	RawJSON  []byte  `json:"-"`
 }
 
+// PageInfo reports the pagination envelope of the response.
+func (page EventsPage) PageInfo() PageInfo {
+	hasMore := page.HasMore
+	return PageInfo{
+		Page:     page.Page,
+		PageSize: page.PageSize,
+		Total:    page.Total,
+		HasMore:  &hasMore,
+		RawJSON:  page.RawJSON,
+	}
+}
+
 // Event represents a single fleet event
 type Event struct {
 	EventID          string            `json:"eventId,omitempty"`
@@ -96,30 +108,15 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 	}
 
 	mode := fleetapi.GetV1EventsParamsTimeMode(timeRange.timeMode)
-	params := fleetapi.GetV1EventsParams{TimeMode: &mode}
-	if timeRange.window != "" {
-		value := timeRange.window
-		params.Window = &value
-	}
-	if timeRange.startTime != "" {
-		value := timeRange.startTime
-		params.StartTime = &value
-	}
-	if timeRange.endTime != "" {
-		value := timeRange.endTime
-		params.EndTime = &value
-	}
-	if node := strings.TrimSpace(opts.NodeUUID); node != "" {
-		params.NodeUUID = &node
-	}
-	if component := strings.TrimSpace(opts.Component); component != "" {
-		params.Component = &component
-	}
-	if opts.Page != nil {
-		params.Page = cloneInt(opts.Page)
-	}
-	if opts.PageSize != nil {
-		params.PageSize = cloneInt(opts.PageSize)
+	params := fleetapi.GetV1EventsParams{
+		TimeMode:  &mode,
+		Window:    optionalString(timeRange.window),
+		StartTime: optionalString(timeRange.startTime),
+		EndTime:   optionalString(timeRange.endTime),
+		NodeUUID:  optionalTrimmedString(opts.NodeUUID),
+		Component: optionalTrimmedString(opts.Component),
+		Page:      cloneInt(opts.Page),
+		PageSize:  cloneInt(opts.PageSize),
 	}
 
 	resp, err := c.api.GetV1EventsWithResponse(ctx, &params)
@@ -240,7 +237,7 @@ func normalizeEventTimeRange(window, startTime, endTime string) (eventTimeRange,
 	case hasWindow && (hasStart || hasEnd):
 		return eventTimeRange{}, fmt.Errorf("window cannot be combined with start time or end time")
 	case hasWindow:
-		if err := validateReportWindow(window); err != nil {
+		if err := ValidateWindow(window); err != nil {
 			return eventTimeRange{}, err
 		}
 		return eventTimeRange{timeMode: eventTimeModeRelative, window: window}, nil
