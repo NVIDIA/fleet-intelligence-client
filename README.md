@@ -40,9 +40,6 @@ Install `nvfleetint`:
 irm https://github.com/NVIDIA/fleet-intelligence-client/releases/latest/download/install.ps1 | iex
 ```
 
-The installer adds `nvfleetint` to both your user PATH and the current
-PowerShell session, so the command is available immediately.
-
 #### Staying current
 
 `nvfleetint version` checks GitHub for the newest published release and tells
