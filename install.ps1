@@ -164,7 +164,16 @@ try {
         if ($entries -notcontains $InstallDir) {
             $newPath = (@($entries) + $InstallDir) -join ';'
             [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-            Write-Host "Added $InstallDir to your user PATH. Open a new terminal to use it."
+            Write-Host "Added $InstallDir to your user PATH."
+        }
+
+        # Persisting the user PATH only affects new processes. Update this
+        # PowerShell process too so the command is available immediately when
+        # the installer is invoked through `irm ... | iex`.
+        $processEntries = @($env:Path -split ';' | Where-Object { $_ })
+        if ($processEntries -notcontains $InstallDir) {
+            $env:Path = (@($processEntries) + $InstallDir) -join ';'
+            Write-Host "Added $InstallDir to the current PowerShell session PATH."
         }
     }
 

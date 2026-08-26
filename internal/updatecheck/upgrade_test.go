@@ -338,15 +338,32 @@ func TestRestoreWindowsBinaryReportsRemovalFailure(t *testing.T) {
 }
 
 func TestManualUpgradeCommand(t *testing.T) {
-	command := ManualUpgradeCommand()
-	if !strings.Contains(command, releasesPage) {
-		t.Fatalf("manual command does not point at the releases page: %q", command)
+	tests := []struct {
+		name string
+		goos string
+		want string
+	}{
+		{
+			name: "windows",
+			goos: "windows",
+			want: "irm " + releasesPage + "/latest/download/install.ps1 | iex",
+		},
+		{
+			name: "unix",
+			goos: "linux",
+			want: "curl -fsSL " + releasesPage + "/latest/download/install.sh | bash",
+		},
 	}
-	if runtime.GOOS == "windows" {
-		if !strings.Contains(command, "install.ps1") {
-			t.Fatalf("expected the PowerShell installer: %q", command)
-		}
-	} else if !strings.Contains(command, "install.sh") {
-		t.Fatalf("expected the shell installer: %q", command)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := manualUpgradeCommand(tt.goos); got != tt.want {
+				t.Fatalf("unexpected manual upgrade command: got %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	if got := ManualUpgradeCommand(); got != manualUpgradeCommand(runtime.GOOS) {
+		t.Fatalf("manual command does not match runtime platform: %q", got)
 	}
 }
