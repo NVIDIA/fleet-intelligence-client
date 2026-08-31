@@ -3656,9 +3656,32 @@ paths:
         XID catalog descriptions, and DC-admin actions. Action text is resolved from
         the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid,
         hostname, and the node''s current nodeGroup/computeZone (display names and
-        IDs), matching alert timeline Level 1 inventory enrichment.'
+        IDs), matching alert timeline Level 1 inventory enrichment.
+
+        Bursts are detected independently on each observation path, selected by agentType:
+        in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both
+        in one page. Each item echoes the single path that detected it, so on a combined
+        page a node that reported the same fault through both paths appears as two
+        rows with different agentType values — that is the observation, not a duplicate
+        to be merged. Sorting and paging are identical for every agentType. Every
+        item also carries all three node identities (hostname, nodeName, bmcHostname);
+        each is empty unless the source owning it is currently enrolled, so an out-of-band-only
+        node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch
+        matches any of the three. For out-of-band bursts the deviceIds keys are resolved
+        from the Redfish resource token to the GPU UUID where inventory allows, and
+        otherwise remain the raw token, so treat the key as an opaque device label.'
       operationId: getV1XIDBursts
       parameters:
+        - description: Observation path to list bursts from, or all for both
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+              - all
+            type: string
         - description: Start time in RFC3339 format (required for absolute mode, e.g.
             2024-01-01T01:00:00Z).
           in: query
@@ -3741,11 +3764,20 @@ paths:
             items:
               type: integer
             type: array
-        - description: Case-insensitive hostname substring
+        - description: 'Case-insensitive substring matched against any of the node''s
+            identities: hostname, nodeName, or bmcHostname. Takes precedence when
+            both nameSearch and deprecated hostnameSearch are supplied.'
+          in: query
+          name: nameSearch
+          schema:
+            type: string
+        - description: 'Deprecated: use nameSearch. Identical behavior; it never matched
+            hostname alone.'
           in: query
           name: hostnameSearch
           schema:
             type: string
+          deprecated: true
         - description: Case-insensitive category substring (cloud-provider/NCP only)
           in: query
           name: categorySearch
@@ -3933,8 +3965,14 @@ paths:
         reflect the distinct values actually present across the customer''s finalized
         bursts (still unfiltered by the current table filters). Action codes are alias-normalized
         and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname
-        filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts
-        rather than a distinct-hostname options list.'
+        filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather
+        than a distinct-hostname options list.
+
+        Options are scoped by agentType and echoed in the response, so they always
+        match what GET /v1/xid/bursts returns for that same value. Request them again
+        when switching paths, and pass agentType=all when the table itself was fetched
+        with agentType=all — single-path options would otherwise omit filters for
+        rows already on screen.'
       operationId: getV1XIDBurstOptions
       parameters:
         - description: Optional RFC3339 start time
@@ -3988,6 +4026,16 @@ paths:
             items:
               type: string
             type: array
+        - description: Observation path to compute options for, or all for both
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+              - all
+            type: string
       responses:
         '200':
           content:
@@ -4000,7 +4048,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Invalid time range or conflicting inventory filters
+          description: Invalid agentType, invalid time range, or conflicting inventory
+            filters
         '401':
           content:
             application/json:
@@ -4038,8 +4087,13 @@ paths:
         actions. Cloud-provider/NCP callers additionally receive category, subcategory,
         platform-attributed disruption, XID catalog descriptions, and all tenant plus
         DC-admin actions. Suggested action text is resolved from the persona-appropriate
-        Guidance Classes catalog. The response includes nodeUuid, hostname, and the
-        node''s current nodeGroup/computeZone (display names and IDs).'
+        Guidance Classes catalog. The response includes nodeUuid, all three node identities
+        (hostname, nodeName, bmcHostname), and the node''s current nodeGroup/computeZone
+        (display names and IDs).
+
+        This endpoint takes no agentType parameter: burst IDs are unique across observation
+        paths, so one ID resolves without one. The returned agentType field reports
+        which path detected the burst.'
       operationId: getV1XIDBurstDetail
       parameters:
         - description: XID burst UUID
@@ -7709,6 +7763,18 @@ components:
       type: object
     models.XIDBurstDetail:
       properties:
+        agentType:
+          description: 'AgentType is the observation path the burst was detected on:
+            "inband" or
+
+            "oob". This endpoint takes no agentType parameter — burst IDs are unique
+
+            across paths — so this field is the only way to tell them apart.'
+          example: inband
+          type: string
+        bmcHostname:
+          example: bmc-hostname-1
+          type: string
         burstDurationSeconds:
           example: 506
           type: integer
@@ -7740,6 +7806,10 @@ components:
           format: date-time
           type: string
         hostname:
+          description: 'Hostname, NodeName, and BMCHostname carry the same node-scoped
+            meaning as
+
+            on XIDBurstListItem.'
           example: machine-hostname-1
           type: string
         jobDisruption:
@@ -7760,6 +7830,9 @@ components:
           type: string
         nodeGroupId:
           example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeName:
+          example: machine-name-1
           type: string
         nodeUuid:
           example: 624fea4b-0000-0000-0000-0e5737890000
@@ -7798,6 +7871,22 @@ components:
       type: object
     models.XIDBurstFilterOptionsResponse:
       properties:
+        agentType:
+          description: 'AgentType echoes the observation path the options were computed
+            from, so
+
+            a client that caches options per path can tell them apart. It may be
+
+            "all", and must be when the table it filters was fetched with
+
+            agentType=all: options for one path never include values seen only on
+            the
+
+            other, so pairing a combined table with single-path options would hide
+
+            filters for rows on screen.'
+          example: inband
+          type: string
         categories:
           items:
             type: string
@@ -7844,6 +7933,22 @@ components:
       type: object
     models.XIDBurstListItem:
       properties:
+        agentType:
+          description: 'AgentType is the observation path the burst was detected on:
+            "inband" or
+
+            "oob". Never "all", even for an agentType=all request — "all" selects
+
+            which rows to return, and every row was still found by exactly one path.
+
+            On a combined page this is what tells the two apart, so a node that
+
+            reported one fault on both appears as two rows labelled differently.'
+          example: inband
+          type: string
+        bmcHostname:
+          example: bmc-hostname-1
+          type: string
         burstDurationSeconds:
           example: 506
           type: integer
@@ -7875,6 +7980,14 @@ components:
           format: date-time
           type: string
         hostname:
+          description: 'Hostname is the in-band OS hostname; NodeName and BMCHostname
+            are the
+
+            OOB machine name and BMC hostname. All three describe the node, not the
+
+            burst, so a dual-enrolled node returns every identity it has regardless
+
+            of AgentType. Each is empty when the source owning it is not enrolled.'
           example: machine-hostname-1
           type: string
         jobDisruption:
@@ -7895,6 +8008,9 @@ components:
           type: string
         nodeGroupId:
           example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeName:
+          example: machine-name-1
           type: string
         nodeUuid:
           example: 624fea4b-0000-0000-0000-0e5737890000

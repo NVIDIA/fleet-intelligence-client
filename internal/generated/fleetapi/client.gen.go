@@ -877,19 +877,19 @@ func (e GetV1NodesParamsOrder) Valid() bool {
 
 // Defines values for GetV1NodesHistoryParamsActorType.
 const (
-	All    GetV1NodesHistoryParamsActorType = "all"
-	System GetV1NodesHistoryParamsActorType = "system"
-	User   GetV1NodesHistoryParamsActorType = "user"
+	GetV1NodesHistoryParamsActorTypeAll    GetV1NodesHistoryParamsActorType = "all"
+	GetV1NodesHistoryParamsActorTypeSystem GetV1NodesHistoryParamsActorType = "system"
+	GetV1NodesHistoryParamsActorTypeUser   GetV1NodesHistoryParamsActorType = "user"
 )
 
 // Valid indicates whether the value is a known member of the GetV1NodesHistoryParamsActorType enum.
 func (e GetV1NodesHistoryParamsActorType) Valid() bool {
 	switch e {
-	case All:
+	case GetV1NodesHistoryParamsActorTypeAll:
 		return true
-	case System:
+	case GetV1NodesHistoryParamsActorTypeSystem:
 		return true
-	case User:
+	case GetV1NodesHistoryParamsActorTypeUser:
 		return true
 	default:
 		return false
@@ -1118,6 +1118,27 @@ func (e GetV1ReportsInventoryParamsOrder) Valid() bool {
 	}
 }
 
+// Defines values for GetV1XIDBurstsParamsAgentType.
+const (
+	GetV1XIDBurstsParamsAgentTypeAll    GetV1XIDBurstsParamsAgentType = "all"
+	GetV1XIDBurstsParamsAgentTypeInband GetV1XIDBurstsParamsAgentType = "inband"
+	GetV1XIDBurstsParamsAgentTypeOob    GetV1XIDBurstsParamsAgentType = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstsParamsAgentType enum.
+func (e GetV1XIDBurstsParamsAgentType) Valid() bool {
+	switch e {
+	case GetV1XIDBurstsParamsAgentTypeAll:
+		return true
+	case GetV1XIDBurstsParamsAgentTypeInband:
+		return true
+	case GetV1XIDBurstsParamsAgentTypeOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1XIDBurstsParamsTimeMode.
 const (
 	GetV1XIDBurstsParamsTimeModeAbsolute GetV1XIDBurstsParamsTimeMode = "absolute"
@@ -1226,6 +1247,27 @@ func (e GetV1XIDBurstOptionsParamsTimeMode) Valid() bool {
 	case GetV1XIDBurstOptionsParamsTimeModeAbsolute:
 		return true
 	case GetV1XIDBurstOptionsParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstOptionsParamsAgentType.
+const (
+	GetV1XIDBurstOptionsParamsAgentTypeAll    GetV1XIDBurstOptionsParamsAgentType = "all"
+	GetV1XIDBurstOptionsParamsAgentTypeInband GetV1XIDBurstOptionsParamsAgentType = "inband"
+	GetV1XIDBurstOptionsParamsAgentTypeOob    GetV1XIDBurstOptionsParamsAgentType = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstOptionsParamsAgentType enum.
+func (e GetV1XIDBurstOptionsParamsAgentType) Valid() bool {
+	switch e {
+	case GetV1XIDBurstOptionsParamsAgentTypeAll:
+		return true
+	case GetV1XIDBurstOptionsParamsAgentTypeInband:
+		return true
+	case GetV1XIDBurstOptionsParamsAgentTypeOob:
 		return true
 	default:
 		return false
@@ -2958,6 +3000,11 @@ type ModelsUpdateRetentionPolicyRequest struct {
 
 // ModelsXIDBurstDetail defines model for models.XIDBurstDetail.
 type ModelsXIDBurstDetail struct {
+	// AgentType AgentType is the observation path the burst was detected on: "inband" or
+	// "oob". This endpoint takes no agentType parameter — burst IDs are unique
+	// across paths — so this field is the only way to tell them apart.
+	AgentType            *string `json:"agentType,omitempty"`
+	BmcHostname          *string `json:"bmcHostname,omitempty"`
 	BurstDurationSeconds *int    `json:"burstDurationSeconds,omitempty"`
 	BurstId              *string `json:"burstId,omitempty"`
 
@@ -2970,7 +3017,10 @@ type ModelsXIDBurstDetail struct {
 	// numbers observed on that device in the burst.
 	DeviceIds *map[string][]int `json:"deviceIds,omitempty"`
 	EndTime   *time.Time        `json:"endTime,omitempty"`
-	Hostname  *string           `json:"hostname,omitempty"`
+
+	// Hostname Hostname, NodeName, and BMCHostname carry the same node-scoped meaning as
+	// on XIDBurstListItem.
+	Hostname *string `json:"hostname,omitempty"`
 
 	// JobDisruption JobDisruption is true when any XID in the burst is job-fatal. It is
 	// identical for tenant and cloud-provider/NCP callers.
@@ -2981,6 +3031,7 @@ type ModelsXIDBurstDetail struct {
 	JobDisruptionDueToPlatformIssue *bool      `json:"jobDisruptionDueToPlatformIssue,omitempty"`
 	NodeGroup                       *string    `json:"nodeGroup,omitempty"`
 	NodeGroupId                     *string    `json:"nodeGroupId,omitempty"`
+	NodeName                        *string    `json:"nodeName,omitempty"`
 	NodeUuid                        *string    `json:"nodeUuid,omitempty"`
 	StartTime                       *time.Time `json:"startTime,omitempty"`
 	StickyXidsSuppressed            *int       `json:"stickyXidsSuppressed,omitempty"`
@@ -2997,6 +3048,13 @@ type ModelsXIDBurstDetail struct {
 
 // ModelsXIDBurstFilterOptionsResponse defines model for models.XIDBurstFilterOptionsResponse.
 type ModelsXIDBurstFilterOptionsResponse struct {
+	// AgentType AgentType echoes the observation path the options were computed from, so
+	// a client that caches options per path can tell them apart. It may be
+	// "all", and must be when the table it filters was fetched with
+	// agentType=all: options for one path never include values seen only on the
+	// other, so pairing a combined table with single-path options would hide
+	// filters for rows on screen.
+	AgentType     *string   `json:"agentType,omitempty"`
 	Categories    *[]string `json:"categories,omitempty"`
 	JobDisruption *[]bool   `json:"jobDisruption,omitempty"`
 
@@ -3013,6 +3071,13 @@ type ModelsXIDBurstFilterOptionsResponse struct {
 
 // ModelsXIDBurstListItem defines model for models.XIDBurstListItem.
 type ModelsXIDBurstListItem struct {
+	// AgentType AgentType is the observation path the burst was detected on: "inband" or
+	// "oob". Never "all", even for an agentType=all request — "all" selects
+	// which rows to return, and every row was still found by exactly one path.
+	// On a combined page this is what tells the two apart, so a node that
+	// reported one fault on both appears as two rows labelled differently.
+	AgentType            *string `json:"agentType,omitempty"`
+	BmcHostname          *string `json:"bmcHostname,omitempty"`
 	BurstDurationSeconds *int    `json:"burstDurationSeconds,omitempty"`
 	BurstId              *string `json:"burstId,omitempty"`
 
@@ -3025,7 +3090,12 @@ type ModelsXIDBurstListItem struct {
 	// numbers observed on that device in the burst.
 	DeviceIds *map[string][]int `json:"deviceIds,omitempty"`
 	EndTime   *time.Time        `json:"endTime,omitempty"`
-	Hostname  *string           `json:"hostname,omitempty"`
+
+	// Hostname Hostname is the in-band OS hostname; NodeName and BMCHostname are the
+	// OOB machine name and BMC hostname. All three describe the node, not the
+	// burst, so a dual-enrolled node returns every identity it has regardless
+	// of AgentType. Each is empty when the source owning it is not enrolled.
+	Hostname *string `json:"hostname,omitempty"`
 
 	// JobDisruption JobDisruption is true when any XID in the burst is job-fatal. It is
 	// identical for tenant and cloud-provider/NCP callers.
@@ -3036,6 +3106,7 @@ type ModelsXIDBurstListItem struct {
 	JobDisruptionDueToPlatformIssue *bool      `json:"jobDisruptionDueToPlatformIssue,omitempty"`
 	NodeGroup                       *string    `json:"nodeGroup,omitempty"`
 	NodeGroupId                     *string    `json:"nodeGroupId,omitempty"`
+	NodeName                        *string    `json:"nodeName,omitempty"`
 	NodeUuid                        *string    `json:"nodeUuid,omitempty"`
 	StartTime                       *time.Time `json:"startTime,omitempty"`
 	StickyXidsSuppressed            *int       `json:"stickyXidsSuppressed,omitempty"`
@@ -3767,6 +3838,9 @@ type GetV1TagsParams struct {
 
 // GetV1XIDBurstsParams defines parameters for GetV1XIDBursts.
 type GetV1XIDBurstsParams struct {
+	// AgentType Observation path to list bursts from, or all for both
+	AgentType *GetV1XIDBurstsParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
+
 	// StartTime Start time in RFC3339 format (required for absolute mode, e.g. 2024-01-01T01:00:00Z).
 	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
 
@@ -3803,7 +3877,11 @@ type GetV1XIDBurstsParams struct {
 	// XidNumbers Exact XID numbers; burst matches if it contains any of them (OR semantics)
 	XidNumbers *[]int `form:"xidNumbers,omitempty" json:"xidNumbers,omitempty"`
 
-	// HostnameSearch Case-insensitive hostname substring
+	// NameSearch Case-insensitive substring matched against any of the node's identities: hostname, nodeName, or bmcHostname. Takes precedence when both nameSearch and deprecated hostnameSearch are supplied.
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// HostnameSearch Deprecated: use nameSearch. Identical behavior; it never matched hostname alone.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	HostnameSearch *string `form:"hostnameSearch,omitempty" json:"hostnameSearch,omitempty"`
 
 	// CategorySearch Case-insensitive category substring (cloud-provider/NCP only)
@@ -3855,6 +3933,9 @@ type GetV1XIDBurstsParams struct {
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
+// GetV1XIDBurstsParamsAgentType defines parameters for GetV1XIDBursts.
+type GetV1XIDBurstsParamsAgentType string
+
 // GetV1XIDBurstsParamsTimeMode defines parameters for GetV1XIDBursts.
 type GetV1XIDBurstsParamsTimeMode string
 
@@ -3889,10 +3970,16 @@ type GetV1XIDBurstOptionsParams struct {
 
 	// ExcludeComputeZoneIds Excluded compute zone IDs
 	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// AgentType Observation path to compute options for, or all for both
+	AgentType *GetV1XIDBurstOptionsParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 }
 
 // GetV1XIDBurstOptionsParamsTimeMode defines parameters for GetV1XIDBurstOptions.
 type GetV1XIDBurstOptionsParamsTimeMode string
+
+// GetV1XIDBurstOptionsParamsAgentType defines parameters for GetV1XIDBurstOptions.
+type GetV1XIDBurstOptionsParamsAgentType string
 
 // GetV2MetricsParams defines parameters for GetV2Metrics.
 type GetV2MetricsParams struct {
@@ -5022,6 +5109,7 @@ type ClientInterface interface {
 	// Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 	// Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
 	// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
+	// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 	//
 	// Corresponds with GET /v1/xid/bursts (the `GetV1XIDBursts` operationId).
 	GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5030,7 +5118,8 @@ type ClientInterface interface {
 	//
 	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 	// Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
-	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+	// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
 	//
 	// Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 	GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5038,7 +5127,8 @@ type ClientInterface interface {
 	// GetV1XIDBurstDetail Get finalized XID burst details
 	//
 	// Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs).
+	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
+	// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
 	//
 	// Corresponds with GET /v1/xid/bursts/{burstId} (the `GetV1XIDBurstDetail` operationId).
 	GetV1XIDBurstDetail(ctx context.Context, burstId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -6127,6 +6217,7 @@ func (c *Client) PatchV1Tags(ctx context.Context, body PatchV1TagsJSONRequestBod
 // Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 // Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
 // Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
+// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 //
 // Corresponds with GET /v1/xid/bursts (the `GetV1XIDBursts` operationId).
 func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6145,7 +6236,8 @@ func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParam
 //
 // Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 // Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
-// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
 //
 // Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 func (c *Client) GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6163,7 +6255,8 @@ func (c *Client) GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurst
 // GetV1XIDBurstDetail Get finalized XID burst details
 //
 // Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs).
+// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
+// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
 //
 // Corresponds with GET /v1/xid/bursts/{burstId} (the `GetV1XIDBurstDetail` operationId).
 func (c *Client) GetV1XIDBurstDetail(ctx context.Context, burstId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9934,6 +10027,18 @@ func NewGetV1XIDBurstsRequest(server string, params *GetV1XIDBurstsParams) (*htt
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
+		if params.AgentType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.StartTime != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -10069,6 +10174,18 @@ func NewGetV1XIDBurstsRequest(server string, params *GetV1XIDBurstsParams) (*htt
 		if params.XidNumbers != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "xidNumbers", *params.XidNumbers, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -10411,6 +10528,18 @@ func NewGetV1XIDBurstOptionsRequest(server string, params *GetV1XIDBurstOptionsP
 		if params.ExcludeComputeZoneIds != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AgentType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -11314,6 +11443,7 @@ type ClientWithResponsesInterface interface {
 	// Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 	// Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
 	// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
+	// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11324,7 +11454,8 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 	// Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
-	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+	// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11334,7 +11465,8 @@ type ClientWithResponsesInterface interface {
 	// GetV1XIDBurstDetailWithResponse Get finalized XID burst details
 	//
 	// Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs).
+	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
+	// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -15977,6 +16109,7 @@ func (c *ClientWithResponses) PatchV1TagsWithResponse(ctx context.Context, body 
 // Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 // Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
 // Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
+// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15993,7 +16126,8 @@ func (c *ClientWithResponses) GetV1XIDBurstsWithResponse(ctx context.Context, pa
 //
 // Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 // Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
-// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
+// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -16009,7 +16143,8 @@ func (c *ClientWithResponses) GetV1XIDBurstOptionsWithResponse(ctx context.Conte
 // GetV1XIDBurstDetailWithResponse Get finalized XID burst details
 //
 // Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs).
+// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
+// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
 //
 // Returns a wrapper object for the known response body format(s).
 //
