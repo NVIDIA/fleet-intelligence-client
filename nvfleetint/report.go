@@ -40,14 +40,19 @@ const (
 	ErrorSeverityInfo     ErrorSeverity = "Info"
 	ErrorSeverityWarning  ErrorSeverity = "Warning"
 
-	InventoryReportSortByHostname       InventoryReportSortBy = "hostname"
-	InventoryReportSortByNodeUUID       InventoryReportSortBy = "nodeUUID"
-	InventoryReportSortByNodeGroup      InventoryReportSortBy = "nodegroup"
-	InventoryReportSortByComputeZone    InventoryReportSortBy = "computezone"
-	InventoryReportSortByGPUType        InventoryReportSortBy = "gpuType"
-	InventoryReportSortByGPUCount       InventoryReportSortBy = "gpuCount"
-	InventoryReportSortByPublicIP       InventoryReportSortBy = "publicIP"
-	InventoryReportSortByPrivateIP      InventoryReportSortBy = "privateIP"
+	InventoryReportSortByHostname          InventoryReportSortBy = "hostname"
+	InventoryReportSortByNodeUUID          InventoryReportSortBy = "nodeUUID"
+	InventoryReportSortByNodeGroup         InventoryReportSortBy = "nodeGroup"
+	InventoryReportSortByComputeZone       InventoryReportSortBy = "computeZone"
+	InventoryReportSortByGPUType           InventoryReportSortBy = "gpuType"
+	InventoryReportSortByGPUCount          InventoryReportSortBy = "gpuCount"
+	InventoryReportSortByPublicIP          InventoryReportSortBy = "publicIP"
+	InventoryReportSortByPrivateIP         InventoryReportSortBy = "privateIP"
+	InventoryReportSortByVerificationCheck InventoryReportSortBy = "verificationCheck"
+	InventoryReportSortByLocation          InventoryReportSortBy = "location"
+
+	// The backend renamed these fields but still accepts the old spellings as
+	// deprecated aliases; prefer VerificationCheck and Location.
 	InventoryReportSortByIntegrityCheck InventoryReportSortBy = "integrityCheck"
 	InventoryReportSortByGeoLocation    InventoryReportSortBy = "geoLocation"
 
@@ -359,7 +364,7 @@ const (
 	errorReportTimeModeValues   = "absolute or relative"
 	errorReportSeverityValues   = "Critical, Fatal, Info, or Warning"
 	inventoryReportOrderValues  = "asc or desc"
-	inventoryReportSortByValues = "hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation"
+	inventoryReportSortByValues = "hostname, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 )
 
 // Defaults an omitted report format and rejects unsupported values
@@ -652,7 +657,7 @@ func signedReportFilename(resp *http.Response) string {
 
 // Decodes inventory report responses and preserves the original payload
 func decodeInventoryReport(data []byte) (InventoryReport, error) {
-	var resp fleetapi.ModelsInventoryReportResponse
+	var resp fleetapi.ModelsInbandInventoryReportResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return InventoryReport{}, err
 	}
@@ -777,7 +782,7 @@ func decodeErrorReportOverview(data []byte, view ErrorReportView) (ErrorReport, 
 }
 
 // Maps inventory node API models into SDK values
-func inventoryNodeFromGenerated(node fleetapi.ModelsInventoryNode) InventoryNode {
+func inventoryNodeFromGenerated(node fleetapi.ModelsInbandInventoryNode) InventoryNode {
 	return InventoryNode{
 		NodeUUID:               stringValue(node.NodeUUID),
 		Hostname:               stringValue(node.Hostname),

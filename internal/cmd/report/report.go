@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const reportInventorySortByList = "hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation"
+const reportInventorySortByList = "hostname, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 
 // Stores local flag values for inventory reports
 type reportInventoryFlags struct {

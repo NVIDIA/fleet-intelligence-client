@@ -279,6 +279,14 @@ paths:
           name: hostname
           schema:
             type: string
+        - description: When true, return only nodes whose liveness state is Healthy/Degraded
+            and has no unhealthy in-band or OOB liveness state. Omit or use false
+            to return all nodes.
+          in: query
+          name: onlineOnly
+          schema:
+            default: false
+            type: boolean
         - description: Sortable table-header column. alert ranks by critical then
             warning count.
           in: query
@@ -787,7 +795,8 @@ paths:
     get:
       description: Get list of compute zones with optional filtering and different
         view modes. Use view=detail for comprehensive metrics and view=basic for essential
-        fields (ID, Name, Type, GeoLocation, Contact, timestamps)
+        fields (ID, Name, Type, Location, Contact, timestamps). Responses include
+        location and the deprecated geoLocation alias for backward compatibility.
       operationId: getV1Computezones
       parameters:
         - description: 'View mode: ''detail'' for comprehensive metrics (default)
@@ -876,7 +885,9 @@ paths:
         - computezones
     put:
       description: Admin updates compute zone type and metadata. Compute zone names
-        are agent-managed and cannot be changed from customer-api.
+        are agent-managed and cannot be changed from customer-api. Use location; geoLocation
+        remains accepted as a deprecated alias. If both are supplied, they must be
+        identical.
       operationId: putV1Computezones
       requestBody:
         content:
@@ -1537,7 +1548,8 @@ paths:
       description: 'Get list of node groups with optional filtering and different
         view modes. Use view=detail for comprehensive metrics and view=basic for minimal
         ID/Name list. Detail view supports additional filters: computeZoneNames (partial
-        match), healthStatuses, and gpuTypes'
+        match), healthStatuses, and gpuTypes. Detail responses include computeZoneLocation
+        and the deprecated computeZoneGeoLocation alias for backward compatibility.'
       operationId: getV1Nodegroups
       parameters:
         - description: 'View mode: ''detail'' for comprehensive metrics (default)
@@ -1736,8 +1748,19 @@ paths:
         - nodegroups
   /v1/nodes:
     delete:
-      description: Soft delete multiple nodes by setting the deleted flag to true
+      description: Soft delete the selected agent enrollment for multiple nodes. A
+        shared node remains active while the other agent enrollment is active.
       operationId: deleteV1Nodes
+      parameters:
+        - description: 'Agent enrollment to soft delete: inband (default) or oob'
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+            type: string
       requestBody:
         content:
           application/json:
@@ -1801,15 +1824,17 @@ paths:
         - nodes
     get:
       description: Get list of nodes with current state and overview. Use view=detail
-        (default) for full response or view=basic for a lightweight nodeUUID + hostname
-        list (see models.BasicNodesResponse). All filter parameters are optional arrays
-        - empty means no filter applied.
+        (default) for full response or view=basic for a lightweight nodeUUID + hostname/BMC
+        identity list, including the optional OOB nodeName when OOB data is selected
+        (see models.BasicNodesResponse). Detail responses include the preferred verification-check
+        fields and the deprecated integrityCheck aliases for backward compatibility.
+        All filter parameters are optional arrays - empty means no filter applied.
       operationId: getV1Nodes
       parameters:
         - description: 'View mode: ''detail'' for full response (default) or ''basic''
-            for nodeUUID + hostname + bmcHostname/bmcIP only (lightweight query, does
-            not support filtering or sorting by healthStatuses, integrityChecks, firmwareChecks,
-            or agentStatuses).'
+            for nodeUUID + hostname + optional OOB nodeName + bmcHostname/bmcIP only
+            (lightweight query, does not support filtering or sorting by healthStatuses,
+            verificationChecks, firmwareChecks, or agentStatuses).'
           in: query
           name: view
           schema:
@@ -1819,11 +1844,13 @@ paths:
               - basic
             type: string
         - description: 'Select the in-band or OOB (BMC/Redfish) view: returns only
-            nodes enrolled by that agent type. In the OOB view, nodes expose bmcHostname/bmcIP
-            and BMC-based integrityCheck, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions
+            nodes enrolled by that agent type. nodeName is source-specific metadata
+            configured on the OOB collector and is absent from in-band responses.
+            In the OOB view, nodes expose nodeName, bmcHostname/bmcIP and BMC-based
+            verification, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions
             are empty. Empty defaults to the in-band view for view=detail; for view=basic,
-            an empty agentType returns a combined view populating hostname and bmcHostname/bmcIP
-            for every node.'
+            an empty agentType returns a combined view that merges the OOB nodeName
+            and BMC identity alongside the in-band hostname.'
           in: query
           name: agentType
           schema:
@@ -1921,13 +1948,22 @@ paths:
             items:
               type: string
             type: array
-        - description: Filter by integrity check status
+        - description: Filter by verification-check status. Takes precedence when
+            both verificationChecks and deprecated integrityChecks are supplied.
+          in: query
+          name: verificationChecks
+          schema:
+            items:
+              $ref: '#/components/schemas/models.IntegrityCheck'
+            type: array
+        - description: 'Deprecated: use verificationChecks.'
           in: query
           name: integrityChecks
           schema:
             items:
               $ref: '#/components/schemas/models.IntegrityCheck'
             type: array
+          deprecated: true
         - description: Filter by firmware check status
           in: query
           name: firmwareChecks
@@ -1942,36 +1978,58 @@ paths:
             items:
               $ref: '#/components/schemas/models.AgentStatus'
             type: array
-        - description: Filter by hostname (case-insensitive partial match)
+        - description: Case-insensitive substring search across nodeUUID and source-appropriate
+            node identity fields. Searches nodeUUID or hostname for agentType=inband;
+            nodeUUID, nodeName, or bmcHostname for agentType=oob; and nodeUUID plus
+            all three names for the combined basic view (view=basic with agentType
+            omitted). Leading and trailing whitespace is ignored; blank means no search.
+          in: query
+          name: search
+          schema:
+            type: string
+        - description: Filter by the in-band OS hostname (case-insensitive partial
+            match). Applies to the in-band view and to active in-band identities in
+            the combined basic view; ignored in the OOB view.
           in: query
           name: hostname
           schema:
             type: string
+        - description: Filter by the configured node name (case-insensitive partial
+            match). Applies only to the OOB view (agentType=oob); ignored in the in-band
+            and combined views.
+          in: query
+          name: nodeName
+          schema:
+            type: string
         - description: Filter by BMC hostname (case-insensitive partial match). Applies
-            only to the OOB view (agentType=oob); ignored in the in-band view.
+            only to the OOB view (agentType=oob); ignored in the in-band and combined
+            views.
           in: query
           name: bmcHostname
           schema:
             type: string
-        - description: Field to sort by. Defaults to hostname (in-band view) or bmcHostname
-            (OOB view). bmcHostname applies only to the OOB view; the in-band-only
-            GPU/kernel/driver/agentVersion keys apply only to the in-band view — a
-            key not valid for the selected view falls back to the view's default.
-            gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions
-            to the top, then sorts the remaining (uniform) nodes by that common vbios
-            in the requested order.
+        - description: Field to sort by. Use verificationCheck; integrityCheck remains
+            a deprecated alias. Defaults to hostname (in-band view) or bmcHostname
+            (OOB view). nodeName and bmcHostname apply only to OOB-capable views;
+            the in-band-only GPU/kernel/driver/agentVersion keys apply only to the
+            in-band view — a key not valid for the selected view falls back to the
+            view's default. gpuFirmwareVersions pins nodes whose GPUs have mismatched
+            vbios versions to the top, then sorts the remaining (uniform) nodes by
+            that common vbios in the requested order.
           in: query
           name: sortBy
           schema:
             default: hostname
             enum:
               - hostname
+              - nodeName
               - nodeUUID
               - healthStatus
               - nodegroup
               - computezone
               - gpuType
               - gpuCount
+              - verificationCheck
               - integrityCheck
               - agentStatus
               - agentVersion
@@ -2115,6 +2173,8 @@ paths:
   /v1/nodes/options:
     get:
       description: 'Returns available filters and sorting options for querying nodes.
+        Sorting fields include verificationCheck and the deprecated integrityCheck
+        alias for backward compatibility.
 
         Filter options may be simple strings (e.g., health statuses) or hierarchical
         objects (e.g., compute zones with nested nodegroups).
@@ -2186,7 +2246,8 @@ paths:
         - nodes
   /v1/nodes/{nodeUUID}:
     delete:
-      description: Soft delete a node by setting the deleted flag to true
+      description: Soft delete the selected agent enrollment. The shared node remains
+        active while the other agent enrollment is active.
       operationId: deleteV1NodesNodeUuid
       parameters:
         - description: Node UUID
@@ -2194,6 +2255,15 @@ paths:
           name: nodeUUID
           required: true
           schema:
+            type: string
+        - description: 'Agent enrollment to soft delete: inband (default) or oob'
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
             type: string
       responses:
         '200':
@@ -2249,7 +2319,9 @@ paths:
         - nodes
     get:
       description: Get detailed information about a specific node including resources,
-        system info, and health status
+        system info, and health status. Responses include the preferred location and
+        verification-check fields plus the deprecated geoLocation/integrityCheck aliases
+        for backward compatibility.
       operationId: getV1NodesNodeUuid
       parameters:
         - description: Node UUID
@@ -3077,7 +3149,6 @@ paths:
                   - $ref: '#/components/schemas/models.ByNodeResponse'
                   - $ref: '#/components/schemas/models.ErrorOverviewResponse'
                   - $ref: '#/components/schemas/models.ErrorReportGraphByErrorResponse'
-                  - type: string
             text/csv:
               schema:
                 type: string
@@ -3123,13 +3194,20 @@ paths:
         - reports
   /v1/reports/inventory:
     get:
-      description: 'Get inventory report in JSON or CSV format. Default response is
-        JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus
-        a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+      description: 'Get an agent-source-specific inventory report in JSON or CSV format.
+        agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob
+        returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default
+        response is JSON. For CSV download, set format=csv. For a signed CSV bundle
+        (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv
+        and signed=true.
 
         Each node includes enrolledAt (original enrollment time, preserved across
         re-enrollment) and removedAt (soft-delete time for removed nodes, manual and
-        auto-removed alike; absent for active nodes).'
+        auto-removed alike; absent for active nodes).
+
+        JSON responses include the preferred location and verification-check fields
+        plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
+        CSV and signed ZIP report columns are unchanged.'
       operationId: getV1ReportsInventory
       parameters:
         - description: Page number (0-indexed). Not used for CSV format
@@ -3161,6 +3239,16 @@ paths:
           schema:
             default: false
             type: boolean
+        - description: 'Inventory source: inband (default) or oob. The JSON and CSV
+            fields are source-specific.'
+          in: query
+          name: agentType
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+            type: string
         - description: Filter by computezone IDs. Empty means all computezones
           in: query
           name: computeZoneIds
@@ -3194,20 +3282,28 @@ paths:
           name: endTime
           schema:
             type: string
-        - description: Field to sort by
+        - description: 'Field to sort by. In-band fields: hostname, gpuType, gpuCount,
+            publicIP, privateIP. OOB fields: nodeName, bmcHostname, bmcIP. Shared
+            fields: nodeUUID, nodeGroup, computeZone, verificationCheck, location.
+            integrityCheck and geoLocation remain deprecated aliases. Defaults to
+            hostname for inband and bmcHostname for oob.'
           in: query
           name: sortBy
           schema:
-            default: hostname
             enum:
               - hostname
               - nodeUUID
-              - nodegroup
-              - computezone
+              - nodeGroup
+              - computeZone
               - gpuType
               - gpuCount
               - publicIP
               - privateIP
+              - nodeName
+              - bmcHostname
+              - bmcIP
+              - verificationCheck
+              - location
               - integrityCheck
               - geoLocation
             type: string
@@ -3226,22 +3322,20 @@ paths:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/models.InventoryReportResponse'
-                  - type: string
+                  - $ref: '#/components/schemas/models.InbandInventoryReportResponse'
+                  - $ref: '#/components/schemas/models.OobInventoryReportResponse'
             application/zip:
               schema:
-                $ref: '#/components/schemas/models.InventoryReportResponse'
+                format: binary
+                type: string
             text/csv:
               schema:
                 type: string
-          description: JSON response (default). For CSV download, use format=csv query
-            parameter. For signed CSV, use format=csv&signed=true (returns application/zip).
+          description: OOB JSON response (agentType=oob). CSV responses use a source-specific
+            header; signed CSV returns application/zip.
         '400':
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-            application/zip:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Bad Request
@@ -3250,16 +3344,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-            application/zip:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
           description: Unauthorized
         '403':
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-            application/zip:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Forbidden - UAM authorization denied
@@ -3268,25 +3356,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-            application/zip:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
           description: Client Closed Request - request was canceled by the client
         '500':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-            application/zip:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
         '503':
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/models.ErrorResponse'
-            application/zip:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Service Unavailable
@@ -3838,10 +3917,10 @@ paths:
         - xid
   /v1/xid/bursts/options:
     get:
-      description: 'Returns all filter options available to the authenticated customer
-        and persona. Options are not narrowed by the table''s current time, scope,
-        or column filters. This v1 response contains no counts and has no cross-filter
-        impact-count behavior.
+      description: 'Returns filter options available to the authenticated customer
+        and persona. Optional time and inventory scope filters narrow the values;
+        table column filters are not applied. This v1 response contains no counts
+        and has no cross-filter impact-count behavior.
 
         Tenant callers receive public disruption values, XIDs, and tenant actions.
         Cloud-provider/NCP callers additionally receive platform-disruption values,
@@ -3857,6 +3936,58 @@ paths:
         filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts
         rather than a distinct-hostname options list.'
       operationId: getV1XIDBurstOptions
+      parameters:
+        - description: Optional RFC3339 start time
+          in: query
+          name: startTime
+          schema:
+            type: string
+        - description: Optional RFC3339 end time
+          in: query
+          name: endTime
+          schema:
+            type: string
+        - description: Optional time mode
+          in: query
+          name: timeMode
+          schema:
+            enum:
+              - absolute
+              - relative
+            type: string
+        - description: Optional relative duration window
+          in: query
+          name: window
+          schema:
+            type: string
+        - description: Node group IDs
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Compute zone IDs
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Excluded node group IDs
+          in: query
+          name: excludeNodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Excluded compute zone IDs
+          in: query
+          name: excludeComputeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
       responses:
         '200':
           content:
@@ -3864,6 +3995,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.XIDBurstFilterOptionsResponse'
           description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid time range or conflicting inventory filters
         '401':
           content:
             application/json:
@@ -4778,6 +4915,19 @@ components:
       type: object
     models.ComponentMetricList:
       properties:
+        agentType:
+          description: 'AgentType is the agent enrollment that produces this component:
+            "inband"
+
+            or "oob". Every component is one agent''s data, so this is the authoritative
+
+            place to tell the two apart — including for backend components such as
+            OOB
+
+            Agent Connectivity, which carry no metrics to classify.
+
+            Values: AgentTypeInband / AgentTypeOob.'
+          type: string
         displayName:
           type: string
         isBackendComponent:
@@ -4820,6 +4970,8 @@ components:
           type: integer
         geoLocation:
           $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
         gpusCount:
           example: 80
           type: integer
@@ -4834,6 +4986,8 @@ components:
         id:
           example: cz-us-east-1
           type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
         metrics:
           items:
             $ref: '#/components/schemas/models.Metric'
@@ -5330,6 +5484,128 @@ components:
         unhealthyPercentage:
           type: number
       type: object
+    models.InbandInventoryNode:
+      properties:
+        agentVersion:
+          example: 1.2.3
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        enrolledAt:
+          example: '2024-01-10T08:00:00Z'
+          type: string
+        firmwareCheck:
+          $ref: '#/components/schemas/models.FirmwareCheck'
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuDriverVersion:
+          example: '550.120'
+          type: string
+        gpuFirmwareVersions:
+          items:
+            $ref: '#/components/schemas/models.GPUFirmwareVersion'
+          type: array
+          uniqueItems: false
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
+        gpuUUIDs:
+          example:
+            - GPU-abc-123
+            - GPU-def-456
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        hostname:
+          example: node-001
+          type: string
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+          deprecated: true
+          description: 'Deprecated: use verificationCheck.'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          deprecated: true
+          description: 'Deprecated: use verificationCheckExtraInfo.'
+        integrityCheckReason:
+          description: 'Deprecated: use verificationCheckReason.'
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+          deprecated: true
+        kernelVersion:
+          example: 6.8.0-49-generic
+          type: string
+        lastIntegrityCheckTS:
+          description: 'Deprecated: use lastVerificationCheckTS.'
+          example: '2024-01-15T10:30:00Z'
+          type: string
+          deprecated: true
+        lastVerificationCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        privateIP:
+          example: 10.0.0.100
+          type: string
+        publicIP:
+          example: 203.0.113.100
+          type: string
+        removedAt:
+          example: '2024-01-20T12:00:00Z'
+          type: string
+        serialNumbers:
+          example:
+            - SN123456789
+            - SN123456790
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        systemUUID:
+          example: 4c4c4544-004a-3410-804c-c7c04f313434
+          type: string
+        verificationCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        verificationCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        verificationCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+      type: object
+    models.InbandInventoryReportResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.InbandInventoryNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
     models.InbandNode:
       properties:
         agentStatus:
@@ -5366,18 +5642,29 @@ components:
           type: string
         integrityCheck:
           $ref: '#/components/schemas/models.IntegrityCheck'
+          deprecated: true
+          description: 'Deprecated: use verificationCheck.'
         integrityCheckExtraInfo:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          deprecated: true
+          description: 'Deprecated: use verificationCheckExtraInfo.'
         integrityCheckReason:
+          description: 'Deprecated: use verificationCheckReason.'
           example: 'Attestation verification unavailable: SDK error'
           type: string
+          deprecated: true
         kernelVersion:
           example: 6.8.0-49-generic
           type: string
         lastIntegrityCheckTS:
+          description: 'Deprecated: use lastVerificationCheckTS.'
           example: '2024-01-15T10:30:00Z'
           type: string
+          deprecated: true
         lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastVerificationCheckTS:
           example: '2024-01-15T10:30:00Z'
           type: string
         nodeGroup:
@@ -5391,6 +5678,13 @@ components:
           type: string
         publicIP:
           example: 203.0.113.100
+          type: string
+        verificationCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        verificationCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        verificationCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
           type: string
       required:
         - nodeUUID
@@ -5421,6 +5715,8 @@ components:
           $ref: '#/components/schemas/models.FirmwareCheck'
         geoLocation:
           $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
         gpuCount:
           example: 4
           type: integer
@@ -5445,20 +5741,33 @@ components:
           type: string
         integrityCheck:
           $ref: '#/components/schemas/models.IntegrityCheck'
+          deprecated: true
+          description: 'Deprecated: use verificationCheck.'
         integrityCheckExtraInfo:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          deprecated: true
+          description: 'Deprecated: use verificationCheckExtraInfo.'
         integrityCheckReason:
+          description: 'Deprecated: use verificationCheckReason.'
           example: 'Attestation verification unavailable: SDK error'
           type: string
+          deprecated: true
         kernelVersion:
           example: 6.8.0-49-generic
           type: string
         lastIntegrityCheckTS:
+          description: 'Deprecated: use lastVerificationCheckTS.'
           example: '2024-01-15T10:30:00Z'
           type: string
+          deprecated: true
         lastUpdatedTS:
           example: '2024-01-15T10:30:00Z'
           type: string
+        lastVerificationCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
         nodeGroup:
           example: node-group-1
           type: string
@@ -5489,6 +5798,13 @@ components:
         unhealthyComponentCount:
           example: 1
           type: integer
+        verificationCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        verificationCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        verificationCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
       required:
         - nodeUUID
       type: object
@@ -5555,106 +5871,6 @@ components:
         overallAttestationResult:
           example: false
           type: boolean
-      type: object
-    models.InventoryNode:
-      properties:
-        agentVersion:
-          example: 1.2.3
-          type: string
-        computeZone:
-          example: compute-zone-1
-          type: string
-        enrolledAt:
-          example: '2024-01-10T08:00:00Z'
-          type: string
-        firmwareCheck:
-          $ref: '#/components/schemas/models.FirmwareCheck'
-        geoLocation:
-          $ref: '#/components/schemas/models.GeoLocation'
-        gpuCount:
-          example: 4
-          type: integer
-        gpuDriverVersion:
-          example: '550.120'
-          type: string
-        gpuFirmwareVersions:
-          items:
-            $ref: '#/components/schemas/models.GPUFirmwareVersion'
-          type: array
-          uniqueItems: false
-        gpuType:
-          example: NVIDIA-T400-4GB
-          type: string
-        gpuUUIDs:
-          example:
-            - GPU-abc-123
-            - GPU-def-456
-          items:
-            type: string
-          type: array
-          uniqueItems: false
-        hostname:
-          example: node-001
-          type: string
-        integrityCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
-        integrityCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
-        integrityCheckReason:
-          example: 'Attestation verification unavailable: SDK error'
-          type: string
-        kernelVersion:
-          example: 6.8.0-49-generic
-          type: string
-        lastIntegrityCheckTS:
-          example: '2024-01-15T10:30:00Z'
-          type: string
-        nodeGroup:
-          example: node-group-1
-          type: string
-        nodeUUID:
-          example: node-123
-          type: string
-        privateIP:
-          example: 10.0.0.100
-          type: string
-        publicIP:
-          example: 203.0.113.100
-          type: string
-        removedAt:
-          example: '2024-01-20T12:00:00Z'
-          type: string
-        serialNumbers:
-          example:
-            - SN123456789
-            - SN123456790
-          items:
-            type: string
-          type: array
-          uniqueItems: false
-        systemUUID:
-          example: 4c4c4544-004a-3410-804c-c7c04f313434
-          type: string
-      type: object
-    models.InventoryReportResponse:
-      properties:
-        hasMore:
-          example: false
-          type: boolean
-        nodes:
-          items:
-            $ref: '#/components/schemas/models.InventoryNode'
-          type: array
-          uniqueItems: false
-        page:
-          example: 0
-          type: integer
-        pageSize:
-          example: 10
-          type: integer
-        total:
-          example: 100
-          type: integer
       type: object
     models.JWTClaims:
       properties:
@@ -5843,6 +6059,18 @@ components:
       type: object
     models.MetricInfo:
       properties:
+        agentType:
+          description: 'AgentType is set only for metrics that carry their own agent
+            gate: "oob"
+
+            for BMC sensor charts. Its absence means "no gate of its own", not
+
+            "in-band" — read the enclosing component''s agentType to classify a metric,
+
+            which a metric may repeat but never contradict.
+
+            Values: AgentTypeInband / AgentTypeOob.'
+          type: string
         displayName:
           type: string
         name:
@@ -5933,14 +6161,37 @@ components:
             Omitted for non-boolean metrics.'
           example: Up
           type: string
+        unavailable:
+          $ref: '#/components/schemas/models.MetricUnavailable'
         unit:
           example: ratio
           type: string
         warning:
           $ref: '#/components/schemas/models.MetricQueryWarning'
       required:
+        - unavailable
         - warning
       type: object
+    models.MetricUnavailable:
+      description: 'Unavailable is set for node-level queries when the metric does
+        not apply to
+
+        the node at all, so the caller can hide the chart rather than draw an empty
+
+        one. Null whenever the metric does apply, including when it simply has no
+
+        data in the window. Always null for aggregated levels, where sensor presence
+
+        is not a single answer across the group.'
+      properties:
+        code:
+          example: sensorNotPresent
+          type: string
+        message:
+          example: This node does not report the sensors for this metric.
+          type: string
+      type: object
+      x-nullable: true
     models.MetricsAggregationResponse:
       properties:
         metrics:
@@ -6081,9 +6332,13 @@ components:
           $ref: '#/components/schemas/models.Contact'
         computeZoneGeoLocation:
           $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use computeZoneLocation.'
         computeZoneId:
           example: cz-us-east-1
           type: string
+        computeZoneLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
         computeZoneName:
           example: US East 1 ComputeZone
           type: string
@@ -6611,6 +6866,90 @@ components:
         - schemaVersion
         - source
       type: object
+    models.OobInventoryNode:
+      properties:
+        agentVersion:
+          example: 1.2.3
+          type: string
+        bmcHostname:
+          example: bmc-a.example.com
+          type: string
+        bmcIP:
+          example: 10.77.91.72:443
+          type: string
+        computeZone:
+          example: compute-zone-1
+          type: string
+        enrolledAt:
+          example: '2024-01-10T08:00:00Z'
+          type: string
+        geoLocation:
+          $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
+        integrityCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+          deprecated: true
+          description: 'Deprecated: use verificationCheck.'
+        integrityCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          deprecated: true
+          description: 'Deprecated: use verificationCheckExtraInfo.'
+        integrityCheckReason:
+          description: 'Deprecated: use verificationCheckReason.'
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+          deprecated: true
+        lastIntegrityCheckTS:
+          description: 'Deprecated: use lastVerificationCheckTS.'
+          example: '2024-01-15T10:30:00Z'
+          type: string
+          deprecated: true
+        lastVerificationCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
+        nodeGroup:
+          example: node-group-1
+          type: string
+        nodeName:
+          example: node-001
+          type: string
+        nodeUUID:
+          example: node-123
+          type: string
+        removedAt:
+          example: '2024-01-20T12:00:00Z'
+          type: string
+        verificationCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        verificationCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        verificationCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
+      type: object
+    models.OobInventoryReportResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        nodes:
+          items:
+            $ref: '#/components/schemas/models.OobInventoryNode'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 10
+          type: integer
+        total:
+          example: 100
+          type: integer
+      type: object
     models.OobManager:
       properties:
         firmwareVersion:
@@ -6666,22 +7005,45 @@ components:
           $ref: '#/components/schemas/models.HealthState'
         integrityCheck:
           $ref: '#/components/schemas/models.IntegrityCheck'
+          deprecated: true
+          description: 'Deprecated: use verificationCheck.'
         integrityCheckExtraInfo:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          deprecated: true
+          description: 'Deprecated: use verificationCheckExtraInfo.'
         integrityCheckReason:
+          description: 'Deprecated: use verificationCheckReason.'
           example: 'Attestation verification unavailable: SDK error'
           type: string
+          deprecated: true
         lastIntegrityCheckTS:
+          description: 'Deprecated: use lastVerificationCheckTS.'
           example: '2024-01-15T10:30:00Z'
           type: string
+          deprecated: true
         lastUpdatedTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        lastVerificationCheckTS:
           example: '2024-01-15T10:30:00Z'
           type: string
         nodeGroup:
           example: node-group-1
           type: string
+        nodeName:
+          description: NodeName is the optional machine name configured on the OOB
+            collector.
+          example: node-001
+          type: string
         nodeUUID:
           example: node-123
+          type: string
+        verificationCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        verificationCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        verificationCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
           type: string
       required:
         - nodeUUID
@@ -6716,6 +7078,8 @@ components:
           type: string
         geoLocation:
           $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
         healthStatus:
           $ref: '#/components/schemas/models.HealthState'
         healthyComponentCount:
@@ -6723,22 +7087,40 @@ components:
           type: integer
         integrityCheck:
           $ref: '#/components/schemas/models.IntegrityCheck'
+          deprecated: true
+          description: 'Deprecated: use verificationCheck.'
         integrityCheckExtraInfo:
           $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          deprecated: true
+          description: 'Deprecated: use verificationCheckExtraInfo.'
         integrityCheckReason:
+          description: 'Deprecated: use verificationCheckReason.'
           example: 'Attestation verification unavailable: SDK error'
           type: string
+          deprecated: true
         lastIntegrityCheckTS:
+          description: 'Deprecated: use lastVerificationCheckTS.'
           example: '2024-01-15T10:30:00Z'
           type: string
+          deprecated: true
         lastUpdatedTS:
           example: '2024-01-15T10:30:00Z'
           type: string
+        lastVerificationCheckTS:
+          example: '2024-01-15T10:30:00Z'
+          type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
         nodeGroup:
           example: node-group-1
           type: string
         nodeGroupId:
           example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeName:
+          description: NodeName is the optional machine name configured on the OOB
+            collector.
+          example: node-001
           type: string
         nodeUUID:
           example: node-123
@@ -6756,6 +7138,13 @@ components:
         unhealthyComponentCount:
           example: 1
           type: integer
+        verificationCheck:
+          $ref: '#/components/schemas/models.IntegrityCheck'
+        verificationCheckExtraInfo:
+          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+        verificationCheckReason:
+          example: 'Attestation verification unavailable: SDK error'
+          type: string
       required:
         - nodeUUID
       type: object
@@ -7027,9 +7416,12 @@ components:
           type: string
         timeRange:
           $ref: '#/components/schemas/models.TimeRange'
+        unavailable:
+          $ref: '#/components/schemas/models.MetricUnavailable'
         warning:
           $ref: '#/components/schemas/models.MetricQueryWarning'
       required:
+        - unavailable
         - warning
       type: object
     models.SetNodeTagsRequest:
@@ -7077,9 +7469,13 @@ components:
           type: string
         geoLocation:
           $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
         id:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
         name:
           example: US East 1 ComputeZone
           type: string
@@ -7098,6 +7494,13 @@ components:
           example: 10.57.17.140
           type: string
         hostname:
+          example: node-001
+          type: string
+        nodeName:
+          description: 'NodeName is OOB collector metadata. It is populated for OOB
+            and combined
+
+            basic views and omitted from an explicitly in-band basic response.'
           example: node-001
           type: string
         nodeUUID:
@@ -7243,11 +7646,15 @@ components:
           $ref: '#/components/schemas/models.Contact'
         geoLocation:
           $ref: '#/components/schemas/models.GeoLocation'
+          deprecated: true
+          description: 'Deprecated: use location.'
         id:
           example: 550e8400-e29b-41d4-a716-446655440000
           maxLength: 255
           minLength: 1
           type: string
+        location:
+          $ref: '#/components/schemas/models.GeoLocation'
         type:
           example: datacenter
           maxLength: 16

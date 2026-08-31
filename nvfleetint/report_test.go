@@ -126,6 +126,42 @@ func TestGetInventoryReportRejectsInvalidOptions(t *testing.T) {
 	}
 }
 
+// Guards every declared sort constant against the generated enum so a backend
+// rename cannot silently turn a documented flag value into a validation error
+func TestInventoryReportSortByConstantsAreAccepted(t *testing.T) {
+	sortValues := []InventoryReportSortBy{
+		InventoryReportSortByHostname,
+		InventoryReportSortByNodeUUID,
+		InventoryReportSortByNodeGroup,
+		InventoryReportSortByComputeZone,
+		InventoryReportSortByGPUType,
+		InventoryReportSortByGPUCount,
+		InventoryReportSortByPublicIP,
+		InventoryReportSortByPrivateIP,
+		InventoryReportSortByVerificationCheck,
+		InventoryReportSortByLocation,
+		InventoryReportSortByIntegrityCheck,
+		InventoryReportSortByGeoLocation,
+	}
+
+	for _, sortBy := range sortValues {
+		t.Run(string(sortBy), func(t *testing.T) {
+			if !sortBy.Valid() {
+				t.Fatalf("sort value %q is not accepted by the generated API enum", sortBy)
+			}
+		})
+	}
+
+	// The error message lists what a user may pass, so every value named there
+	// must actually validate or the guidance sends them into another failure.
+	for _, advertised := range strings.Split(inventoryReportSortByValues, ",") {
+		value := strings.TrimPrefix(strings.TrimSpace(advertised), "or ")
+		if !InventoryReportSortBy(value).Valid() {
+			t.Fatalf("advertised sort value %q is rejected by the API enum", value)
+		}
+	}
+}
+
 // Verifies inventory report options reject incompatible flags before a request
 func TestInventoryReportOptionsValidateRejectsSignedJSON(t *testing.T) {
 	tests := []struct {

@@ -719,6 +719,24 @@ func (e GetV1NodegroupsParamsOrder) Valid() bool {
 	}
 }
 
+// Defines values for DeleteV1NodesParamsAgentType.
+const (
+	DeleteV1NodesParamsAgentTypeInband DeleteV1NodesParamsAgentType = "inband"
+	DeleteV1NodesParamsAgentTypeOob    DeleteV1NodesParamsAgentType = "oob"
+)
+
+// Valid indicates whether the value is a known member of the DeleteV1NodesParamsAgentType enum.
+func (e DeleteV1NodesParamsAgentType) Valid() bool {
+	switch e {
+	case DeleteV1NodesParamsAgentTypeInband:
+		return true
+	case DeleteV1NodesParamsAgentTypeOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1NodesParamsView.
 const (
 	GetV1NodesParamsViewBasic  GetV1NodesParamsView = "basic"
@@ -793,8 +811,10 @@ const (
 	GetV1NodesParamsSortByHostname            GetV1NodesParamsSortBy = "hostname"
 	GetV1NodesParamsSortByIntegrityCheck      GetV1NodesParamsSortBy = "integrityCheck"
 	GetV1NodesParamsSortByKernelVersion       GetV1NodesParamsSortBy = "kernelVersion"
+	GetV1NodesParamsSortByNodeName            GetV1NodesParamsSortBy = "nodeName"
 	GetV1NodesParamsSortByNodeUUID            GetV1NodesParamsSortBy = "nodeUUID"
 	GetV1NodesParamsSortByNodegroup           GetV1NodesParamsSortBy = "nodegroup"
+	GetV1NodesParamsSortByVerificationCheck   GetV1NodesParamsSortBy = "verificationCheck"
 )
 
 // Valid indicates whether the value is a known member of the GetV1NodesParamsSortBy enum.
@@ -824,9 +844,13 @@ func (e GetV1NodesParamsSortBy) Valid() bool {
 		return true
 	case GetV1NodesParamsSortByKernelVersion:
 		return true
+	case GetV1NodesParamsSortByNodeName:
+		return true
 	case GetV1NodesParamsSortByNodeUUID:
 		return true
 	case GetV1NodesParamsSortByNodegroup:
+		return true
+	case GetV1NodesParamsSortByVerificationCheck:
 		return true
 	default:
 		return false
@@ -884,6 +908,24 @@ func (e GetV1NodesOptionsParamsAgentType) Valid() bool {
 	case GetV1NodesOptionsParamsAgentTypeInband:
 		return true
 	case GetV1NodesOptionsParamsAgentTypeOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DeleteV1NodesNodeUuidParamsAgentType.
+const (
+	DeleteV1NodesNodeUuidParamsAgentTypeInband DeleteV1NodesNodeUuidParamsAgentType = "inband"
+	DeleteV1NodesNodeUuidParamsAgentTypeOob    DeleteV1NodesNodeUuidParamsAgentType = "oob"
+)
+
+// Valid indicates whether the value is a known member of the DeleteV1NodesNodeUuidParamsAgentType enum.
+func (e DeleteV1NodesNodeUuidParamsAgentType) Valid() bool {
+	switch e {
+	case DeleteV1NodesNodeUuidParamsAgentTypeInband:
+		return true
+	case DeleteV1NodesNodeUuidParamsAgentTypeOob:
 		return true
 	default:
 		return false
@@ -983,24 +1025,51 @@ func (e GetV1ReportsInventoryParamsFormat) Valid() bool {
 	}
 }
 
+// Defines values for GetV1ReportsInventoryParamsAgentType.
+const (
+	GetV1ReportsInventoryParamsAgentTypeInband GetV1ReportsInventoryParamsAgentType = "inband"
+	GetV1ReportsInventoryParamsAgentTypeOob    GetV1ReportsInventoryParamsAgentType = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsInventoryParamsAgentType enum.
+func (e GetV1ReportsInventoryParamsAgentType) Valid() bool {
+	switch e {
+	case GetV1ReportsInventoryParamsAgentTypeInband:
+		return true
+	case GetV1ReportsInventoryParamsAgentTypeOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1ReportsInventoryParamsSortBy.
 const (
-	GetV1ReportsInventoryParamsSortByComputezone    GetV1ReportsInventoryParamsSortBy = "computezone"
-	GetV1ReportsInventoryParamsSortByGeoLocation    GetV1ReportsInventoryParamsSortBy = "geoLocation"
-	GetV1ReportsInventoryParamsSortByGpuCount       GetV1ReportsInventoryParamsSortBy = "gpuCount"
-	GetV1ReportsInventoryParamsSortByGpuType        GetV1ReportsInventoryParamsSortBy = "gpuType"
-	GetV1ReportsInventoryParamsSortByHostname       GetV1ReportsInventoryParamsSortBy = "hostname"
-	GetV1ReportsInventoryParamsSortByIntegrityCheck GetV1ReportsInventoryParamsSortBy = "integrityCheck"
-	GetV1ReportsInventoryParamsSortByNodeUUID       GetV1ReportsInventoryParamsSortBy = "nodeUUID"
-	GetV1ReportsInventoryParamsSortByNodegroup      GetV1ReportsInventoryParamsSortBy = "nodegroup"
-	GetV1ReportsInventoryParamsSortByPrivateIP      GetV1ReportsInventoryParamsSortBy = "privateIP"
-	GetV1ReportsInventoryParamsSortByPublicIP       GetV1ReportsInventoryParamsSortBy = "publicIP"
+	GetV1ReportsInventoryParamsSortByBmcHostname       GetV1ReportsInventoryParamsSortBy = "bmcHostname"
+	GetV1ReportsInventoryParamsSortByBmcIP             GetV1ReportsInventoryParamsSortBy = "bmcIP"
+	GetV1ReportsInventoryParamsSortByComputeZone       GetV1ReportsInventoryParamsSortBy = "computeZone"
+	GetV1ReportsInventoryParamsSortByGeoLocation       GetV1ReportsInventoryParamsSortBy = "geoLocation"
+	GetV1ReportsInventoryParamsSortByGpuCount          GetV1ReportsInventoryParamsSortBy = "gpuCount"
+	GetV1ReportsInventoryParamsSortByGpuType           GetV1ReportsInventoryParamsSortBy = "gpuType"
+	GetV1ReportsInventoryParamsSortByHostname          GetV1ReportsInventoryParamsSortBy = "hostname"
+	GetV1ReportsInventoryParamsSortByIntegrityCheck    GetV1ReportsInventoryParamsSortBy = "integrityCheck"
+	GetV1ReportsInventoryParamsSortByLocation          GetV1ReportsInventoryParamsSortBy = "location"
+	GetV1ReportsInventoryParamsSortByNodeGroup         GetV1ReportsInventoryParamsSortBy = "nodeGroup"
+	GetV1ReportsInventoryParamsSortByNodeName          GetV1ReportsInventoryParamsSortBy = "nodeName"
+	GetV1ReportsInventoryParamsSortByNodeUUID          GetV1ReportsInventoryParamsSortBy = "nodeUUID"
+	GetV1ReportsInventoryParamsSortByPrivateIP         GetV1ReportsInventoryParamsSortBy = "privateIP"
+	GetV1ReportsInventoryParamsSortByPublicIP          GetV1ReportsInventoryParamsSortBy = "publicIP"
+	GetV1ReportsInventoryParamsSortByVerificationCheck GetV1ReportsInventoryParamsSortBy = "verificationCheck"
 )
 
 // Valid indicates whether the value is a known member of the GetV1ReportsInventoryParamsSortBy enum.
 func (e GetV1ReportsInventoryParamsSortBy) Valid() bool {
 	switch e {
-	case GetV1ReportsInventoryParamsSortByComputezone:
+	case GetV1ReportsInventoryParamsSortByBmcHostname:
+		return true
+	case GetV1ReportsInventoryParamsSortByBmcIP:
+		return true
+	case GetV1ReportsInventoryParamsSortByComputeZone:
 		return true
 	case GetV1ReportsInventoryParamsSortByGeoLocation:
 		return true
@@ -1012,13 +1081,19 @@ func (e GetV1ReportsInventoryParamsSortBy) Valid() bool {
 		return true
 	case GetV1ReportsInventoryParamsSortByIntegrityCheck:
 		return true
-	case GetV1ReportsInventoryParamsSortByNodeUUID:
+	case GetV1ReportsInventoryParamsSortByLocation:
 		return true
-	case GetV1ReportsInventoryParamsSortByNodegroup:
+	case GetV1ReportsInventoryParamsSortByNodeGroup:
+		return true
+	case GetV1ReportsInventoryParamsSortByNodeName:
+		return true
+	case GetV1ReportsInventoryParamsSortByNodeUUID:
 		return true
 	case GetV1ReportsInventoryParamsSortByPrivateIP:
 		return true
 	case GetV1ReportsInventoryParamsSortByPublicIP:
+		return true
+	case GetV1ReportsInventoryParamsSortByVerificationCheck:
 		return true
 	default:
 		return false
@@ -1133,6 +1208,24 @@ func (e GetV1XIDBurstsParamsSortOrder) Valid() bool {
 	case GetV1XIDBurstsParamsSortOrderAsc:
 		return true
 	case GetV1XIDBurstsParamsSortOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstOptionsParamsTimeMode.
+const (
+	GetV1XIDBurstOptionsParamsTimeModeAbsolute GetV1XIDBurstOptionsParamsTimeMode = "absolute"
+	GetV1XIDBurstOptionsParamsTimeModeRelative GetV1XIDBurstOptionsParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstOptionsParamsTimeMode enum.
+func (e GetV1XIDBurstOptionsParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1XIDBurstOptionsParamsTimeModeAbsolute:
+		return true
+	case GetV1XIDBurstOptionsParamsTimeModeRelative:
 		return true
 	default:
 		return false
@@ -1492,6 +1585,12 @@ type ModelsComponentInfo struct {
 
 // ModelsComponentMetricList defines model for models.ComponentMetricList.
 type ModelsComponentMetricList struct {
+	// AgentType AgentType is the agent enrollment that produces this component: "inband"
+	// or "oob". Every component is one agent's data, so this is the authoritative
+	// place to tell the two apart — including for backend components such as OOB
+	// Agent Connectivity, which carry no metrics to classify.
+	// Values: AgentTypeInband / AgentTypeOob.
+	AgentType          *string             `json:"agentType,omitempty"`
 	DisplayName        *string             `json:"displayName,omitempty"`
 	IsBackendComponent *bool               `json:"isBackendComponent,omitempty"`
 	Metrics            *[]ModelsMetricInfo `json:"metrics,omitempty"`
@@ -1509,17 +1608,21 @@ type ModelsComponentsInfo struct {
 
 // ModelsComputeZoneOverview defines model for models.ComputeZoneOverview.
 type ModelsComputeZoneOverview struct {
-	AlertOverview       *ModelsAlertOverview   `json:"alertOverview,omitempty"`
-	Contact             *ModelsContact         `json:"contact,omitempty"`
-	CpuCoresCount       *int                   `json:"cpuCoresCount,omitempty"`
-	CreatedAt           *string                `json:"createdAt,omitempty"`
-	DegradedNodesCount  *int                   `json:"degradedNodesCount,omitempty"`
+	AlertOverview      *ModelsAlertOverview `json:"alertOverview,omitempty"`
+	Contact            *ModelsContact       `json:"contact,omitempty"`
+	CpuCoresCount      *int                 `json:"cpuCoresCount,omitempty"`
+	CreatedAt          *string              `json:"createdAt,omitempty"`
+	DegradedNodesCount *int                 `json:"degradedNodesCount,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation         *ModelsGeoLocation     `json:"geoLocation,omitempty"`
 	GpusCount           *int                   `json:"gpusCount,omitempty"`
 	HealthPercentage    *float32               `json:"healthPercentage,omitempty"`
 	HealthState         *ModelsHealthState     `json:"healthState,omitempty"`
 	HealthyNodesCount   *int                   `json:"healthyNodesCount,omitempty"`
 	Id                  *string                `json:"id,omitempty"`
+	Location            *ModelsGeoLocation     `json:"location,omitempty"`
 	Metrics             *[]ModelsMetric        `json:"metrics,omitempty"`
 	Name                *string                `json:"name,omitempty"`
 	NodeGroupsCount     *int                   `json:"nodeGroupsCount,omitempty"`
@@ -1776,64 +1879,156 @@ type ModelsHealthSummary struct {
 	UnhealthyPercentage      *float32 `json:"unhealthyPercentage,omitempty"`
 }
 
+// ModelsInbandInventoryNode defines model for models.InbandInventoryNode.
+type ModelsInbandInventoryNode struct {
+	AgentVersion  *string              `json:"agentVersion,omitempty"`
+	ComputeZone   *string              `json:"computeZone,omitempty"`
+	EnrolledAt    *string              `json:"enrolledAt,omitempty"`
+	FirmwareCheck *ModelsFirmwareCheck `json:"firmwareCheck,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	GeoLocation         *ModelsGeoLocation          `json:"geoLocation,omitempty"`
+	GpuCount            *int                        `json:"gpuCount,omitempty"`
+	GpuDriverVersion    *string                     `json:"gpuDriverVersion,omitempty"`
+	GpuFirmwareVersions *[]ModelsGPUFirmwareVersion `json:"gpuFirmwareVersions,omitempty"`
+	GpuType             *string                     `json:"gpuType,omitempty"`
+	GpuUUIDs            *[]string                   `json:"gpuUUIDs,omitempty"`
+	Hostname            *string                     `json:"hostname,omitempty"`
+
+	// IntegrityCheck Deprecated: use verificationCheck.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheck *ModelsIntegrityCheck `json:"integrityCheck,omitempty"`
+
+	// IntegrityCheckExtraInfo Deprecated: use verificationCheckExtraInfo.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
+
+	// IntegrityCheckReason Deprecated: use verificationCheckReason.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckReason *string `json:"integrityCheckReason,omitempty"`
+	KernelVersion        *string `json:"kernelVersion,omitempty"`
+
+	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
+	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
+	Location                   *ModelsGeoLocation             `json:"location,omitempty"`
+	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
+	NodeUUID                   *string                        `json:"nodeUUID,omitempty"`
+	PrivateIP                  *string                        `json:"privateIP,omitempty"`
+	PublicIP                   *string                        `json:"publicIP,omitempty"`
+	RemovedAt                  *string                        `json:"removedAt,omitempty"`
+	SerialNumbers              *[]string                      `json:"serialNumbers,omitempty"`
+	SystemUUID                 *string                        `json:"systemUUID,omitempty"`
+	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+}
+
+// ModelsInbandInventoryReportResponse defines model for models.InbandInventoryReportResponse.
+type ModelsInbandInventoryReportResponse struct {
+	HasMore  *bool                        `json:"hasMore,omitempty"`
+	Nodes    *[]ModelsInbandInventoryNode `json:"nodes,omitempty"`
+	Page     *int                         `json:"page,omitempty"`
+	PageSize *int                         `json:"pageSize,omitempty"`
+	Total    *int                         `json:"total,omitempty"`
+}
+
 // ModelsInbandNode defines model for models.InbandNode.
 type ModelsInbandNode struct {
-	AgentStatus             *ModelsAgentStatus             `json:"agentStatus,omitempty"`
-	AgentType               *string                        `json:"agentType,omitempty"`
-	AgentVersion            *string                        `json:"agentVersion,omitempty"`
-	ComputeZone             *string                        `json:"computeZone,omitempty"`
-	FirmwareCheck           *ModelsFirmwareCheck           `json:"firmwareCheck,omitempty"`
-	GpuCount                *int                           `json:"gpuCount,omitempty"`
-	GpuDriverVersion        *string                        `json:"gpuDriverVersion,omitempty"`
-	GpuFirmwareVersions     *[]ModelsGPUFirmwareVersion    `json:"gpuFirmwareVersions,omitempty"`
-	GpuType                 *string                        `json:"gpuType,omitempty"`
-	HealthStatus            *ModelsHealthState             `json:"healthStatus,omitempty"`
-	Hostname                *string                        `json:"hostname,omitempty"`
-	IntegrityCheck          *ModelsIntegrityCheck          `json:"integrityCheck,omitempty"`
+	AgentStatus         *ModelsAgentStatus          `json:"agentStatus,omitempty"`
+	AgentType           *string                     `json:"agentType,omitempty"`
+	AgentVersion        *string                     `json:"agentVersion,omitempty"`
+	ComputeZone         *string                     `json:"computeZone,omitempty"`
+	FirmwareCheck       *ModelsFirmwareCheck        `json:"firmwareCheck,omitempty"`
+	GpuCount            *int                        `json:"gpuCount,omitempty"`
+	GpuDriverVersion    *string                     `json:"gpuDriverVersion,omitempty"`
+	GpuFirmwareVersions *[]ModelsGPUFirmwareVersion `json:"gpuFirmwareVersions,omitempty"`
+	GpuType             *string                     `json:"gpuType,omitempty"`
+	HealthStatus        *ModelsHealthState          `json:"healthStatus,omitempty"`
+	Hostname            *string                     `json:"hostname,omitempty"`
+
+	// IntegrityCheck Deprecated: use verificationCheck.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheck *ModelsIntegrityCheck `json:"integrityCheck,omitempty"`
+
+	// IntegrityCheckExtraInfo Deprecated: use verificationCheckExtraInfo.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
-	IntegrityCheckReason    *string                        `json:"integrityCheckReason,omitempty"`
-	KernelVersion           *string                        `json:"kernelVersion,omitempty"`
-	LastIntegrityCheckTS    *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string                        `json:"lastUpdatedTS,omitempty"`
-	NodeGroup               *string                        `json:"nodeGroup,omitempty"`
-	NodeUUID                string                         `json:"nodeUUID"`
-	PrivateIP               *string                        `json:"privateIP,omitempty"`
-	PublicIP                *string                        `json:"publicIP,omitempty"`
+
+	// IntegrityCheckReason Deprecated: use verificationCheckReason.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckReason *string `json:"integrityCheckReason,omitempty"`
+	KernelVersion        *string `json:"kernelVersion,omitempty"`
+
+	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS              *string                        `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
+	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
+	NodeUUID                   string                         `json:"nodeUUID"`
+	PrivateIP                  *string                        `json:"privateIP,omitempty"`
+	PublicIP                   *string                        `json:"publicIP,omitempty"`
+	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsInbandNodeDetailsResponse defines model for models.InbandNodeDetailsResponse.
 type ModelsInbandNodeDetailsResponse struct {
-	AgentStatus             *ModelsAgentStatus             `json:"agentStatus,omitempty"`
-	AgentType               *string                        `json:"agentType,omitempty"`
-	AgentVersion            *string                        `json:"agentVersion,omitempty"`
-	ComputeZone             *string                        `json:"computeZone,omitempty"`
-	ComputeZoneId           *string                        `json:"computeZoneId,omitempty"`
-	DegradedComponentCount  *int                           `json:"degradedComponentCount,omitempty"`
-	EnrolledAt              *string                        `json:"enrolledAt,omitempty"`
-	FirmwareCheck           *ModelsFirmwareCheck           `json:"firmwareCheck,omitempty"`
-	GeoLocation             *ModelsGeoLocation             `json:"geoLocation,omitempty"`
-	GpuCount                *int                           `json:"gpuCount,omitempty"`
-	GpuDriverVersion        *string                        `json:"gpuDriverVersion,omitempty"`
-	GpuFirmwareVersions     *[]ModelsGPUFirmwareVersion    `json:"gpuFirmwareVersions,omitempty"`
-	GpuType                 *string                        `json:"gpuType,omitempty"`
-	HealthStatus            *ModelsHealthState             `json:"healthStatus,omitempty"`
-	HealthyComponentCount   *int                           `json:"healthyComponentCount,omitempty"`
-	Hostname                *string                        `json:"hostname,omitempty"`
-	IntegrityCheck          *ModelsIntegrityCheck          `json:"integrityCheck,omitempty"`
+	AgentStatus            *ModelsAgentStatus   `json:"agentStatus,omitempty"`
+	AgentType              *string              `json:"agentType,omitempty"`
+	AgentVersion           *string              `json:"agentVersion,omitempty"`
+	ComputeZone            *string              `json:"computeZone,omitempty"`
+	ComputeZoneId          *string              `json:"computeZoneId,omitempty"`
+	DegradedComponentCount *int                 `json:"degradedComponentCount,omitempty"`
+	EnrolledAt             *string              `json:"enrolledAt,omitempty"`
+	FirmwareCheck          *ModelsFirmwareCheck `json:"firmwareCheck,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	GeoLocation           *ModelsGeoLocation          `json:"geoLocation,omitempty"`
+	GpuCount              *int                        `json:"gpuCount,omitempty"`
+	GpuDriverVersion      *string                     `json:"gpuDriverVersion,omitempty"`
+	GpuFirmwareVersions   *[]ModelsGPUFirmwareVersion `json:"gpuFirmwareVersions,omitempty"`
+	GpuType               *string                     `json:"gpuType,omitempty"`
+	HealthStatus          *ModelsHealthState          `json:"healthStatus,omitempty"`
+	HealthyComponentCount *int                        `json:"healthyComponentCount,omitempty"`
+	Hostname              *string                     `json:"hostname,omitempty"`
+
+	// IntegrityCheck Deprecated: use verificationCheck.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheck *ModelsIntegrityCheck `json:"integrityCheck,omitempty"`
+
+	// IntegrityCheckExtraInfo Deprecated: use verificationCheckExtraInfo.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
-	IntegrityCheckReason    *string                        `json:"integrityCheckReason,omitempty"`
-	KernelVersion           *string                        `json:"kernelVersion,omitempty"`
-	LastIntegrityCheckTS    *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string                        `json:"lastUpdatedTS,omitempty"`
-	NodeGroup               *string                        `json:"nodeGroup,omitempty"`
-	NodeGroupId             *string                        `json:"nodeGroupId,omitempty"`
-	NodeUUID                string                         `json:"nodeUUID"`
-	PrivateIP               *string                        `json:"privateIP,omitempty"`
-	PublicIP                *string                        `json:"publicIP,omitempty"`
-	Resources               *ModelsNodeResources           `json:"resources,omitempty"`
-	SystemInfo              *ModelsSystemInfo              `json:"systemInfo,omitempty"`
-	Tags                    *[]string                      `json:"tags,omitempty"`
-	UnhealthyComponentCount *int                           `json:"unhealthyComponentCount,omitempty"`
+
+	// IntegrityCheckReason Deprecated: use verificationCheckReason.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckReason *string `json:"integrityCheckReason,omitempty"`
+	KernelVersion        *string `json:"kernelVersion,omitempty"`
+
+	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS              *string                        `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
+	Location                   *ModelsGeoLocation             `json:"location,omitempty"`
+	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
+	NodeGroupId                *string                        `json:"nodeGroupId,omitempty"`
+	NodeUUID                   string                         `json:"nodeUUID"`
+	PrivateIP                  *string                        `json:"privateIP,omitempty"`
+	PublicIP                   *string                        `json:"publicIP,omitempty"`
+	Resources                  *ModelsNodeResources           `json:"resources,omitempty"`
+	SystemInfo                 *ModelsSystemInfo              `json:"systemInfo,omitempty"`
+	Tags                       *[]string                      `json:"tags,omitempty"`
+	UnhealthyComponentCount    *int                           `json:"unhealthyComponentCount,omitempty"`
+	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsInbandNodesResponse defines model for models.InbandNodesResponse.
@@ -1861,42 +2056,6 @@ type ModelsIntegrityCheckExtraInfo struct {
 	GpuResults               *map[string]ModelsJWTClaims `json:"gpuResults,omitempty"`
 	NrasCallResult           *string                     `json:"nrasCallResult,omitempty"`
 	OverallAttestationResult *bool                       `json:"overallAttestationResult,omitempty"`
-}
-
-// ModelsInventoryNode defines model for models.InventoryNode.
-type ModelsInventoryNode struct {
-	AgentVersion            *string                        `json:"agentVersion,omitempty"`
-	ComputeZone             *string                        `json:"computeZone,omitempty"`
-	EnrolledAt              *string                        `json:"enrolledAt,omitempty"`
-	FirmwareCheck           *ModelsFirmwareCheck           `json:"firmwareCheck,omitempty"`
-	GeoLocation             *ModelsGeoLocation             `json:"geoLocation,omitempty"`
-	GpuCount                *int                           `json:"gpuCount,omitempty"`
-	GpuDriverVersion        *string                        `json:"gpuDriverVersion,omitempty"`
-	GpuFirmwareVersions     *[]ModelsGPUFirmwareVersion    `json:"gpuFirmwareVersions,omitempty"`
-	GpuType                 *string                        `json:"gpuType,omitempty"`
-	GpuUUIDs                *[]string                      `json:"gpuUUIDs,omitempty"`
-	Hostname                *string                        `json:"hostname,omitempty"`
-	IntegrityCheck          *ModelsIntegrityCheck          `json:"integrityCheck,omitempty"`
-	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
-	IntegrityCheckReason    *string                        `json:"integrityCheckReason,omitempty"`
-	KernelVersion           *string                        `json:"kernelVersion,omitempty"`
-	LastIntegrityCheckTS    *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	NodeGroup               *string                        `json:"nodeGroup,omitempty"`
-	NodeUUID                *string                        `json:"nodeUUID,omitempty"`
-	PrivateIP               *string                        `json:"privateIP,omitempty"`
-	PublicIP                *string                        `json:"publicIP,omitempty"`
-	RemovedAt               *string                        `json:"removedAt,omitempty"`
-	SerialNumbers           *[]string                      `json:"serialNumbers,omitempty"`
-	SystemUUID              *string                        `json:"systemUUID,omitempty"`
-}
-
-// ModelsInventoryReportResponse defines model for models.InventoryReportResponse.
-type ModelsInventoryReportResponse struct {
-	HasMore  *bool                  `json:"hasMore,omitempty"`
-	Nodes    *[]ModelsInventoryNode `json:"nodes,omitempty"`
-	Page     *int                   `json:"page,omitempty"`
-	PageSize *int                   `json:"pageSize,omitempty"`
-	Total    *int                   `json:"total,omitempty"`
 }
 
 // ModelsJWTClaims defines model for models.JWTClaims.
@@ -2000,6 +2159,12 @@ type ModelsMetric struct {
 
 // ModelsMetricInfo defines model for models.MetricInfo.
 type ModelsMetricInfo struct {
+	// AgentType AgentType is set only for metrics that carry their own agent gate: "oob"
+	// for BMC sensor charts. Its absence means "no gate of its own", not
+	// "in-band" — read the enclosing component's agentType to classify a metric,
+	// which a metric may repeat but never contradict.
+	// Values: AgentTypeInband / AgentTypeOob.
+	AgentType   *string `json:"agentType,omitempty"`
 	DisplayName *string `json:"displayName,omitempty"`
 	Name        *string `json:"name,omitempty"`
 	Type        *string `json:"type,omitempty"`
@@ -2049,10 +2214,27 @@ type ModelsMetricTimeSeries struct {
 	// TrueLabel TrueLabel is the human-readable label for value 1 in boolean/count-as-bool metrics.
 	// Omitted for non-boolean metrics.
 	TrueLabel *string `json:"trueLabel,omitempty"`
-	Unit      *string `json:"unit,omitempty"`
+
+	// Unavailable Unavailable is set for node-level queries when the metric does not apply to
+	// the node at all, so the caller can hide the chart rather than draw an empty
+	// one. Null whenever the metric does apply, including when it simply has no
+	// data in the window. Always null for aggregated levels, where sensor presence
+	// is not a single answer across the group.
+	Unavailable ModelsMetricUnavailable `json:"unavailable"`
+	Unit        *string                 `json:"unit,omitempty"`
 
 	// Warning e.g. omitted invalid metric points; null when no issues
 	Warning ModelsMetricQueryWarning `json:"warning"`
+}
+
+// ModelsMetricUnavailable Unavailable is set for node-level queries when the metric does not apply to
+// the node at all, so the caller can hide the chart rather than draw an empty
+// one. Null whenever the metric does apply, including when it simply has no
+// data in the window. Always null for aggregated levels, where sensor presence
+// is not a single answer across the group.
+type ModelsMetricUnavailable struct {
+	Code    *string `json:"code,omitempty"`
+	Message *string `json:"message,omitempty"`
 }
 
 // ModelsMetricsAggregationResponse defines model for models.MetricsAggregationResponse.
@@ -2129,16 +2311,20 @@ type ModelsNodeGroupMembershipsResponse struct {
 
 // ModelsNodeGroupOverview defines model for models.NodeGroupOverview.
 type ModelsNodeGroupOverview struct {
-	AlertOverview          *ModelsAlertOverview `json:"alertOverview,omitempty"`
-	ComputeZoneContact     *ModelsContact       `json:"computeZoneContact,omitempty"`
-	ComputeZoneGeoLocation *ModelsGeoLocation   `json:"computeZoneGeoLocation,omitempty"`
-	ComputeZoneId          *string              `json:"computeZoneId,omitempty"`
-	ComputeZoneName        *string              `json:"computeZoneName,omitempty"`
-	CpuCoresCount          *int                 `json:"cpuCoresCount,omitempty"`
-	CreatedAt              *string              `json:"createdAt,omitempty"`
-	DegradedNodesCount     *int                 `json:"degradedNodesCount,omitempty"`
-	Description            *string              `json:"description,omitempty"`
-	GpusCount              *int                 `json:"gpusCount,omitempty"`
+	AlertOverview      *ModelsAlertOverview `json:"alertOverview,omitempty"`
+	ComputeZoneContact *ModelsContact       `json:"computeZoneContact,omitempty"`
+
+	// ComputeZoneGeoLocation Deprecated: use computeZoneLocation.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ComputeZoneGeoLocation *ModelsGeoLocation `json:"computeZoneGeoLocation,omitempty"`
+	ComputeZoneId          *string            `json:"computeZoneId,omitempty"`
+	ComputeZoneLocation    *ModelsGeoLocation `json:"computeZoneLocation,omitempty"`
+	ComputeZoneName        *string            `json:"computeZoneName,omitempty"`
+	CpuCoresCount          *int               `json:"cpuCoresCount,omitempty"`
+	CreatedAt              *string            `json:"createdAt,omitempty"`
+	DegradedNodesCount     *int               `json:"degradedNodesCount,omitempty"`
+	Description            *string            `json:"description,omitempty"`
+	GpusCount              *int               `json:"gpusCount,omitempty"`
 
 	// HasInbandAgent HasInbandAgent / HasOobAgent are true when at least one node in this group has ever
 	// reported in-band / OOB inventory. A group can have both, one, or neither depending on
@@ -2359,6 +2545,53 @@ type ModelsOobInventory struct {
 	TargetError *string            `json:"targetError,omitempty"`
 }
 
+// ModelsOobInventoryNode defines model for models.OobInventoryNode.
+type ModelsOobInventoryNode struct {
+	AgentVersion *string `json:"agentVersion,omitempty"`
+	BmcHostname  *string `json:"bmcHostname,omitempty"`
+	BmcIP        *string `json:"bmcIP,omitempty"`
+	ComputeZone  *string `json:"computeZone,omitempty"`
+	EnrolledAt   *string `json:"enrolledAt,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	GeoLocation *ModelsGeoLocation `json:"geoLocation,omitempty"`
+
+	// IntegrityCheck Deprecated: use verificationCheck.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheck *ModelsIntegrityCheck `json:"integrityCheck,omitempty"`
+
+	// IntegrityCheckExtraInfo Deprecated: use verificationCheckExtraInfo.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
+
+	// IntegrityCheckReason Deprecated: use verificationCheckReason.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckReason *string `json:"integrityCheckReason,omitempty"`
+
+	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
+	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
+	Location                   *ModelsGeoLocation             `json:"location,omitempty"`
+	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
+	NodeName                   *string                        `json:"nodeName,omitempty"`
+	NodeUUID                   *string                        `json:"nodeUUID,omitempty"`
+	RemovedAt                  *string                        `json:"removedAt,omitempty"`
+	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+}
+
+// ModelsOobInventoryReportResponse defines model for models.OobInventoryReportResponse.
+type ModelsOobInventoryReportResponse struct {
+	HasMore  *bool                     `json:"hasMore,omitempty"`
+	Nodes    *[]ModelsOobInventoryNode `json:"nodes,omitempty"`
+	Page     *int                      `json:"page,omitempty"`
+	PageSize *int                      `json:"pageSize,omitempty"`
+	Total    *int                      `json:"total,omitempty"`
+}
+
 // ModelsOobManager defines model for models.OobManager.
 type ModelsOobManager struct {
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
@@ -2374,47 +2607,89 @@ type ModelsOobManager struct {
 
 // ModelsOobNode defines model for models.OobNode.
 type ModelsOobNode struct {
-	AgentStatus             *ModelsAgentStatus             `json:"agentStatus,omitempty"`
-	AgentType               *string                        `json:"agentType,omitempty"`
-	AgentVersion            *string                        `json:"agentVersion,omitempty"`
-	BmcHostname             *string                        `json:"bmcHostname,omitempty"`
-	BmcIP                   *string                        `json:"bmcIP,omitempty"`
-	ComputeZone             *string                        `json:"computeZone,omitempty"`
-	HealthStatus            *ModelsHealthState             `json:"healthStatus,omitempty"`
-	IntegrityCheck          *ModelsIntegrityCheck          `json:"integrityCheck,omitempty"`
+	AgentStatus  *ModelsAgentStatus `json:"agentStatus,omitempty"`
+	AgentType    *string            `json:"agentType,omitempty"`
+	AgentVersion *string            `json:"agentVersion,omitempty"`
+	BmcHostname  *string            `json:"bmcHostname,omitempty"`
+	BmcIP        *string            `json:"bmcIP,omitempty"`
+	ComputeZone  *string            `json:"computeZone,omitempty"`
+	HealthStatus *ModelsHealthState `json:"healthStatus,omitempty"`
+
+	// IntegrityCheck Deprecated: use verificationCheck.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheck *ModelsIntegrityCheck `json:"integrityCheck,omitempty"`
+
+	// IntegrityCheckExtraInfo Deprecated: use verificationCheckExtraInfo.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
-	IntegrityCheckReason    *string                        `json:"integrityCheckReason,omitempty"`
-	LastIntegrityCheckTS    *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string                        `json:"lastUpdatedTS,omitempty"`
-	NodeGroup               *string                        `json:"nodeGroup,omitempty"`
-	NodeUUID                string                         `json:"nodeUUID"`
+
+	// IntegrityCheckReason Deprecated: use verificationCheckReason.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckReason *string `json:"integrityCheckReason,omitempty"`
+
+	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastIntegrityCheckTS    *string `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string `json:"lastVerificationCheckTS,omitempty"`
+	NodeGroup               *string `json:"nodeGroup,omitempty"`
+
+	// NodeName NodeName is the optional machine name configured on the OOB collector.
+	NodeName                   *string                        `json:"nodeName,omitempty"`
+	NodeUUID                   string                         `json:"nodeUUID"`
+	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsOobNodeDetailsResponse defines model for models.OobNodeDetailsResponse.
 type ModelsOobNodeDetailsResponse struct {
-	AgentStatus             *ModelsAgentStatus             `json:"agentStatus,omitempty"`
-	AgentType               *string                        `json:"agentType,omitempty"`
-	AgentVersion            *string                        `json:"agentVersion,omitempty"`
-	BmcHostname             *string                        `json:"bmcHostname,omitempty"`
-	BmcIP                   *string                        `json:"bmcIP,omitempty"`
-	ComputeZone             *string                        `json:"computeZone,omitempty"`
-	ComputeZoneId           *string                        `json:"computeZoneId,omitempty"`
-	DegradedComponentCount  *int                           `json:"degradedComponentCount,omitempty"`
-	EnrolledAt              *string                        `json:"enrolledAt,omitempty"`
-	GeoLocation             *ModelsGeoLocation             `json:"geoLocation,omitempty"`
-	HealthStatus            *ModelsHealthState             `json:"healthStatus,omitempty"`
-	HealthyComponentCount   *int                           `json:"healthyComponentCount,omitempty"`
-	IntegrityCheck          *ModelsIntegrityCheck          `json:"integrityCheck,omitempty"`
+	AgentStatus            *ModelsAgentStatus `json:"agentStatus,omitempty"`
+	AgentType              *string            `json:"agentType,omitempty"`
+	AgentVersion           *string            `json:"agentVersion,omitempty"`
+	BmcHostname            *string            `json:"bmcHostname,omitempty"`
+	BmcIP                  *string            `json:"bmcIP,omitempty"`
+	ComputeZone            *string            `json:"computeZone,omitempty"`
+	ComputeZoneId          *string            `json:"computeZoneId,omitempty"`
+	DegradedComponentCount *int               `json:"degradedComponentCount,omitempty"`
+	EnrolledAt             *string            `json:"enrolledAt,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	GeoLocation           *ModelsGeoLocation `json:"geoLocation,omitempty"`
+	HealthStatus          *ModelsHealthState `json:"healthStatus,omitempty"`
+	HealthyComponentCount *int               `json:"healthyComponentCount,omitempty"`
+
+	// IntegrityCheck Deprecated: use verificationCheck.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheck *ModelsIntegrityCheck `json:"integrityCheck,omitempty"`
+
+	// IntegrityCheckExtraInfo Deprecated: use verificationCheckExtraInfo.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	IntegrityCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
-	IntegrityCheckReason    *string                        `json:"integrityCheckReason,omitempty"`
-	LastIntegrityCheckTS    *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string                        `json:"lastUpdatedTS,omitempty"`
-	NodeGroup               *string                        `json:"nodeGroup,omitempty"`
-	NodeGroupId             *string                        `json:"nodeGroupId,omitempty"`
-	NodeUUID                string                         `json:"nodeUUID"`
-	OobInventory            *ModelsOobInventory            `json:"oobInventory,omitempty"`
-	Tags                    *[]string                      `json:"tags,omitempty"`
-	UnhealthyComponentCount *int                           `json:"unhealthyComponentCount,omitempty"`
+
+	// IntegrityCheckReason Deprecated: use verificationCheckReason.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	IntegrityCheckReason *string `json:"integrityCheckReason,omitempty"`
+
+	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastIntegrityCheckTS    *string            `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string            `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string            `json:"lastVerificationCheckTS,omitempty"`
+	Location                *ModelsGeoLocation `json:"location,omitempty"`
+	NodeGroup               *string            `json:"nodeGroup,omitempty"`
+	NodeGroupId             *string            `json:"nodeGroupId,omitempty"`
+
+	// NodeName NodeName is the optional machine name configured on the OOB collector.
+	NodeName                   *string                        `json:"nodeName,omitempty"`
+	NodeUUID                   string                         `json:"nodeUUID"`
+	OobInventory               *ModelsOobInventory            `json:"oobInventory,omitempty"`
+	Tags                       *[]string                      `json:"tags,omitempty"`
+	UnhealthyComponentCount    *int                           `json:"unhealthyComponentCount,omitempty"`
+	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsOobNodesResponse defines model for models.OobNodesResponse.
@@ -2525,6 +2800,13 @@ type ModelsQueryMetricRangeResponse struct {
 	StepAggregationFunction *string                   `json:"stepAggregationFunction,omitempty"`
 	TimeRange               *ModelsTimeRange          `json:"timeRange,omitempty"`
 
+	// Unavailable Unavailable is set for node-level queries when the metric does not apply to
+	// the node at all, so the caller can hide the chart rather than draw an empty
+	// one. Null whenever the metric does apply, including when it simply has no
+	// data in the window. Always null for aggregated levels, where sensor presence
+	// is not a single answer across the group.
+	Unavailable ModelsMetricUnavailable `json:"unavailable"`
+
 	// Warning e.g. omitted invalid metric points; null when no issues
 	Warning ModelsMetricQueryWarning `json:"warning"`
 }
@@ -2548,10 +2830,14 @@ type ModelsSigningKeyInfo struct {
 
 // ModelsSimpleComputeZone defines model for models.SimpleComputeZone.
 type ModelsSimpleComputeZone struct {
-	Contact     *ModelsContact         `json:"contact,omitempty"`
-	CreatedAt   *string                `json:"createdAt,omitempty"`
+	Contact   *ModelsContact `json:"contact,omitempty"`
+	CreatedAt *string        `json:"createdAt,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation *ModelsGeoLocation     `json:"geoLocation,omitempty"`
 	Id          *string                `json:"id,omitempty"`
+	Location    *ModelsGeoLocation     `json:"location,omitempty"`
 	Name        *string                `json:"name,omitempty"`
 	Type        *ModelsComputeZoneType `json:"type,omitempty"`
 	UpdatedAt   *string                `json:"updatedAt,omitempty"`
@@ -2562,7 +2848,11 @@ type ModelsSimpleNode struct {
 	BmcHostname *string `json:"bmcHostname,omitempty"`
 	BmcIP       *string `json:"bmcIP,omitempty"`
 	Hostname    *string `json:"hostname,omitempty"`
-	NodeUUID    string  `json:"nodeUUID"`
+
+	// NodeName NodeName is OOB collector metadata. It is populated for OOB and combined
+	// basic views and omitted from an explicitly in-band basic response.
+	NodeName *string `json:"nodeName,omitempty"`
+	NodeUUID string  `json:"nodeUUID"`
 }
 
 // ModelsSimpleNodeGroup defines model for models.SimpleNodeGroup.
@@ -2633,9 +2923,13 @@ type ModelsTimeRange struct {
 
 // ModelsUpdateComputeZoneRequest defines model for models.UpdateComputeZoneRequest.
 type ModelsUpdateComputeZoneRequest struct {
-	Contact     *ModelsContact     `json:"contact,omitempty"`
+	Contact *ModelsContact `json:"contact,omitempty"`
+
+	// GeoLocation Deprecated: use location.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation *ModelsGeoLocation `json:"geoLocation,omitempty"`
 	Id          string             `json:"id"`
+	Location    *ModelsGeoLocation `json:"location,omitempty"`
 	Type        *string            `json:"type,omitempty"`
 }
 
@@ -2793,6 +3087,9 @@ type GetV1AlertTimelineNodesParams struct {
 
 	// Hostname Case-insensitive partial match on hostname
 	Hostname *string `form:"hostname,omitempty" json:"hostname,omitempty"`
+
+	// OnlineOnly When true, return only nodes whose liveness state is Healthy/Degraded and has no unhealthy in-band or OOB liveness state. Omit or use false to return all nodes.
+	OnlineOnly *bool `form:"onlineOnly,omitempty" json:"onlineOnly,omitempty"`
 
 	// SortBy Sortable table-header column. alert ranks by critical then warning count.
 	SortBy *GetV1AlertTimelineNodesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
@@ -3138,12 +3435,21 @@ type GetV1Nodegroups200JSONResponseBody struct {
 	union json.RawMessage
 }
 
+// DeleteV1NodesParams defines parameters for DeleteV1Nodes.
+type DeleteV1NodesParams struct {
+	// AgentType Agent enrollment to soft delete: inband (default) or oob
+	AgentType *DeleteV1NodesParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
+}
+
+// DeleteV1NodesParamsAgentType defines parameters for DeleteV1Nodes.
+type DeleteV1NodesParamsAgentType string
+
 // GetV1NodesParams defines parameters for GetV1Nodes.
 type GetV1NodesParams struct {
-	// View View mode: 'detail' for full response (default) or 'basic' for nodeUUID + hostname + bmcHostname/bmcIP only (lightweight query, does not support filtering or sorting by healthStatuses, integrityChecks, firmwareChecks, or agentStatuses).
+	// View View mode: 'detail' for full response (default) or 'basic' for nodeUUID + hostname + optional OOB nodeName + bmcHostname/bmcIP only (lightweight query, does not support filtering or sorting by healthStatuses, verificationChecks, firmwareChecks, or agentStatuses).
 	View *GetV1NodesParamsView `form:"view,omitempty" json:"view,omitempty"`
 
-	// AgentType Select the in-band or OOB (BMC/Redfish) view: returns only nodes enrolled by that agent type. In the OOB view, nodes expose bmcHostname/bmcIP and BMC-based integrityCheck, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions are empty. Empty defaults to the in-band view for view=detail; for view=basic, an empty agentType returns a combined view populating hostname and bmcHostname/bmcIP for every node.
+	// AgentType Select the in-band or OOB (BMC/Redfish) view: returns only nodes enrolled by that agent type. nodeName is source-specific metadata configured on the OOB collector and is absent from in-band responses. In the OOB view, nodes expose nodeName, bmcHostname/bmcIP and BMC-based verification, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions are empty. Empty defaults to the in-band view for view=detail; for view=basic, an empty agentType returns a combined view that merges the OOB nodeName and BMC identity alongside the in-band hostname.
 	AgentType *GetV1NodesParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 
 	// Page Page number (0-indexed)
@@ -3182,7 +3488,11 @@ type GetV1NodesParams struct {
 	// PrivateIPs Filter by private IP addresses. Empty means all private IPs
 	PrivateIPs *[]string `form:"privateIPs,omitempty" json:"privateIPs,omitempty"`
 
-	// IntegrityChecks Filter by integrity check status
+	// VerificationChecks Filter by verification-check status. Takes precedence when both verificationChecks and deprecated integrityChecks are supplied.
+	VerificationChecks *[]ModelsIntegrityCheck `form:"verificationChecks,omitempty" json:"verificationChecks,omitempty"`
+
+	// IntegrityChecks Deprecated: use verificationChecks.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	IntegrityChecks *[]ModelsIntegrityCheck `form:"integrityChecks,omitempty" json:"integrityChecks,omitempty"`
 
 	// FirmwareChecks Filter by firmware check status
@@ -3191,13 +3501,19 @@ type GetV1NodesParams struct {
 	// AgentStatuses Filter by agent status values
 	AgentStatuses *[]ModelsAgentStatus `form:"agentStatuses,omitempty" json:"agentStatuses,omitempty"`
 
-	// Hostname Filter by hostname (case-insensitive partial match)
+	// Search Case-insensitive substring search across nodeUUID and source-appropriate node identity fields. Searches nodeUUID or hostname for agentType=inband; nodeUUID, nodeName, or bmcHostname for agentType=oob; and nodeUUID plus all three names for the combined basic view (view=basic with agentType omitted). Leading and trailing whitespace is ignored; blank means no search.
+	Search *string `form:"search,omitempty" json:"search,omitempty"`
+
+	// Hostname Filter by the in-band OS hostname (case-insensitive partial match). Applies to the in-band view and to active in-band identities in the combined basic view; ignored in the OOB view.
 	Hostname *string `form:"hostname,omitempty" json:"hostname,omitempty"`
 
-	// BmcHostname Filter by BMC hostname (case-insensitive partial match). Applies only to the OOB view (agentType=oob); ignored in the in-band view.
+	// NodeName Filter by the configured node name (case-insensitive partial match). Applies only to the OOB view (agentType=oob); ignored in the in-band and combined views.
+	NodeName *string `form:"nodeName,omitempty" json:"nodeName,omitempty"`
+
+	// BmcHostname Filter by BMC hostname (case-insensitive partial match). Applies only to the OOB view (agentType=oob); ignored in the in-band and combined views.
 	BmcHostname *string `form:"bmcHostname,omitempty" json:"bmcHostname,omitempty"`
 
-	// SortBy Field to sort by. Defaults to hostname (in-band view) or bmcHostname (OOB view). bmcHostname applies only to the OOB view; the in-band-only GPU/kernel/driver/agentVersion keys apply only to the in-band view — a key not valid for the selected view falls back to the view's default. gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions to the top, then sorts the remaining (uniform) nodes by that common vbios in the requested order.
+	// SortBy Field to sort by. Use verificationCheck; integrityCheck remains a deprecated alias. Defaults to hostname (in-band view) or bmcHostname (OOB view). nodeName and bmcHostname apply only to OOB-capable views; the in-band-only GPU/kernel/driver/agentVersion keys apply only to the in-band view — a key not valid for the selected view falls back to the view's default. gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions to the top, then sorts the remaining (uniform) nodes by that common vbios in the requested order.
 	SortBy *GetV1NodesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort order (asc, desc)
@@ -3247,6 +3563,15 @@ type GetV1NodesOptionsParams struct {
 
 // GetV1NodesOptionsParamsAgentType defines parameters for GetV1NodesOptions.
 type GetV1NodesOptionsParamsAgentType string
+
+// DeleteV1NodesNodeUuidParams defines parameters for DeleteV1NodesNodeUuid.
+type DeleteV1NodesNodeUuidParams struct {
+	// AgentType Agent enrollment to soft delete: inband (default) or oob
+	AgentType *DeleteV1NodesNodeUuidParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
+}
+
+// DeleteV1NodesNodeUuidParamsAgentType defines parameters for DeleteV1NodesNodeUuid.
+type DeleteV1NodesNodeUuidParamsAgentType string
 
 // GetV1NodesNodeUuidParams defines parameters for GetV1NodesNodeUuid.
 type GetV1NodesNodeUuidParams struct {
@@ -3364,9 +3689,6 @@ type GetV1ReportsErrorParamsView string
 // GetV1ReportsErrorParamsFormat defines parameters for GetV1ReportsError.
 type GetV1ReportsErrorParamsFormat string
 
-// GetV1ReportsError200JSONResponseBody4 defines parameters for GetV1ReportsError.
-type GetV1ReportsError200JSONResponseBody4 = string
-
 // GetV1ReportsError200JSONResponseBody defines parameters for GetV1ReportsError.
 type GetV1ReportsError200JSONResponseBody struct {
 	union json.RawMessage
@@ -3386,6 +3708,9 @@ type GetV1ReportsInventoryParams struct {
 	// Signed Sign the CSV with NVIDIA's signing key and return a zip containing the CSV plus a .sig.bundle (cosign-verifiable Sigstore bundle). Only valid with format=csv.
 	Signed *bool `form:"signed,omitempty" json:"signed,omitempty"`
 
+	// AgentType Inventory source: inband (default) or oob. The JSON and CSV fields are source-specific.
+	AgentType *GetV1ReportsInventoryParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
+
 	// ComputeZoneIds Filter by computezone IDs. Empty means all computezones
 	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
 
@@ -3401,7 +3726,7 @@ type GetV1ReportsInventoryParams struct {
 	// EndTime End time for filtering nodes active during period (RFC3339 format, e.g., 2024-12-31T23:59:59Z)
 	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
 
-	// SortBy Field to sort by
+	// SortBy Field to sort by. In-band fields: hostname, gpuType, gpuCount, publicIP, privateIP. OOB fields: nodeName, bmcHostname, bmcIP. Shared fields: nodeUUID, nodeGroup, computeZone, verificationCheck, location. integrityCheck and geoLocation remain deprecated aliases. Defaults to hostname for inband and bmcHostname for oob.
 	SortBy *GetV1ReportsInventoryParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort order (asc, desc)
@@ -3411,14 +3736,14 @@ type GetV1ReportsInventoryParams struct {
 // GetV1ReportsInventoryParamsFormat defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventoryParamsFormat string
 
+// GetV1ReportsInventoryParamsAgentType defines parameters for GetV1ReportsInventory.
+type GetV1ReportsInventoryParamsAgentType string
+
 // GetV1ReportsInventoryParamsSortBy defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventoryParamsSortBy string
 
 // GetV1ReportsInventoryParamsOrder defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventoryParamsOrder string
-
-// GetV1ReportsInventory200JSONResponseBody1 defines parameters for GetV1ReportsInventory.
-type GetV1ReportsInventory200JSONResponseBody1 = string
 
 // GetV1ReportsInventory200JSONResponseBody defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventory200JSONResponseBody struct {
@@ -3538,6 +3863,36 @@ type GetV1XIDBurstsParamsSortBy string
 
 // GetV1XIDBurstsParamsSortOrder defines parameters for GetV1XIDBursts.
 type GetV1XIDBurstsParamsSortOrder string
+
+// GetV1XIDBurstOptionsParams defines parameters for GetV1XIDBurstOptions.
+type GetV1XIDBurstOptionsParams struct {
+	// StartTime Optional RFC3339 start time
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime Optional RFC3339 end time
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Optional time mode
+	TimeMode *GetV1XIDBurstOptionsParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Optional relative duration window
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// NodeGroupIds Node group IDs
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Compute zone IDs
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Excluded node group IDs
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Excluded compute zone IDs
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+}
+
+// GetV1XIDBurstOptionsParamsTimeMode defines parameters for GetV1XIDBurstOptions.
+type GetV1XIDBurstOptionsParamsTimeMode string
 
 // GetV2MetricsParams defines parameters for GetV2Metrics.
 type GetV2MetricsParams struct {
@@ -3992,32 +4347,6 @@ func (t *GetV1ReportsError200JSONResponseBody) MergeModelsErrorReportGraphByErro
 	return err
 }
 
-// AsGetV1ReportsError200JSONResponseBody4 returns the union data inside the GetV1ReportsError200JSONResponseBody as a GetV1ReportsError200JSONResponseBody4
-func (t GetV1ReportsError200JSONResponseBody) AsGetV1ReportsError200JSONResponseBody4() (GetV1ReportsError200JSONResponseBody4, error) {
-	var body GetV1ReportsError200JSONResponseBody4
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGetV1ReportsError200JSONResponseBody4 overwrites any union data inside the GetV1ReportsError200JSONResponseBody as the provided GetV1ReportsError200JSONResponseBody4
-func (t *GetV1ReportsError200JSONResponseBody) FromGetV1ReportsError200JSONResponseBody4(v GetV1ReportsError200JSONResponseBody4) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGetV1ReportsError200JSONResponseBody4 performs a merge with any union data inside the GetV1ReportsError200JSONResponseBody, using the provided GetV1ReportsError200JSONResponseBody4
-func (t *GetV1ReportsError200JSONResponseBody) MergeGetV1ReportsError200JSONResponseBody4(v GetV1ReportsError200JSONResponseBody4) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 func (t GetV1ReportsError200JSONResponseBody) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
@@ -4028,22 +4357,22 @@ func (t *GetV1ReportsError200JSONResponseBody) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-// AsModelsInventoryReportResponse returns the union data inside the GetV1ReportsInventory200JSONResponseBody as a ModelsInventoryReportResponse
-func (t GetV1ReportsInventory200JSONResponseBody) AsModelsInventoryReportResponse() (ModelsInventoryReportResponse, error) {
-	var body ModelsInventoryReportResponse
+// AsModelsInbandInventoryReportResponse returns the union data inside the GetV1ReportsInventory200JSONResponseBody as a ModelsInbandInventoryReportResponse
+func (t GetV1ReportsInventory200JSONResponseBody) AsModelsInbandInventoryReportResponse() (ModelsInbandInventoryReportResponse, error) {
+	var body ModelsInbandInventoryReportResponse
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromModelsInventoryReportResponse overwrites any union data inside the GetV1ReportsInventory200JSONResponseBody as the provided ModelsInventoryReportResponse
-func (t *GetV1ReportsInventory200JSONResponseBody) FromModelsInventoryReportResponse(v ModelsInventoryReportResponse) error {
+// FromModelsInbandInventoryReportResponse overwrites any union data inside the GetV1ReportsInventory200JSONResponseBody as the provided ModelsInbandInventoryReportResponse
+func (t *GetV1ReportsInventory200JSONResponseBody) FromModelsInbandInventoryReportResponse(v ModelsInbandInventoryReportResponse) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeModelsInventoryReportResponse performs a merge with any union data inside the GetV1ReportsInventory200JSONResponseBody, using the provided ModelsInventoryReportResponse
-func (t *GetV1ReportsInventory200JSONResponseBody) MergeModelsInventoryReportResponse(v ModelsInventoryReportResponse) error {
+// MergeModelsInbandInventoryReportResponse performs a merge with any union data inside the GetV1ReportsInventory200JSONResponseBody, using the provided ModelsInbandInventoryReportResponse
+func (t *GetV1ReportsInventory200JSONResponseBody) MergeModelsInbandInventoryReportResponse(v ModelsInbandInventoryReportResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -4054,22 +4383,22 @@ func (t *GetV1ReportsInventory200JSONResponseBody) MergeModelsInventoryReportRes
 	return err
 }
 
-// AsGetV1ReportsInventory200JSONResponseBody1 returns the union data inside the GetV1ReportsInventory200JSONResponseBody as a GetV1ReportsInventory200JSONResponseBody1
-func (t GetV1ReportsInventory200JSONResponseBody) AsGetV1ReportsInventory200JSONResponseBody1() (GetV1ReportsInventory200JSONResponseBody1, error) {
-	var body GetV1ReportsInventory200JSONResponseBody1
+// AsModelsOobInventoryReportResponse returns the union data inside the GetV1ReportsInventory200JSONResponseBody as a ModelsOobInventoryReportResponse
+func (t GetV1ReportsInventory200JSONResponseBody) AsModelsOobInventoryReportResponse() (ModelsOobInventoryReportResponse, error) {
+	var body ModelsOobInventoryReportResponse
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromGetV1ReportsInventory200JSONResponseBody1 overwrites any union data inside the GetV1ReportsInventory200JSONResponseBody as the provided GetV1ReportsInventory200JSONResponseBody1
-func (t *GetV1ReportsInventory200JSONResponseBody) FromGetV1ReportsInventory200JSONResponseBody1(v GetV1ReportsInventory200JSONResponseBody1) error {
+// FromModelsOobInventoryReportResponse overwrites any union data inside the GetV1ReportsInventory200JSONResponseBody as the provided ModelsOobInventoryReportResponse
+func (t *GetV1ReportsInventory200JSONResponseBody) FromModelsOobInventoryReportResponse(v ModelsOobInventoryReportResponse) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeGetV1ReportsInventory200JSONResponseBody1 performs a merge with any union data inside the GetV1ReportsInventory200JSONResponseBody, using the provided GetV1ReportsInventory200JSONResponseBody1
-func (t *GetV1ReportsInventory200JSONResponseBody) MergeGetV1ReportsInventory200JSONResponseBody1(v GetV1ReportsInventory200JSONResponseBody1) error {
+// MergeModelsOobInventoryReportResponse performs a merge with any union data inside the GetV1ReportsInventory200JSONResponseBody, using the provided ModelsOobInventoryReportResponse
+func (t *GetV1ReportsInventory200JSONResponseBody) MergeModelsOobInventoryReportResponse(v ModelsOobInventoryReportResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -4275,14 +4604,14 @@ type ClientInterface interface {
 
 	// GetV1Computezones Get compute zones
 	//
-	// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, GeoLocation, Contact, timestamps)
+	// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, Location, Contact, timestamps). Responses include location and the deprecated geoLocation alias for backward compatibility.
 	//
 	// Corresponds with GET /v1/computezones (the `GetV1Computezones` operationId).
 	GetV1Computezones(ctx context.Context, params *GetV1ComputezonesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutV1ComputezonesWithBody Update compute zone
 	//
-	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -4291,7 +4620,7 @@ type ClientInterface interface {
 
 	// PutV1Computezones Update compute zone
 	//
-	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -4377,7 +4706,7 @@ type ClientInterface interface {
 
 	// GetV1Nodegroups Get node groups
 	//
-	// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes
+	// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes. Detail responses include computeZoneLocation and the deprecated computeZoneGeoLocation alias for backward compatibility.
 	//
 	// Corresponds with GET /v1/nodegroups (the `GetV1Nodegroups` operationId).
 	GetV1Nodegroups(ctx context.Context, params *GetV1NodegroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4396,25 +4725,25 @@ type ClientInterface interface {
 
 	// DeleteV1NodesWithBody Delete multiple nodes (soft delete)
 	//
-	// Soft delete multiple nodes by setting the deleted flag to true.
+	// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-	DeleteV1NodesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteV1NodesWithBody(ctx context.Context, params *DeleteV1NodesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteV1Nodes Delete multiple nodes (soft delete)
 	//
-	// Soft delete multiple nodes by setting the deleted flag to true.
+	// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-	DeleteV1Nodes(ctx context.Context, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteV1Nodes(ctx context.Context, params *DeleteV1NodesParams, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1Nodes Get nodes overview and states
 	//
-	// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname list (see models.BasicNodesResponse). All filter parameters are optional arrays - empty means no filter applied.
+	// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname/BMC identity list, including the optional OOB nodeName when OOB data is selected (see models.BasicNodesResponse). Detail responses include the preferred verification-check fields and the deprecated integrityCheck aliases for backward compatibility. All filter parameters are optional arrays - empty means no filter applied.
 	//
 	// Corresponds with GET /v1/nodes (the `GetV1Nodes` operationId).
 	GetV1Nodes(ctx context.Context, params *GetV1NodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4431,7 +4760,7 @@ type ClientInterface interface {
 
 	// GetV1NodesOptions Get available query options for nodes
 	//
-	// Returns available filters and sorting options for querying nodes.
+	// Returns available filters and sorting options for querying nodes. Sorting fields include verificationCheck and the deprecated integrityCheck alias for backward compatibility.
 	// Filter options may be simple strings (e.g., health statuses) or hierarchical objects (e.g., compute zones with nested nodegroups).
 	//
 	// Filter options examples:
@@ -4445,14 +4774,14 @@ type ClientInterface interface {
 
 	// DeleteV1NodesNodeUuid Delete a node (soft delete)
 	//
-	// Soft delete a node by setting the deleted flag to true.
+	// Soft delete the selected agent enrollment. The shared node remains active while the other agent enrollment is active.
 	//
 	// Corresponds with DELETE /v1/nodes/{nodeUUID} (the `DeleteV1NodesNodeUuid` operationId).
-	DeleteV1NodesNodeUuid(ctx context.Context, nodeUUID string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteV1NodesNodeUuid(ctx context.Context, nodeUUID string, params *DeleteV1NodesNodeUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1NodesNodeUuid Get detailed node information
 	//
-	// Get detailed information about a specific node including resources, system info, and health status
+	// Get detailed information about a specific node including resources, system info, and health status. Responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 	//
 	// Corresponds with GET /v1/nodes/{nodeUUID} (the `GetV1NodesNodeUuid` operationId).
 	GetV1NodesNodeUuid(ctx context.Context, nodeUUID string, params *GetV1NodesNodeUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4604,8 +4933,9 @@ type ClientInterface interface {
 
 	// GetV1ReportsInventory Get inventory report
 	//
-	// Get inventory report in JSON or CSV format. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+	// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 	// Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
+	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 	//
 	// Corresponds with GET /v1/reports/inventory (the `GetV1ReportsInventory` operationId).
 	GetV1ReportsInventory(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4698,12 +5028,12 @@ type ClientInterface interface {
 
 	// GetV1XIDBurstOptions Get XID burst filter options
 	//
-	// Returns all filter options available to the authenticated customer and persona. Options are not narrowed by the table's current time, scope, or column filters. This v1 response contains no counts and has no cross-filter impact-count behavior.
+	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 	// Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
 	//
 	// Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
-	GetV1XIDBurstOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1XIDBurstDetail Get finalized XID burst details
 	//
@@ -4969,7 +5299,7 @@ func (c *Client) GetV1AuthStatus(ctx context.Context, reqEditors ...RequestEdito
 
 // GetV1Computezones Get compute zones
 //
-// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, GeoLocation, Contact, timestamps)
+// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, Location, Contact, timestamps). Responses include location and the deprecated geoLocation alias for backward compatibility.
 //
 // Corresponds with GET /v1/computezones (the `GetV1Computezones` operationId).
 func (c *Client) GetV1Computezones(ctx context.Context, params *GetV1ComputezonesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -4986,7 +5316,7 @@ func (c *Client) GetV1Computezones(ctx context.Context, params *GetV1Computezone
 
 // PutV1ComputezonesWithBody Update compute zone
 //
-// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 //
 // Takes any type of body and a specified content type.
 //
@@ -5005,7 +5335,7 @@ func (c *Client) PutV1ComputezonesWithBody(ctx context.Context, contentType stri
 
 // PutV1Computezones Update compute zone
 //
-// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -5191,7 +5521,7 @@ func (c *Client) PutV1NodeRemovalPolicy(ctx context.Context, body PutV1NodeRemov
 
 // GetV1Nodegroups Get node groups
 //
-// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes
+// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes. Detail responses include computeZoneLocation and the deprecated computeZoneGeoLocation alias for backward compatibility.
 //
 // Corresponds with GET /v1/nodegroups (the `GetV1Nodegroups` operationId).
 func (c *Client) GetV1Nodegroups(ctx context.Context, params *GetV1NodegroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5230,13 +5560,13 @@ func (c *Client) GetV1NodegroupsOptions(ctx context.Context, reqEditors ...Reque
 
 // DeleteV1NodesWithBody Delete multiple nodes (soft delete)
 //
-// Soft delete multiple nodes by setting the deleted flag to true.
+// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 //
 // Takes any type of body and a specified content type.
 //
 // Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-func (c *Client) DeleteV1NodesWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteV1NodesRequestWithBody(c.Server, contentType, body)
+func (c *Client) DeleteV1NodesWithBody(ctx context.Context, params *DeleteV1NodesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteV1NodesRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5249,13 +5579,13 @@ func (c *Client) DeleteV1NodesWithBody(ctx context.Context, contentType string, 
 
 // DeleteV1Nodes Delete multiple nodes (soft delete)
 //
-// Soft delete multiple nodes by setting the deleted flag to true.
+// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 //
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-func (c *Client) DeleteV1Nodes(ctx context.Context, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteV1NodesRequest(c.Server, body)
+func (c *Client) DeleteV1Nodes(ctx context.Context, params *DeleteV1NodesParams, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteV1NodesRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5268,7 +5598,7 @@ func (c *Client) DeleteV1Nodes(ctx context.Context, body DeleteV1NodesJSONReques
 
 // GetV1Nodes Get nodes overview and states
 //
-// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname list (see models.BasicNodesResponse). All filter parameters are optional arrays - empty means no filter applied.
+// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname/BMC identity list, including the optional OOB nodeName when OOB data is selected (see models.BasicNodesResponse). Detail responses include the preferred verification-check fields and the deprecated integrityCheck aliases for backward compatibility. All filter parameters are optional arrays - empty means no filter applied.
 //
 // Corresponds with GET /v1/nodes (the `GetV1Nodes` operationId).
 func (c *Client) GetV1Nodes(ctx context.Context, params *GetV1NodesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5305,7 +5635,7 @@ func (c *Client) GetV1NodesHistory(ctx context.Context, params *GetV1NodesHistor
 
 // GetV1NodesOptions Get available query options for nodes
 //
-// Returns available filters and sorting options for querying nodes.
+// Returns available filters and sorting options for querying nodes. Sorting fields include verificationCheck and the deprecated integrityCheck alias for backward compatibility.
 // Filter options may be simple strings (e.g., health statuses) or hierarchical objects (e.g., compute zones with nested nodegroups).
 //
 // Filter options examples:
@@ -5329,11 +5659,11 @@ func (c *Client) GetV1NodesOptions(ctx context.Context, params *GetV1NodesOption
 
 // DeleteV1NodesNodeUuid Delete a node (soft delete)
 //
-// Soft delete a node by setting the deleted flag to true.
+// Soft delete the selected agent enrollment. The shared node remains active while the other agent enrollment is active.
 //
 // Corresponds with DELETE /v1/nodes/{nodeUUID} (the `DeleteV1NodesNodeUuid` operationId).
-func (c *Client) DeleteV1NodesNodeUuid(ctx context.Context, nodeUUID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteV1NodesNodeUuidRequest(c.Server, nodeUUID)
+func (c *Client) DeleteV1NodesNodeUuid(ctx context.Context, nodeUUID string, params *DeleteV1NodesNodeUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteV1NodesNodeUuidRequest(c.Server, nodeUUID, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5346,7 +5676,7 @@ func (c *Client) DeleteV1NodesNodeUuid(ctx context.Context, nodeUUID string, req
 
 // GetV1NodesNodeUuid Get detailed node information
 //
-// # Get detailed information about a specific node including resources, system info, and health status
+// Get detailed information about a specific node including resources, system info, and health status. Responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 //
 // Corresponds with GET /v1/nodes/{nodeUUID} (the `GetV1NodesNodeUuid` operationId).
 func (c *Client) GetV1NodesNodeUuid(ctx context.Context, nodeUUID string, params *GetV1NodesNodeUuidParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5638,8 +5968,9 @@ func (c *Client) GetV1ReportsError(ctx context.Context, params *GetV1ReportsErro
 
 // GetV1ReportsInventory Get inventory report
 //
-// Get inventory report in JSON or CSV format. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 // Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
+// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 //
 // Corresponds with GET /v1/reports/inventory (the `GetV1ReportsInventory` operationId).
 func (c *Client) GetV1ReportsInventory(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5812,13 +6143,13 @@ func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParam
 
 // GetV1XIDBurstOptions Get XID burst filter options
 //
-// Returns all filter options available to the authenticated customer and persona. Options are not narrowed by the table's current time, scope, or column filters. This v1 response contains no counts and has no cross-filter impact-count behavior.
+// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 // Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 // jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
 //
 // Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
-func (c *Client) GetV1XIDBurstOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetV1XIDBurstOptionsRequest(c.Server)
+func (c *Client) GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1XIDBurstOptionsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -6136,6 +6467,18 @@ func NewGetV1AlertTimelineNodesRequest(server string, params *GetV1AlertTimeline
 		if params.Hostname != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hostname", *params.Hostname, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.OnlineOnly != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "onlineOnly", *params.OnlineOnly, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -7814,18 +8157,18 @@ func NewGetV1NodegroupsOptionsRequest(server string) (*http.Request, error) {
 }
 
 // NewDeleteV1NodesRequest calls the generic DeleteV1Nodes builder with application/json body
-func NewDeleteV1NodesRequest(server string, body DeleteV1NodesJSONRequestBody) (*http.Request, error) {
+func NewDeleteV1NodesRequest(server string, params *DeleteV1NodesParams, body DeleteV1NodesJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewDeleteV1NodesRequestWithBody(server, "application/json", bodyReader)
+	return NewDeleteV1NodesRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewDeleteV1NodesRequestWithBody constructs an http.Request for the DeleteV1Nodes method, with any body, and a specified content type
-func NewDeleteV1NodesRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewDeleteV1NodesRequestWithBody(server string, params *DeleteV1NodesParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -7841,6 +8184,33 @@ func NewDeleteV1NodesRequestWithBody(server string, contentType string, body io.
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.AgentType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), body)
@@ -8049,6 +8419,18 @@ func NewGetV1NodesRequest(server string, params *GetV1NodesParams) (*http.Reques
 
 		}
 
+		if params.VerificationChecks != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "verificationChecks", *params.VerificationChecks, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.IntegrityChecks != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "integrityChecks", *params.IntegrityChecks, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
@@ -8085,9 +8467,33 @@ func NewGetV1NodesRequest(server string, params *GetV1NodesParams) (*http.Reques
 
 		}
 
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Hostname != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hostname", *params.Hostname, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeName != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeName", *params.NodeName, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -8280,7 +8686,7 @@ func NewGetV1NodesOptionsRequest(server string, params *GetV1NodesOptionsParams)
 }
 
 // NewDeleteV1NodesNodeUuidRequest constructs an http.Request for the DeleteV1NodesNodeUuid method
-func NewDeleteV1NodesNodeUuidRequest(server string, nodeUUID string) (*http.Request, error) {
+func NewDeleteV1NodesNodeUuidRequest(server string, nodeUUID string, params *DeleteV1NodesNodeUuidParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -8303,6 +8709,33 @@ func NewDeleteV1NodesNodeUuidRequest(server string, nodeUUID string) (*http.Requ
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.AgentType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
@@ -9166,6 +9599,18 @@ func NewGetV1ReportsInventoryRequest(server string, params *GetV1ReportsInventor
 
 		}
 
+		if params.AgentType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ComputeZoneIds != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
@@ -9852,7 +10297,7 @@ func NewGetV1XIDBurstsRequest(server string, params *GetV1XIDBurstsParams) (*htt
 }
 
 // NewGetV1XIDBurstOptionsRequest constructs an http.Request for the GetV1XIDBurstOptions method
-func NewGetV1XIDBurstOptionsRequest(server string) (*http.Request, error) {
+func NewGetV1XIDBurstOptionsRequest(server string, params *GetV1XIDBurstOptionsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -9868,6 +10313,117 @@ func NewGetV1XIDBurstOptionsRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -10290,7 +10846,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1ComputezonesWithResponse Get compute zones
 	//
-	// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, GeoLocation, Contact, timestamps)
+	// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, Location, Contact, timestamps). Responses include location and the deprecated geoLocation alias for backward compatibility.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -10299,7 +10855,7 @@ type ClientWithResponsesInterface interface {
 
 	// PutV1ComputezonesWithBodyWithResponse Update compute zone
 	//
-	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -10308,7 +10864,7 @@ type ClientWithResponsesInterface interface {
 
 	// PutV1ComputezonesWithResponse Update compute zone
 	//
-	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+	// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -10408,7 +10964,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1NodegroupsWithResponse Get node groups
 	//
-	// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes
+	// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes. Detail responses include computeZoneLocation and the deprecated computeZoneGeoLocation alias for backward compatibility.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -10431,25 +10987,25 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteV1NodesWithBodyWithResponse Delete multiple nodes (soft delete)
 	//
-	// Soft delete multiple nodes by setting the deleted flag to true.
+	// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-	DeleteV1NodesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error)
+	DeleteV1NodesWithBodyWithResponse(ctx context.Context, params *DeleteV1NodesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error)
 
 	// DeleteV1NodesWithResponse Delete multiple nodes (soft delete)
 	//
-	// Soft delete multiple nodes by setting the deleted flag to true.
+	// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-	DeleteV1NodesWithResponse(ctx context.Context, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error)
+	DeleteV1NodesWithResponse(ctx context.Context, params *DeleteV1NodesParams, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error)
 
 	// GetV1NodesWithResponse Get nodes overview and states
 	//
-	// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname list (see models.BasicNodesResponse). All filter parameters are optional arrays - empty means no filter applied.
+	// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname/BMC identity list, including the optional OOB nodeName when OOB data is selected (see models.BasicNodesResponse). Detail responses include the preferred verification-check fields and the deprecated integrityCheck aliases for backward compatibility. All filter parameters are optional arrays - empty means no filter applied.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -10470,7 +11026,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1NodesOptionsWithResponse Get available query options for nodes
 	//
-	// Returns available filters and sorting options for querying nodes.
+	// Returns available filters and sorting options for querying nodes. Sorting fields include verificationCheck and the deprecated integrityCheck alias for backward compatibility.
 	// Filter options may be simple strings (e.g., health statuses) or hierarchical objects (e.g., compute zones with nested nodegroups).
 	//
 	// Filter options examples:
@@ -10486,16 +11042,16 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteV1NodesNodeUuidWithResponse Delete a node (soft delete)
 	//
-	// Soft delete a node by setting the deleted flag to true.
+	// Soft delete the selected agent enrollment. The shared node remains active while the other agent enrollment is active.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /v1/nodes/{nodeUUID} (the `DeleteV1NodesNodeUuid` operationId).
-	DeleteV1NodesNodeUuidWithResponse(ctx context.Context, nodeUUID string, reqEditors ...RequestEditorFn) (*DeleteV1NodesNodeUuidResponse, error)
+	DeleteV1NodesNodeUuidWithResponse(ctx context.Context, nodeUUID string, params *DeleteV1NodesNodeUuidParams, reqEditors ...RequestEditorFn) (*DeleteV1NodesNodeUuidResponse, error)
 
 	// GetV1NodesNodeUuidWithResponse Get detailed node information
 	//
-	// Get detailed information about a specific node including resources, system info, and health status
+	// Get detailed information about a specific node including resources, system info, and health status. Responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -10663,8 +11219,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1ReportsInventoryWithResponse Get inventory report
 	//
-	// Get inventory report in JSON or CSV format. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+	// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 	// Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
+	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -10765,14 +11322,14 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1XIDBurstOptionsWithResponse Get XID burst filter options
 	//
-	// Returns all filter options available to the authenticated customer and persona. Options are not narrowed by the table's current time, scope, or column filters. This v1 response contains no counts and has no cross-filter impact-count behavior.
+	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 	// Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
-	GetV1XIDBurstOptionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1XIDBurstOptionsResponse, error)
+	GetV1XIDBurstOptionsWithResponse(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstOptionsResponse, error)
 
 	// GetV1XIDBurstDetailWithResponse Get finalized XID burst details
 	//
@@ -14235,6 +14792,8 @@ type GetV1XIDBurstOptionsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ModelsXIDBurstFilterOptionsResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ModelsErrorResponse
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *ModelsErrorResponse
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -14248,6 +14807,11 @@ type GetV1XIDBurstOptionsResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetV1XIDBurstOptionsResponse) GetJSON200() *ModelsXIDBurstFilterOptionsResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetV1XIDBurstOptionsResponse) GetJSON400() *ModelsErrorResponse {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -14699,7 +15263,7 @@ func (c *ClientWithResponses) GetV1AuthStatusWithResponse(ctx context.Context, r
 
 // GetV1ComputezonesWithResponse Get compute zones
 //
-// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, GeoLocation, Contact, timestamps)
+// Get list of compute zones with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for essential fields (ID, Name, Type, Location, Contact, timestamps). Responses include location and the deprecated geoLocation alias for backward compatibility.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -14714,7 +15278,7 @@ func (c *ClientWithResponses) GetV1ComputezonesWithResponse(ctx context.Context,
 
 // PutV1ComputezonesWithBodyWithResponse Update compute zone
 //
-// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -14729,7 +15293,7 @@ func (c *ClientWithResponses) PutV1ComputezonesWithBodyWithResponse(ctx context.
 
 // PutV1ComputezonesWithResponse Update compute zone
 //
-// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api.
+// Admin updates compute zone type and metadata. Compute zone names are agent-managed and cannot be changed from customer-api. Use location; geoLocation remains accepted as a deprecated alias. If both are supplied, they must be identical.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -14889,7 +15453,7 @@ func (c *ClientWithResponses) PutV1NodeRemovalPolicyWithResponse(ctx context.Con
 
 // GetV1NodegroupsWithResponse Get node groups
 //
-// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes
+// Get list of node groups with optional filtering and different view modes. Use view=detail for comprehensive metrics and view=basic for minimal ID/Name list. Detail view supports additional filters: computeZoneNames (partial match), healthStatuses, and gpuTypes. Detail responses include computeZoneLocation and the deprecated computeZoneGeoLocation alias for backward compatibility.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -14924,13 +15488,13 @@ func (c *ClientWithResponses) GetV1NodegroupsOptionsWithResponse(ctx context.Con
 
 // DeleteV1NodesWithBodyWithResponse Delete multiple nodes (soft delete)
 //
-// Soft delete multiple nodes by setting the deleted flag to true.
+// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-func (c *ClientWithResponses) DeleteV1NodesWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error) {
-	rsp, err := c.DeleteV1NodesWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) DeleteV1NodesWithBodyWithResponse(ctx context.Context, params *DeleteV1NodesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error) {
+	rsp, err := c.DeleteV1NodesWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14939,13 +15503,13 @@ func (c *ClientWithResponses) DeleteV1NodesWithBodyWithResponse(ctx context.Cont
 
 // DeleteV1NodesWithResponse Delete multiple nodes (soft delete)
 //
-// Soft delete multiple nodes by setting the deleted flag to true.
+// Soft delete the selected agent enrollment for multiple nodes. A shared node remains active while the other agent enrollment is active.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /v1/nodes (the `DeleteV1Nodes` operationId).
-func (c *ClientWithResponses) DeleteV1NodesWithResponse(ctx context.Context, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error) {
-	rsp, err := c.DeleteV1Nodes(ctx, body, reqEditors...)
+func (c *ClientWithResponses) DeleteV1NodesWithResponse(ctx context.Context, params *DeleteV1NodesParams, body DeleteV1NodesJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteV1NodesResponse, error) {
+	rsp, err := c.DeleteV1Nodes(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14954,7 +15518,7 @@ func (c *ClientWithResponses) DeleteV1NodesWithResponse(ctx context.Context, bod
 
 // GetV1NodesWithResponse Get nodes overview and states
 //
-// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname list (see models.BasicNodesResponse). All filter parameters are optional arrays - empty means no filter applied.
+// Get list of nodes with current state and overview. Use view=detail (default) for full response or view=basic for a lightweight nodeUUID + hostname/BMC identity list, including the optional OOB nodeName when OOB data is selected (see models.BasicNodesResponse). Detail responses include the preferred verification-check fields and the deprecated integrityCheck aliases for backward compatibility. All filter parameters are optional arrays - empty means no filter applied.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -14987,7 +15551,7 @@ func (c *ClientWithResponses) GetV1NodesHistoryWithResponse(ctx context.Context,
 
 // GetV1NodesOptionsWithResponse Get available query options for nodes
 //
-// Returns available filters and sorting options for querying nodes.
+// Returns available filters and sorting options for querying nodes. Sorting fields include verificationCheck and the deprecated integrityCheck alias for backward compatibility.
 // Filter options may be simple strings (e.g., health statuses) or hierarchical objects (e.g., compute zones with nested nodegroups).
 //
 // Filter options examples:
@@ -15009,13 +15573,13 @@ func (c *ClientWithResponses) GetV1NodesOptionsWithResponse(ctx context.Context,
 
 // DeleteV1NodesNodeUuidWithResponse Delete a node (soft delete)
 //
-// Soft delete a node by setting the deleted flag to true.
+// Soft delete the selected agent enrollment. The shared node remains active while the other agent enrollment is active.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /v1/nodes/{nodeUUID} (the `DeleteV1NodesNodeUuid` operationId).
-func (c *ClientWithResponses) DeleteV1NodesNodeUuidWithResponse(ctx context.Context, nodeUUID string, reqEditors ...RequestEditorFn) (*DeleteV1NodesNodeUuidResponse, error) {
-	rsp, err := c.DeleteV1NodesNodeUuid(ctx, nodeUUID, reqEditors...)
+func (c *ClientWithResponses) DeleteV1NodesNodeUuidWithResponse(ctx context.Context, nodeUUID string, params *DeleteV1NodesNodeUuidParams, reqEditors ...RequestEditorFn) (*DeleteV1NodesNodeUuidResponse, error) {
+	rsp, err := c.DeleteV1NodesNodeUuid(ctx, nodeUUID, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15024,7 +15588,7 @@ func (c *ClientWithResponses) DeleteV1NodesNodeUuidWithResponse(ctx context.Cont
 
 // GetV1NodesNodeUuidWithResponse Get detailed node information
 //
-// # Get detailed information about a specific node including resources, system info, and health status
+// Get detailed information about a specific node including resources, system info, and health status. Responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15276,8 +15840,9 @@ func (c *ClientWithResponses) GetV1ReportsErrorWithResponse(ctx context.Context,
 
 // GetV1ReportsInventoryWithResponse Get inventory report
 //
-// Get inventory report in JSON or CSV format. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 // Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
+// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15426,15 +15991,15 @@ func (c *ClientWithResponses) GetV1XIDBurstsWithResponse(ctx context.Context, pa
 
 // GetV1XIDBurstOptionsWithResponse Get XID burst filter options
 //
-// Returns all filter options available to the authenticated customer and persona. Options are not narrowed by the table's current time, scope, or column filters. This v1 response contains no counts and has no cross-filter impact-count behavior.
+// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 // Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 // jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text hostnameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
-func (c *ClientWithResponses) GetV1XIDBurstOptionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1XIDBurstOptionsResponse, error) {
-	rsp, err := c.GetV1XIDBurstOptions(ctx, reqEditors...)
+func (c *ClientWithResponses) GetV1XIDBurstOptionsWithResponse(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstOptionsResponse, error) {
+	rsp, err := c.GetV1XIDBurstOptions(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -17948,25 +18513,7 @@ func ParseGetV1ReportsInventoryResponse(rsp *http.Response) (*GetV1ReportsInvent
 		response.JSON503 = &dest
 
 	case rsp.StatusCode == 200:
-	// Content-type (text/csv) unsupported
-
-	case rsp.StatusCode == 400:
-	// Content-type (application/zip) unsupported
-
-	case rsp.StatusCode == 401:
-	// Content-type (application/zip) unsupported
-
-	case rsp.StatusCode == 403:
-	// Content-type (application/zip) unsupported
-
-	case rsp.StatusCode == 499:
-	// Content-type (application/zip) unsupported
-
-	case rsp.StatusCode == 500:
-	// Content-type (application/zip) unsupported
-
-	case rsp.StatusCode == 503:
-		// Content-type (application/zip) unsupported
+		// Content-type (text/csv) unsupported
 
 	}
 
@@ -18304,6 +18851,13 @@ func ParseGetV1XIDBurstOptionsResponse(rsp *http.Response) (*GetV1XIDBurstOption
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest ModelsErrorResponse

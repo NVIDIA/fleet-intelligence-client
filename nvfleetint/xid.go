@@ -377,7 +377,7 @@ func (c *Client) GetXIDBurstFilterOptions(ctx context.Context) (XIDBurstFilterOp
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	resp, err := c.api.GetV1XIDBurstOptions(ctx)
+	resp, err := c.api.GetV1XIDBurstOptions(ctx, nil)
 	if err != nil {
 		return XIDBurstFilterOptions{}, err
 	}
