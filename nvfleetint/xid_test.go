@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -398,6 +399,142 @@ func TestDescribeXIDBurstErrors(t *testing.T) {
 	}
 }
 
+// Verifies a scope reaches the XID burst options endpoint as query parameters.
+func TestGetXIDBurstFilterOptionsSendsScope(t *testing.T) {
+	tests := []struct {
+		name  string
+		scope XIDBurstFilterOptionsScope
+		want  url.Values
+	}{
+		{
+			name:  "relative range",
+			scope: XIDBurstFilterOptionsScope{Window: "24h"},
+			want:  url.Values{"timeMode": {"relative"}, "window": {"24h"}},
+		},
+		{
+			name: "absolute range",
+			scope: XIDBurstFilterOptionsScope{
+				StartTime: "2026-05-01T00:00:00Z",
+				EndTime:   "2026-05-02T00:00:00Z",
+			},
+			want: url.Values{
+				"timeMode":  {"absolute"},
+				"startTime": {"2026-05-01T00:00:00Z"},
+				"endTime":   {"2026-05-02T00:00:00Z"},
+			},
+		},
+		{
+			name: "inventory scope without a range",
+			scope: XIDBurstFilterOptionsScope{
+				NodeGroupIDs:   []string{"ng-1", "ng-2"},
+				ComputeZoneIDs: []string{"cz-1"},
+			},
+			want: url.Values{"nodeGroupIds": {"ng-1", "ng-2"}, "computeZoneIds": {"cz-1"}},
+		},
+		{
+			name: "exclusion filters",
+			scope: XIDBurstFilterOptionsScope{
+				ExcludeNodeGroupIDs:   []string{"ng-9"},
+				ExcludeComputeZoneIDs: []string{"cz-9"},
+			},
+			want: url.Values{"excludeNodeGroupIds": {"ng-9"}, "excludeComputeZoneIds": {"cz-9"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got url.Values
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				got = r.URL.Query()
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"xidNumbers":[]}`))
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-key")
+			if err != nil {
+				t.Fatalf("new client failed: %v", err)
+			}
+			if _, err := client.GetXIDBurstFilterOptions(context.Background(), tt.scope); err != nil {
+				t.Fatalf("get XID burst filter options failed: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("unexpected query parameters: got %v want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Verifies the options scope is validated before a request is issued.
+func TestGetXIDBurstFilterOptionsRejectsInvalidScope(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"xidNumbers":[]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		scope XIDBurstFilterOptionsScope
+		want  string
+	}{
+		{
+			name:  "window with start",
+			scope: XIDBurstFilterOptionsScope{Window: "24h", StartTime: "2026-05-01T00:00:00Z"},
+			want:  "window cannot be combined with start time or end time",
+		},
+		{
+			name:  "start without end",
+			scope: XIDBurstFilterOptionsScope{StartTime: "2026-05-01T00:00:00Z"},
+			want:  "start time and end time must be provided together",
+		},
+		{
+			name:  "bad window",
+			scope: XIDBurstFilterOptionsScope{Window: "7d"},
+			want:  "window",
+		},
+		{
+			name: "node group include and exclude",
+			scope: XIDBurstFilterOptionsScope{
+				NodeGroupIDs:        []string{"ng-1"},
+				ExcludeNodeGroupIDs: []string{"ng-2"},
+			},
+			want: "node group include and exclude filters cannot be combined",
+		},
+		{
+			name: "compute zone include and exclude",
+			scope: XIDBurstFilterOptionsScope{
+				ComputeZoneIDs:        []string{"cz-1"},
+				ExcludeComputeZoneIDs: []string{"cz-2"},
+			},
+			want: "compute zone include and exclude filters cannot be combined",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := client.GetXIDBurstFilterOptions(context.Background(), tt.scope)
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
+	}
+
+	if requests != 0 {
+		t.Fatalf("expected no requests to reach the server, got %d", requests)
+	}
+}
+
 // Verifies XID burst filter options decode the per-field value lists.
 func TestGetXIDBurstFilterOptions(t *testing.T) {
 	body := `{"xidNumbers":[43,94],"categories":["User-App"],"subcategories":["Illegal Memory Access"],` +
@@ -410,6 +547,11 @@ func TestGetXIDBurstFilterOptions(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Fatalf("unexpected auth header: %q", got)
 		}
+		// An empty scope must send no parameters at all rather than defaulting
+		// to a time mode, since the endpoint treats the range as optional.
+		if got := r.URL.RawQuery; got != "" {
+			t.Fatalf("expected no query parameters for an empty scope, got %q", got)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
 	}))
@@ -419,7 +561,7 @@ func TestGetXIDBurstFilterOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
-	options, err := client.GetXIDBurstFilterOptions(context.Background())
+	options, err := client.GetXIDBurstFilterOptions(context.Background(), XIDBurstFilterOptionsScope{})
 	if err != nil {
 		t.Fatalf("get XID burst filter options failed: %v", err)
 	}
@@ -457,7 +599,7 @@ func TestGetXIDBurstFilterOptionsAPIError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
-	if _, err := client.GetXIDBurstFilterOptions(context.Background()); err == nil {
+	if _, err := client.GetXIDBurstFilterOptions(context.Background(), XIDBurstFilterOptionsScope{}); err == nil {
 		t.Fatal("expected an error")
 	} else if !strings.Contains(err.Error(), "403") {
 		t.Fatalf("unexpected error: %v", err)
