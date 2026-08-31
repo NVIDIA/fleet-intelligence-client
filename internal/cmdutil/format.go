@@ -13,8 +13,8 @@ import (
 // is plain text, but the SDK dependency is what keeps them out of
 // internal/output, which formats values rather than models.
 
-// FormatGeoLocation formats the most useful location label available.
-func FormatGeoLocation(location *nvfleetint.GeoLocation) string {
+// FormatLocation formats the most useful location label available.
+func FormatLocation(location *nvfleetint.Location) string {
 	if location == nil {
 		return "-"
 	}

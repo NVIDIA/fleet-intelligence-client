@@ -58,7 +58,7 @@ func TestGetInventoryReportSendsParamsAndDecodes(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","gpuType":"NVIDIA-H100","gpuCount":8,"integrityCheck":"Verified","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","serialNumbers":["SN1"]}],"hasMore":false,"page":2,"pageSize":25,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","gpuType":"NVIDIA-H100","gpuCount":8,"verificationCheck":"Verified","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","serialNumbers":["SN1"]}],"hasMore":false,"page":2,"pageSize":25,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -140,8 +140,6 @@ func TestInventoryReportSortByConstantsAreAccepted(t *testing.T) {
 		InventoryReportSortByPrivateIP,
 		InventoryReportSortByVerificationCheck,
 		InventoryReportSortByLocation,
-		InventoryReportSortByIntegrityCheck,
-		InventoryReportSortByGeoLocation,
 	}
 
 	for _, sortBy := range sortValues {

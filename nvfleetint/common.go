@@ -14,9 +14,7 @@ import (
 )
 
 // Represents physical location metadata for a fleet resource.
-// This retains the backend "geoLocation" vocabulary; the CLI surfaces it
-// to users as "location".
-type GeoLocation struct {
+type Location struct {
 	City      string   `json:"city,omitempty"`
 	Country   string   `json:"country,omitempty"`
 	Region    string   `json:"region,omitempty"`
@@ -117,11 +115,11 @@ func newAPIError(statusCode int, status string, data []byte) error {
 }
 
 // Maps generated location metadata into SDK values
-func geoLocationFromGenerated(location *fleetapi.ModelsGeoLocation) *GeoLocation {
+func locationFromGenerated(location *fleetapi.ModelsGeoLocation) *Location {
 	if location == nil {
 		return nil
 	}
-	return &GeoLocation{
+	return &Location{
 		City:      stringValue(location.City),
 		Country:   stringValue(location.Country),
 		Region:    stringValue(location.Region),

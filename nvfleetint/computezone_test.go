@@ -39,7 +39,7 @@ func TestListComputeZonesDetailSendsAuthAndParams(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","name":"East","type":"datacenter","geoLocation":{"region":"us-east-1"},"nodesCount":7}],"hasMore":true,"page":2,"pageSize":50,"total":99}`))
+		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","name":"East","type":"datacenter","location":{"region":"us-east-1"},"nodesCount":7}],"hasMore":true,"page":2,"pageSize":50,"total":99}`))
 	}))
 	defer server.Close()
 
@@ -74,8 +74,8 @@ func TestListComputeZonesDetailSendsAuthAndParams(t *testing.T) {
 	if zone.NodeCount == nil || *zone.NodeCount != 7 {
 		t.Fatalf("unexpected node count: %#v", zone.NodeCount)
 	}
-	if zone.GeoLocation == nil || zone.GeoLocation.Region != "us-east-1" {
-		t.Fatalf("unexpected geolocation: %#v", zone.GeoLocation)
+	if zone.Location == nil || zone.Location.Region != "us-east-1" {
+		t.Fatalf("unexpected location: %#v", zone.Location)
 	}
 	if !strings.Contains(string(got.RawJSON), `"computezones"`) {
 		t.Fatalf("raw JSON not preserved: %q", string(got.RawJSON))

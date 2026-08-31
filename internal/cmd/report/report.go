@@ -774,7 +774,6 @@ func writeReportErrorOutput(w io.Writer, common cmdutil.Resolved, result reportE
 
 // Renders inventory report nodes as a table
 func writeReportInventoryTable(w io.Writer, nodes []nvfleetint.InventoryNode) error {
-	// "VERIFICATION CHECK" is the user-facing label for the backend integrityCheck field.
 	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP"}, reportInventoryRows(nodes))
 }
 
@@ -806,7 +805,7 @@ func reportInventoryRows(nodes []nvfleetint.InventoryNode) [][]string {
 			clioutput.DisplayString(node.NodeGroup),
 			clioutput.DisplayString(node.GPUType),
 			clioutput.FormatOptionalInt(node.GPUCount),
-			clioutput.DisplayString(node.IntegrityCheck),
+			clioutput.DisplayString(node.VerificationCheck),
 			clioutput.DisplayString(node.FirmwareCheck),
 			clioutput.DisplayString(node.PublicIP),
 			clioutput.DisplayString(node.PrivateIP),

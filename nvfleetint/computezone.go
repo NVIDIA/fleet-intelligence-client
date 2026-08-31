@@ -58,11 +58,11 @@ func (page ComputeZonesPage) PageInfo() PageInfo {
 
 // Represents a compute zone
 type ComputeZone struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Type        string       `json:"type,omitempty"`
-	GeoLocation *GeoLocation `json:"geoLocation,omitempty"`
-	NodeCount   *int         `json:"nodeCount,omitempty"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Type      string    `json:"type,omitempty"`
+	Location  *Location `json:"location,omitempty"`
+	NodeCount *int      `json:"nodeCount,omitempty"`
 }
 
 // Lists compute zones using the configured API client
@@ -182,20 +182,20 @@ func decodeBasicComputeZones(data []byte) (ComputeZonesPage, error) {
 // Maps detail API models into SDK values
 func computeZoneFromOverview(zone fleetapi.ModelsComputeZoneOverview) ComputeZone {
 	return ComputeZone{
-		ID:          stringValue(zone.Id),
-		Name:        stringValue(zone.Name),
-		Type:        enumStringValue(zone.Type),
-		GeoLocation: geoLocationFromGenerated(zone.GeoLocation),
-		NodeCount:   cloneInt(zone.NodesCount),
+		ID:        stringValue(zone.Id),
+		Name:      stringValue(zone.Name),
+		Type:      enumStringValue(zone.Type),
+		Location:  locationFromGenerated(zone.Location),
+		NodeCount: cloneInt(zone.NodesCount),
 	}
 }
 
 // Maps basic API models into SDK values
 func computeZoneFromSimple(zone fleetapi.ModelsSimpleComputeZone) ComputeZone {
 	return ComputeZone{
-		ID:          stringValue(zone.Id),
-		Name:        stringValue(zone.Name),
-		Type:        enumStringValue(zone.Type),
-		GeoLocation: geoLocationFromGenerated(zone.GeoLocation),
+		ID:       stringValue(zone.Id),
+		Name:     stringValue(zone.Name),
+		Type:     enumStringValue(zone.Type),
+		Location: locationFromGenerated(zone.Location),
 	}
 }

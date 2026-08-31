@@ -21,35 +21,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// User-facing spelling of the backend "integrityCheck" node sort field
-const nodeSortByVerificationCheck = "verificationCheck"
-
-// Lists the sort fields accepted by node list, using the user-facing
-// "verificationCheck" spelling instead of the backend "integrityCheck"
+// Lists the sort fields accepted by node list
 const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, " +
-	nodeSortByVerificationCheck + ", agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions"
+	"verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions"
 
 // Stores local flag values for node list
 type nodeListFlags struct {
-	view             string
-	agentType        string
-	nodeUUIDs        string
-	health           string
-	computeZoneIDs   string
-	computeZoneNames string
-	nodeGroupIDs     string
-	nodeGroupNames   string
-	gpuType          string
-	gpuCount         string
-	publicIP         string
-	privateIP        string
-	hostname         string
-	bmcHostname      string
-	agentStatus      string
-	integrityCheck   string
-	firmwareCheck    string
-	sortBy           string
-	order            string
+	view              string
+	agentType         string
+	nodeUUIDs         string
+	health            string
+	computeZoneIDs    string
+	computeZoneNames  string
+	nodeGroupIDs      string
+	nodeGroupNames    string
+	gpuType           string
+	gpuCount          string
+	publicIP          string
+	privateIP         string
+	hostname          string
+	bmcHostname       string
+	agentStatus       string
+	verificationCheck string
+	firmwareCheck     string
+	sortBy            string
+	order             string
 }
 
 // Stores data ready for node list rendering
@@ -164,8 +160,7 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
 	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter")
-	// User-facing "verification check" maps to the backend "integrity check" API field.
-	cmd.Flags().StringVar(&flags.integrityCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
+	cmd.Flags().StringVar(&flags.verificationCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field (including verificationCheck)")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
@@ -510,16 +505,16 @@ func parseOOBInventorySections(
 // Names the flag carrying each node list option, for rendering SDK validation
 // errors against what the user typed.
 var nodeListFlagNames = map[string]cmdutil.OptionFlagName{
-	"view":           {Flag: "view"},
-	"agentType":      {Flag: "agent-type"},
-	"health":         {Flag: "health"},
-	"agentStatus":    {Flag: "agent-status"},
-	"integrityCheck": {Flag: "verification-check"},
-	"firmwareCheck":  {Flag: "firmware-check"},
-	"gpuCount":       {Flag: "gpu-count"},
-	"order":          {Flag: "order"},
-	// The CLI spells the backend's integrityCheck sort field verificationCheck,
-	// so it lists the sort fields itself rather than echoing the backend's.
+	"view":              {Flag: "view"},
+	"agentType":         {Flag: "agent-type"},
+	"health":            {Flag: "health"},
+	"agentStatus":       {Flag: "agent-status"},
+	"verificationCheck": {Flag: "verification-check"},
+	"firmwareCheck":     {Flag: "firmware-check"},
+	"gpuCount":          {Flag: "gpu-count"},
+	"order":             {Flag: "order"},
+	// The CLI accepts a subset of the backend's sort fields, so it lists them
+	// itself rather than echoing the backend's.
 	"sortBy": {Flag: "sort-by", Expected: nodeSortByList},
 }
 
@@ -527,17 +522,14 @@ var nodeListFlagNames = map[string]cmdutil.OptionFlagName{
 // to the SDK to validate, so the accepted values and the view compatibility
 // rules are stated in one place rather than in both layers.
 func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
-	sortBy, err := normalizeNodeSortBy(flags.sortBy)
-	if err != nil {
-		return nvfleetint.ListNodesOptions{}, err
-	}
+	var err error
 
 	opts := nvfleetint.ListNodesOptions{
 		View:        nvfleetint.NodeView(flags.view),
 		AgentType:   nvfleetint.NodeAgentType(flags.agentType),
 		Hostname:    strings.TrimSpace(flags.hostname),
 		BMCHostname: strings.TrimSpace(flags.bmcHostname),
-		SortBy:      sortBy,
+		SortBy:      nvfleetint.NodeSortBy(strings.TrimSpace(flags.sortBy)),
 		Order:       nvfleetint.NodeSortOrder(flags.order),
 	}
 
@@ -549,8 +541,8 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 		"agent-status", flags.agentStatus); err != nil {
 		return opts, err
 	}
-	if opts.IntegrityChecks, err = cmdutil.ParseTypedList[nvfleetint.NodeIntegrityCheck](
-		"verification-check", flags.integrityCheck); err != nil {
+	if opts.VerificationChecks, err = cmdutil.ParseTypedList[nvfleetint.NodeVerificationCheck](
+		"verification-check", flags.verificationCheck); err != nil {
 		return opts, err
 	}
 	if opts.FirmwareChecks, err = cmdutil.ParseTypedList[nvfleetint.NodeFirmwareCheck](
@@ -592,18 +584,6 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 	}
 
 	return opts, nil
-}
-
-// Normalizes the raw sort-by flag into an API sort field.
-// "verificationCheck" is the user-facing name for the backend "integrityCheck"
-// sort field; the backend name stays accepted so existing scripts keep working.
-func normalizeNodeSortBy(raw string) (nvfleetint.NodeSortBy, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == nodeSortByVerificationCheck {
-		return nvfleetint.NodeSortByIntegrityCheck, nil
-	}
-
-	return nvfleetint.NodeSortBy(trimmed), nil
 }
 
 // Writes JSON or table output for node list results
@@ -695,7 +675,6 @@ func writeNodeTable(
 			oobDetailNodeRows(nodes),
 		)
 	}
-	// "VERIFICATION CHECK" is the user-facing label for the backend integrityCheck field.
 	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
 }
 
@@ -735,7 +714,7 @@ func detailNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.Health),
 			clioutput.DisplayString(node.GPUType),
 			clioutput.FormatOptionalInt(node.GPUCount),
-			clioutput.DisplayString(node.IntegrityCheck),
+			clioutput.DisplayString(node.VerificationCheck),
 			clioutput.DisplayString(node.FirmwareCheck),
 			clioutput.DisplayString(node.AgentStatus),
 		})
@@ -754,7 +733,7 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
 			clioutput.DisplayString(node.Health),
-			clioutput.DisplayString(node.IntegrityCheck),
+			clioutput.DisplayString(node.VerificationCheck),
 			clioutput.DisplayString(node.AgentStatus),
 		})
 	}
@@ -865,16 +844,16 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},
 		{"NODE GROUP", clioutput.FormatNameAndID(node.NodeGroup, node.NodeGroupID)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		{"VERIFICATION CHECK", clioutput.DisplayString(node.IntegrityCheck)},
-		{"VERIFICATION REASON", clioutput.DisplayString(node.IntegrityCheckReason)},
+		{"VERIFICATION CHECK", clioutput.DisplayString(node.VerificationCheck)},
+		{"VERIFICATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastIntegrityCheckTime)},
+		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastVerificationCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
-		{"LOCATION", cmdutil.FormatGeoLocation(node.GeoLocation)},
+		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
@@ -892,21 +871,19 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"GPU TYPE", clioutput.DisplayString(node.GPUType)},
 		{"GPU COUNT", clioutput.FormatOptionalInt(node.GPUCount)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		// Verification check/reason/last-check map to the backend integrityCheck* fields.
-		{"VERIFICATION CHECK", clioutput.DisplayString(node.IntegrityCheck)},
-		{"VERIFICATION REASON", clioutput.DisplayString(node.IntegrityCheckReason)},
+		{"VERIFICATION CHECK", clioutput.DisplayString(node.VerificationCheck)},
+		{"VERIFICATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
 		{"FIRMWARE CHECK", clioutput.DisplayString(node.FirmwareCheck)},
 		{"PUBLIC IP", clioutput.DisplayString(node.PublicIP)},
 		{"PRIVATE IP", clioutput.DisplayString(node.PrivateIP)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastIntegrityCheckTime)},
+		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastVerificationCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
-		// "LOCATION" is the user-facing label for the backend geoLocation field.
-		{"LOCATION", cmdutil.FormatGeoLocation(node.GeoLocation)},
+		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 	}
 
 	if node.BMCHostname != "" || node.BMCIP != "" {
@@ -1256,14 +1233,23 @@ var nodeOptionsRenderer = cmdutil.OptionsRenderer{
 		"agentStatuses":  {Name: "--agent-status"},
 	},
 	SortFields: map[string]string{
-		"nodeGroup":      "nodegroup",
-		"computeZone":    "computezone",
-		"integrityCheck": nodeSortByVerificationCheck,
+		"nodeGroup":   "nodegroup",
+		"computeZone": "computezone",
 	},
 	SortAccepted: func(field string) bool {
-		sortBy, err := normalizeNodeSortBy(field)
-		return err == nil && sortBy.Valid()
+		return nvfleetint.NodeSortBy(field).Valid()
 	},
+	SortHidden: func(field string) bool {
+		return nodeDeprecatedSortFields[field]
+	},
+}
+
+// Sort fields the backend still advertises but has deprecated and will drop.
+// `node list --sort-by` keeps taking them, so scripts written against them do
+// not break before the API breaks them, but `node options` stops offering them.
+// Delete this once the API no longer returns them.
+var nodeDeprecatedSortFields = map[string]bool{
+	"integrityCheck": true,
 }
 
 // Creates the node options command

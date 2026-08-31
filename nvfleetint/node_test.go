@@ -36,8 +36,8 @@ func TestListNodesDetailSendsAuthAndParams(t *testing.T) {
 		if got := query["agentStatuses"]; !slices.Equal(got, []string{"Online"}) {
 			t.Fatalf("unexpected agentStatuses: %#v raw query %q", got, r.URL.RawQuery)
 		}
-		if got := query["integrityChecks"]; !slices.Equal(got, []string{"Verified"}) {
-			t.Fatalf("unexpected integrityChecks: %#v raw query %q", got, r.URL.RawQuery)
+		if got := query["verificationChecks"]; !slices.Equal(got, []string{"Verified"}) {
+			t.Fatalf("unexpected verificationChecks: %#v raw query %q", got, r.URL.RawQuery)
 		}
 		if got := query["firmwareChecks"]; !slices.Equal(got, []string{"Unknown"}) {
 			t.Fatalf("unexpected firmwareChecks: %#v raw query %q", got, r.URL.RawQuery)
@@ -83,7 +83,7 @@ func TestListNodesDetailSendsAuthAndParams(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","healthStatus":"Healthy","gpuType":"NVIDIA-H100","gpuCount":8,"agentStatus":"Online","integrityCheck":"Verified","firmwareCheck":"Unknown","lastUpdatedTS":"2026-05-01T00:00:00Z"}],"hasMore":true,"page":2,"pageSize":50,"total":99}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","healthStatus":"Healthy","gpuType":"NVIDIA-H100","gpuCount":8,"agentStatus":"Online","verificationCheck":"Verified","firmwareCheck":"Unknown","lastUpdatedTS":"2026-05-01T00:00:00Z"}],"hasMore":true,"page":2,"pageSize":50,"total":99}`))
 	}))
 	defer server.Close()
 
@@ -95,25 +95,25 @@ func TestListNodesDetailSendsAuthAndParams(t *testing.T) {
 	page := 2
 	pageSize := 50
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		View:             NodeViewDetail,
-		NodeUUIDs:        []string{"node-1", "node-2"},
-		HealthStatuses:   []NodeHealthStatus{NodeHealthHealthy, NodeHealthDegraded},
-		ComputeZoneIDs:   []string{"cz-1", "cz-2"},
-		ComputeZoneNames: []string{"East"},
-		NodeGroupIDs:     []string{"ng-1"},
-		NodeGroupNames:   []string{"Training"},
-		GPUTypes:         []string{"NVIDIA-H100"},
-		GPUCounts:        []int{8, 4},
-		PublicIPs:        []string{"203.0.113.10"},
-		PrivateIPs:       []string{"10.0.0.10"},
-		Hostname:         "gpu",
-		AgentStatuses:    []NodeAgentStatus{NodeAgentOnline},
-		IntegrityChecks:  []NodeIntegrityCheck{NodeIntegrityVerified},
-		FirmwareChecks:   []NodeFirmwareCheck{NodeFirmwareUnknown},
-		SortBy:           NodeSortByHealthStatus,
-		Order:            NodeOrderDesc,
-		Page:             &page,
-		PageSize:         &pageSize,
+		View:               NodeViewDetail,
+		NodeUUIDs:          []string{"node-1", "node-2"},
+		HealthStatuses:     []NodeHealthStatus{NodeHealthHealthy, NodeHealthDegraded},
+		ComputeZoneIDs:     []string{"cz-1", "cz-2"},
+		ComputeZoneNames:   []string{"East"},
+		NodeGroupIDs:       []string{"ng-1"},
+		NodeGroupNames:     []string{"Training"},
+		GPUTypes:           []string{"NVIDIA-H100"},
+		GPUCounts:          []int{8, 4},
+		PublicIPs:          []string{"203.0.113.10"},
+		PrivateIPs:         []string{"10.0.0.10"},
+		Hostname:           "gpu",
+		AgentStatuses:      []NodeAgentStatus{NodeAgentOnline},
+		VerificationChecks: []NodeVerificationCheck{NodeVerificationVerified},
+		FirmwareChecks:     []NodeFirmwareCheck{NodeFirmwareUnknown},
+		SortBy:             NodeSortByHealthStatus,
+		Order:              NodeOrderDesc,
+		Page:               &page,
+		PageSize:           &pageSize,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
@@ -198,7 +198,7 @@ func TestDescribeNodeSendsAuthAndDecodesDetails(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","computeZoneId":"cz-1","nodeGroup":"Training","nodeGroupId":"ng-1","healthStatus":"Degraded","gpuType":"NVIDIA-H100","gpuCount":8,"agentStatus":"Online","integrityCheck":"Unverified","integrityCheckReason":"nonce mismatch","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","healthyComponentCount":3,"degradedComponentCount":1,"unhealthyComponentCount":0,"resources":{"cpuInfo":{"manufacturer":"Intel","type":"Xeon","logicalCores":"96"},"diskInfo":{"containerRootDisk":"/dev/sda1","blockDevices":[{"name":"sda1","mountPoint":"/","fsType":"ext4","parents":["sda"],"size":1024,"used":512,"type":"disk","wwn":"wwn-1"}]},"gpuInfo":{"product":"NVIDIA H100","memory":"80GB","gpus":[{"uuid":"GPU-1"}]},"memoryInfo":{"totalBytes":"1099511627776"},"nicInfo":{"privateIPInterfaces":[{"interface":"eth0","ip":"10.0.0.10","mac":"00:11:22:33:44:55"}]}},"systemInfo":{"agentVersion":"1.2.3","gpuDriverVersion":"550.54.14","cudaVersion":"12.4"},"tags":["prod","h100"]}`))
+		_, _ = w.Write([]byte(`{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","computeZoneId":"cz-1","nodeGroup":"Training","nodeGroupId":"ng-1","healthStatus":"Degraded","gpuType":"NVIDIA-H100","gpuCount":8,"agentStatus":"Online","verificationCheck":"Unverified","verificationCheckReason":"nonce mismatch","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","healthyComponentCount":3,"degradedComponentCount":1,"unhealthyComponentCount":0,"resources":{"cpuInfo":{"manufacturer":"Intel","type":"Xeon","logicalCores":"96"},"diskInfo":{"containerRootDisk":"/dev/sda1","blockDevices":[{"name":"sda1","mountPoint":"/","fsType":"ext4","parents":["sda"],"size":1024,"used":512,"type":"disk","wwn":"wwn-1"}]},"gpuInfo":{"product":"NVIDIA H100","memory":"80GB","gpus":[{"uuid":"GPU-1"}]},"memoryInfo":{"totalBytes":"1099511627776"},"nicInfo":{"privateIPInterfaces":[{"interface":"eth0","ip":"10.0.0.10","mac":"00:11:22:33:44:55"}]}},"systemInfo":{"agentVersion":"1.2.3","gpuDriverVersion":"550.54.14","cudaVersion":"12.4"},"tags":["prod","h100"]}`))
 	}))
 	defer server.Close()
 
@@ -211,7 +211,7 @@ func TestDescribeNodeSendsAuthAndDecodesDetails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got.UUID != "node-1" || got.ComputeZoneID != "cz-1" || got.NodeGroupID != "ng-1" || got.Health != "Degraded" || got.IntegrityCheckReason != "nonce mismatch" {
+	if got.UUID != "node-1" || got.ComputeZoneID != "cz-1" || got.NodeGroupID != "ng-1" || got.Health != "Degraded" || got.VerificationCheckReason != "nonce mismatch" {
 		t.Fatalf("unexpected node details: %#v", got)
 	}
 	if got.Resources == nil || got.Resources.GPUInfo == nil || len(got.Resources.GPUInfo.GPUs) != 1 || got.Resources.GPUInfo.GPUs[0].UUID != "GPU-1" {
@@ -386,7 +386,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		{name: "agent type", opts: ListNodesOptions{AgentType: "sideband"}, want: "invalid node agent type"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
-		{name: "integrity", opts: ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}, want: "invalid node verification check"},
+		{name: "verification", opts: ListNodesOptions{VerificationChecks: []NodeVerificationCheck{"Missing"}}, want: "invalid node verification check"},
 		{name: "firmware", opts: ListNodesOptions{FirmwareChecks: []NodeFirmwareCheck{"Missing"}}, want: "invalid node firmware check"},
 		{name: "gpu count", opts: ListNodesOptions{GPUCounts: []int{8, -1}}, want: "invalid node GPU count"},
 		{name: "sort", opts: ListNodesOptions{SortBy: "bad"}, want: "invalid node sort"},
@@ -408,17 +408,17 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 	}
 }
 
-// Verifies supported integrity filters match the API vocabulary
-func TestNodeIntegrityCheckValid(t *testing.T) {
-	tests := []NodeIntegrityCheck{
-		NodeIntegrityVerified,
-		NodeIntegrityUnverified,
-		NodeIntegrityDegraded,
-		NodeIntegrityPending,
-		NodeIntegrityUnsupported,
-		NodeIntegrityUnknown,
-		NodeIntegrityPassed,
-		NodeIntegrityFailed,
+// Verifies supported verification check filters match the API vocabulary
+func TestNodeVerificationCheckValid(t *testing.T) {
+	tests := []NodeVerificationCheck{
+		NodeVerificationVerified,
+		NodeVerificationUnverified,
+		NodeVerificationDegraded,
+		NodeVerificationPending,
+		NodeVerificationUnsupported,
+		NodeVerificationUnknown,
+		NodeVerificationPassed,
+		NodeVerificationFailed,
 	}
 
 	for _, check := range tests {
@@ -438,7 +438,7 @@ func TestNodeSortByValid(t *testing.T) {
 		NodeSortByComputeZone,
 		NodeSortByGPUType,
 		NodeSortByGPUCount,
-		NodeSortByIntegrityCheck,
+		NodeSortByVerificationCheck,
 		NodeSortByAgentStatus,
 		NodeSortByAgentVersion,
 		NodeSortByKernelVersion,
@@ -506,7 +506,7 @@ func TestListNodesOptionsValidate(t *testing.T) {
 func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
 	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByUUID, NodeSortByBMCHostname}
 	rejected := []NodeSortBy{
-		NodeSortByHealthStatus, NodeSortByIntegrityCheck, NodeSortByAgentStatus,
+		NodeSortByHealthStatus, NodeSortByVerificationCheck, NodeSortByAgentStatus,
 		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone,
 	}
 
@@ -531,13 +531,13 @@ func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
 // Verifies a rejected value carries the structured detail a front end needs to
 // re-render the message against its own name for the option
 func TestInvalidOptionErrorCarriesOption(t *testing.T) {
-	err := (ListNodesOptions{IntegrityChecks: []NodeIntegrityCheck{"Missing"}}).Validate()
+	err := (ListNodesOptions{VerificationChecks: []NodeVerificationCheck{"Missing"}}).Validate()
 
 	var optionErr *InvalidOptionError
 	if !errors.As(err, &optionErr) {
 		t.Fatalf("expected InvalidOptionError, got %T", err)
 	}
-	if optionErr.Option != "integrityCheck" || optionErr.Value != "Missing" {
+	if optionErr.Option != "verificationCheck" || optionErr.Value != "Missing" {
 		t.Fatalf("unexpected option error: %#v", optionErr)
 	}
 	if !strings.Contains(optionErr.Expected, "Verified") {
