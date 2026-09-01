@@ -181,7 +181,9 @@ and a flag given an empty value clears that field, so setting a contact never
 disturbs a location. At least one field is required, and the command asks for
 confirmation before writing, so scripts and CI runs need `--yes`. Compute zone
 names are agent-managed and cannot be changed through the customer API. `--type`
-accepts `datacenter` or `cloud provider`.
+accepts `datacenter` or `cloud provider`. `--dry-run` reads the compute zone,
+builds the merged PUT request that would be sent, and prints it without
+sending the PUT.
 
 `tag set` replaces a node's tags rather than adding to them: a tag the node
 already carries that is not listed in `--tags` is removed, and `--clear`

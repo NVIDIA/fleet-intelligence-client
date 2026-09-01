@@ -207,9 +207,11 @@ func computeZoneFromSimple(zone fleetapi.ModelsSimpleComputeZone) ComputeZone {
 
 // UpdateComputeZoneOptions represents request options for updating a compute
 // zone's metadata. Every field is optional: a nil field leaves the stored value
-// alone, and a non-nil pointer to an empty string clears it. Compute zone names
-// are agent-managed and cannot be set through the customer API, so there is no
-// name option.
+// alone. For the contact and location fields, a non-nil pointer to an empty
+// string clears the stored value; Type has no such clear path and, if
+// non-nil, must name a supported, non-empty type (see Validate). Compute zone
+// names are agent-managed and cannot be set through the customer API, so there
+// is no name option.
 //
 // Coordinates are text rather than numbers for two reasons. The generated model
 // decodes them as float32, so round-tripping a stored coordinate through it
