@@ -115,7 +115,7 @@ func newAPIError(statusCode int, status string, data []byte) error {
 }
 
 // Maps generated location metadata into SDK values
-func locationFromGenerated(location *fleetapi.ModelsGeoLocation) *Location {
+func locationFromGenerated(location *fleetapi.ModelsLocation) *Location {
 	if location == nil {
 		return nil
 	}

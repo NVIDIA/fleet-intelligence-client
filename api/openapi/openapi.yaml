@@ -1954,7 +1954,7 @@ paths:
           name: verificationChecks
           schema:
             items:
-              $ref: '#/components/schemas/models.IntegrityCheck'
+              $ref: '#/components/schemas/models.VerificationCheck'
             type: array
         - description: 'Deprecated: use verificationChecks.'
           in: query
@@ -5041,7 +5041,7 @@ components:
           example: cz-us-east-1
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         metrics:
           items:
             $ref: '#/components/schemas/models.Metric'
@@ -5461,6 +5461,7 @@ components:
           type: string
       type: object
     models.GeoLocation:
+      description: 'Deprecated: use Location.'
       properties:
         city:
           example: Baltimore
@@ -5478,6 +5479,7 @@ components:
           example: us-east-1
           type: string
       type: object
+      deprecated: true
     models.GetMetricsResponse:
       properties:
         components:
@@ -5605,7 +5607,7 @@ components:
           example: '2024-01-15T10:30:00Z'
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         nodeGroup:
           example: node-group-1
           type: string
@@ -5633,9 +5635,9 @@ components:
           example: 4c4c4544-004a-3410-804c-c7c04f313434
           type: string
         verificationCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
+          $ref: '#/components/schemas/models.VerificationCheck'
         verificationCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          $ref: '#/components/schemas/models.VerificationCheckExtraInfo'
         verificationCheckReason:
           example: 'Attestation verification unavailable: SDK error'
           type: string
@@ -5734,9 +5736,9 @@ components:
           example: 203.0.113.100
           type: string
         verificationCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
+          $ref: '#/components/schemas/models.VerificationCheck'
         verificationCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          $ref: '#/components/schemas/models.VerificationCheckExtraInfo'
         verificationCheckReason:
           example: 'Attestation verification unavailable: SDK error'
           type: string
@@ -5821,7 +5823,7 @@ components:
           example: '2024-01-15T10:30:00Z'
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         nodeGroup:
           example: node-group-1
           type: string
@@ -5853,9 +5855,9 @@ components:
           example: 1
           type: integer
         verificationCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
+          $ref: '#/components/schemas/models.VerificationCheck'
         verificationCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          $ref: '#/components/schemas/models.VerificationCheckExtraInfo'
         verificationCheckReason:
           example: 'Attestation verification unavailable: SDK error'
           type: string
@@ -5890,6 +5892,7 @@ components:
           $ref: '#/components/schemas/models.SigningKeyInfo'
       type: object
     models.IntegrityCheck:
+      description: 'Deprecated: use VerificationCheck.'
       enum:
         - Verified
         - Unverified
@@ -5898,8 +5901,6 @@ components:
         - Unsupported
         - Unknown
       type: string
-      x-enum-comments:
-        IntegrityCheckDegraded: Catch-all for attestation errors/unavailable verification
       x-enum-varnames:
         - IntegrityCheckPassed
         - IntegrityCheckFailed
@@ -5907,7 +5908,9 @@ components:
         - IntegrityCheckPending
         - IntegrityCheckUnsupported
         - IntegrityCheckUnknown
+      deprecated: true
     models.IntegrityCheckExtraInfo:
+      description: 'Deprecated: use VerificationCheckExtraInfo.'
       properties:
         errorDetails:
           example: 'SDK error: code=13, message=nonce refresh failed'
@@ -5926,6 +5929,7 @@ components:
           example: false
           type: boolean
       type: object
+      deprecated: true
     models.JWTClaims:
       properties:
         eat_nonce:
@@ -6084,6 +6088,24 @@ components:
             type: string
           type: array
           uniqueItems: false
+      type: object
+    models.Location:
+      properties:
+        city:
+          example: Baltimore
+          type: string
+        country:
+          example: United States
+          type: string
+        latitude:
+          example: 39.0458
+          type: number
+        longitude:
+          example: -76.6413
+          type: number
+        region:
+          example: us-east-1
+          type: string
       type: object
     models.MemoryInfo:
       properties:
@@ -6392,7 +6414,7 @@ components:
           example: cz-us-east-1
           type: string
         computeZoneLocation:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         computeZoneName:
           example: US East 1 ComputeZone
           type: string
@@ -6963,7 +6985,7 @@ components:
           example: '2024-01-15T10:30:00Z'
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         nodeGroup:
           example: node-group-1
           type: string
@@ -6977,9 +6999,9 @@ components:
           example: '2024-01-20T12:00:00Z'
           type: string
         verificationCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
+          $ref: '#/components/schemas/models.VerificationCheck'
         verificationCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          $ref: '#/components/schemas/models.VerificationCheckExtraInfo'
         verificationCheckReason:
           example: 'Attestation verification unavailable: SDK error'
           type: string
@@ -7093,9 +7115,9 @@ components:
           example: node-123
           type: string
         verificationCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
+          $ref: '#/components/schemas/models.VerificationCheck'
         verificationCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          $ref: '#/components/schemas/models.VerificationCheckExtraInfo'
         verificationCheckReason:
           example: 'Attestation verification unavailable: SDK error'
           type: string
@@ -7164,7 +7186,7 @@ components:
           example: '2024-01-15T10:30:00Z'
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         nodeGroup:
           example: node-group-1
           type: string
@@ -7193,9 +7215,9 @@ components:
           example: 1
           type: integer
         verificationCheck:
-          $ref: '#/components/schemas/models.IntegrityCheck'
+          $ref: '#/components/schemas/models.VerificationCheck'
         verificationCheckExtraInfo:
-          $ref: '#/components/schemas/models.IntegrityCheckExtraInfo'
+          $ref: '#/components/schemas/models.VerificationCheckExtraInfo'
         verificationCheckReason:
           example: 'Attestation verification unavailable: SDK error'
           type: string
@@ -7298,6 +7320,9 @@ components:
         processorType:
           example: cpu
           type: string
+        serialNumber:
+          example: CPU123456789
+          type: string
         socket:
           example: CPU0
           type: string
@@ -7310,6 +7335,9 @@ components:
         totalThreads:
           example: 112
           type: integer
+        uuid:
+          example: 61a34398-33c9-4192-88db-7fe41c56eb47
+          type: string
       required:
         - id
       type: object
@@ -7529,7 +7557,7 @@ components:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         name:
           example: US East 1 ComputeZone
           type: string
@@ -7708,7 +7736,7 @@ components:
           minLength: 1
           type: string
         location:
-          $ref: '#/components/schemas/models.GeoLocation'
+          $ref: '#/components/schemas/models.Location'
         type:
           example: datacenter
           maxLength: 16
@@ -7760,6 +7788,43 @@ components:
           type: integer
       required:
         - retentionDays
+      type: object
+    models.VerificationCheck:
+      enum:
+        - Verified
+        - Unverified
+        - Degraded
+        - Pending
+        - Unsupported
+        - Unknown
+      type: string
+      x-enum-comments:
+        VerificationCheckDegraded: Catch-all for attestation errors/unavailable verification
+      x-enum-varnames:
+        - VerificationCheckPassed
+        - VerificationCheckFailed
+        - VerificationCheckDegraded
+        - VerificationCheckPending
+        - VerificationCheckUnsupported
+        - VerificationCheckUnknown
+    models.VerificationCheckExtraInfo:
+      properties:
+        errorDetails:
+          example: 'SDK error: code=13, message=nonce refresh failed'
+          type: string
+        gpuEvidencePresent:
+          example: true
+          type: boolean
+        gpuResults:
+          additionalProperties:
+            $ref: '#/components/schemas/models.JWTClaims'
+          type: object
+        nrasCallResult:
+          example: 'NRAS attestation failed: GPU-0: NONCE_NOT_MATCHING'
+          type: string
+        overallAttestationResult:
+          example: false
+          type: boolean
       type: object
     models.XIDBurstDetail:
       properties:
