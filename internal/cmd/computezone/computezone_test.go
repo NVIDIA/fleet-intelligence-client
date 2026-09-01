@@ -340,6 +340,87 @@ func TestComputeZoneUpdateDeclinedWritesNothing(t *testing.T) {
 	}
 }
 
+// Verifies --dry-run reports the requested changes without sending a
+// request or prompting for confirmation
+func TestComputeZoneUpdateDryRun(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var requests []string
+	var body []byte
+	server := updateServer(t, &requests, &body)
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"computezone", "update", "cz-1", "--type", "cloud provider", "--dry-run"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+	// The read-modify-write merge still needs to read the zone; only the PUT
+	// is skipped.
+	if !slices.Equal(requests, []string{"GET /v1/computezones"}) {
+		t.Fatalf("unexpected requests: %#v", requests)
+	}
+	for _, want := range []string{
+		"PUT " + server.URL + "/v1/computezones",
+		`"type": "cloud provider"`,
+		`"email": "ops@example.com"`,
+		"Dry run: no request was sent.",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("output missing %q:\n%s", want, out.String())
+		}
+	}
+}
+
+// Verifies --dry-run with -o json emits the method, URL, and body as a
+// structured document instead of the backend payload, since no PUT is made
+func TestComputeZoneUpdateDryRunJSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var requests []string
+	var body []byte
+	server := updateServer(t, &requests, &body)
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"computezone", "update", "cz-1", "--contact-pic", "", "--dry-run", "-o", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+	if !slices.Equal(requests, []string{"GET /v1/computezones"}) {
+		t.Fatalf("unexpected requests: %#v", requests)
+	}
+
+	var decoded struct {
+		Method string         `json:"method"`
+		URL    string         `json:"url"`
+		Body   map[string]any `json:"body"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &decoded); err != nil {
+		t.Fatalf("json output not decodable: %v (%s)", err, out.String())
+	}
+	if decoded.Method != http.MethodPut {
+		t.Fatalf("unexpected method: %s", decoded.Method)
+	}
+	if decoded.URL != server.URL+"/v1/computezones" {
+		t.Fatalf("unexpected url: %s", decoded.URL)
+	}
+	if decoded.Body["id"] != "cz-1" {
+		t.Fatalf("unexpected body: %#v", decoded.Body)
+	}
+}
+
 // Verifies the flag validation that runs before any request
 func TestComputeZoneUpdateRejectsBadFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())

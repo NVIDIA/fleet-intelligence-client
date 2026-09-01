@@ -289,21 +289,7 @@ func (c *Client) UpdateComputeZone(ctx context.Context, zoneID string, opts Upda
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	zoneID = strings.TrimSpace(zoneID)
-	if zoneID == "" {
-		return ComputeZoneUpdate{}, errors.New("compute zone ID is required")
-	}
-	if err := opts.Validate(); err != nil {
-		return ComputeZoneUpdate{}, err
-	}
-
-	current, err := c.getComputeZone(ctx, zoneID)
-	if err != nil {
-		return ComputeZoneUpdate{}, err
-	}
-
-	body := buildComputeZoneUpdate(zoneID, current, opts)
-	payload, err := json.Marshal(body)
+	body, payload, err := c.buildComputeZoneUpdateRequest(ctx, zoneID, opts)
 	if err != nil {
 		return ComputeZoneUpdate{}, err
 	}
@@ -330,6 +316,56 @@ func (c *Client) UpdateComputeZone(ctx context.Context, zoneID string, opts Upda
 	result.RawJSON = append([]byte(nil), resp.Body...)
 
 	return result, nil
+}
+
+// PreviewUpdateComputeZone builds the request UpdateComputeZone would send,
+// without sending it. It still performs the read the merge depends on
+// (getComputeZone), since the request body cannot be known without it, but
+// issues no write. Both PreviewUpdateComputeZone and UpdateComputeZone build
+// the body through buildComputeZoneUpdateRequest, so a preview can never
+// disagree with the request that is actually issued.
+func (c *Client) PreviewUpdateComputeZone(ctx context.Context, zoneID string, opts UpdateComputeZoneOptions) (RequestPreview, error) {
+	ctx, cancel := c.requestContext(ctx)
+	defer cancel()
+
+	_, payload, err := c.buildComputeZoneUpdateRequest(ctx, zoneID, opts)
+	if err != nil {
+		return RequestPreview{}, err
+	}
+
+	req, err := fleetapi.NewPutV1ComputezonesRequestWithBody(c.generatedServerURL(), "application/json", bytes.NewReader(payload))
+	if err != nil {
+		return RequestPreview{}, err
+	}
+
+	return RequestPreview{Method: req.Method, URL: req.URL.String(), Body: payload}, nil
+}
+
+// Validates the options, reads the zone being updated, and merges the
+// supplied fields into the document that will be sent. UpdateComputeZone and
+// PreviewUpdateComputeZone both call this, so the executed request and the
+// --dry-run preview of it are built by exactly the same code.
+func (c *Client) buildComputeZoneUpdateRequest(ctx context.Context, zoneID string, opts UpdateComputeZoneOptions) (computeZoneDocument, []byte, error) {
+	zoneID = strings.TrimSpace(zoneID)
+	if zoneID == "" {
+		return computeZoneDocument{}, nil, errors.New("compute zone ID is required")
+	}
+	if err := opts.Validate(); err != nil {
+		return computeZoneDocument{}, nil, err
+	}
+
+	current, err := c.getComputeZone(ctx, zoneID)
+	if err != nil {
+		return computeZoneDocument{}, nil, err
+	}
+
+	body := buildComputeZoneUpdate(zoneID, current, opts)
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return computeZoneDocument{}, nil, err
+	}
+
+	return body, payload, nil
 }
 
 // Validate reports whether the options describe a request the API accepts.

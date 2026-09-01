@@ -220,6 +220,7 @@ type computeZoneUpdateFlags struct {
 	latitude  string
 	longitude string
 	yes       bool
+	dryRun    bool
 }
 
 // Creates the compute zone update command
@@ -243,11 +244,15 @@ Compute zone names are agent-managed and cannot be changed through the customer
 API, so there is no --name.
 
 At least one field is required, and the command confirms before writing unless
---yes is passed.`,
+--yes is passed. Use --dry-run to print the method, URL, and body of the PUT
+request that would be sent, without issuing it; it still reads the zone to
+build the merge, but skips both the confirmation prompt and the write, and
+exits 0.`,
 		Example: `  nvfleetint computezone update cz-1 --type datacenter
   nvfleetint computezone update cz-1 --contact-email ops@example.com --contact-pic "Jane Doe"
   nvfleetint computezone update cz-1 --location-city Baltimore --location-latitude 39.0458 --location-longitude -76.6413
-  nvfleetint computezone update cz-1 --location-region "" --yes`,
+  nvfleetint computezone update cz-1 --location-region "" --yes
+  nvfleetint computezone update cz-1 --type datacenter --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runComputeZoneUpdate(cmd, args[0], flags, cmdutil.ResolveCommon(cmd, common))
 		},
@@ -262,6 +267,7 @@ At least one field is required, and the command confirms before writing unless
 	cmd.Flags().StringVar(&flags.latitude, "location-latitude", "", "Location latitude in decimal degrees; empty clears it")
 	cmd.Flags().StringVar(&flags.longitude, "location-longitude", "", "Location longitude in decimal degrees; empty clears it")
 	cmd.Flags().BoolVar(&flags.yes, "yes", false, "Skip the confirmation prompt")
+	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Print the request that would be sent without issuing it")
 	cmdutil.RegisterReadFlags(cmd, common)
 
 	return cmd
@@ -297,6 +303,14 @@ func runComputeZoneUpdate(cmd *cobra.Command, zoneID string, flags computeZoneUp
 	client, err := cmdutil.New(common)
 	if err != nil {
 		return err
+	}
+
+	if flags.dryRun {
+		preview, err := client.PreviewUpdateComputeZone(cmd.Context(), zoneID, opts)
+		if err != nil {
+			return err
+		}
+		return cmdutil.WriteRequestPreview(cmd.OutOrStdout(), common, preview)
 	}
 
 	// Confirm after the client is built so a bad profile fails before the
