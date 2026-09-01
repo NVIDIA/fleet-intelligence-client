@@ -472,34 +472,89 @@ func nonEmptyValues(values ...string) []string {
 // The command whose flags the XID burst options describe.
 const xidBurstOptionsConsumer = "'xidburst list'"
 
+// Stores local flag values for the XID burst options command
+type xidBurstOptionsFlags struct {
+	window                string
+	start                 string
+	end                   string
+	nodeGroupIDs          string
+	computeZoneIDs        string
+	excludeNodeGroupIDs   string
+	excludeComputeZoneIDs string
+}
+
 // Creates the xid burst options command
 func newXIDBurstOptionsCmd() *cobra.Command {
+	flags := xidBurstOptionsFlags{}
 	common := cmdutil.NewCommon()
 	cmd := &cobra.Command{
 		Use:   "options",
 		Short: "List available XID burst filters",
 		Args:  cobra.NoArgs,
+		Long: `List the filter values available for 'xidburst list'.
+
+Every filter is optional. Supplying a time range or an inventory scope narrows
+the values to those present in that slice of the fleet, so each remaining option
+is one that returns results. Unlike 'xidburst list', a time range is not
+required. Column filters are not applied, and no counts are returned.`,
+		Example: `  nvfleetint xidburst options
+  nvfleetint xidburst options --window 24h
+  nvfleetint xidburst options --window 168h --compute-zone-ids cz-1`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runXIDBurstOptions(cmd, cmdutil.ResolveCommon(cmd, common))
+			return runXIDBurstOptions(cmd, flags, cmdutil.ResolveCommon(cmd, common))
 		},
 	}
 
+	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to scope the options to")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to scope the options to")
+	cmd.Flags().StringVar(&flags.excludeNodeGroupIDs, "exclude-nodegroup-ids", "",
+		"Comma-separated node group IDs to exclude; cannot be combined with --nodegroup-ids")
+	cmd.Flags().StringVar(&flags.excludeComputeZoneIDs, "exclude-compute-zone-ids", "",
+		"Comma-separated compute zone IDs to exclude; cannot be combined with --compute-zone-ids")
 	cmdutil.RegisterReadFlags(cmd, common)
 
 	return cmd
 }
 
 // Gets and renders the filter values available for XID burst queries.
-func runXIDBurstOptions(cmd *cobra.Command, common cmdutil.Resolved) error {
+func runXIDBurstOptions(cmd *cobra.Command, flags xidBurstOptionsFlags, common cmdutil.Resolved) error {
 	if err := cmdutil.ValidateReadFlags(common); err != nil {
 		return err
+	}
+	// The range narrows the options rather than selecting them, so unlike
+	// 'xidburst list' omitting it entirely is valid.
+	if err := cmdutil.ValidateOptionalTimeRangeFlags(flags.window, flags.start, flags.end); err != nil {
+		return err
+	}
+
+	scope := nvfleetint.XIDBurstFilterOptionsScope{
+		Window:    strings.TrimSpace(flags.window),
+		StartTime: strings.TrimSpace(flags.start),
+		EndTime:   strings.TrimSpace(flags.end),
+	}
+	for _, filter := range []struct {
+		name   string
+		raw    string
+		assign func([]string)
+	}{
+		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, assign: func(v []string) { scope.NodeGroupIDs = v }},
+		{name: "compute-zone-ids", raw: flags.computeZoneIDs, assign: func(v []string) { scope.ComputeZoneIDs = v }},
+		{name: "exclude-nodegroup-ids", raw: flags.excludeNodeGroupIDs, assign: func(v []string) { scope.ExcludeNodeGroupIDs = v }},
+		{name: "exclude-compute-zone-ids", raw: flags.excludeComputeZoneIDs, assign: func(v []string) { scope.ExcludeComputeZoneIDs = v }},
+	} {
+		values, err := cmdutil.ParseCommaList(filter.raw)
+		if err != nil {
+			return fmt.Errorf("invalid --%s: %w", filter.name, err)
+		}
+		filter.assign(values)
 	}
 
 	client, err := cmdutil.New(common)
 	if err != nil {
 		return err
 	}
-	options, err := client.GetXIDBurstFilterOptions(cmd.Context())
+	options, err := client.GetXIDBurstFilterOptions(cmd.Context(), scope)
 	if err != nil {
 		return err
 	}

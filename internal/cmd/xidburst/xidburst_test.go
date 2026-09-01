@@ -340,6 +340,112 @@ func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
 // Verifies XID burst options split suggested actions across the four
 // persona/type flags, default a missing persona to tenant, and set aside
 // actions whose type the API did not report.
+// Verifies the scope flags reach the options endpoint as query parameters
+func TestXIDBurstOptionsSendsScopeFlags(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var query url.Values
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/xid/bursts/options" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		query = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"xidNumbers":[43]}`))
+	}))
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{
+		"xidburst", "options",
+		"--window", "24h",
+		"--nodegroup-ids", "ng-1,ng-2",
+		"--exclude-compute-zone-ids", "cz-9",
+	})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("xid burst options command failed: %v", err)
+	}
+
+	if got := query.Get("timeMode"); got != "relative" {
+		t.Fatalf("unexpected timeMode: %q", got)
+	}
+	if got := query.Get("window"); got != "24h" {
+		t.Fatalf("unexpected window: %q", got)
+	}
+	if got := query["nodeGroupIds"]; !reflect.DeepEqual(got, []string{"ng-1", "ng-2"}) {
+		t.Fatalf("unexpected nodeGroupIds: %#v", got)
+	}
+	if got := query["excludeComputeZoneIds"]; !reflect.DeepEqual(got, []string{"cz-9"}) {
+		t.Fatalf("unexpected excludeComputeZoneIds: %#v", got)
+	}
+	if query.Has("computeZoneIds") || query.Has("excludeNodeGroupIds") {
+		t.Fatalf("did not expect unset filters: %q", query.Encode())
+	}
+}
+
+// Verifies scope flags are validated before a request, unlike 'xidburst list'
+// the time range stays optional
+func TestXIDBurstOptionsRejectsInvalidScopeFlags(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"xidNumbers":[]}`))
+	}))
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "window with start",
+			args: []string{"--window", "24h", "--start", "2026-05-01T00:00:00Z"},
+			want: "--window cannot be used with --start or --end",
+		},
+		{
+			name: "start without end",
+			args: []string{"--start", "2026-05-01T00:00:00Z"},
+			want: "--start and --end must be used together",
+		},
+		{
+			name: "node group include and exclude",
+			args: []string{"--nodegroup-ids", "ng-1", "--exclude-nodegroup-ids", "ng-2"},
+			want: "node group include and exclude filters cannot be combined",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(append([]string{"xidburst", "options"}, tt.args...))
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
+	}
+
+	if requests != 0 {
+		t.Fatalf("expected no requests to reach the server, got %d", requests)
+	}
+}
+
 func TestXIDBurstOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 

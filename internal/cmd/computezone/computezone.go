@@ -177,7 +177,6 @@ func writeComputeZoneTable(w io.Writer, view string, zones []nvfleetint.ComputeZ
 	if nvfleetint.ComputeZoneView(view) == nvfleetint.ComputeZoneViewBasic {
 		return clioutput.WriteTable(w, []string{"ID", "NAME"}, basicComputeZoneRows(zones))
 	}
-	// "LOCATION" is the user-facing label for the backend geoLocation field.
 	return clioutput.WriteTable(w, []string{"ID", "NAME", "TYPE", "LOCATION", "NODE COUNT"}, detailComputeZoneRows(zones))
 }
 
@@ -198,7 +197,7 @@ func detailComputeZoneRows(zones []nvfleetint.ComputeZone) [][]string {
 			clioutput.DisplayString(zone.ID),
 			clioutput.DisplayString(zone.Name),
 			clioutput.DisplayString(zone.Type),
-			cmdutil.FormatGeoLocation(zone.GeoLocation),
+			cmdutil.FormatLocation(zone.Location),
 			clioutput.FormatOptionalInt(zone.NodeCount),
 		})
 	}

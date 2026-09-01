@@ -77,7 +77,7 @@ Filter values:
 | `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
-Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcHostname`. The backend spelling `integrityCheck` remains accepted as an alias for `verificationCheck`. Node-group sort keys are `health` and `nodes`.
+Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcHostname`. Node-group sort keys are `health` and `nodes`.
 
 ### Alerts and events
 

@@ -66,6 +66,12 @@ type OptionsRenderer struct {
 	// Backends return sort fields for views the CLI cannot request, and those
 	// are called out rather than presented as usable.
 	SortAccepted func(field string) bool
+	// sortHidden reports whether a backend sort field should be left out of the
+	// listing altogether. It is for fields the API still advertises but has
+	// deprecated and is about to drop: unlike a field SortAccepted rejects,
+	// these do work today, so naming them at all would only invite scripts that
+	// break when the API removes them.
+	SortHidden func(field string) bool
 	// sortConsumers names the commands the endpoint's sorting block describes,
 	// when that is narrower than consumers. An endpoint can advertise the
 	// columns of one view while its filters apply to several.
@@ -172,6 +178,9 @@ func (renderer OptionsRenderer) writeSorting(w io.Writer, sorting nvfleetint.Sor
 	accepted := make([]string, 0, len(sorting.Fields))
 	var rejected []string
 	for _, field := range sorting.Fields {
+		if renderer.SortHidden != nil && renderer.SortHidden(field) {
+			continue
+		}
 		translated := renderer.translateSortField(field)
 		if renderer.SortAccepted == nil || renderer.SortAccepted(translated) {
 			accepted = append(accepted, translated)
@@ -184,7 +193,13 @@ func (renderer OptionsRenderer) writeSorting(w io.Writer, sorting nvfleetint.Sor
 	if _, err := fmt.Fprintf(w, "\nSorting for %s\n", sortConsumers); err != nil {
 		return err
 	}
-	sortByHeading := sortHeading("--sort-by", renderer.translateSortField(sorting.Defaults.Field))
+	defaultSortField := sorting.Defaults.Field
+	if renderer.SortHidden != nil && renderer.SortHidden(defaultSortField) {
+		// A default the API still applies but no longer advertises as a
+		// choice should not be named as one either.
+		defaultSortField = ""
+	}
+	sortByHeading := sortHeading("--sort-by", renderer.translateSortField(defaultSortField))
 	if err := WriteOptionSection(w, sortByHeading, ValueRows(accepted)); err != nil {
 		return err
 	}

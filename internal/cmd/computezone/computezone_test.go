@@ -60,7 +60,7 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","name":"East","type":"datacenter","geoLocation":{"city":"Santa Clara","country":"US"},"nodesCount":7}],"hasMore":false,"page":1,"pageSize":50,"total":1}`))
+		_, _ = w.Write([]byte(`{"computezones":[{"id":"cz-1","name":"East","type":"datacenter","location":{"city":"Santa Clara","country":"US"},"nodesCount":7}],"hasMore":false,"page":1,"pageSize":50,"total":1}`))
 	}))
 	defer server.Close()
 

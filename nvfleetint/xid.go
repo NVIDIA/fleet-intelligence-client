@@ -369,15 +369,52 @@ type XIDBurstFilterOptions struct {
 	RawJSON                         []byte            `json:"-"`
 }
 
+// XIDBurstFilterOptionsScope narrows the values an options lookup returns to
+// those present in a time range and inventory scope. Every field is optional;
+// the zero value asks for every value available to the caller. The time range
+// follows the same rules as the burst list: a window selects a relative range,
+// start and end select an absolute one, and the two cannot be combined.
+//
+// The backend applies no table column filters here, so narrowing by anything
+// other than these fields is not available.
+type XIDBurstFilterOptionsScope struct {
+	Window    string
+	StartTime string
+	EndTime   string
+
+	NodeGroupIDs   []string
+	ComputeZoneIDs []string
+
+	// Exclusion filters select every assignment except the supplied IDs. Each
+	// cannot be combined with the inclusive filter for the same dimension.
+	ExcludeNodeGroupIDs   []string
+	ExcludeComputeZoneIDs []string
+}
+
+// Reports whether any time filter was supplied. The endpoint treats the range
+// as optional, so an empty scope must send no time parameters at all rather
+// than defaulting to a mode.
+func (scope XIDBurstFilterOptionsScope) hasTimeRange() bool {
+	return strings.TrimSpace(scope.Window) != "" ||
+		strings.TrimSpace(scope.StartTime) != "" ||
+		strings.TrimSpace(scope.EndTime) != ""
+}
+
 // GetXIDBurstFilterOptions gets the filter values available when listing XID
 // bursts. Categories, subcategories, platform-disruption values, and DC-admin
 // actions are returned only to cloud-provider/NCP callers, so a tenant key sees
-// a reduced set.
-func (c *Client) GetXIDBurstFilterOptions(ctx context.Context) (XIDBurstFilterOptions, error) {
+// a reduced set. The scope optionally narrows the values to a time range and
+// inventory selection; pass the zero value for everything available.
+func (c *Client) GetXIDBurstFilterOptions(ctx context.Context, scope XIDBurstFilterOptionsScope) (XIDBurstFilterOptions, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	resp, err := c.api.GetV1XIDBurstOptions(ctx)
+	params, err := buildXIDBurstFilterOptionsParams(scope)
+	if err != nil {
+		return XIDBurstFilterOptions{}, err
+	}
+
+	resp, err := c.api.GetV1XIDBurstOptions(ctx, params)
 	if err != nil {
 		return XIDBurstFilterOptions{}, err
 	}
@@ -397,4 +434,37 @@ func (c *Client) GetXIDBurstFilterOptions(ctx context.Context) (XIDBurstFilterOp
 	}
 	options.RawJSON = append([]byte(nil), body...)
 	return options, nil
+}
+
+// Validates a filter-options scope and builds the query parameters. The time
+// range is optional here, unlike the burst list, so it is normalized only when
+// the caller supplied one.
+func buildXIDBurstFilterOptionsParams(scope XIDBurstFilterOptionsScope) (*fleetapi.GetV1XIDBurstOptionsParams, error) {
+	if len(scope.NodeGroupIDs) > 0 && len(scope.ExcludeNodeGroupIDs) > 0 {
+		return nil, errors.New("node group include and exclude filters cannot be combined")
+	}
+	if len(scope.ComputeZoneIDs) > 0 && len(scope.ExcludeComputeZoneIDs) > 0 {
+		return nil, errors.New("compute zone include and exclude filters cannot be combined")
+	}
+
+	params := fleetapi.GetV1XIDBurstOptionsParams{
+		NodeGroupIds:          optionalSlice(scope.NodeGroupIDs),
+		ComputeZoneIds:        optionalSlice(scope.ComputeZoneIDs),
+		ExcludeNodeGroupIds:   optionalSlice(scope.ExcludeNodeGroupIDs),
+		ExcludeComputeZoneIds: optionalSlice(scope.ExcludeComputeZoneIDs),
+	}
+	if !scope.hasTimeRange() {
+		return &params, nil
+	}
+
+	timeRange, err := normalizeEventTimeRange(scope.Window, scope.StartTime, scope.EndTime)
+	if err != nil {
+		return nil, err
+	}
+	mode := fleetapi.GetV1XIDBurstOptionsParamsTimeMode(timeRange.timeMode)
+	params.TimeMode = &mode
+	params.Window = optionalString(timeRange.window)
+	params.StartTime = optionalString(timeRange.startTime)
+	params.EndTime = optionalString(timeRange.endTime)
+	return &params, nil
 }

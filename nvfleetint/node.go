@@ -26,16 +26,16 @@ const (
 	NodeHealthUnhealthy NodeHealthStatus = "Unhealthy"
 	NodeHealthUnknown   NodeHealthStatus = "Unknown"
 
-	NodeIntegrityVerified    NodeIntegrityCheck = "Verified"
-	NodeIntegrityUnverified  NodeIntegrityCheck = "Unverified"
-	NodeIntegrityDegraded    NodeIntegrityCheck = "Degraded"
-	NodeIntegrityPending     NodeIntegrityCheck = "Pending"
-	NodeIntegrityUnsupported NodeIntegrityCheck = "Unsupported"
-	NodeIntegrityUnknown     NodeIntegrityCheck = "Unknown"
-	// Deprecated: use NodeIntegrityVerified
-	NodeIntegrityPassed NodeIntegrityCheck = NodeIntegrityVerified
-	// Deprecated: use NodeIntegrityUnverified
-	NodeIntegrityFailed NodeIntegrityCheck = NodeIntegrityUnverified
+	NodeVerificationVerified    NodeVerificationCheck = "Verified"
+	NodeVerificationUnverified  NodeVerificationCheck = "Unverified"
+	NodeVerificationDegraded    NodeVerificationCheck = "Degraded"
+	NodeVerificationPending     NodeVerificationCheck = "Pending"
+	NodeVerificationUnsupported NodeVerificationCheck = "Unsupported"
+	NodeVerificationUnknown     NodeVerificationCheck = "Unknown"
+	// Deprecated: use NodeVerificationVerified
+	NodeVerificationPassed NodeVerificationCheck = NodeVerificationVerified
+	// Deprecated: use NodeVerificationUnverified
+	NodeVerificationFailed NodeVerificationCheck = NodeVerificationUnverified
 
 	NodeFirmwarePassed  NodeFirmwareCheck = "Passed"
 	NodeFirmwareFailed  NodeFirmwareCheck = "Failed"
@@ -52,7 +52,7 @@ const (
 	NodeSortByComputeZone         NodeSortBy = "computezone"
 	NodeSortByGPUType             NodeSortBy = "gpuType"
 	NodeSortByGPUCount            NodeSortBy = "gpuCount"
-	NodeSortByIntegrityCheck      NodeSortBy = "integrityCheck"
+	NodeSortByVerificationCheck   NodeSortBy = "verificationCheck"
 	NodeSortByAgentStatus         NodeSortBy = "agentStatus"
 	NodeSortByAgentVersion        NodeSortBy = "agentVersion"
 	NodeSortByKernelVersion       NodeSortBy = "kernelVersion"
@@ -88,13 +88,11 @@ func (status NodeHealthStatus) Valid() bool {
 	return fleetapi.GetV1NodesParamsHealthStatuses(status).Valid()
 }
 
-// Represents supported integrity check filters for listing nodes.
-// This retains the backend "integrity check" vocabulary; the CLI surfaces it
-// to users as "verification check".
-type NodeIntegrityCheck string
+// Represents supported verification check filters for listing nodes
+type NodeVerificationCheck string
 
-// Reports whether the integrity check status is accepted by the API
-func (check NodeIntegrityCheck) Valid() bool {
+// Reports whether the verification check status is accepted by the API
+func (check NodeVerificationCheck) Valid() bool {
 	return fleetapi.ModelsIntegrityCheck(check).Valid()
 }
 
@@ -132,27 +130,27 @@ func (order NodeSortOrder) Valid() bool {
 
 // Represents request options for listing nodes
 type ListNodesOptions struct {
-	View             NodeView
-	AgentType        NodeAgentType
-	NodeUUIDs        []string
-	HealthStatuses   []NodeHealthStatus
-	ComputeZoneIDs   []string
-	ComputeZoneNames []string
-	NodeGroupIDs     []string
-	NodeGroupNames   []string
-	GPUTypes         []string
-	GPUCounts        []int
-	PublicIPs        []string
-	PrivateIPs       []string
-	Hostname         string
-	BMCHostname      string
-	AgentStatuses    []NodeAgentStatus
-	IntegrityChecks  []NodeIntegrityCheck
-	FirmwareChecks   []NodeFirmwareCheck
-	SortBy           NodeSortBy
-	Order            NodeSortOrder
-	Page             *int
-	PageSize         *int
+	View               NodeView
+	AgentType          NodeAgentType
+	NodeUUIDs          []string
+	HealthStatuses     []NodeHealthStatus
+	ComputeZoneIDs     []string
+	ComputeZoneNames   []string
+	NodeGroupIDs       []string
+	NodeGroupNames     []string
+	GPUTypes           []string
+	GPUCounts          []int
+	PublicIPs          []string
+	PrivateIPs         []string
+	Hostname           string
+	BMCHostname        string
+	AgentStatuses      []NodeAgentStatus
+	VerificationChecks []NodeVerificationCheck
+	FirmwareChecks     []NodeFirmwareCheck
+	SortBy             NodeSortBy
+	Order              NodeSortOrder
+	Page               *int
+	PageSize           *int
 }
 
 // Represents a paginated node response with the raw backend payload
@@ -179,29 +177,29 @@ func (page NodesPage) PageInfo() PageInfo {
 
 // Represents a node
 type Node struct {
-	UUID                    string                   `json:"nodeUUID"`
-	Hostname                string                   `json:"hostname,omitempty"`
-	AgentType               string                   `json:"agentType,omitempty"`
-	AgentVersion            string                   `json:"agentVersion,omitempty"`
-	BMCHostname             string                   `json:"bmcHostname,omitempty"`
-	BMCIP                   string                   `json:"bmcIP,omitempty"`
-	ComputeZone             string                   `json:"computeZone,omitempty"`
-	NodeGroup               string                   `json:"nodeGroup,omitempty"`
-	Health                  string                   `json:"healthStatus,omitempty"`
-	GPUType                 string                   `json:"gpuType,omitempty"`
-	GPUCount                *int                     `json:"gpuCount,omitempty"`
-	AgentStatus             string                   `json:"agentStatus,omitempty"`
-	IntegrityCheck          string                   `json:"integrityCheck,omitempty"`
-	IntegrityCheckExtraInfo *IntegrityCheckExtraInfo `json:"integrityCheckExtraInfo,omitempty"`
-	IntegrityCheckReason    string                   `json:"integrityCheckReason,omitempty"`
-	FirmwareCheck           string                   `json:"firmwareCheck,omitempty"`
-	GPUDriverVersion        string                   `json:"gpuDriverVersion,omitempty"`
-	GPUFirmwareVersions     []GPUFirmwareVersion     `json:"gpuFirmwareVersions,omitempty"`
-	KernelVersion           string                   `json:"kernelVersion,omitempty"`
-	PublicIP                string                   `json:"publicIP,omitempty"`
-	PrivateIP               string                   `json:"privateIP,omitempty"`
-	LastIntegrityCheckTime  string                   `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTime         string                   `json:"lastUpdatedTS,omitempty"`
+	UUID                       string                      `json:"nodeUUID"`
+	Hostname                   string                      `json:"hostname,omitempty"`
+	AgentType                  string                      `json:"agentType,omitempty"`
+	AgentVersion               string                      `json:"agentVersion,omitempty"`
+	BMCHostname                string                      `json:"bmcHostname,omitempty"`
+	BMCIP                      string                      `json:"bmcIP,omitempty"`
+	ComputeZone                string                      `json:"computeZone,omitempty"`
+	NodeGroup                  string                      `json:"nodeGroup,omitempty"`
+	Health                     string                      `json:"healthStatus,omitempty"`
+	GPUType                    string                      `json:"gpuType,omitempty"`
+	GPUCount                   *int                        `json:"gpuCount,omitempty"`
+	AgentStatus                string                      `json:"agentStatus,omitempty"`
+	VerificationCheck          string                      `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *VerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    string                      `json:"verificationCheckReason,omitempty"`
+	FirmwareCheck              string                      `json:"firmwareCheck,omitempty"`
+	GPUDriverVersion           string                      `json:"gpuDriverVersion,omitempty"`
+	GPUFirmwareVersions        []GPUFirmwareVersion        `json:"gpuFirmwareVersions,omitempty"`
+	KernelVersion              string                      `json:"kernelVersion,omitempty"`
+	PublicIP                   string                      `json:"publicIP,omitempty"`
+	PrivateIP                  string                      `json:"privateIP,omitempty"`
+	LastVerificationCheckTime  string                      `json:"lastVerificationCheckTS,omitempty"`
+	LastUpdatedTime            string                      `json:"lastUpdatedTS,omitempty"`
 }
 
 // Represents firmware reported by one GPU
@@ -210,8 +208,8 @@ type GPUFirmwareVersion struct {
 	GPUIndex        string `json:"gpuIndex,omitempty"`
 }
 
-// Represents structured details returned with an integrity check
-type IntegrityCheckExtraInfo struct {
+// Represents structured details returned with a verification check
+type VerificationCheckExtraInfo struct {
 	ErrorDetails             string               `json:"errorDetails,omitempty"`
 	GPUEvidencePresent       *bool                `json:"gpuEvidencePresent,omitempty"`
 	GPUResults               map[string]JWTClaims `json:"gpuResults,omitempty"`
@@ -270,7 +268,7 @@ type NodeDetails struct {
 	ComputeZoneID           string         `json:"computeZoneId,omitempty"`
 	NodeGroupID             string         `json:"nodeGroupId,omitempty"`
 	EnrolledAt              string         `json:"enrolledAt,omitempty"`
-	GeoLocation             *GeoLocation   `json:"geoLocation,omitempty"`
+	Location                *Location      `json:"location,omitempty"`
 	HealthyComponentCount   *int           `json:"healthyComponentCount,omitempty"`
 	DegradedComponentCount  *int           `json:"degradedComponentCount,omitempty"`
 	UnhealthyComponentCount *int           `json:"unhealthyComponentCount,omitempty"`
@@ -410,7 +408,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if view == NodeViewDetail {
 		params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodesParamsHealthStatuses](opts.HealthStatuses)
 		params.AgentStatuses = optionalEnumSlice[fleetapi.ModelsAgentStatus](opts.AgentStatuses)
-		params.IntegrityChecks = optionalEnumSlice[fleetapi.ModelsIntegrityCheck](opts.IntegrityChecks)
+		params.VerificationChecks = optionalEnumSlice[fleetapi.ModelsIntegrityCheck](opts.VerificationChecks)
 		params.FirmwareChecks = optionalEnumSlice[fleetapi.ModelsFirmwareCheck](opts.FirmwareChecks)
 	}
 
@@ -485,13 +483,13 @@ func (c *Client) DescribeNodeWithOptions(
 
 // The accepted values named in each node option's error
 const (
-	nodeViewValues           = "basic or detail"
-	nodeAgentTypeValues      = "inband or oob"
-	nodeHealthValues         = "Healthy, Degraded, Unhealthy, or Unknown"
-	nodeAgentStatusValues    = "Online, Offline, or Unknown"
-	nodeIntegrityCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
-	nodeFirmwareCheckValues  = "Passed, Failed, or Unknown"
-	nodeOrderValues          = "asc or desc"
+	nodeViewValues              = "basic or detail"
+	nodeAgentTypeValues         = "inband or oob"
+	nodeHealthValues            = "Healthy, Degraded, Unhealthy, or Unknown"
+	nodeAgentStatusValues       = "Online, Offline, or Unknown"
+	nodeVerificationCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
+	nodeFirmwareCheckValues     = "Passed, Failed, or Unknown"
+	nodeOrderValues             = "asc or desc"
 )
 
 // Validate reports whether the options describe a request the API accepts.
@@ -524,9 +522,9 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 			return "", invalidOption("agentStatus", "node agent status", string(status), nodeAgentStatusValues)
 		}
 	}
-	for _, check := range opts.IntegrityChecks {
+	for _, check := range opts.VerificationChecks {
 		if !check.Valid() {
-			return "", invalidOption("integrityCheck", "node verification check", string(check), nodeIntegrityCheckValues)
+			return "", invalidOption("verificationCheck", "node verification check", string(check), nodeVerificationCheckValues)
 		}
 	}
 	for _, check := range opts.FirmwareChecks {
@@ -547,12 +545,12 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 	}
 
 	if view == NodeViewBasic {
-		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.IntegrityChecks) > 0 || len(opts.FirmwareChecks) > 0 {
+		if len(opts.HealthStatuses) > 0 || len(opts.AgentStatuses) > 0 || len(opts.VerificationChecks) > 0 || len(opts.FirmwareChecks) > 0 {
 			return "", errors.New("basic node view is incompatible with health, agent-status, verification-check, and firmware-check filters")
 		}
 		// The rule is stated rather than echoing the rejected value, because
 		// the value here is the backend spelling of a sort field a front end
-		// may name differently, as the CLI does with integrityCheck.
+		// may name differently.
 		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
 			return "", errors.New("basic node view supports sorting only by hostname, nodeUUID, or bmcHostname")
 		}
@@ -654,47 +652,47 @@ func decodeBasicNodes(data []byte) (NodesPage, error) {
 // Maps detail API models into SDK values
 func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
-		UUID:                    node.NodeUUID,
-		Hostname:                stringValue(node.Hostname),
-		AgentType:               stringValue(node.AgentType),
-		AgentVersion:            stringValue(node.AgentVersion),
-		ComputeZone:             stringValue(node.ComputeZone),
-		NodeGroup:               stringValue(node.NodeGroup),
-		Health:                  enumStringValue(node.HealthStatus),
-		GPUType:                 stringValue(node.GpuType),
-		GPUCount:                cloneInt(node.GpuCount),
-		AgentStatus:             enumStringValue(node.AgentStatus),
-		IntegrityCheck:          enumStringValue(node.IntegrityCheck),
-		IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
-		IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
-		FirmwareCheck:           enumStringValue(node.FirmwareCheck),
-		GPUDriverVersion:        stringValue(node.GpuDriverVersion),
-		GPUFirmwareVersions:     gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
-		KernelVersion:           stringValue(node.KernelVersion),
-		PublicIP:                stringValue(node.PublicIP),
-		PrivateIP:               stringValue(node.PrivateIP),
-		LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
-		LastUpdatedTime:         stringValue(node.LastUpdatedTS),
+		UUID:                       node.NodeUUID,
+		Hostname:                   stringValue(node.Hostname),
+		AgentType:                  stringValue(node.AgentType),
+		AgentVersion:               stringValue(node.AgentVersion),
+		ComputeZone:                stringValue(node.ComputeZone),
+		NodeGroup:                  stringValue(node.NodeGroup),
+		Health:                     enumStringValue(node.HealthStatus),
+		GPUType:                    stringValue(node.GpuType),
+		GPUCount:                   cloneInt(node.GpuCount),
+		AgentStatus:                enumStringValue(node.AgentStatus),
+		VerificationCheck:          enumStringValue(node.VerificationCheck),
+		VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+		VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+		FirmwareCheck:              enumStringValue(node.FirmwareCheck),
+		GPUDriverVersion:           stringValue(node.GpuDriverVersion),
+		GPUFirmwareVersions:        gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
+		KernelVersion:              stringValue(node.KernelVersion),
+		PublicIP:                   stringValue(node.PublicIP),
+		PrivateIP:                  stringValue(node.PrivateIP),
+		LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+		LastUpdatedTime:            stringValue(node.LastUpdatedTS),
 	}
 }
 
 // Maps OOB list API models into SDK values
 func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 	return Node{
-		UUID:                    node.NodeUUID,
-		AgentType:               stringValue(node.AgentType),
-		AgentVersion:            stringValue(node.AgentVersion),
-		BMCHostname:             stringValue(node.BmcHostname),
-		BMCIP:                   stringValue(node.BmcIP),
-		ComputeZone:             stringValue(node.ComputeZone),
-		NodeGroup:               stringValue(node.NodeGroup),
-		Health:                  enumStringValue(node.HealthStatus),
-		AgentStatus:             enumStringValue(node.AgentStatus),
-		IntegrityCheck:          enumStringValue(node.IntegrityCheck),
-		IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
-		IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
-		LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
-		LastUpdatedTime:         stringValue(node.LastUpdatedTS),
+		UUID:                       node.NodeUUID,
+		AgentType:                  stringValue(node.AgentType),
+		AgentVersion:               stringValue(node.AgentVersion),
+		BMCHostname:                stringValue(node.BmcHostname),
+		BMCIP:                      stringValue(node.BmcIP),
+		ComputeZone:                stringValue(node.ComputeZone),
+		NodeGroup:                  stringValue(node.NodeGroup),
+		Health:                     enumStringValue(node.HealthStatus),
+		AgentStatus:                enumStringValue(node.AgentStatus),
+		VerificationCheck:          enumStringValue(node.VerificationCheck),
+		VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+		VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+		LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+		LastUpdatedTime:            stringValue(node.LastUpdatedTS),
 	}
 }
 
@@ -712,32 +710,32 @@ func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
-			UUID:                    node.NodeUUID,
-			Hostname:                stringValue(node.Hostname),
-			AgentType:               stringValue(node.AgentType),
-			AgentVersion:            stringValue(node.AgentVersion),
-			ComputeZone:             stringValue(node.ComputeZone),
-			NodeGroup:               stringValue(node.NodeGroup),
-			Health:                  enumStringValue(node.HealthStatus),
-			GPUType:                 stringValue(node.GpuType),
-			GPUCount:                cloneInt(node.GpuCount),
-			AgentStatus:             enumStringValue(node.AgentStatus),
-			IntegrityCheck:          enumStringValue(node.IntegrityCheck),
-			IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
-			IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
-			FirmwareCheck:           enumStringValue(node.FirmwareCheck),
-			GPUDriverVersion:        stringValue(node.GpuDriverVersion),
-			GPUFirmwareVersions:     gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
-			KernelVersion:           stringValue(node.KernelVersion),
-			PublicIP:                stringValue(node.PublicIP),
-			PrivateIP:               stringValue(node.PrivateIP),
-			LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
-			LastUpdatedTime:         stringValue(node.LastUpdatedTS),
+			UUID:                       node.NodeUUID,
+			Hostname:                   stringValue(node.Hostname),
+			AgentType:                  stringValue(node.AgentType),
+			AgentVersion:               stringValue(node.AgentVersion),
+			ComputeZone:                stringValue(node.ComputeZone),
+			NodeGroup:                  stringValue(node.NodeGroup),
+			Health:                     enumStringValue(node.HealthStatus),
+			GPUType:                    stringValue(node.GpuType),
+			GPUCount:                   cloneInt(node.GpuCount),
+			AgentStatus:                enumStringValue(node.AgentStatus),
+			VerificationCheck:          enumStringValue(node.VerificationCheck),
+			VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+			VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+			FirmwareCheck:              enumStringValue(node.FirmwareCheck),
+			GPUDriverVersion:           stringValue(node.GpuDriverVersion),
+			GPUFirmwareVersions:        gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
+			KernelVersion:              stringValue(node.KernelVersion),
+			PublicIP:                   stringValue(node.PublicIP),
+			PrivateIP:                  stringValue(node.PrivateIP),
+			LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+			LastUpdatedTime:            stringValue(node.LastUpdatedTS),
 		},
 		ComputeZoneID:           stringValue(node.ComputeZoneId),
 		NodeGroupID:             stringValue(node.NodeGroupId),
 		EnrolledAt:              stringValue(node.EnrolledAt),
-		GeoLocation:             geoLocationFromGenerated(node.GeoLocation),
+		Location:                locationFromGenerated(node.Location),
 		HealthyComponentCount:   cloneInt(node.HealthyComponentCount),
 		DegradedComponentCount:  cloneInt(node.DegradedComponentCount),
 		UnhealthyComponentCount: cloneInt(node.UnhealthyComponentCount),
@@ -751,25 +749,25 @@ func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsRespons
 func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
-			UUID:                    node.NodeUUID,
-			AgentType:               stringValue(node.AgentType),
-			AgentVersion:            stringValue(node.AgentVersion),
-			BMCHostname:             stringValue(node.BmcHostname),
-			BMCIP:                   stringValue(node.BmcIP),
-			ComputeZone:             stringValue(node.ComputeZone),
-			NodeGroup:               stringValue(node.NodeGroup),
-			Health:                  enumStringValue(node.HealthStatus),
-			AgentStatus:             enumStringValue(node.AgentStatus),
-			IntegrityCheck:          enumStringValue(node.IntegrityCheck),
-			IntegrityCheckExtraInfo: integrityCheckExtraInfoFromGenerated(node.IntegrityCheckExtraInfo),
-			IntegrityCheckReason:    stringValue(node.IntegrityCheckReason),
-			LastIntegrityCheckTime:  stringValue(node.LastIntegrityCheckTS),
-			LastUpdatedTime:         stringValue(node.LastUpdatedTS),
+			UUID:                       node.NodeUUID,
+			AgentType:                  stringValue(node.AgentType),
+			AgentVersion:               stringValue(node.AgentVersion),
+			BMCHostname:                stringValue(node.BmcHostname),
+			BMCIP:                      stringValue(node.BmcIP),
+			ComputeZone:                stringValue(node.ComputeZone),
+			NodeGroup:                  stringValue(node.NodeGroup),
+			Health:                     enumStringValue(node.HealthStatus),
+			AgentStatus:                enumStringValue(node.AgentStatus),
+			VerificationCheck:          enumStringValue(node.VerificationCheck),
+			VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+			VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+			LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+			LastUpdatedTime:            stringValue(node.LastUpdatedTS),
 		},
 		ComputeZoneID:           stringValue(node.ComputeZoneId),
 		NodeGroupID:             stringValue(node.NodeGroupId),
 		EnrolledAt:              stringValue(node.EnrolledAt),
-		GeoLocation:             geoLocationFromGenerated(node.GeoLocation),
+		Location:                locationFromGenerated(node.Location),
 		HealthyComponentCount:   cloneInt(node.HealthyComponentCount),
 		DegradedComponentCount:  cloneInt(node.DegradedComponentCount),
 		UnhealthyComponentCount: cloneInt(node.UnhealthyComponentCount),
@@ -792,13 +790,13 @@ func gpuFirmwareVersionsFromGenerated(versions *[]fleetapi.ModelsGPUFirmwareVers
 	return out
 }
 
-func integrityCheckExtraInfoFromGenerated(
+func verificationCheckExtraInfoFromGenerated(
 	info *fleetapi.ModelsIntegrityCheckExtraInfo,
-) *IntegrityCheckExtraInfo {
+) *VerificationCheckExtraInfo {
 	if info == nil {
 		return nil
 	}
-	out := &IntegrityCheckExtraInfo{
+	out := &VerificationCheckExtraInfo{
 		ErrorDetails:             stringValue(info.ErrorDetails),
 		GPUEvidencePresent:       cloneBool(info.GpuEvidencePresent),
 		NRASCallResult:           stringValue(info.NrasCallResult),

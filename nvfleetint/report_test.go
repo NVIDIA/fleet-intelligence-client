@@ -58,7 +58,7 @@ func TestGetInventoryReportSendsParamsAndDecodes(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","gpuType":"NVIDIA-H100","gpuCount":8,"integrityCheck":"Verified","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","serialNumbers":["SN1"]}],"hasMore":false,"page":2,"pageSize":25,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","gpuType":"NVIDIA-H100","gpuCount":8,"verificationCheck":"Verified","firmwareCheck":"Passed","publicIP":"203.0.113.10","privateIP":"10.0.0.10","serialNumbers":["SN1"]}],"hasMore":false,"page":2,"pageSize":25,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -123,6 +123,40 @@ func TestGetInventoryReportRejectsInvalidOptions(t *testing.T) {
 				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
 			}
 		})
+	}
+}
+
+// Guards every declared sort constant against the generated enum so a backend
+// rename cannot silently turn a documented flag value into a validation error
+func TestInventoryReportSortByConstantsAreAccepted(t *testing.T) {
+	sortValues := []InventoryReportSortBy{
+		InventoryReportSortByHostname,
+		InventoryReportSortByNodeUUID,
+		InventoryReportSortByNodeGroup,
+		InventoryReportSortByComputeZone,
+		InventoryReportSortByGPUType,
+		InventoryReportSortByGPUCount,
+		InventoryReportSortByPublicIP,
+		InventoryReportSortByPrivateIP,
+		InventoryReportSortByVerificationCheck,
+		InventoryReportSortByLocation,
+	}
+
+	for _, sortBy := range sortValues {
+		t.Run(string(sortBy), func(t *testing.T) {
+			if !sortBy.Valid() {
+				t.Fatalf("sort value %q is not accepted by the generated API enum", sortBy)
+			}
+		})
+	}
+
+	// The error message lists what a user may pass, so every value named there
+	// must actually validate or the guidance sends them into another failure.
+	for _, advertised := range strings.Split(inventoryReportSortByValues, ",") {
+		value := strings.TrimPrefix(strings.TrimSpace(advertised), "or ")
+		if !InventoryReportSortBy(value).Valid() {
+			t.Fatalf("advertised sort value %q is rejected by the API enum", value)
+		}
 	}
 }
 

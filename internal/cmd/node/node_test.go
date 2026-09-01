@@ -98,37 +98,34 @@ func TestNodeListDetailSortFields(t *testing.T) {
 	}
 }
 
-// Verifies both the user-facing "verificationCheck" sort field and the legacy
-// backend "integrityCheck" spelling reach the API as "integrityCheck"
+// Verifies the verificationCheck sort field reaches the API unchanged, and that
+// the retired "integrityCheck" spelling is never sent in its place
 func TestNodeListSortVerificationCheck(t *testing.T) {
-	for _, sortBy := range []string{"verificationCheck", "integrityCheck"} {
-		t.Run(sortBy, func(t *testing.T) {
-			t.Setenv("HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
 
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if got := r.URL.Query().Get("sortBy"); got != "integrityCheck" {
-					t.Fatalf("unexpected sortBy: got %q want %q", got, "integrityCheck")
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
-			}))
-			defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("sortBy"); got != "verificationCheck" {
+			t.Fatalf("unexpected sortBy: got %q want %q", got, "verificationCheck")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"page":0,"pageSize":20,"total":0}`))
+	}))
+	defer server.Close()
 
-			cmdtest.SaveConfig(t, server.URL, "test-key")
+	cmdtest.SaveConfig(t, server.URL, "test-key")
 
-			var out bytes.Buffer
-			cmd := newRootCmd()
-			cmd.SetOut(&out)
-			cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", sortBy})
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "verificationCheck"})
 
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("command failed: %v", err)
-			}
-		})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
 	}
 }
 
-// Verifies node list help and sort errors use the user-facing "verificationCheck"
+// Verifies node list help and sort errors name "verificationCheck" and never
+// the retired "integrityCheck" alias
 func TestNodeListSortHelpUsesVerificationCheck(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -148,9 +145,7 @@ func TestNodeListSortHelpUsesVerificationCheck(t *testing.T) {
 		t.Fatalf("unexpected sort-by error: %v", err)
 	}
 
-	// Basic view rejects the sort after the CLI has translated it, so this is
-	// the path where the backend spelling could leak back to the user.
-	_, err = nodeListOptions(nodeListFlags{view: "basic", sortBy: nodeSortByVerificationCheck})
+	_, err = nodeListOptions(nodeListFlags{view: "basic", sortBy: "verificationCheck"})
 	if err == nil {
 		t.Fatal("expected basic view sort error")
 	}
@@ -186,8 +181,8 @@ func TestNodeListTableFiltersAndSort(t *testing.T) {
 		if got := query["agentStatuses"]; !slices.Equal(got, []string{"Online"}) {
 			t.Fatalf("unexpected agentStatuses: %#v raw query %q", got, r.URL.RawQuery)
 		}
-		if got := query["integrityChecks"]; !slices.Equal(got, []string{"Verified"}) {
-			t.Fatalf("unexpected integrityChecks: %#v raw query %q", got, r.URL.RawQuery)
+		if got := query["verificationChecks"]; !slices.Equal(got, []string{"Verified"}) {
+			t.Fatalf("unexpected verificationChecks: %#v raw query %q", got, r.URL.RawQuery)
 		}
 		if got := query["firmwareChecks"]; !slices.Equal(got, []string{"Unknown"}) {
 			t.Fatalf("unexpected firmwareChecks: %#v raw query %q", got, r.URL.RawQuery)
@@ -227,7 +222,7 @@ func TestNodeListTableFiltersAndSort(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","healthStatus":"Healthy","gpuType":"NVIDIA-H100","gpuCount":8,"integrityCheck":"Verified","firmwareCheck":"Unknown","agentStatus":"Online"}],"hasMore":false,"page":0,"pageSize":10,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","computeZone":"East","nodeGroup":"Training","healthStatus":"Healthy","gpuType":"NVIDIA-H100","gpuCount":8,"verificationCheck":"Verified","firmwareCheck":"Unknown","agentStatus":"Online"}],"hasMore":false,"page":0,"pageSize":10,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -940,7 +935,7 @@ func TestNodeOptionsOutput(t *testing.T) {
 		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +
 		`{"name":"gpuTypes","options":["NVIDIA-H100"]},` +
 		`{"name":"brandNewFilter","options":["surprise"]}` +
-		`]},"sorting":{"fields":["hostname","nodeGroup","computeZone","integrityCheck"],"orders":["asc","desc"],"defaults":{"field":"hostname","order":"asc"}}}`
+		`]},"sorting":{"fields":["hostname","nodeGroup","computeZone","verificationCheck","integrityCheck"],"orders":["asc","desc"],"defaults":{"field":"integrityCheck","order":"asc"}}}`
 
 	var agentTypes []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -973,17 +968,22 @@ func TestNodeOptionsOutput(t *testing.T) {
 		"cz-1", "East",
 		"--gpu-type",
 		"brandNewFilter  (no flag on 'node list')",
-		// The backend spells three sort fields differently from the CLI.
+		// The backend spells two sort fields differently from the CLI.
 		"nodegroup", "computezone", "verificationCheck",
-		"(default: hostname)", "(default: asc)",
+		// The backend's default sort field is the deprecated "integrityCheck"
+		// alias; naming it as the default would offer it as a choice.
+		"\n--sort-by\n", "(default: asc)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("table output missing %q:\n%s", want, got)
 		}
 	}
+	// integrityCheck is a deprecated alias the API still advertises; offering it
+	// would point new scripts at a field that is about to be removed, and it
+	// must not be named as the --sort-by default either.
 	for _, unwanted := range []string{"nodeGroup,", "computeZone,", "integrityCheck"} {
 		if strings.Contains(got, unwanted) {
-			t.Fatalf("table output should not offer backend spelling %q:\n%s", unwanted, got)
+			t.Fatalf("table output should not offer %q:\n%s", unwanted, got)
 		}
 	}
 	// The compute zone section lists only zones; the node group is not left

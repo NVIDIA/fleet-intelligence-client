@@ -27,7 +27,7 @@ Read this before querying live data.
 
 ## JSON names
 
-Use backend names: `healthStatus`, `integrityCheck`, `integrityCheckReason`, `lastIntegrityCheckTS`, and `geoLocation`. `overview` calls the healthy-node count `healthNodeCount`, not `healthyNodeCount`.
+Use backend names: `healthStatus`, `verificationCheck`, `verificationCheckReason`, `lastVerificationCheckTS`, and `location`. `overview` calls the healthy-node count `healthNodeCount`, not `healthyNodeCount`.
 
 ## Completeness
 

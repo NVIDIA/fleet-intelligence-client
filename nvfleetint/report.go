@@ -40,16 +40,16 @@ const (
 	ErrorSeverityInfo     ErrorSeverity = "Info"
 	ErrorSeverityWarning  ErrorSeverity = "Warning"
 
-	InventoryReportSortByHostname       InventoryReportSortBy = "hostname"
-	InventoryReportSortByNodeUUID       InventoryReportSortBy = "nodeUUID"
-	InventoryReportSortByNodeGroup      InventoryReportSortBy = "nodegroup"
-	InventoryReportSortByComputeZone    InventoryReportSortBy = "computezone"
-	InventoryReportSortByGPUType        InventoryReportSortBy = "gpuType"
-	InventoryReportSortByGPUCount       InventoryReportSortBy = "gpuCount"
-	InventoryReportSortByPublicIP       InventoryReportSortBy = "publicIP"
-	InventoryReportSortByPrivateIP      InventoryReportSortBy = "privateIP"
-	InventoryReportSortByIntegrityCheck InventoryReportSortBy = "integrityCheck"
-	InventoryReportSortByGeoLocation    InventoryReportSortBy = "geoLocation"
+	InventoryReportSortByHostname          InventoryReportSortBy = "hostname"
+	InventoryReportSortByNodeUUID          InventoryReportSortBy = "nodeUUID"
+	InventoryReportSortByNodeGroup         InventoryReportSortBy = "nodeGroup"
+	InventoryReportSortByComputeZone       InventoryReportSortBy = "computeZone"
+	InventoryReportSortByGPUType           InventoryReportSortBy = "gpuType"
+	InventoryReportSortByGPUCount          InventoryReportSortBy = "gpuCount"
+	InventoryReportSortByPublicIP          InventoryReportSortBy = "publicIP"
+	InventoryReportSortByPrivateIP         InventoryReportSortBy = "privateIP"
+	InventoryReportSortByVerificationCheck InventoryReportSortBy = "verificationCheck"
+	InventoryReportSortByLocation          InventoryReportSortBy = "location"
 
 	InventoryReportOrderAsc  InventoryReportSortOrder = "asc"
 	InventoryReportOrderDesc InventoryReportSortOrder = "desc"
@@ -166,22 +166,22 @@ func (page InventoryReport) PageInfo() PageInfo {
 
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
-	NodeUUID               string       `json:"nodeUUID"`
-	Hostname               string       `json:"hostname,omitempty"`
-	ComputeZone            string       `json:"computeZone,omitempty"`
-	NodeGroup              string       `json:"nodeGroup,omitempty"`
-	GPUType                string       `json:"gpuType,omitempty"`
-	GPUCount               *int         `json:"gpuCount,omitempty"`
-	PublicIP               string       `json:"publicIP,omitempty"`
-	PrivateIP              string       `json:"privateIP,omitempty"`
-	IntegrityCheck         string       `json:"integrityCheck,omitempty"`
-	IntegrityCheckReason   string       `json:"integrityCheckReason,omitempty"`
-	LastIntegrityCheckTime string       `json:"lastIntegrityCheckTS,omitempty"`
-	FirmwareCheck          string       `json:"firmwareCheck,omitempty"`
-	EnrolledAt             string       `json:"enrolledAt,omitempty"`
-	RemovedAt              string       `json:"removedAt,omitempty"`
-	GeoLocation            *GeoLocation `json:"geoLocation,omitempty"`
-	SerialNumbers          []string     `json:"serialNumbers,omitempty"`
+	NodeUUID                  string    `json:"nodeUUID"`
+	Hostname                  string    `json:"hostname,omitempty"`
+	ComputeZone               string    `json:"computeZone,omitempty"`
+	NodeGroup                 string    `json:"nodeGroup,omitempty"`
+	GPUType                   string    `json:"gpuType,omitempty"`
+	GPUCount                  *int      `json:"gpuCount,omitempty"`
+	PublicIP                  string    `json:"publicIP,omitempty"`
+	PrivateIP                 string    `json:"privateIP,omitempty"`
+	VerificationCheck         string    `json:"verificationCheck,omitempty"`
+	VerificationCheckReason   string    `json:"verificationCheckReason,omitempty"`
+	LastVerificationCheckTime string    `json:"lastVerificationCheckTS,omitempty"`
+	FirmwareCheck             string    `json:"firmwareCheck,omitempty"`
+	EnrolledAt                string    `json:"enrolledAt,omitempty"`
+	RemovedAt                 string    `json:"removedAt,omitempty"`
+	Location                  *Location `json:"location,omitempty"`
+	SerialNumbers             []string  `json:"serialNumbers,omitempty"`
 }
 
 // Represents request options for error reports
@@ -359,7 +359,7 @@ const (
 	errorReportTimeModeValues   = "absolute or relative"
 	errorReportSeverityValues   = "Critical, Fatal, Info, or Warning"
 	inventoryReportOrderValues  = "asc or desc"
-	inventoryReportSortByValues = "hostname, nodeUUID, nodegroup, computezone, gpuType, gpuCount, publicIP, privateIP, integrityCheck, or geoLocation"
+	inventoryReportSortByValues = "hostname, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 )
 
 // Defaults an omitted report format and rejects unsupported values
@@ -652,7 +652,7 @@ func signedReportFilename(resp *http.Response) string {
 
 // Decodes inventory report responses and preserves the original payload
 func decodeInventoryReport(data []byte) (InventoryReport, error) {
-	var resp fleetapi.ModelsInventoryReportResponse
+	var resp fleetapi.ModelsInbandInventoryReportResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return InventoryReport{}, err
 	}
@@ -777,24 +777,24 @@ func decodeErrorReportOverview(data []byte, view ErrorReportView) (ErrorReport, 
 }
 
 // Maps inventory node API models into SDK values
-func inventoryNodeFromGenerated(node fleetapi.ModelsInventoryNode) InventoryNode {
+func inventoryNodeFromGenerated(node fleetapi.ModelsInbandInventoryNode) InventoryNode {
 	return InventoryNode{
-		NodeUUID:               stringValue(node.NodeUUID),
-		Hostname:               stringValue(node.Hostname),
-		ComputeZone:            stringValue(node.ComputeZone),
-		NodeGroup:              stringValue(node.NodeGroup),
-		GPUType:                stringValue(node.GpuType),
-		GPUCount:               cloneInt(node.GpuCount),
-		PublicIP:               stringValue(node.PublicIP),
-		PrivateIP:              stringValue(node.PrivateIP),
-		IntegrityCheck:         enumStringValue(node.IntegrityCheck),
-		IntegrityCheckReason:   stringValue(node.IntegrityCheckReason),
-		LastIntegrityCheckTime: stringValue(node.LastIntegrityCheckTS),
-		FirmwareCheck:          enumStringValue(node.FirmwareCheck),
-		EnrolledAt:             stringValue(node.EnrolledAt),
-		RemovedAt:              stringValue(node.RemovedAt),
-		GeoLocation:            geoLocationFromGenerated(node.GeoLocation),
-		SerialNumbers:          cloneStringSlice(node.SerialNumbers),
+		NodeUUID:                  stringValue(node.NodeUUID),
+		Hostname:                  stringValue(node.Hostname),
+		ComputeZone:               stringValue(node.ComputeZone),
+		NodeGroup:                 stringValue(node.NodeGroup),
+		GPUType:                   stringValue(node.GpuType),
+		GPUCount:                  cloneInt(node.GpuCount),
+		PublicIP:                  stringValue(node.PublicIP),
+		PrivateIP:                 stringValue(node.PrivateIP),
+		VerificationCheck:         enumStringValue(node.VerificationCheck),
+		VerificationCheckReason:   stringValue(node.VerificationCheckReason),
+		LastVerificationCheckTime: stringValue(node.LastVerificationCheckTS),
+		FirmwareCheck:             enumStringValue(node.FirmwareCheck),
+		EnrolledAt:                stringValue(node.EnrolledAt),
+		RemovedAt:                 stringValue(node.RemovedAt),
+		Location:                  locationFromGenerated(node.Location),
+		SerialNumbers:             cloneStringSlice(node.SerialNumbers),
 	}
 }
 

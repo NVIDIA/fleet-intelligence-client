@@ -55,6 +55,16 @@ func ValidateTimeRangeFlags(window, start, end string) error {
 	return ValidateRFC3339Flag("--end", end)
 }
 
+// ValidateOptionalTimeRangeFlags applies the same rules as
+// ValidateTimeRangeFlags where the range is a filter rather than a requirement,
+// so supplying none of the flags is allowed. A partial range is still an error.
+func ValidateOptionalTimeRangeFlags(window, start, end string) error {
+	if strings.TrimSpace(window) == "" && strings.TrimSpace(start) == "" && strings.TrimSpace(end) == "" {
+		return nil
+	}
+	return ValidateTimeRangeFlags(window, start, end)
+}
+
 // NormalizeWindowFlag trims a --window value and checks it against the SDK's
 // rule, returning the value to send to the backend.
 func NormalizeWindowFlag(window string) (string, error) {
