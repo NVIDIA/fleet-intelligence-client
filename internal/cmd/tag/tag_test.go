@@ -5,6 +5,7 @@ package tag
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -270,6 +271,81 @@ func TestTagSetAbortsWhenDeclined(t *testing.T) {
 	err := cmd.Execute()
 	if !errors.Is(err, cmdutil.ErrAborted) {
 		t.Fatalf("expected an aborted error, got %v", err)
+	}
+}
+
+// Verifies --dry-run reports the resulting tags without sending a request or
+// prompting for confirmation
+func TestTagSetDryRun(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Fatal("did not expect a request during --dry-run")
+	}))
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"tag", "set", "node-1", "--tags", "gpu-health", "--dry-run"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+	for _, want := range []string{
+		"PUT " + server.URL + "/v1/nodes/node-1/tags",
+		`"tags"`,
+		`"gpu-health"`,
+		"Dry run: no request was sent.",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("output missing %q:\n%s", want, out.String())
+		}
+	}
+}
+
+// Verifies --dry-run with -o json emits the method, URL, and body as a
+// structured document instead of the backend payload, since no request is made
+func TestTagSetDryRunJSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Fatal("did not expect a request during --dry-run")
+	}))
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"tag", "set", "node-1", "--clear", "--dry-run", "-o", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	var decoded struct {
+		Method string `json:"method"`
+		URL    string `json:"url"`
+		Body   struct {
+			Tags []string `json:"tags"`
+		} `json:"body"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &decoded); err != nil {
+		t.Fatalf("json output not decodable: %v (%s)", err, out.String())
+	}
+	if decoded.Method != http.MethodPut {
+		t.Fatalf("unexpected method: %s", decoded.Method)
+	}
+	if decoded.URL != server.URL+"/v1/nodes/node-1/tags" {
+		t.Fatalf("unexpected url: %s", decoded.URL)
+	}
+	if len(decoded.Body.Tags) != 0 {
+		t.Fatalf("unexpected body: %#v", decoded.Body)
 	}
 }
 

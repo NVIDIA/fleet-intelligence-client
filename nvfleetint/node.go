@@ -93,7 +93,7 @@ type NodeVerificationCheck string
 
 // Reports whether the verification check status is accepted by the API
 func (check NodeVerificationCheck) Valid() bool {
-	return fleetapi.ModelsIntegrityCheck(check).Valid()
+	return fleetapi.ModelsVerificationCheck(check).Valid()
 }
 
 // Represents supported firmware check filters for listing nodes
@@ -408,7 +408,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if view == NodeViewDetail {
 		params.HealthStatuses = optionalEnumSlice[fleetapi.GetV1NodesParamsHealthStatuses](opts.HealthStatuses)
 		params.AgentStatuses = optionalEnumSlice[fleetapi.ModelsAgentStatus](opts.AgentStatuses)
-		params.VerificationChecks = optionalEnumSlice[fleetapi.ModelsIntegrityCheck](opts.VerificationChecks)
+		params.VerificationChecks = optionalEnumSlice[fleetapi.ModelsVerificationCheck](opts.VerificationChecks)
 		params.FirmwareChecks = optionalEnumSlice[fleetapi.ModelsFirmwareCheck](opts.FirmwareChecks)
 	}
 
@@ -791,7 +791,7 @@ func gpuFirmwareVersionsFromGenerated(versions *[]fleetapi.ModelsGPUFirmwareVers
 }
 
 func verificationCheckExtraInfoFromGenerated(
-	info *fleetapi.ModelsIntegrityCheckExtraInfo,
+	info *fleetapi.ModelsVerificationCheckExtraInfo,
 ) *VerificationCheckExtraInfo {
 	if info == nil {
 		return nil

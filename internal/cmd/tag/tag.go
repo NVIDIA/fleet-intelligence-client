@@ -18,9 +18,10 @@ import (
 
 // Stores local flag values for tag set
 type tagSetFlags struct {
-	tags  string
-	clear bool
-	yes   bool
+	tags   string
+	clear  bool
+	yes    bool
+	dryRun bool
 }
 
 // Stores local flag values for tag list
@@ -147,7 +148,9 @@ func newTagSetCmd() *cobra.Command {
 This replaces rather than adds: a tag the node already carries that is not
 listed in --tags is removed. Use --clear to remove all of them. Exactly one of
 --tags or --clear is required, and the command confirms before writing unless
---yes is passed.
+--yes is passed. Use --dry-run to print the method, URL, and body of the PUT
+request that would be sent, without issuing it; it skips both the
+confirmation prompt and the write, and exits 0.
 
 Tags use lowercase letters, digits, hyphens, and underscores. They must start
 and end with a letter or digit, cannot contain consecutive separators, and are
@@ -156,7 +159,8 @@ reserved.
 
 Run 'nvfleetint tag list --node <node-uuid>' to see a node's current tags.`,
 		Example: `  nvfleetint tag set 1e9c0d2a-0000-4a1b-9c3d-000000000001 --tags gpu-health,burn_in
-  nvfleetint tag set 1e9c0d2a-0000-4a1b-9c3d-000000000001 --clear --yes`,
+  nvfleetint tag set 1e9c0d2a-0000-4a1b-9c3d-000000000001 --clear --yes
+  nvfleetint tag set 1e9c0d2a-0000-4a1b-9c3d-000000000001 --tags gpu-health --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runTagSet(cmd, args[0], flags, cmdutil.ResolveCommon(cmd, common))
 		},
@@ -165,6 +169,7 @@ Run 'nvfleetint tag list --node <node-uuid>' to see a node's current tags.`,
 	cmd.Flags().StringVar(&flags.tags, "tags", "", "Comma-separated tags the node should carry, replacing its current tags")
 	cmd.Flags().BoolVar(&flags.clear, "clear", false, "Remove every tag from the node")
 	cmd.Flags().BoolVar(&flags.yes, "yes", false, "Skip the confirmation prompt")
+	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Print the request that would be sent without issuing it")
 	cmdutil.RegisterReadFlags(cmd, common)
 
 	return cmd
@@ -188,6 +193,14 @@ func runTagSet(cmd *cobra.Command, nodeUUID string, flags tagSetFlags, common cm
 	client, err := cmdutil.New(common)
 	if err != nil {
 		return err
+	}
+
+	if flags.dryRun {
+		preview, err := client.PreviewSetNodeTags(cmd.Context(), nodeUUID, nvfleetint.SetNodeTagsOptions{Tags: tags})
+		if err != nil {
+			return err
+		}
+		return cmdutil.WriteRequestPreview(cmd.OutOrStdout(), common, preview)
 	}
 
 	// Confirm after the client is built so a bad profile fails before the

@@ -132,6 +132,12 @@ nvfleetint xidburst list --window 168h --xid-numbers 48,94 --job-disruption
 nvfleetint xidburst list --window 24h --exclude-nodegroup-ids ng-1,ng-2
 nvfleetint xidburst describe <burst-id>
 
+# Compute zone metadata
+nvfleetint computezone update <zone-id> --type datacenter
+nvfleetint computezone update <zone-id> --contact-email ops@example.com
+nvfleetint computezone update <zone-id> \
+  --location-city Baltimore --location-latitude 39.0458 --location-longitude -76.6413
+
 # Tags and reports
 nvfleetint tag list --prefix gpu
 nvfleetint tag set <node-uuid> --tags gpu-health,burn_in
@@ -165,6 +171,19 @@ callers. Node groups and compute zones can be filtered inclusively
 (`--exclude-nodegroup-ids`, `--exclude-compute-zone-ids`), but not both for the
 same dimension. `xidburst describe` adds the impacted GPU device IDs, per-XID
 catalog details, and suggested actions.
+
+`computezone update` changes one compute zone's type, contact, and location.
+Contact and location are structured values on the API, so each of their fields
+has its own flag: `--contact-email`, `--contact-pic`, `--location-city`,
+`--location-country`, `--location-region`, `--location-latitude`, and
+`--location-longitude`. A flag that is not given leaves the stored value alone
+and a flag given an empty value clears that field, so setting a contact never
+disturbs a location. At least one field is required, and the command asks for
+confirmation before writing, so scripts and CI runs need `--yes`. Compute zone
+names are agent-managed and cannot be changed through the customer API. `--type`
+accepts `datacenter` or `cloud provider`. `--dry-run` reads the compute zone,
+builds the merged PUT request that would be sent, and prints it without
+sending the PUT.
 
 `tag set` replaces a node's tags rather than adding to them: a tag the node
 already carries that is not listed in `--tags` is removed, and `--clear`

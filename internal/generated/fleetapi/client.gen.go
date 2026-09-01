@@ -395,6 +395,36 @@ func (e ModelsNotificationScopeType) Valid() bool {
 	}
 }
 
+// Defines values for ModelsVerificationCheck.
+const (
+	VerificationCheckDegraded    ModelsVerificationCheck = "Degraded"
+	VerificationCheckFailed      ModelsVerificationCheck = "Unverified"
+	VerificationCheckPassed      ModelsVerificationCheck = "Verified"
+	VerificationCheckPending     ModelsVerificationCheck = "Pending"
+	VerificationCheckUnknown     ModelsVerificationCheck = "Unknown"
+	VerificationCheckUnsupported ModelsVerificationCheck = "Unsupported"
+)
+
+// Valid indicates whether the value is a known member of the ModelsVerificationCheck enum.
+func (e ModelsVerificationCheck) Valid() bool {
+	switch e {
+	case VerificationCheckDegraded:
+		return true
+	case VerificationCheckFailed:
+		return true
+	case VerificationCheckPassed:
+		return true
+	case VerificationCheckPending:
+		return true
+	case VerificationCheckUnknown:
+		return true
+	case VerificationCheckUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1AlertTimelineNodesParamsSortBy.
 const (
 	GetV1AlertTimelineNodesParamsSortByAlert       GetV1AlertTimelineNodesParamsSortBy = "alert"
@@ -1664,7 +1694,7 @@ type ModelsComputeZoneOverview struct {
 	HealthState         *ModelsHealthState     `json:"healthState,omitempty"`
 	HealthyNodesCount   *int                   `json:"healthyNodesCount,omitempty"`
 	Id                  *string                `json:"id,omitempty"`
-	Location            *ModelsGeoLocation     `json:"location,omitempty"`
+	Location            *ModelsLocation        `json:"location,omitempty"`
 	Metrics             *[]ModelsMetric        `json:"metrics,omitempty"`
 	Name                *string                `json:"name,omitempty"`
 	NodeGroupsCount     *int                   `json:"nodeGroupsCount,omitempty"`
@@ -1879,7 +1909,9 @@ type ModelsGPUInfo struct {
 	Product      *string            `json:"product,omitempty"`
 }
 
-// ModelsGeoLocation defines model for models.GeoLocation.
+// ModelsGeoLocation Deprecated: use Location.
+//
+// Deprecated: this type has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 type ModelsGeoLocation struct {
 	City      *string  `json:"city,omitempty"`
 	Country   *string  `json:"country,omitempty"`
@@ -1953,19 +1985,19 @@ type ModelsInbandInventoryNode struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
-	Location                   *ModelsGeoLocation             `json:"location,omitempty"`
-	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
-	NodeUUID                   *string                        `json:"nodeUUID,omitempty"`
-	PrivateIP                  *string                        `json:"privateIP,omitempty"`
-	PublicIP                   *string                        `json:"publicIP,omitempty"`
-	RemovedAt                  *string                        `json:"removedAt,omitempty"`
-	SerialNumbers              *[]string                      `json:"serialNumbers,omitempty"`
-	SystemUUID                 *string                        `json:"systemUUID,omitempty"`
-	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
-	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
-	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+	LastIntegrityCheckTS       *string                           `json:"lastIntegrityCheckTS,omitempty"`
+	LastVerificationCheckTS    *string                           `json:"lastVerificationCheckTS,omitempty"`
+	Location                   *ModelsLocation                   `json:"location,omitempty"`
+	NodeGroup                  *string                           `json:"nodeGroup,omitempty"`
+	NodeUUID                   *string                           `json:"nodeUUID,omitempty"`
+	PrivateIP                  *string                           `json:"privateIP,omitempty"`
+	PublicIP                   *string                           `json:"publicIP,omitempty"`
+	RemovedAt                  *string                           `json:"removedAt,omitempty"`
+	SerialNumbers              *[]string                         `json:"serialNumbers,omitempty"`
+	SystemUUID                 *string                           `json:"systemUUID,omitempty"`
+	VerificationCheck          *ModelsVerificationCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsInbandInventoryReportResponse defines model for models.InbandInventoryReportResponse.
@@ -2006,16 +2038,16 @@ type ModelsInbandNode struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS              *string                        `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
-	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
-	NodeUUID                   string                         `json:"nodeUUID"`
-	PrivateIP                  *string                        `json:"privateIP,omitempty"`
-	PublicIP                   *string                        `json:"publicIP,omitempty"`
-	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
-	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
-	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+	LastIntegrityCheckTS       *string                           `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS              *string                           `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS    *string                           `json:"lastVerificationCheckTS,omitempty"`
+	NodeGroup                  *string                           `json:"nodeGroup,omitempty"`
+	NodeUUID                   string                            `json:"nodeUUID"`
+	PrivateIP                  *string                           `json:"privateIP,omitempty"`
+	PublicIP                   *string                           `json:"publicIP,omitempty"`
+	VerificationCheck          *ModelsVerificationCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsInbandNodeDetailsResponse defines model for models.InbandNodeDetailsResponse.
@@ -2055,22 +2087,22 @@ type ModelsInbandNodeDetailsResponse struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS              *string                        `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
-	Location                   *ModelsGeoLocation             `json:"location,omitempty"`
-	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
-	NodeGroupId                *string                        `json:"nodeGroupId,omitempty"`
-	NodeUUID                   string                         `json:"nodeUUID"`
-	PrivateIP                  *string                        `json:"privateIP,omitempty"`
-	PublicIP                   *string                        `json:"publicIP,omitempty"`
-	Resources                  *ModelsNodeResources           `json:"resources,omitempty"`
-	SystemInfo                 *ModelsSystemInfo              `json:"systemInfo,omitempty"`
-	Tags                       *[]string                      `json:"tags,omitempty"`
-	UnhealthyComponentCount    *int                           `json:"unhealthyComponentCount,omitempty"`
-	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
-	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
-	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+	LastIntegrityCheckTS       *string                           `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS              *string                           `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS    *string                           `json:"lastVerificationCheckTS,omitempty"`
+	Location                   *ModelsLocation                   `json:"location,omitempty"`
+	NodeGroup                  *string                           `json:"nodeGroup,omitempty"`
+	NodeGroupId                *string                           `json:"nodeGroupId,omitempty"`
+	NodeUUID                   string                            `json:"nodeUUID"`
+	PrivateIP                  *string                           `json:"privateIP,omitempty"`
+	PublicIP                   *string                           `json:"publicIP,omitempty"`
+	Resources                  *ModelsNodeResources              `json:"resources,omitempty"`
+	SystemInfo                 *ModelsSystemInfo                 `json:"systemInfo,omitempty"`
+	Tags                       *[]string                         `json:"tags,omitempty"`
+	UnhealthyComponentCount    *int                              `json:"unhealthyComponentCount,omitempty"`
+	VerificationCheck          *ModelsVerificationCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsInbandNodesResponse defines model for models.InbandNodesResponse.
@@ -2088,10 +2120,14 @@ type ModelsInfoResponse struct {
 	SigningKey *ModelsSigningKeyInfo `json:"signingKey,omitempty"`
 }
 
-// ModelsIntegrityCheck defines model for models.IntegrityCheck.
+// ModelsIntegrityCheck Deprecated: use VerificationCheck.
+//
+// Deprecated: this type has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 type ModelsIntegrityCheck string
 
-// ModelsIntegrityCheckExtraInfo defines model for models.IntegrityCheckExtraInfo.
+// ModelsIntegrityCheckExtraInfo Deprecated: use VerificationCheckExtraInfo.
+//
+// Deprecated: this type has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 type ModelsIntegrityCheckExtraInfo struct {
 	ErrorDetails             *string                     `json:"errorDetails,omitempty"`
 	GpuEvidencePresent       *bool                       `json:"gpuEvidencePresent,omitempty"`
@@ -2182,6 +2218,15 @@ type ModelsListNotificationPreferencesResponse struct {
 // ModelsListTagsResponse defines model for models.ListTagsResponse.
 type ModelsListTagsResponse struct {
 	Tags *[]string `json:"tags,omitempty"`
+}
+
+// ModelsLocation defines model for models.Location.
+type ModelsLocation struct {
+	City      *string  `json:"city,omitempty"`
+	Country   *string  `json:"country,omitempty"`
+	Latitude  *float32 `json:"latitude,omitempty"`
+	Longitude *float32 `json:"longitude,omitempty"`
+	Region    *string  `json:"region,omitempty"`
 }
 
 // ModelsMemoryInfo defines model for models.MemoryInfo.
@@ -2360,7 +2405,7 @@ type ModelsNodeGroupOverview struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ComputeZoneGeoLocation *ModelsGeoLocation `json:"computeZoneGeoLocation,omitempty"`
 	ComputeZoneId          *string            `json:"computeZoneId,omitempty"`
-	ComputeZoneLocation    *ModelsGeoLocation `json:"computeZoneLocation,omitempty"`
+	ComputeZoneLocation    *ModelsLocation    `json:"computeZoneLocation,omitempty"`
 	ComputeZoneName        *string            `json:"computeZoneName,omitempty"`
 	CpuCoresCount          *int               `json:"cpuCoresCount,omitempty"`
 	CreatedAt              *string            `json:"createdAt,omitempty"`
@@ -2613,16 +2658,16 @@ type ModelsOobInventoryNode struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS       *string                        `json:"lastIntegrityCheckTS,omitempty"`
-	LastVerificationCheckTS    *string                        `json:"lastVerificationCheckTS,omitempty"`
-	Location                   *ModelsGeoLocation             `json:"location,omitempty"`
-	NodeGroup                  *string                        `json:"nodeGroup,omitempty"`
-	NodeName                   *string                        `json:"nodeName,omitempty"`
-	NodeUUID                   *string                        `json:"nodeUUID,omitempty"`
-	RemovedAt                  *string                        `json:"removedAt,omitempty"`
-	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
-	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
-	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+	LastIntegrityCheckTS       *string                           `json:"lastIntegrityCheckTS,omitempty"`
+	LastVerificationCheckTS    *string                           `json:"lastVerificationCheckTS,omitempty"`
+	Location                   *ModelsLocation                   `json:"location,omitempty"`
+	NodeGroup                  *string                           `json:"nodeGroup,omitempty"`
+	NodeName                   *string                           `json:"nodeName,omitempty"`
+	NodeUUID                   *string                           `json:"nodeUUID,omitempty"`
+	RemovedAt                  *string                           `json:"removedAt,omitempty"`
+	VerificationCheck          *ModelsVerificationCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsOobInventoryReportResponse defines model for models.OobInventoryReportResponse.
@@ -2677,11 +2722,11 @@ type ModelsOobNode struct {
 	NodeGroup               *string `json:"nodeGroup,omitempty"`
 
 	// NodeName NodeName is the optional machine name configured on the OOB collector.
-	NodeName                   *string                        `json:"nodeName,omitempty"`
-	NodeUUID                   string                         `json:"nodeUUID"`
-	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
-	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
-	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+	NodeName                   *string                           `json:"nodeName,omitempty"`
+	NodeUUID                   string                            `json:"nodeUUID"`
+	VerificationCheck          *ModelsVerificationCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsOobNodeDetailsResponse defines model for models.OobNodeDetailsResponse.
@@ -2716,22 +2761,22 @@ type ModelsOobNodeDetailsResponse struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS    *string            `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string            `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS *string            `json:"lastVerificationCheckTS,omitempty"`
-	Location                *ModelsGeoLocation `json:"location,omitempty"`
-	NodeGroup               *string            `json:"nodeGroup,omitempty"`
-	NodeGroupId             *string            `json:"nodeGroupId,omitempty"`
+	LastIntegrityCheckTS    *string         `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string         `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string         `json:"lastVerificationCheckTS,omitempty"`
+	Location                *ModelsLocation `json:"location,omitempty"`
+	NodeGroup               *string         `json:"nodeGroup,omitempty"`
+	NodeGroupId             *string         `json:"nodeGroupId,omitempty"`
 
 	// NodeName NodeName is the optional machine name configured on the OOB collector.
-	NodeName                   *string                        `json:"nodeName,omitempty"`
-	NodeUUID                   string                         `json:"nodeUUID"`
-	OobInventory               *ModelsOobInventory            `json:"oobInventory,omitempty"`
-	Tags                       *[]string                      `json:"tags,omitempty"`
-	UnhealthyComponentCount    *int                           `json:"unhealthyComponentCount,omitempty"`
-	VerificationCheck          *ModelsIntegrityCheck          `json:"verificationCheck,omitempty"`
-	VerificationCheckExtraInfo *ModelsIntegrityCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
-	VerificationCheckReason    *string                        `json:"verificationCheckReason,omitempty"`
+	NodeName                   *string                           `json:"nodeName,omitempty"`
+	NodeUUID                   string                            `json:"nodeUUID"`
+	OobInventory               *ModelsOobInventory               `json:"oobInventory,omitempty"`
+	Tags                       *[]string                         `json:"tags,omitempty"`
+	UnhealthyComponentCount    *int                              `json:"unhealthyComponentCount,omitempty"`
+	VerificationCheck          *ModelsVerificationCheck          `json:"verificationCheck,omitempty"`
+	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
 // ModelsOobNodesResponse defines model for models.OobNodesResponse.
@@ -2772,10 +2817,12 @@ type ModelsOobProcessor struct {
 	OdataId               *string `json:"odataId,omitempty"`
 	ProcessorArchitecture *string `json:"processorArchitecture,omitempty"`
 	ProcessorType         *string `json:"processorType,omitempty"`
+	SerialNumber          *string `json:"serialNumber,omitempty"`
 	Socket                *string `json:"socket,omitempty"`
 	StatusState           *string `json:"statusState,omitempty"`
 	TotalCores            *int    `json:"totalCores,omitempty"`
 	TotalThreads          *int    `json:"totalThreads,omitempty"`
+	Uuid                  *string `json:"uuid,omitempty"`
 }
 
 // ModelsOobSource defines model for models.OobSource.
@@ -2879,7 +2926,7 @@ type ModelsSimpleComputeZone struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation *ModelsGeoLocation     `json:"geoLocation,omitempty"`
 	Id          *string                `json:"id,omitempty"`
-	Location    *ModelsGeoLocation     `json:"location,omitempty"`
+	Location    *ModelsLocation        `json:"location,omitempty"`
 	Name        *string                `json:"name,omitempty"`
 	Type        *ModelsComputeZoneType `json:"type,omitempty"`
 	UpdatedAt   *string                `json:"updatedAt,omitempty"`
@@ -2971,7 +3018,7 @@ type ModelsUpdateComputeZoneRequest struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation *ModelsGeoLocation `json:"geoLocation,omitempty"`
 	Id          string             `json:"id"`
-	Location    *ModelsGeoLocation `json:"location,omitempty"`
+	Location    *ModelsLocation    `json:"location,omitempty"`
 	Type        *string            `json:"type,omitempty"`
 }
 
@@ -2996,6 +3043,18 @@ type ModelsUpdateNodeRemovalPolicyRequest struct {
 // ModelsUpdateRetentionPolicyRequest defines model for models.UpdateRetentionPolicyRequest.
 type ModelsUpdateRetentionPolicyRequest struct {
 	RetentionDays int `json:"retentionDays"`
+}
+
+// ModelsVerificationCheck defines model for models.VerificationCheck.
+type ModelsVerificationCheck string
+
+// ModelsVerificationCheckExtraInfo defines model for models.VerificationCheckExtraInfo.
+type ModelsVerificationCheckExtraInfo struct {
+	ErrorDetails             *string                     `json:"errorDetails,omitempty"`
+	GpuEvidencePresent       *bool                       `json:"gpuEvidencePresent,omitempty"`
+	GpuResults               *map[string]ModelsJWTClaims `json:"gpuResults,omitempty"`
+	NrasCallResult           *string                     `json:"nrasCallResult,omitempty"`
+	OverallAttestationResult *bool                       `json:"overallAttestationResult,omitempty"`
 }
 
 // ModelsXIDBurstDetail defines model for models.XIDBurstDetail.
@@ -3560,7 +3619,7 @@ type GetV1NodesParams struct {
 	PrivateIPs *[]string `form:"privateIPs,omitempty" json:"privateIPs,omitempty"`
 
 	// VerificationChecks Filter by verification-check status. Takes precedence when both verificationChecks and deprecated integrityChecks are supplied.
-	VerificationChecks *[]ModelsIntegrityCheck `form:"verificationChecks,omitempty" json:"verificationChecks,omitempty"`
+	VerificationChecks *[]ModelsVerificationCheck `form:"verificationChecks,omitempty" json:"verificationChecks,omitempty"`
 
 	// IntegrityChecks Deprecated: use verificationChecks.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set

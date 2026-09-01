@@ -4,6 +4,7 @@
 package nvfleetint
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -136,19 +137,12 @@ func (c *Client) SetNodeTags(ctx context.Context, nodeUUID string, opts SetNodeT
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	nodeUUID = strings.TrimSpace(nodeUUID)
-	if nodeUUID == "" {
-		return NodeTags{}, fmt.Errorf("node UUID is required")
-	}
-
-	tags, err := normalizeTags(opts.Tags)
+	nodeUUID, tags, payload, err := c.buildSetNodeTagsRequest(nodeUUID, opts)
 	if err != nil {
 		return NodeTags{}, err
 	}
 
-	resp, err := c.api.PutV1NodesNodeUuidTagsWithResponse(ctx, nodeUUID, fleetapi.ModelsSetNodeTagsRequest{
-		Tags: tags,
-	})
+	resp, err := c.api.PutV1NodesNodeUuidTagsWithBodyWithResponse(ctx, nodeUUID, "application/json", bytes.NewReader(payload))
 	if err != nil {
 		return NodeTags{}, err
 	}
@@ -181,6 +175,46 @@ func (c *Client) SetNodeTags(ctx context.Context, nodeUUID string, opts SetNodeT
 		Tags:     written,
 		RawJSON:  append([]byte(nil), resp.Body...),
 	}, nil
+}
+
+// PreviewSetNodeTags builds the request SetNodeTags would send, without
+// sending it. Building the body needs no network call, so there is no request
+// context to bound; both PreviewSetNodeTags and SetNodeTags build the body
+// through buildSetNodeTagsRequest, so a preview can never disagree with the
+// request that is actually issued.
+func (c *Client) PreviewSetNodeTags(_ context.Context, nodeUUID string, opts SetNodeTagsOptions) (RequestPreview, error) {
+	nodeUUID, _, payload, err := c.buildSetNodeTagsRequest(nodeUUID, opts)
+	if err != nil {
+		return RequestPreview{}, err
+	}
+
+	req, err := fleetapi.NewPutV1NodesNodeUuidTagsRequestWithBody(c.generatedServerURL(), nodeUUID, "application/json", bytes.NewReader(payload))
+	if err != nil {
+		return RequestPreview{}, err
+	}
+
+	return RequestPreview{Method: req.Method, URL: req.URL.String(), Body: payload}, nil
+}
+
+// Validates the tags and builds the JSON body SetNodeTags and
+// PreviewSetNodeTags both send.
+func (c *Client) buildSetNodeTagsRequest(nodeUUID string, opts SetNodeTagsOptions) (string, []string, []byte, error) {
+	nodeUUID = strings.TrimSpace(nodeUUID)
+	if nodeUUID == "" {
+		return "", nil, nil, fmt.Errorf("node UUID is required")
+	}
+
+	tags, err := normalizeTags(opts.Tags)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	payload, err := json.Marshal(fleetapi.ModelsSetNodeTagsRequest{Tags: tags})
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	return nodeUUID, tags, payload, nil
 }
 
 // Trims, validates, and rejects duplicates in a requested tag set. The result
