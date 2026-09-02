@@ -232,7 +232,8 @@ func newComputeZoneUpdateCmd() *cobra.Command {
 		Use:   "update <zone-id>",
 		Short: "Update a compute zone's type, contact, and location",
 		Args:  cmdutil.RequireSingleArg("compute zone ID"),
-		Long: `Update the metadata stored for one compute zone.
+		Long: `Update the metadata stored for one compute zone, identified by its ID (see
+"computezone list" for the ID column).
 
 Contact and location are structured values on the API, so each of their fields
 has its own flag. A flag that is not given leaves the stored value alone, and a
@@ -248,11 +249,11 @@ At least one field is required, and the command confirms before writing unless
 request that would be sent, without issuing it; it still reads the zone to
 build the merge, but skips both the confirmation prompt and the write, and
 exits 0.`,
-		Example: `  nvfleetint computezone update cz-1 --type datacenter
-  nvfleetint computezone update cz-1 --contact-email ops@example.com --contact-pic "Jane Doe"
-  nvfleetint computezone update cz-1 --location-city Baltimore --location-latitude 39.0458 --location-longitude -76.6413
-  nvfleetint computezone update cz-1 --location-region "" --yes
-  nvfleetint computezone update cz-1 --type datacenter --dry-run`,
+		Example: `  nvfleetint computezone update 3fa85f64-5717-4562-b3fc-2c963f66afa6 --type datacenter
+  nvfleetint computezone update 3fa85f64-5717-4562-b3fc-2c963f66afa6 --contact-email ops@example.com --contact-pic "Jane Doe"
+  nvfleetint computezone update 3fa85f64-5717-4562-b3fc-2c963f66afa6 --location-city Baltimore --location-latitude 39.0458 --location-longitude -76.6413
+  nvfleetint computezone update 3fa85f64-5717-4562-b3fc-2c963f66afa6 --location-region "" --yes
+  nvfleetint computezone update 3fa85f64-5717-4562-b3fc-2c963f66afa6 --type datacenter --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runComputeZoneUpdate(cmd, args[0], flags, cmdutil.ResolveCommon(cmd, common))
 		},
