@@ -378,7 +378,6 @@ func xidBurstDescribeRows(burst nvfleetint.XIDBurstDetails) [][]string {
 		{"NODE GROUP", clioutput.FormatNameAndID(burst.NodeGroup, burst.NodeGroupID)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(burst.ComputeZone, burst.ComputeZoneID)},
 		{"START TIME", clioutput.DisplayString(burst.StartTime)},
-		{"END TIME", clioutput.DisplayString(burst.EndTime)},
 		{"DURATION (S)", clioutput.FormatOptionalInt(burst.BurstDurationSeconds)},
 		{"XID COUNT", clioutput.FormatOptionalInt(burst.XIDCount)},
 		{"XIDS", formatXIDNumbers(burst.XIDNumbers)},
