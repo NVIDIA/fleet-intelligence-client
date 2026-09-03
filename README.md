@@ -119,12 +119,20 @@ Install and authenticate `nvfleetint` first. See
 
 ## Documentation
 
-- [CLI guide](docs/cli.md)
-- [Go SDK](docs/sdk.md)
-- [OpenAPI contract](api/openapi/openapi.yaml)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
+Full documentation is available at **[docs.nvidia.com/fleet-intel/client](https://docs.nvidia.com/fleet-intel/client)**, including the CLI guide, Go SDK reference, architecture overview, and agent skills.
 
-This project is available under the [Apache License 2.0](LICENSE). Open a
-[GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues) for
-support, and report vulnerabilities through the [security policy](SECURITY.md).
+For the broader Fleet Intelligence platform documentation, see [docs.nvidia.com/fleet-intel](https://docs.nvidia.com/fleet-intel).
+
+The [OpenAPI contract](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/api/openapi/openapi.yaml) is available in the repository.
+
+## Contributing
+
+See [CONTRIBUTING.md](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/CONTRIBUTING.md) for development setup and guidelines.
+
+## Security
+
+Report vulnerabilities through the [security policy](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/SECURITY.md).
+
+## License
+
+Apache License 2.0 - see [LICENSE](https://github.com/NVIDIA/fleet-intelligence-client/blob/main/LICENSE) for details. Open a [GitHub issue](https://github.com/NVIDIA/fleet-intelligence-client/issues) for support.
