@@ -1920,28 +1920,32 @@ paths:
             items:
               type: string
             type: array
-        - description: Filter by GPU type values. Empty means all GPU types
+        - description: Filter by GPU type values in the in-band view. Empty means
+            all GPU types; rejected for OOB and combined views.
           in: query
           name: gpuTypes
           schema:
             items:
               type: string
             type: array
-        - description: Filter by GPU count values. Empty means all GPU counts
+        - description: Filter by GPU count values in the in-band view. Empty means
+            all GPU counts; rejected for OOB and combined views.
           in: query
           name: gpuCounts
           schema:
             items:
               type: integer
             type: array
-        - description: Filter by public IP addresses. Empty means all public IPs
+        - description: Filter by public IP addresses in the in-band view. Empty means
+            all public IPs; rejected for OOB and combined views.
           in: query
           name: publicIPs
           schema:
             items:
               type: string
             type: array
-        - description: Filter by private IP addresses. Empty means all private IPs
+        - description: Filter by private IP addresses in the in-band view. Empty means
+            all private IPs; rejected for OOB and combined views.
           in: query
           name: privateIPs
           schema:
@@ -1989,21 +1993,21 @@ paths:
             type: string
         - description: Filter by the in-band OS hostname (case-insensitive partial
             match). Applies to the in-band view and to active in-band identities in
-            the combined basic view; ignored in the OOB view.
+            the combined basic view; rejected for agentType=oob.
           in: query
           name: hostname
           schema:
             type: string
         - description: Filter by the configured node name (case-insensitive partial
-            match). Applies only to the OOB view (agentType=oob); ignored in the in-band
-            and combined views.
+            match). Applies to the OOB view (agentType=oob) and the combined basic
+            view; rejected for the in-band view.
           in: query
           name: nodeName
           schema:
             type: string
         - description: Filter by BMC hostname (case-insensitive partial match). Applies
-            only to the OOB view (agentType=oob); ignored in the in-band and combined
-            views.
+            to the OOB view (agentType=oob) and the combined basic view; rejected
+            for the in-band view.
           in: query
           name: bmcHostname
           schema:
@@ -2012,10 +2016,10 @@ paths:
             a deprecated alias. Defaults to hostname (in-band view) or bmcHostname
             (OOB view). nodeName and bmcHostname apply only to OOB-capable views;
             the in-band-only GPU/kernel/driver/agentVersion keys apply only to the
-            in-band view — a key not valid for the selected view falls back to the
-            view's default. gpuFirmwareVersions pins nodes whose GPUs have mismatched
-            vbios versions to the top, then sorts the remaining (uniform) nodes by
-            that common vbios in the requested order.
+            in-band view. A key not valid for the selected agentType is rejected.
+            gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions
+            to the top, then sorts the remaining (uniform) nodes by that common vbios
+            in the requested order.
           in: query
           name: sortBy
           schema:
@@ -7320,9 +7324,6 @@ components:
         processorType:
           example: cpu
           type: string
-        serialNumber:
-          example: CPU123456789
-          type: string
         socket:
           example: CPU0
           type: string
@@ -7335,9 +7336,6 @@ components:
         totalThreads:
           example: 112
           type: integer
-        uuid:
-          example: 61a34398-33c9-4192-88db-7fe41c56eb47
-          type: string
       required:
         - id
       type: object
