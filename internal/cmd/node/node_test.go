@@ -117,7 +117,7 @@ func TestNodeListSortVerificationCheck(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json", "--sort-by", "verificationCheck"})
+	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", "verificationCheck"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -911,6 +911,9 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
 		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view supports sorting only by"},
+		{name: "filter without agent-type", args: []string{"node", "list", "--hostname", "gpu"}, want: "--agent-type is required when using --hostname"},
+		{name: "sort-by without agent-type", args: []string{"node", "list", "--sort-by", "hostname"}, want: "--agent-type is required when using --sort-by"},
+		{name: "order without agent-type", args: []string{"node", "list", "--order", "asc"}, want: "--agent-type is required when using --order"},
 	}
 
 	for _, tt := range tests {

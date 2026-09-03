@@ -47,11 +47,11 @@ nvfleetint nodegroup list --gpu-type H100 --sort-by health --order desc --output
 ### Nodes
 
 ```bash
-nvfleetint node list --health Degraded,Unhealthy --output json
-nvfleetint node list --agent-status Offline --output json
-nvfleetint node list --hostname gpu-node-7 --view basic --output json
-nvfleetint node list --compute-zone-names ord --output json
-nvfleetint node list --nodegroup-names training --output json
+nvfleetint node list --agent-type inband --health Degraded,Unhealthy --output json
+nvfleetint node list --agent-type inband --agent-status Offline --output json
+nvfleetint node list --agent-type inband --hostname gpu-node-7 --view basic --output json
+nvfleetint node list --agent-type inband --compute-zone-names ord --output json
+nvfleetint node list --agent-type inband --nodegroup-names training --output json
 nvfleetint node list --agent-type oob --bmc-hostname bmc-01 --output json
 nvfleetint node describe <node-uuid> --output json
 nvfleetint node describe <node-uuid> --agent-type oob --output json
@@ -62,7 +62,9 @@ Ask users for human-readable zone/group names, never IDs. Name filters are comma
 
 Detailed node list and describe query both agent views by default and return
 `{inband: ..., oob: ...}` in JSON. Use `--agent-type inband|oob` when only one
-view is needed. OOB list supports `--bmc-hostname`; OOB describe includes full
+view is needed; `node list` requires `--agent-type` whenever any filter or
+`--sort-by`/`--order` flag is set, since in-band and OOB nodes carry different
+fields. OOB list supports `--bmc-hostname`; OOB describe includes full
 inventory JSON and supports table sections `managers`, `systems`, `chassis`,
 and `firmware`. Node basic rejects health, agent, verification, and firmware
 filters and supports sorting by `hostname`, `nodeUUID`, or `bmcHostname`.
