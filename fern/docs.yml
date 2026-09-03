@@ -20,7 +20,7 @@ metadata:
 # or removed from docs/.
 navigation:
   - page: Overview
-    path: ../docs/overview.md
+    path: ../README.md
     slug: overview
   - page: Architecture
     path: ../docs/architecture.md
@@ -37,6 +37,9 @@ navigation:
   - page: Verify Releases
     path: ../docs/verify-releases.md
     slug: verify-releases
+  - page: Contributing
+    path: ../CONTRIBUTING.md
+    slug: contributing
 
 redirects:
   - source: "/fleet-intel/client/index.html"
