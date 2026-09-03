@@ -133,6 +133,8 @@ func newNodeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List nodes",
 		Long: "List nodes.\n\n" +
+			"--agent-type is required whenever any filter or --sort-by/--order flag is set, " +
+			"since in-band and OOB nodes carry different fields.\n\n" +
 			cmdutil.OptionsHelpNote("nvfleetint node options",
 				"--health", "--compute-zone-ids", "--nodegroup-ids",
 				"--gpu-type", "--agent-status", "--sort-by", "--order"),
@@ -202,6 +204,17 @@ func newNodeDescribeCmd() *cobra.Command {
 	return cmd
 }
 
+// Flags that filter or sort node list results. --agent-type is required
+// whenever any of these is set, because in-band and OOB nodes carry
+// different fields and a filter or sort spelled for one view silently
+// misbehaves against the other.
+var nodeListFilterAndSortFlagNames = []string{
+	"node-uuids", "health", "compute-zone-ids", "compute-zone-names",
+	"nodegroup-ids", "nodegroup-names", "gpu-type", "gpu-count",
+	"public-ip", "private-ip", "hostname", "node-name", "bmc-hostname",
+	"agent-status", "verification-check", "firmware-check", "sort-by", "order",
+}
+
 // Validates flags, calls the SDK, and writes output
 func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolved) error {
 	if err := cmdutil.ValidateListFlags(common); err != nil {
@@ -210,6 +223,13 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 	opts, err := nodeListOptions(flags)
 	if err != nil {
 		return err
+	}
+	if flags.agentType == "" {
+		for _, name := range nodeListFilterAndSortFlagNames {
+			if cmd.Flags().Changed(name) {
+				return fmt.Errorf("--agent-type is required when using --%s", name)
+			}
+		}
 	}
 
 	client, err := cmdutil.New(common)

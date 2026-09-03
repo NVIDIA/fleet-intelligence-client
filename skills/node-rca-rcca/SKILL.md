@@ -25,7 +25,7 @@ Require `connection` equal to `ok`. Pass the same explicit `--profile <profile>`
 For a hostname, search all identity pages and require one exact match. Ask the user to choose when a partial name returns multiple candidates.
 
 ```bash
-nvfleetint node list --hostname <hostname> --view basic --all \
+nvfleetint node list --hostname <hostname> --agent-type inband --view basic --all \
   --profile <profile> --output json
 ```
 
