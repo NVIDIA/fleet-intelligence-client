@@ -158,7 +158,7 @@ func TestListNodesBasic(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","nodeName":"machine-001","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -181,6 +181,9 @@ func TestListNodesBasic(t *testing.T) {
 	}
 	if got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10:443" {
 		t.Fatalf("unexpected basic BMC fields: %#v", got.Nodes[0])
+	}
+	if got.Nodes[0].NodeName != "machine-001" {
+		t.Fatalf("unexpected basic node name: %#v", got.Nodes[0])
 	}
 	if got.Nodes[0].GPUCount != nil || got.Nodes[0].Health != "" {
 		t.Fatalf("basic view should not set detail fields: %#v", got.Nodes[0])
@@ -244,6 +247,7 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"nodeUUID":"node-oob-1",
 			"hostname":"host-001",
+			"nodeName":"machine-001",
 			"agentType":"oob",
 			"bmcHostname":"bmc-001",
 			"bmcIP":"192.0.2.10",
@@ -272,7 +276,7 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got.AgentType != "oob" || got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
+	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
 	}
 	if got.OOBInventory == nil || got.OOBInventory.SchemaVersion != "inventory.v1alpha1" {
@@ -299,11 +303,11 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 func TestListNodesOOB(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		if query.Get("agentType") != "oob" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "bmcHostname" {
+		if query.Get("agentType") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "nodeName" {
 			t.Fatalf("unexpected query: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -313,13 +317,14 @@ func TestListNodesOOB(t *testing.T) {
 	}
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
 		AgentType:   NodeAgentTypeOOB,
+		NodeName:    "machine",
 		BMCHostname: "bmc",
-		SortBy:      NodeSortByBMCHostname,
+		SortBy:      NodeSortByNodeName,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}
-	if len(got.Nodes) != 1 || got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
+	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB nodes: %#v", got.Nodes)
 	}
 }
@@ -444,6 +449,7 @@ func TestNodeSortByValid(t *testing.T) {
 		NodeSortByKernelVersion,
 		NodeSortByGPUDriverVersion,
 		NodeSortByGPUFirmwareVersions,
+		NodeSortByNodeName,
 		NodeSortByBMCHostname,
 	}
 
@@ -504,7 +510,7 @@ func TestListNodesOptionsValidate(t *testing.T) {
 // Verifies basic view accepts only the columns it actually returns. The CLI and
 // the SDK used to answer this differently, so it is pinned on both sides.
 func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
-	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByUUID, NodeSortByBMCHostname}
+	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname}
 	rejected := []NodeSortBy{
 		NodeSortByHealthStatus, NodeSortByVerificationCheck, NodeSortByAgentStatus,
 		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone,

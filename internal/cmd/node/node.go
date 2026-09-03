@@ -23,7 +23,8 @@ import (
 
 // Lists the sort fields accepted by node list
 const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, " +
-	"verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, or gpuFirmwareVersions"
+	"verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, gpuFirmwareVersions, " +
+	"nodeName, or bmcHostname"
 
 // Stores local flag values for node list
 type nodeListFlags struct {
@@ -40,6 +41,7 @@ type nodeListFlags struct {
 	publicIP          string
 	privateIP         string
 	hostname          string
+	nodeName          string
 	bmcHostname       string
 	agentStatus       string
 	verificationCheck string
@@ -158,6 +160,7 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.publicIP, "public-ip", "", "Comma-separated public IP addresses to filter")
 	cmd.Flags().StringVar(&flags.privateIP, "private-ip", "", "Comma-separated private IP addresses to filter")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
+	cmd.Flags().StringVar(&flags.nodeName, "node-name", "", "Node name partial match (OOB view)")
 	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
 	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter")
 	cmd.Flags().StringVar(&flags.verificationCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
@@ -528,6 +531,7 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 		View:        nvfleetint.NodeView(flags.view),
 		AgentType:   nvfleetint.NodeAgentType(flags.agentType),
 		Hostname:    strings.TrimSpace(flags.hostname),
+		NodeName:    strings.TrimSpace(flags.nodeName),
 		BMCHostname: strings.TrimSpace(flags.bmcHostname),
 		SortBy:      nvfleetint.NodeSortBy(strings.TrimSpace(flags.sortBy)),
 		Order:       nvfleetint.NodeSortOrder(flags.order),
@@ -664,14 +668,14 @@ func writeNodeTable(
 	if nvfleetint.NodeView(view) == nvfleetint.NodeViewBasic {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "HOSTNAME", "BMC HOSTNAME", "BMC IP"},
+			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP"},
 			basicNodeRows(nodes),
 		)
 	}
 	if agentType == nvfleetint.NodeAgentTypeOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
@@ -681,7 +685,7 @@ func writeNodeTable(
 // Reports whether a node list contains OOB-view records
 func nodeListIsOOB(nodes []nvfleetint.Node) bool {
 	for _, node := range nodes {
-		if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.BMCHostname != "" || node.BMCIP != "" {
+		if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
 			return true
 		}
 	}
@@ -695,6 +699,7 @@ func basicNodeRows(nodes []nvfleetint.Node) [][]string {
 		rows = append(rows, []string{
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.Hostname),
+			clioutput.DisplayString(node.NodeName),
 			clioutput.DisplayString(node.BMCHostname),
 			clioutput.DisplayString(node.BMCIP),
 		})
@@ -728,6 +733,7 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 	for _, node := range nodes {
 		rows = append(rows, []string{
 			clioutput.DisplayString(node.UUID),
+			clioutput.DisplayString(node.NodeName),
 			clioutput.DisplayString(node.BMCHostname),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
@@ -854,6 +860,7 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
+		{"NODE NAME", clioutput.DisplayString(node.NodeName)},
 		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
