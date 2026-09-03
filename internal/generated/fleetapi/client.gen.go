@@ -2817,12 +2817,10 @@ type ModelsOobProcessor struct {
 	OdataId               *string `json:"odataId,omitempty"`
 	ProcessorArchitecture *string `json:"processorArchitecture,omitempty"`
 	ProcessorType         *string `json:"processorType,omitempty"`
-	SerialNumber          *string `json:"serialNumber,omitempty"`
 	Socket                *string `json:"socket,omitempty"`
 	StatusState           *string `json:"statusState,omitempty"`
 	TotalCores            *int    `json:"totalCores,omitempty"`
 	TotalThreads          *int    `json:"totalThreads,omitempty"`
-	Uuid                  *string `json:"uuid,omitempty"`
 }
 
 // ModelsOobSource defines model for models.OobSource.
@@ -3606,16 +3604,16 @@ type GetV1NodesParams struct {
 	// NodeGroupNames Filter by nodegroup names (partial match). Empty means all nodegroups
 	NodeGroupNames *[]string `form:"nodeGroupNames,omitempty" json:"nodeGroupNames,omitempty"`
 
-	// GpuTypes Filter by GPU type values. Empty means all GPU types
+	// GpuTypes Filter by GPU type values in the in-band view. Empty means all GPU types; rejected for OOB and combined views.
 	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
-	// GpuCounts Filter by GPU count values. Empty means all GPU counts
+	// GpuCounts Filter by GPU count values in the in-band view. Empty means all GPU counts; rejected for OOB and combined views.
 	GpuCounts *[]int `form:"gpuCounts,omitempty" json:"gpuCounts,omitempty"`
 
-	// PublicIPs Filter by public IP addresses. Empty means all public IPs
+	// PublicIPs Filter by public IP addresses in the in-band view. Empty means all public IPs; rejected for OOB and combined views.
 	PublicIPs *[]string `form:"publicIPs,omitempty" json:"publicIPs,omitempty"`
 
-	// PrivateIPs Filter by private IP addresses. Empty means all private IPs
+	// PrivateIPs Filter by private IP addresses in the in-band view. Empty means all private IPs; rejected for OOB and combined views.
 	PrivateIPs *[]string `form:"privateIPs,omitempty" json:"privateIPs,omitempty"`
 
 	// VerificationChecks Filter by verification-check status. Takes precedence when both verificationChecks and deprecated integrityChecks are supplied.
@@ -3634,16 +3632,16 @@ type GetV1NodesParams struct {
 	// Search Case-insensitive substring search across nodeUUID and source-appropriate node identity fields. Searches nodeUUID or hostname for agentType=inband; nodeUUID, nodeName, or bmcHostname for agentType=oob; and nodeUUID plus all three names for the combined basic view (view=basic with agentType omitted). Leading and trailing whitespace is ignored; blank means no search.
 	Search *string `form:"search,omitempty" json:"search,omitempty"`
 
-	// Hostname Filter by the in-band OS hostname (case-insensitive partial match). Applies to the in-band view and to active in-band identities in the combined basic view; ignored in the OOB view.
+	// Hostname Filter by the in-band OS hostname (case-insensitive partial match). Applies to the in-band view and to active in-band identities in the combined basic view; rejected for agentType=oob.
 	Hostname *string `form:"hostname,omitempty" json:"hostname,omitempty"`
 
-	// NodeName Filter by the configured node name (case-insensitive partial match). Applies only to the OOB view (agentType=oob); ignored in the in-band and combined views.
+	// NodeName Filter by the configured node name (case-insensitive partial match). Applies to the OOB view (agentType=oob) and the combined basic view; rejected for the in-band view.
 	NodeName *string `form:"nodeName,omitempty" json:"nodeName,omitempty"`
 
-	// BmcHostname Filter by BMC hostname (case-insensitive partial match). Applies only to the OOB view (agentType=oob); ignored in the in-band and combined views.
+	// BmcHostname Filter by BMC hostname (case-insensitive partial match). Applies to the OOB view (agentType=oob) and the combined basic view; rejected for the in-band view.
 	BmcHostname *string `form:"bmcHostname,omitempty" json:"bmcHostname,omitempty"`
 
-	// SortBy Field to sort by. Use verificationCheck; integrityCheck remains a deprecated alias. Defaults to hostname (in-band view) or bmcHostname (OOB view). nodeName and bmcHostname apply only to OOB-capable views; the in-band-only GPU/kernel/driver/agentVersion keys apply only to the in-band view — a key not valid for the selected view falls back to the view's default. gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions to the top, then sorts the remaining (uniform) nodes by that common vbios in the requested order.
+	// SortBy Field to sort by. Use verificationCheck; integrityCheck remains a deprecated alias. Defaults to hostname (in-band view) or bmcHostname (OOB view). nodeName and bmcHostname apply only to OOB-capable views; the in-band-only GPU/kernel/driver/agentVersion keys apply only to the in-band view. A key not valid for the selected agentType is rejected. gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions to the top, then sorts the remaining (uniform) nodes by that common vbios in the requested order.
 	SortBy *GetV1NodesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort order (asc, desc)

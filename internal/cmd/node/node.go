@@ -63,11 +63,19 @@ type nodeListOutput struct {
 type nodeListResult struct {
 	Inband *nodeListOutput
 	OOB    *nodeListOutput
+	// Set instead of the corresponding *nodeListOutput above when that leg's
+	// filters/sort-by aren't valid for its agent type (backend 400): the
+	// other, compatible leg still renders rather than failing the whole
+	// command.
+	InbandSkipReason string
+	OOBSkipReason    string
 }
 
 type combinedNodeListJSON struct {
-	Inband any `json:"inband"`
-	OOB    any `json:"oob"`
+	Inband      any    `json:"inband"`
+	OOB         any    `json:"oob"`
+	InbandError string `json:"inbandError,omitempty"`
+	OOBError    string `json:"oobError,omitempty"`
 }
 
 type nodeDescribeFlags struct {
@@ -262,14 +270,34 @@ func listNodeViews(
 	}()
 	waitGroup.Wait()
 
-	if inbandErr != nil {
+	// A 400 here means this leg's filters/sort-by don't apply to its agent
+	// type (e.g. --gpu-type against the OOB view) rather than a real
+	// failure, so it doesn't need to take down the whole command: the other,
+	// compatible leg still has something useful to show.
+	inbandBadFilter := apiErrorHasStatus(inbandErr, http.StatusBadRequest)
+	oobBadFilter := apiErrorHasStatus(oobErr, http.StatusBadRequest)
+
+	switch {
+	case inbandErr != nil && !inbandBadFilter:
 		return nodeListResult{}, fmt.Errorf("fetch in-band node list: %w", inbandErr)
-	}
-	if oobErr != nil {
+	case oobErr != nil && !oobBadFilter:
 		return nodeListResult{}, fmt.Errorf("fetch OOB node list: %w", oobErr)
+	case inbandBadFilter && oobBadFilter:
+		return nodeListResult{}, fmt.Errorf(
+			"these filters are not supported for either the in-band or OOB view: %w", inbandErr,
+		)
 	}
-	result.Inband = &inbandOutput
-	result.OOB = &oobOutput
+
+	if inbandBadFilter {
+		result.InbandSkipReason = inbandErr.Error()
+	} else {
+		result.Inband = &inbandOutput
+	}
+	if oobBadFilter {
+		result.OOBSkipReason = oobErr.Error()
+	} else {
+		result.OOB = &oobOutput
+	}
 	return result, nil
 }
 
@@ -289,7 +317,7 @@ func fetchNodeList(
 			func(page nvfleetint.NodesPage) { nodes = append(nodes, page.Nodes...) },
 		)
 		if err != nil {
-			return nodeListOutput{}, err
+			return nodeListOutput{}, friendlyNodeListError(err, opts)
 		}
 		return nodeListOutput{
 			Nodes:     nodes,
@@ -301,7 +329,7 @@ func fetchNodeList(
 
 	page, err := client.ListNodes(ctx, opts)
 	if err != nil {
-		return nodeListOutput{}, err
+		return nodeListOutput{}, friendlyNodeListError(err, opts)
 	}
 	return nodeListOutput{
 		Nodes:     page.Nodes,
@@ -424,6 +452,32 @@ func describeNodeResult(
 func apiErrorHasStatus(err error, statusCode int) bool {
 	var apiErr *nvfleetint.APIError
 	return errors.As(err, &apiErr) && apiErr.StatusCode == statusCode
+}
+
+// friendlyNodeListError rewrites a backend 400 from GET /v1/nodes into a
+// message that names the flag combination at fault. The API rejects a
+// --sort-by field or filter that isn't valid for the requested agent type or
+// view (e.g. --sort-by gpuType with --agent-type oob, since OOB nodes carry
+// no GPU inventory) but only reports it as a generic "Bad Request", so the
+// CLI adds that context here. The original *nvfleetint.APIError stays
+// wrapped via %w so exit codes and -o json error output are unaffected.
+func friendlyNodeListError(err error, opts nvfleetint.ListNodesOptions) error {
+	var apiErr *nvfleetint.APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusBadRequest {
+		return err
+	}
+
+	scope := "the basic view"
+	optionsCmd := "nvfleetint node options"
+	if opts.AgentType != "" {
+		scope = fmt.Sprintf("--agent-type %s", opts.AgentType)
+		optionsCmd = fmt.Sprintf("%s --agent-type %s", optionsCmd, opts.AgentType)
+	}
+
+	return fmt.Errorf(
+		"a filter or --sort-by value is not supported for %s; run %q to see what's accepted: %w",
+		scope, optionsCmd, err,
+	)
 }
 
 func writeNodeDescribeJSON(
@@ -608,18 +662,33 @@ func writeNodeListOutput(w io.Writer, common cmdutil.Resolved, result nodeListOu
 func writeNodeListResult(w io.Writer, common cmdutil.Resolved, result nodeListResult) error {
 	if common.Output == clioutput.FormatJSON {
 		return clioutput.WriteJSON(w, combinedNodeListJSON{
-			Inband: nodeListJSONValue(result.Inband),
-			OOB:    nodeListJSONValue(result.OOB),
+			Inband:      nodeListJSONValue(result.Inband),
+			OOB:         nodeListJSONValue(result.OOB),
+			InbandError: result.InbandSkipReason,
+			OOBError:    result.OOBSkipReason,
 		})
 	}
 
-	if result.Inband != nil {
-		if err := writeNodeListSection(w, "In-band", *result.Inband, false); err != nil {
+	wrote := false
+	switch {
+	case result.Inband != nil:
+		if err := writeNodeListSection(w, "In-band", *result.Inband, wrote); err != nil {
 			return err
 		}
+		wrote = true
+	case result.InbandSkipReason != "":
+		if err := writeNodeListSkipNote(w, "In-band", result.InbandSkipReason, wrote); err != nil {
+			return err
+		}
+		wrote = true
 	}
-	if result.OOB != nil {
-		if err := writeNodeListSection(w, "Out-of-band", *result.OOB, result.Inband != nil); err != nil {
+	switch {
+	case result.OOB != nil:
+		if err := writeNodeListSection(w, "Out-of-band", *result.OOB, wrote); err != nil {
+			return err
+		}
+	case result.OOBSkipReason != "":
+		if err := writeNodeListSkipNote(w, "Out-of-band", result.OOBSkipReason, wrote); err != nil {
 			return err
 		}
 	}
@@ -642,6 +711,19 @@ func writeNodeListSection(w io.Writer, title string, result nodeListOutput, lead
 		return clioutput.WritePaginationFooter(w, *result.Page)
 	}
 	return nil
+}
+
+// writeNodeListSkipNote reports why a view was left out of a combined node
+// list result instead of silently omitting it, so a filter/sort-by mismatch
+// with one agent type doesn't look like that view simply had no nodes.
+func writeNodeListSkipNote(w io.Writer, title, reason string, leadingNewline bool) error {
+	if leadingNewline {
+		if _, err := fmt.Fprintln(w); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintf(w, "%s: skipped (%s)\n", title, reason)
+	return err
 }
 
 func nodeListJSONValue(result *nodeListOutput) any {

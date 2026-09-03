@@ -338,6 +338,78 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 	}
 }
 
+// Verifies a filter valid only for one agent type (e.g. --gpu-type, which
+// OOB nodes carry no data for) doesn't fail the whole combined-view command:
+// the compatible leg still renders, and the rejected leg is reported as
+// skipped rather than silently dropped or erroring the command.
+func TestNodeListCombinedViewToleratesOneLegBadRequest(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Query().Get("agentType") {
+		case "inband":
+			_, _ = w.Write([]byte(`{
+				"nodes":[{"nodeUUID":"node-inband","hostname":"gpu-001","agentType":"inband","healthStatus":"Healthy"}],
+				"hasMore":false,"page":0,"pageSize":20,"total":1
+			}`))
+		case "oob":
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"Invalid filter parameters","details":"gpuTypes is rejected for the OOB view"}`))
+		default:
+			t.Errorf("unexpected agentType: %q", r.URL.Query().Get("agentType"))
+			http.Error(w, "missing agentType", http.StatusBadRequest)
+		}
+	}))
+	defer server.Close()
+
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "list", "--gpu-type", "H100"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command should succeed on the compatible leg alone: %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "node-inband") {
+		t.Fatalf("expected in-band results to render: %q", got)
+	}
+	if !strings.Contains(got, "Out-of-band: skipped") || !strings.Contains(got, "Invalid filter parameters") {
+		t.Fatalf("expected an OOB skip note naming the cause: %q", got)
+	}
+
+	out.Reset()
+	cmd = newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "list", "--gpu-type", "H100", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("JSON command should succeed on the compatible leg alone: %v", err)
+	}
+
+	var combined struct {
+		Inband struct {
+			Nodes []map[string]any `json:"nodes"`
+		} `json:"inband"`
+		OOB      any    `json:"oob"`
+		OOBError string `json:"oobError"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &combined); err != nil {
+		t.Fatalf("decode combined JSON: %v", err)
+	}
+	if len(combined.Inband.Nodes) != 1 || combined.Inband.Nodes[0]["nodeUUID"] != "node-inband" {
+		t.Fatalf("unexpected in-band JSON: %#v", combined.Inband)
+	}
+	if combined.OOB != nil {
+		t.Fatalf("expected oob to be omitted, got %#v", combined.OOB)
+	}
+	if combined.OOBError == "" {
+		t.Fatal("expected oobError to explain the skip")
+	}
+}
+
 // Verifies all-page JSON output
 func TestNodeListAllJSONMergesRawItems(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -925,6 +997,59 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("unexpected error: got %v want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+// Verifies a backend 400 for an agent-type-incompatible filter or sort field
+// (a combination the CLI cannot catch client-side) is rewritten with the
+// flag context instead of surfacing the raw "Bad Request".
+func TestNodeListRewritesIncompatibleFilterError(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "explicit agent type",
+			args: []string{"node", "list", "--agent-type", "oob", "--sort-by", "gpuType"},
+			want: `a filter or --sort-by value is not supported for --agent-type oob; ` +
+				`run "nvfleetint node options --agent-type oob" to see what's accepted`,
+		},
+		{
+			name: "basic view",
+			args: []string{"node", "list", "--view", "basic", "--gpu-type", "H100"},
+			want: `a filter or --sort-by value is not supported for the basic view; ` +
+				`run "nvfleetint node options" to see what's accepted`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"error":"Invalid filter parameters","details":"field not valid for this agentType"}`))
+			}))
+			defer server.Close()
+
+			cmdtest.SaveConfig(t, server.URL, "test-key")
+
+			cmd := newRootCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected error: got %v want to contain %q", err, tt.want)
+			}
+			if !strings.Contains(err.Error(), "Invalid filter parameters") {
+				t.Fatalf("expected backend message to remain in error chain: got %v", err)
 			}
 		})
 	}
