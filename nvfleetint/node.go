@@ -58,6 +58,7 @@ const (
 	NodeSortByKernelVersion       NodeSortBy = "kernelVersion"
 	NodeSortByGPUDriverVersion    NodeSortBy = "gpuDriverVersion"
 	NodeSortByGPUFirmwareVersions NodeSortBy = "gpuFirmwareVersions"
+	NodeSortByNodeName            NodeSortBy = "nodeName"
 	NodeSortByBMCHostname         NodeSortBy = "bmcHostname"
 
 	NodeOrderAsc  NodeSortOrder = "asc"
@@ -143,6 +144,7 @@ type ListNodesOptions struct {
 	PublicIPs          []string
 	PrivateIPs         []string
 	Hostname           string
+	NodeName           string
 	BMCHostname        string
 	AgentStatuses      []NodeAgentStatus
 	VerificationChecks []NodeVerificationCheck
@@ -179,6 +181,7 @@ func (page NodesPage) PageInfo() PageInfo {
 type Node struct {
 	UUID                       string                      `json:"nodeUUID"`
 	Hostname                   string                      `json:"hostname,omitempty"`
+	NodeName                   string                      `json:"nodeName,omitempty"`
 	AgentType                  string                      `json:"agentType,omitempty"`
 	AgentVersion               string                      `json:"agentVersion,omitempty"`
 	BMCHostname                string                      `json:"bmcHostname,omitempty"`
@@ -389,6 +392,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 		AgentType:        optionalEnum[fleetapi.GetV1NodesParamsAgentType](opts.AgentType),
 		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
 		Hostname:         optionalString(opts.Hostname),
+		NodeName:         optionalString(opts.NodeName),
 		BmcHostname:      optionalString(opts.BMCHostname),
 		ComputeZoneIds:   optionalSlice(opts.ComputeZoneIDs),
 		ComputeZoneNames: optionalSlice(opts.ComputeZoneNames),
@@ -552,7 +556,7 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 		// the value here is the backend spelling of a sort field a front end
 		// may name differently.
 		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
-			return "", errors.New("basic node view supports sorting only by hostname, nodeUUID, or bmcHostname")
+			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, or bmcHostname")
 		}
 	}
 
@@ -564,7 +568,7 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 // sort on.
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHostname, NodeSortByUUID, NodeSortByBMCHostname:
+	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname:
 		return true
 	default:
 		return false
@@ -680,6 +684,7 @@ func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 	return Node{
 		UUID:                       node.NodeUUID,
+		NodeName:                   stringValue(node.NodeName),
 		AgentType:                  stringValue(node.AgentType),
 		AgentVersion:               stringValue(node.AgentVersion),
 		BMCHostname:                stringValue(node.BmcHostname),
@@ -701,6 +706,7 @@ func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
 		UUID:        node.NodeUUID,
 		Hostname:    stringValue(node.Hostname),
+		NodeName:    stringValue(node.NodeName),
 		BMCHostname: stringValue(node.BmcHostname),
 		BMCIP:       stringValue(node.BmcIP),
 	}
@@ -750,6 +756,7 @@ func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) Nod
 	return NodeDetails{
 		Node: Node{
 			UUID:                       node.NodeUUID,
+			NodeName:                   stringValue(node.NodeName),
 			AgentType:                  stringValue(node.AgentType),
 			AgentVersion:               stringValue(node.AgentVersion),
 			BMCHostname:                stringValue(node.BmcHostname),

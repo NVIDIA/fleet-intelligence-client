@@ -154,6 +154,20 @@ func TestNodeListSortHelpUsesVerificationCheck(t *testing.T) {
 	}
 }
 
+func TestNodeListOptionsSupportsNodeName(t *testing.T) {
+	opts, err := nodeListOptions(nodeListFlags{
+		view:     "detail",
+		nodeName: " machine-001 ",
+		sortBy:   "nodeName",
+	})
+	if err != nil {
+		t.Fatalf("node list options failed: %v", err)
+	}
+	if opts.NodeName != "machine-001" || opts.SortBy != nvfleetint.NodeSortByNodeName {
+		t.Fatalf("unexpected node-name options: %#v", opts)
+	}
+}
+
 // Verifies table output and filter translation
 func TestNodeListTableFiltersAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -262,7 +276,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-oob","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
+				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		default:
@@ -285,7 +299,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"In-band", "node-inband", "gpu-001", "GPU TYPE",
-		"Out-of-band", "node-oob", "bmc-001", "BMC HOSTNAME",
+		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "bmc-001", "BMC HOSTNAME",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("combined table missing %q: %q", want, got)
@@ -812,7 +826,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 func TestWriteNodeBasicTable(t *testing.T) {
 	var out bytes.Buffer
 	err := writeNodeTable(&out, string(nvfleetint.NodeViewBasic), "", []nvfleetint.Node{
-		{UUID: "node-1", Hostname: "gpu-001", BMCHostname: "bmc-001", BMCIP: "192.0.2.10:443"},
+		{UUID: "node-1", Hostname: "gpu-001", NodeName: "machine-001", BMCHostname: "bmc-001", BMCIP: "192.0.2.10:443"},
 	})
 	if err != nil {
 		t.Fatalf("write table failed: %v", err)
@@ -820,8 +834,8 @@ func TestWriteNodeBasicTable(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"UUID", "HOSTNAME", "BMC HOSTNAME", "BMC IP",
-		"node-1", "gpu-001", "bmc-001", "192.0.2.10:443",
+		"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP",
+		"node-1", "gpu-001", "machine-001", "bmc-001", "192.0.2.10:443",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
@@ -833,17 +847,18 @@ func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 	rows := oobDetailNodeRows([]nvfleetint.Node{{
 		UUID:        "node-1",
 		Hostname:    "inband-hostname",
+		NodeName:    "machine-001",
 		BMCHostname: "bmc-001",
 		BMCIP:       "192.0.2.10:443",
 	}})
 
-	if len(rows) != 1 || len(rows[0]) != 8 {
+	if len(rows) != 1 || len(rows[0]) != 9 {
 		t.Fatalf("unexpected OOB row shape: %#v", rows)
 	}
 	if slices.Contains(rows[0], "inband-hostname") {
 		t.Fatalf("OOB row contains in-band hostname: %#v", rows[0])
 	}
-	if rows[0][1] != "bmc-001" || rows[0][2] != "192.0.2.10:443" {
+	if rows[0][1] != "machine-001" || rows[0][2] != "bmc-001" || rows[0][3] != "192.0.2.10:443" {
 		t.Fatalf("unexpected OOB identity columns: %#v", rows[0])
 	}
 }
@@ -853,6 +868,7 @@ func TestOOBNodeDescribeRowsOmitInbandFields(t *testing.T) {
 		Node: nvfleetint.Node{
 			UUID:          "node-1",
 			Hostname:      "inband-hostname",
+			NodeName:      "machine-001",
 			AgentType:     "oob",
 			GPUType:       "NVIDIA H100",
 			FirmwareCheck: "Passed",
@@ -872,6 +888,9 @@ func TestOOBNodeDescribeRowsOmitInbandFields(t *testing.T) {
 		if slices.Contains(labels, unwanted) {
 			t.Fatalf("OOB summary contains in-band field %q: %#v", unwanted, labels)
 		}
+	}
+	if !slices.Contains(labels, "NODE NAME") {
+		t.Fatalf("OOB summary missing node name: %#v", labels)
 	}
 }
 
