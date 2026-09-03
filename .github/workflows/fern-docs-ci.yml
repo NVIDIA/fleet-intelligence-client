@@ -22,6 +22,8 @@ on:
     paths:
       - 'docs/**'
       - 'fern/**'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
       - 'scripts/docs-fetch-versions.py'
       - '.github/workflows/fern-docs-ci.yml'
   workflow_dispatch: {}
