@@ -277,7 +277,7 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.NodeKind != OOBNodeKindNVSwitch ||
+	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.NodeKind != NodeKindNVSwitch ||
 		got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
 	}
@@ -326,7 +326,7 @@ func TestListNodesOOB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}
-	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].NodeKind != OOBNodeKindNVSwitch ||
+	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].NodeKind != NodeKindNVSwitch ||
 		got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB nodes: %#v", got.Nodes)
 	}

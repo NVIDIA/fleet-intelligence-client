@@ -54,7 +54,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 	}
 	inventory := &fleetapi.ModelsOobInventory{
 		CollectedAt:     "2026-08-17T12:00:00Z",
-		NodeKind:        testPointer(fleetapi.OobNodeKindNvSwitch),
+		NodeKind:        testPointer(fleetapi.NodeKindNvSwitch),
 		SchemaVersion:   "inventory.v1alpha1",
 		PrimarySystemId: testPointer("system-1"),
 		Source: fleetapi.ModelsOobSource{
@@ -113,7 +113,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 
 	got := oobInventoryFromGenerated(inventory)
 	if got == nil || got.CollectedAt != inventory.CollectedAt || got.SchemaVersion != inventory.SchemaVersion ||
-		got.NodeKind != OOBNodeKindNVSwitch || got.PrimarySystemID != "system-1" ||
+		got.NodeKind != NodeKindNVSwitch || got.PrimarySystemID != "system-1" ||
 		got.TargetError != "one target was unavailable" {
 		t.Fatalf("unexpected inventory metadata: %#v", got)
 	}

@@ -876,7 +876,7 @@ func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 		UUID:        "node-1",
 		Hostname:    "inband-hostname",
 		NodeName:    "machine-001",
-		NodeKind:    nvfleetint.OOBNodeKindNVSwitch,
+		NodeKind:    nvfleetint.NodeKindNVSwitch,
 		BMCHostname: "bmc-001",
 		BMCIP:       "192.0.2.10:443",
 	}})

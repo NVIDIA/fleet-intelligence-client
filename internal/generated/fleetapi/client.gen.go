@@ -347,6 +347,30 @@ func (e ModelsIntegrityCheck) Valid() bool {
 	}
 }
 
+// Defines values for ModelsNodeKind.
+const (
+	NodeKindCompute    ModelsNodeKind = "compute"
+	NodeKindNvSwitch   ModelsNodeKind = "nvswitch"
+	NodeKindPowerShelf ModelsNodeKind = "power_shelf"
+	NodeKindUnknown    ModelsNodeKind = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the ModelsNodeKind enum.
+func (e ModelsNodeKind) Valid() bool {
+	switch e {
+	case NodeKindCompute:
+		return true
+	case NodeKindNvSwitch:
+		return true
+	case NodeKindPowerShelf:
+		return true
+	case NodeKindUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelsNotificationChannel.
 const (
 	NotificationChannelEmail   ModelsNotificationChannel = "email"
@@ -389,30 +413,6 @@ func (e ModelsNotificationScopeType) Valid() bool {
 	case ScopeNodes:
 		return true
 	case ScopeTags:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ModelsOobNodeKind.
-const (
-	OobNodeKindCompute    ModelsOobNodeKind = "compute"
-	OobNodeKindNvSwitch   ModelsOobNodeKind = "nvswitch"
-	OobNodeKindPowerShelf ModelsOobNodeKind = "power_shelf"
-	OobNodeKindUnknown    ModelsOobNodeKind = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the ModelsOobNodeKind enum.
-func (e ModelsOobNodeKind) Valid() bool {
-	switch e {
-	case OobNodeKindCompute:
-		return true
-	case OobNodeKindNvSwitch:
-		return true
-	case OobNodeKindPowerShelf:
-		return true
-	case OobNodeKindUnknown:
 		return true
 	default:
 		return false
@@ -2491,6 +2491,9 @@ type ModelsNodeHistoryResponse struct {
 	Total    *int                      `json:"total,omitempty"`
 }
 
+// ModelsNodeKind defines model for models.NodeKind.
+type ModelsNodeKind string
+
 // ModelsNodeRemovalPolicy defines model for models.NodeRemovalPolicy.
 type ModelsNodeRemovalPolicy struct {
 	CreatedAt *string `json:"createdAt,omitempty"`
@@ -2659,7 +2662,7 @@ type ModelsOobInventory struct {
 	DomainErrors *[]ModelsOobDomainError `json:"domainErrors,omitempty"`
 	Firmware     *[]ModelsOobFirmware    `json:"firmware,omitempty"`
 	Managers     *[]ModelsOobManager     `json:"managers,omitempty"`
-	NodeKind     *ModelsOobNodeKind      `json:"nodeKind,omitempty"`
+	NodeKind     *ModelsNodeKind         `json:"nodeKind,omitempty"`
 
 	// PrimarySystemId Optional fields — omitted from the response when absent:
 	PrimarySystemId *string `json:"primarySystemId,omitempty"`
@@ -2795,11 +2798,11 @@ type ModelsOobNode struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS    *string            `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string            `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS *string            `json:"lastVerificationCheckTS,omitempty"`
-	NodeGroup               *string            `json:"nodeGroup,omitempty"`
-	NodeKind                *ModelsOobNodeKind `json:"nodeKind,omitempty"`
+	LastIntegrityCheckTS    *string         `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string         `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string         `json:"lastVerificationCheckTS,omitempty"`
+	NodeGroup               *string         `json:"nodeGroup,omitempty"`
+	NodeKind                *ModelsNodeKind `json:"nodeKind,omitempty"`
 
 	// NodeName NodeName is the optional machine name configured on the OOB collector.
 	NodeName                   *string                           `json:"nodeName,omitempty"`
@@ -2841,13 +2844,13 @@ type ModelsOobNodeDetailsResponse struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS    *string            `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string            `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS *string            `json:"lastVerificationCheckTS,omitempty"`
-	Location                *ModelsLocation    `json:"location,omitempty"`
-	NodeGroup               *string            `json:"nodeGroup,omitempty"`
-	NodeGroupId             *string            `json:"nodeGroupId,omitempty"`
-	NodeKind                *ModelsOobNodeKind `json:"nodeKind,omitempty"`
+	LastIntegrityCheckTS    *string         `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string         `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string         `json:"lastVerificationCheckTS,omitempty"`
+	Location                *ModelsLocation `json:"location,omitempty"`
+	NodeGroup               *string         `json:"nodeGroup,omitempty"`
+	NodeGroupId             *string         `json:"nodeGroupId,omitempty"`
+	NodeKind                *ModelsNodeKind `json:"nodeKind,omitempty"`
 
 	// NodeName NodeName is the optional machine name configured on the OOB collector.
 	NodeName                   *string                           `json:"nodeName,omitempty"`
@@ -2859,9 +2862,6 @@ type ModelsOobNodeDetailsResponse struct {
 	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
 	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
-
-// ModelsOobNodeKind defines model for models.OobNodeKind.
-type ModelsOobNodeKind string
 
 // ModelsOobNodesResponse defines model for models.OobNodesResponse.
 type ModelsOobNodesResponse struct {

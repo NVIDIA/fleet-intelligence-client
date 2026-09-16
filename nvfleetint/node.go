@@ -182,7 +182,7 @@ type Node struct {
 	UUID                       string                      `json:"nodeUUID"`
 	Hostname                   string                      `json:"hostname,omitempty"`
 	NodeName                   string                      `json:"nodeName,omitempty"`
-	NodeKind                   OOBNodeKind                 `json:"nodeKind,omitempty"`
+	NodeKind                   NodeKind                    `json:"nodeKind,omitempty"`
 	AgentType                  string                      `json:"agentType,omitempty"`
 	AgentVersion               string                      `json:"agentVersion,omitempty"`
 	BMCHostname                string                      `json:"bmcHostname,omitempty"`
@@ -686,7 +686,7 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 	return Node{
 		UUID:                       node.NodeUUID,
 		NodeName:                   stringValue(node.NodeName),
-		NodeKind:                   oobNodeKindFromGenerated(node.NodeKind),
+		NodeKind:                   nodeKindFromGenerated(node.NodeKind),
 		AgentType:                  stringValue(node.AgentType),
 		AgentVersion:               stringValue(node.AgentVersion),
 		BMCHostname:                stringValue(node.BmcHostname),
@@ -759,7 +759,7 @@ func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) Nod
 		Node: Node{
 			UUID:                       node.NodeUUID,
 			NodeName:                   stringValue(node.NodeName),
-			NodeKind:                   oobNodeKindFromGenerated(node.NodeKind),
+			NodeKind:                   nodeKindFromGenerated(node.NodeKind),
 			AgentType:                  stringValue(node.AgentType),
 			AgentVersion:               stringValue(node.AgentVersion),
 			BMCHostname:                stringValue(node.BmcHostname),

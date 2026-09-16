@@ -6934,7 +6934,7 @@ components:
           type: array
           uniqueItems: false
         nodeKind:
-          $ref: '#/components/schemas/models.OobNodeKind'
+          $ref: '#/components/schemas/models.NodeKind'
         primarySystemId:
           description: 'Optional fields — omitted from the response when absent:'
           example: DGX
@@ -7192,7 +7192,7 @@ components:
           example: node-group-1
           type: string
         nodeKind:
-          $ref: '#/components/schemas/models.OobNodeKind'
+          $ref: '#/components/schemas/models.NodeKind'
         nodeName:
           description: NodeName is the optional machine name configured on the OOB
             collector.
@@ -7281,7 +7281,7 @@ components:
           example: 550e8400-e29b-41d4-a716-446655440001
           type: string
         nodeKind:
-          $ref: '#/components/schemas/models.OobNodeKind'
+          $ref: '#/components/schemas/models.NodeKind'
         nodeName:
           description: NodeName is the optional machine name configured on the OOB
             collector.
@@ -7313,7 +7313,7 @@ components:
       required:
         - nodeUUID
       type: object
-    models.OobNodeKind:
+    models.NodeKind:
       default: unknown
       enum:
         - unknown
@@ -7323,10 +7323,10 @@ components:
       example: compute
       type: string
       x-enum-varnames:
-        - OobNodeKindUnknown
-        - OobNodeKindCompute
-        - OobNodeKindNvSwitch
-        - OobNodeKindPowerShelf
+        - NodeKindUnknown
+        - NodeKindCompute
+        - NodeKindNvSwitch
+        - NodeKindPowerShelf
     models.OobNodesResponse:
       properties:
         hasMore:

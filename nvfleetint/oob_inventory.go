@@ -5,14 +5,14 @@ package nvfleetint
 
 import "github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 
-// OOBNodeKind classifies the independently addressable node that produced an OOB inventory document.
-type OOBNodeKind string
+// NodeKind classifies the independently addressable node that produced an OOB inventory document.
+type NodeKind string
 
 const (
-	OOBNodeKindUnknown    OOBNodeKind = "unknown"
-	OOBNodeKindCompute    OOBNodeKind = "compute"
-	OOBNodeKindNVSwitch   OOBNodeKind = "nvswitch"
-	OOBNodeKindPowerShelf OOBNodeKind = "power_shelf"
+	NodeKindUnknown    NodeKind = "unknown"
+	NodeKindCompute    NodeKind = "compute"
+	NodeKindNVSwitch   NodeKind = "nvswitch"
+	NodeKindPowerShelf NodeKind = "power_shelf"
 )
 
 // Represents inventory collected out of band through a node's BMC
@@ -21,7 +21,7 @@ type OOBInventory struct {
 	CollectedAt     string           `json:"collectedAt"`
 	DomainErrors    []OOBDomainError `json:"domainErrors,omitempty"`
 	Firmware        []OOBFirmware    `json:"firmware,omitempty"`
-	NodeKind        OOBNodeKind      `json:"nodeKind,omitempty"`
+	NodeKind        NodeKind         `json:"nodeKind,omitempty"`
 	Managers        []OOBManager     `json:"managers,omitempty"`
 	PrimarySystemID string           `json:"primarySystemId,omitempty"`
 	SchemaVersion   string           `json:"schemaVersion"`
@@ -199,7 +199,7 @@ func oobInventoryFromGenerated(inventory *fleetapi.ModelsOobInventory) *OOBInven
 
 	out := &OOBInventory{
 		CollectedAt:     inventory.CollectedAt,
-		NodeKind:        oobNodeKindFromGenerated(inventory.NodeKind),
+		NodeKind:        nodeKindFromGenerated(inventory.NodeKind),
 		PrimarySystemID: stringValue(inventory.PrimarySystemId),
 		SchemaVersion:   inventory.SchemaVersion,
 		Source:          oobSourceFromGenerated(inventory.Source),
@@ -391,11 +391,11 @@ func oobFirmwareFromGenerated(firmware fleetapi.ModelsOobFirmware) OOBFirmware {
 	}
 }
 
-func oobNodeKindFromGenerated(kind *fleetapi.ModelsOobNodeKind) OOBNodeKind {
+func nodeKindFromGenerated(kind *fleetapi.ModelsNodeKind) NodeKind {
 	if kind == nil {
 		return ""
 	}
-	return OOBNodeKind(*kind)
+	return NodeKind(*kind)
 }
 
 func oobInventoryStatusFromGenerated(status *fleetapi.ModelsOobInventoryStatus) *OOBInventoryStatus {
