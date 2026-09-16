@@ -11,6 +11,23 @@ import (
 
 // Verifies generated OOB inventory models are mapped into the public SDK models.
 func TestOOBInventoryFromGenerated(t *testing.T) {
+	status := &fleetapi.ModelsOobInventoryStatus{
+		Health:       testPointer("Critical"),
+		HealthRollup: testPointer("Warning"),
+		State:        testPointer("Enabled"),
+		Conditions: &[]fleetapi.ModelsOobInventoryCondition{{
+			ConditionType: testPointer("Alert"),
+			Message:       testPointer("One or more errors were detected."),
+			MessageArgs:   &[]string{"GPU_SXM_1"},
+			MessageId:     "ResourceEvent.1.0.ResourceErrorsDetected",
+			OriginOfCondition: &fleetapi.ModelsOobInventoryReference{
+				OdataId: "/redfish/v1/Chassis/HGX_GPU_SXM_1",
+			},
+			Resolution: testPointer("Replace the failed component."),
+			Severity:   testPointer("Critical"),
+			Timestamp:  testPointer("2026-07-23T17:20:43Z"),
+		}},
+	}
 	processor := fleetapi.ModelsOobProcessor{
 		Id:             "cpu-1",
 		Model:          testPointer("Grace"),
@@ -23,6 +40,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 		ProcessorType:  testPointer("CPU"),
 		Socket:         testPointer("CPU0"),
 		InstructionSet: testPointer("ARM-A64"),
+		Status:         status,
 	}
 	pcieDevice := fleetapi.ModelsOobPcieDevice{
 		Id:              "gpu-1",
@@ -32,6 +50,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 		FirmwareVersion: testPointer("96.00.5E.00.01"),
 		StatusState:     testPointer("Enabled"),
 		Health:          testPointer("OK"),
+		Status:          status,
 	}
 	inventory := &fleetapi.ModelsOobInventory{
 		CollectedAt:     "2026-08-17T12:00:00Z",
@@ -54,11 +73,13 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 			MemoryGib:         testPointer(float32(2048)),
 			SecureBootEnabled: testPointer(true),
 			Processors:        &[]fleetapi.ModelsOobProcessor{processor},
+			Status:            status,
 		}},
 		Managers: &[]fleetapi.ModelsOobManager{{
 			Id:              "manager-1",
 			FirmwareVersion: testPointer("7.10.00.00"),
 			ManagerType:     testPointer("BMC"),
+			Status:          status,
 			StatusState:     testPointer("Enabled"),
 		}},
 		Chassis: &[]fleetapi.ModelsOobChassis{{
@@ -69,6 +90,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 				RackOffset: testPointer(12),
 			},
 			PcieDevices: &[]fleetapi.ModelsOobPcieDevice{pcieDevice},
+			Status:      status,
 		}},
 		Firmware: &[]fleetapi.ModelsOobFirmware{{
 			Id:           "bios-1",
@@ -78,6 +100,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 			StatusState:  testPointer("Enabled"),
 			Health:       testPointer("OK"),
 			HealthRollup: testPointer("Warning"),
+			Status:       status,
 		}},
 		DomainErrors: &[]fleetapi.ModelsOobDomainError{{
 			Domain:   "firmware",
@@ -89,7 +112,8 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 
 	got := oobInventoryFromGenerated(inventory)
 	if got == nil || got.CollectedAt != inventory.CollectedAt || got.SchemaVersion != inventory.SchemaVersion ||
-		got.PrimarySystemID != "system-1" || got.TargetError != "one target was unavailable" {
+		got.PrimarySystemID != "system-1" ||
+		got.TargetError != "one target was unavailable" {
 		t.Fatalf("unexpected inventory metadata: %#v", got)
 	}
 	if got.Source == nil || got.Source.Address != "192.0.2.10" || got.Source.Hostname != "bmc-1" ||
@@ -98,19 +122,25 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 	}
 	if len(got.Systems) != 1 || got.Systems[0].CPUCount == nil || *got.Systems[0].CPUCount != 2 ||
 		len(got.Systems[0].Processors) != 1 || got.Systems[0].Processors[0].TotalCores == nil ||
-		*got.Systems[0].Processors[0].TotalCores != 72 {
+		*got.Systems[0].Processors[0].TotalCores != 72 || got.Systems[0].Status == nil ||
+		got.Systems[0].Status.Health != "Critical" || len(got.Systems[0].Status.Conditions) != 1 ||
+		got.Systems[0].Status.Conditions[0].MessageID != "ResourceEvent.1.0.ResourceErrorsDetected" ||
+		got.Systems[0].Status.Conditions[0].OriginOfCondition == nil ||
+		got.Systems[0].Status.Conditions[0].OriginOfCondition.ODataID != "/redfish/v1/Chassis/HGX_GPU_SXM_1" {
 		t.Fatalf("unexpected systems: %#v", got.Systems)
 	}
-	if len(got.Managers) != 1 || got.Managers[0].FirmwareVersion != "7.10.00.00" {
+	if len(got.Managers) != 1 || got.Managers[0].FirmwareVersion != "7.10.00.00" ||
+		got.Managers[0].Status == nil {
 		t.Fatalf("unexpected managers: %#v", got.Managers)
 	}
 	if len(got.Chassis) != 1 || got.Chassis[0].Location == nil || got.Chassis[0].Location.RackOffset == nil ||
 		*got.Chassis[0].Location.RackOffset != 12 || len(got.Chassis[0].PCIeDevices) != 1 ||
-		got.Chassis[0].PCIeDevices[0].Model != "H100" {
+		got.Chassis[0].PCIeDevices[0].Model != "H100" || got.Chassis[0].Status == nil ||
+		got.Chassis[0].PCIeDevices[0].Status == nil {
 		t.Fatalf("unexpected chassis: %#v", got.Chassis)
 	}
 	if len(got.Firmware) != 1 || got.Firmware[0].ServiceID != "firmware-service-1" ||
-		got.Firmware[0].HealthRollup != "Warning" {
+		got.Firmware[0].HealthRollup != "Warning" || got.Firmware[0].Status == nil {
 		t.Fatalf("unexpected firmware: %#v", got.Firmware)
 	}
 	if len(got.DomainErrors) != 1 || got.DomainErrors[0].Domain != "firmware" ||
