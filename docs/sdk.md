@@ -58,9 +58,21 @@ node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNo
 	AgentType: nvfleetint.NodeAgentTypeOOB,
 })
 if err == nil && node.OOBInventory != nil {
-	fmt.Println(node.OOBInventory.SchemaVersion)
+	fmt.Println(node.OOBInventory.SchemaVersion, node.OOBInventory.NodeKind)
+	for _, system := range node.OOBInventory.Systems {
+		if system.Status != nil {
+			fmt.Println(system.Status.State, system.Status.Health, system.Status.Conditions)
+		}
+	}
 }
 ```
+
+OOB node list and detail results expose the inventory classification as
+`Node.NodeKind`.
+
+OOB inventory exposes node kinds (`unknown`, `compute`, `nvswitch`, and
+`power_shelf`) and nested Redfish status conditions on systems, processors,
+managers, chassis, PCIe devices, and firmware.
 
 `NewClient` requires an HTTPS API URL and an API key. Plain HTTP is accepted
 only for loopback addresses used during local development.

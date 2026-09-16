@@ -248,6 +248,7 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 			"nodeUUID":"node-oob-1",
 			"hostname":"host-001",
 			"nodeName":"machine-001",
+			"nodeKind":"nvswitch",
 			"agentType":"oob",
 			"bmcHostname":"bmc-001",
 			"bmcIP":"192.0.2.10",
@@ -276,7 +277,8 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
+	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.NodeKind != OOBNodeKindNVSwitch ||
+		got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
 	}
 	if got.OOBInventory == nil || got.OOBInventory.SchemaVersion != "inventory.v1alpha1" {
@@ -307,7 +309,7 @@ func TestListNodesOOB(t *testing.T) {
 			t.Fatalf("unexpected query: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -324,7 +326,8 @@ func TestListNodesOOB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}
-	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
+	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].NodeKind != OOBNodeKindNVSwitch ||
+		got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB nodes: %#v", got.Nodes)
 	}
 }

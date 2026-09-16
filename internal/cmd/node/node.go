@@ -695,7 +695,7 @@ func writeNodeTable(
 	if agentType == nvfleetint.NodeAgentTypeOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
@@ -754,6 +754,7 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 		rows = append(rows, []string{
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.NodeName),
+			clioutput.DisplayString(string(node.NodeKind)),
 			clioutput.DisplayString(node.BMCHostname),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
@@ -1014,6 +1015,7 @@ func oobInventorySummaryRows(inventory *nvfleetint.OOBInventory) [][]string {
 	return [][]string{
 		{"INVENTORY SCHEMA VERSION", clioutput.DisplayString(inventory.SchemaVersion)},
 		{"INVENTORY COLLECTED AT", clioutput.DisplayString(inventory.CollectedAt)},
+		{"NODE KIND", clioutput.DisplayString(string(inventory.NodeKind))},
 		{"INVENTORY PRIMARY SYSTEM", clioutput.DisplayString(inventory.PrimarySystemID)},
 		{"INVENTORY MANAGERS", strconv.Itoa(len(inventory.Managers))},
 		{"INVENTORY SYSTEMS", strconv.Itoa(len(inventory.Systems))},

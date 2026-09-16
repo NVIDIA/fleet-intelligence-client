@@ -154,7 +154,9 @@ top-level `inband` and `oob` objects. Use `--agent-type inband` or
 `--agent-type oob` to request one view. OOB lists accept `--bmc-hostname` and
 the `bmcHostname` sort key. OOB describe tables can be narrowed with
 `--section managers,systems,chassis,firmware`; `--section all` includes every
-inventory section. JSON describe output always includes the full inventory.
+inventory section. Both the out-of-band node list and summary table include
+`NODE KIND`. JSON describe output always includes
+the full inventory, including nested Redfish status and condition details.
 
 The investigative alert workflow is `summary → node → describe`: start with
 impacted-node counts, inspect one node's alerts, then retrieve one alert's

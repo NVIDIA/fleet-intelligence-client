@@ -5,18 +5,54 @@ package nvfleetint
 
 import "github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 
+// OOBNodeKind classifies the independently addressable node that produced an OOB inventory document.
+type OOBNodeKind string
+
+const (
+	OOBNodeKindUnknown    OOBNodeKind = "unknown"
+	OOBNodeKindCompute    OOBNodeKind = "compute"
+	OOBNodeKindNVSwitch   OOBNodeKind = "nvswitch"
+	OOBNodeKindPowerShelf OOBNodeKind = "power_shelf"
+)
+
 // Represents inventory collected out of band through a node's BMC
 type OOBInventory struct {
 	Chassis         []OOBChassis     `json:"chassis,omitempty"`
 	CollectedAt     string           `json:"collectedAt"`
 	DomainErrors    []OOBDomainError `json:"domainErrors,omitempty"`
 	Firmware        []OOBFirmware    `json:"firmware,omitempty"`
+	NodeKind        OOBNodeKind      `json:"nodeKind,omitempty"`
 	Managers        []OOBManager     `json:"managers,omitempty"`
 	PrimarySystemID string           `json:"primarySystemId,omitempty"`
 	SchemaVersion   string           `json:"schemaVersion"`
 	Source          *OOBSource       `json:"source,omitempty"`
 	Systems         []OOBSystem      `json:"systems,omitempty"`
 	TargetError     string           `json:"targetError,omitempty"`
+}
+
+// OOBInventoryStatus represents the Redfish status reported for an inventory resource.
+type OOBInventoryStatus struct {
+	Conditions   []OOBInventoryCondition `json:"conditions,omitempty"`
+	Health       string                  `json:"health,omitempty"`
+	HealthRollup string                  `json:"healthRollup,omitempty"`
+	State        string                  `json:"state,omitempty"`
+}
+
+// OOBInventoryCondition contains the details of one Redfish status condition.
+type OOBInventoryCondition struct {
+	ConditionType     string                 `json:"conditionType,omitempty"`
+	Message           string                 `json:"message,omitempty"`
+	MessageArgs       []string               `json:"messageArgs,omitempty"`
+	MessageID         string                 `json:"messageId"`
+	OriginOfCondition *OOBInventoryReference `json:"originOfCondition,omitempty"`
+	Resolution        string                 `json:"resolution,omitempty"`
+	Severity          string                 `json:"severity,omitempty"`
+	Timestamp         string                 `json:"timestamp,omitempty"`
+}
+
+// OOBInventoryReference identifies the Redfish resource associated with a condition.
+type OOBInventoryReference struct {
+	ODataID string `json:"@odata.id"`
 }
 
 // Identifies the source used to collect OOB inventory
@@ -32,57 +68,60 @@ type OOBSource struct {
 
 // Represents a computer system reported by the BMC
 type OOBSystem struct {
-	AssetTag          string         `json:"assetTag,omitempty"`
-	BIOSVersion       string         `json:"biosVersion,omitempty"`
-	CPUCoreCount      *int           `json:"cpuCoreCount,omitempty"`
-	CPUCount          *int           `json:"cpuCount,omitempty"`
-	CPUModel          string         `json:"cpuModel,omitempty"`
-	Health            string         `json:"health,omitempty"`
-	HealthRollup      string         `json:"healthRollup,omitempty"`
-	Hostname          string         `json:"hostName,omitempty"`
-	ID                string         `json:"id,omitempty"`
-	Manufacturer      string         `json:"manufacturer,omitempty"`
-	MemoryGiB         *float32       `json:"memoryGib,omitempty"`
-	Model             string         `json:"model,omitempty"`
-	ODataID           string         `json:"odataId,omitempty"`
-	PowerState        string         `json:"powerState,omitempty"`
-	Processors        []OOBProcessor `json:"processors,omitempty"`
-	SecureBootEnabled *bool          `json:"secureBootEnabled,omitempty"`
-	SerialNumber      string         `json:"serialNumber,omitempty"`
-	SKU               string         `json:"sku,omitempty"`
-	StatusState       string         `json:"statusState,omitempty"`
-	UUID              string         `json:"uuid,omitempty"`
+	AssetTag          string              `json:"assetTag,omitempty"`
+	BIOSVersion       string              `json:"biosVersion,omitempty"`
+	CPUCoreCount      *int                `json:"cpuCoreCount,omitempty"`
+	CPUCount          *int                `json:"cpuCount,omitempty"`
+	CPUModel          string              `json:"cpuModel,omitempty"`
+	Health            string              `json:"health,omitempty"`
+	HealthRollup      string              `json:"healthRollup,omitempty"`
+	Hostname          string              `json:"hostName,omitempty"`
+	ID                string              `json:"id,omitempty"`
+	Manufacturer      string              `json:"manufacturer,omitempty"`
+	MemoryGiB         *float32            `json:"memoryGib,omitempty"`
+	Model             string              `json:"model,omitempty"`
+	ODataID           string              `json:"odataId,omitempty"`
+	PowerState        string              `json:"powerState,omitempty"`
+	Processors        []OOBProcessor      `json:"processors,omitempty"`
+	SecureBootEnabled *bool               `json:"secureBootEnabled,omitempty"`
+	SerialNumber      string              `json:"serialNumber,omitempty"`
+	SKU               string              `json:"sku,omitempty"`
+	Status            *OOBInventoryStatus `json:"status,omitempty"`
+	StatusState       string              `json:"statusState,omitempty"`
+	UUID              string              `json:"uuid,omitempty"`
 }
 
 // Represents a processor reported by the BMC
 type OOBProcessor struct {
-	Health                string `json:"health,omitempty"`
-	HealthRollup          string `json:"healthRollup,omitempty"`
-	ID                    string `json:"id,omitempty"`
-	InstructionSet        string `json:"instructionSet,omitempty"`
-	Manufacturer          string `json:"manufacturer,omitempty"`
-	MaxSpeedMHz           *int   `json:"maxSpeedMhz,omitempty"`
-	Model                 string `json:"model,omitempty"`
-	ODataID               string `json:"odataId,omitempty"`
-	ProcessorArchitecture string `json:"processorArchitecture,omitempty"`
-	ProcessorType         string `json:"processorType,omitempty"`
-	Socket                string `json:"socket,omitempty"`
-	StatusState           string `json:"statusState,omitempty"`
-	TotalCores            *int   `json:"totalCores,omitempty"`
-	TotalThreads          *int   `json:"totalThreads,omitempty"`
+	Health                string              `json:"health,omitempty"`
+	HealthRollup          string              `json:"healthRollup,omitempty"`
+	ID                    string              `json:"id,omitempty"`
+	InstructionSet        string              `json:"instructionSet,omitempty"`
+	Manufacturer          string              `json:"manufacturer,omitempty"`
+	MaxSpeedMHz           *int                `json:"maxSpeedMhz,omitempty"`
+	Model                 string              `json:"model,omitempty"`
+	ODataID               string              `json:"odataId,omitempty"`
+	ProcessorArchitecture string              `json:"processorArchitecture,omitempty"`
+	ProcessorType         string              `json:"processorType,omitempty"`
+	Socket                string              `json:"socket,omitempty"`
+	Status                *OOBInventoryStatus `json:"status,omitempty"`
+	StatusState           string              `json:"statusState,omitempty"`
+	TotalCores            *int                `json:"totalCores,omitempty"`
+	TotalThreads          *int                `json:"totalThreads,omitempty"`
 }
 
 // Represents a BMC manager
 type OOBManager struct {
-	FirmwareVersion string `json:"firmwareVersion,omitempty"`
-	Health          string `json:"health,omitempty"`
-	HealthRollup    string `json:"healthRollup,omitempty"`
-	ID              string `json:"id,omitempty"`
-	ManagerType     string `json:"managerType,omitempty"`
-	Model           string `json:"model,omitempty"`
-	ODataID         string `json:"odataId,omitempty"`
-	StatusState     string `json:"statusState,omitempty"`
-	UUID            string `json:"uuid,omitempty"`
+	FirmwareVersion string              `json:"firmwareVersion,omitempty"`
+	Health          string              `json:"health,omitempty"`
+	HealthRollup    string              `json:"healthRollup,omitempty"`
+	ID              string              `json:"id,omitempty"`
+	ManagerType     string              `json:"managerType,omitempty"`
+	Model           string              `json:"model,omitempty"`
+	ODataID         string              `json:"odataId,omitempty"`
+	Status          *OOBInventoryStatus `json:"status,omitempty"`
+	StatusState     string              `json:"statusState,omitempty"`
+	UUID            string              `json:"uuid,omitempty"`
 }
 
 // Represents a chassis reported by the BMC
@@ -101,6 +140,7 @@ type OOBChassis struct {
 	PowerState   string              `json:"powerState,omitempty"`
 	SerialNumber string              `json:"serialNumber,omitempty"`
 	SKU          string              `json:"sku,omitempty"`
+	Status       *OOBInventoryStatus `json:"status,omitempty"`
 	StatusState  string              `json:"statusState,omitempty"`
 }
 
@@ -115,32 +155,34 @@ type OOBChassisLocation struct {
 
 // Represents a PCIe device reported by the BMC
 type OOBPCIeDevice struct {
-	DeviceType      string `json:"deviceType,omitempty"`
-	FirmwareVersion string `json:"firmwareVersion,omitempty"`
-	Health          string `json:"health,omitempty"`
-	HealthRollup    string `json:"healthRollup,omitempty"`
-	ID              string `json:"id,omitempty"`
-	Manufacturer    string `json:"manufacturer,omitempty"`
-	Model           string `json:"model,omitempty"`
-	ODataID         string `json:"odataId,omitempty"`
-	PartNumber      string `json:"partNumber,omitempty"`
-	SerialNumber    string `json:"serialNumber,omitempty"`
-	SKU             string `json:"sku,omitempty"`
-	StatusState     string `json:"statusState,omitempty"`
-	UUID            string `json:"uuid,omitempty"`
+	DeviceType      string              `json:"deviceType,omitempty"`
+	FirmwareVersion string              `json:"firmwareVersion,omitempty"`
+	Health          string              `json:"health,omitempty"`
+	HealthRollup    string              `json:"healthRollup,omitempty"`
+	ID              string              `json:"id,omitempty"`
+	Manufacturer    string              `json:"manufacturer,omitempty"`
+	Model           string              `json:"model,omitempty"`
+	ODataID         string              `json:"odataId,omitempty"`
+	PartNumber      string              `json:"partNumber,omitempty"`
+	SerialNumber    string              `json:"serialNumber,omitempty"`
+	SKU             string              `json:"sku,omitempty"`
+	Status          *OOBInventoryStatus `json:"status,omitempty"`
+	StatusState     string              `json:"statusState,omitempty"`
+	UUID            string              `json:"uuid,omitempty"`
 }
 
 // Represents a firmware inventory entry reported by the BMC
 type OOBFirmware struct {
-	Health       string `json:"health,omitempty"`
-	HealthRollup string `json:"healthRollup,omitempty"`
-	ID           string `json:"id,omitempty"`
-	Name         string `json:"name,omitempty"`
-	ODataID      string `json:"odataId,omitempty"`
-	ReleaseDate  string `json:"releaseDate,omitempty"`
-	ServiceID    string `json:"serviceId,omitempty"`
-	StatusState  string `json:"statusState,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Health       string              `json:"health,omitempty"`
+	HealthRollup string              `json:"healthRollup,omitempty"`
+	ID           string              `json:"id,omitempty"`
+	Name         string              `json:"name,omitempty"`
+	ODataID      string              `json:"odataId,omitempty"`
+	ReleaseDate  string              `json:"releaseDate,omitempty"`
+	ServiceID    string              `json:"serviceId,omitempty"`
+	Status       *OOBInventoryStatus `json:"status,omitempty"`
+	StatusState  string              `json:"statusState,omitempty"`
+	Version      string              `json:"version,omitempty"`
 }
 
 // Represents a collection error scoped to one OOB inventory domain
@@ -157,6 +199,7 @@ func oobInventoryFromGenerated(inventory *fleetapi.ModelsOobInventory) *OOBInven
 
 	out := &OOBInventory{
 		CollectedAt:     inventory.CollectedAt,
+		NodeKind:        oobNodeKindFromGenerated(inventory.NodeKind),
 		PrimarySystemID: stringValue(inventory.PrimarySystemId),
 		SchemaVersion:   inventory.SchemaVersion,
 		Source:          oobSourceFromGenerated(inventory.Source),
@@ -226,6 +269,7 @@ func oobSystemFromGenerated(system fleetapi.ModelsOobSystem) OOBSystem {
 		SecureBootEnabled: cloneBool(system.SecureBootEnabled),
 		SerialNumber:      stringValue(system.SerialNumber),
 		SKU:               stringValue(system.Sku),
+		Status:            oobInventoryStatusFromGenerated(system.Status),
 		StatusState:       stringValue(system.StatusState),
 		UUID:              stringValue(system.Uuid),
 	}
@@ -251,6 +295,7 @@ func oobProcessorFromGenerated(processor fleetapi.ModelsOobProcessor) OOBProcess
 		ProcessorArchitecture: stringValue(processor.ProcessorArchitecture),
 		ProcessorType:         stringValue(processor.ProcessorType),
 		Socket:                stringValue(processor.Socket),
+		Status:                oobInventoryStatusFromGenerated(processor.Status),
 		StatusState:           stringValue(processor.StatusState),
 		TotalCores:            cloneInt(processor.TotalCores),
 		TotalThreads:          cloneInt(processor.TotalThreads),
@@ -266,6 +311,7 @@ func oobManagerFromGenerated(manager fleetapi.ModelsOobManager) OOBManager {
 		ManagerType:     stringValue(manager.ManagerType),
 		Model:           stringValue(manager.Model),
 		ODataID:         stringValue(manager.OdataId),
+		Status:          oobInventoryStatusFromGenerated(manager.Status),
 		StatusState:     stringValue(manager.StatusState),
 		UUID:            stringValue(manager.Uuid),
 	}
@@ -286,6 +332,7 @@ func oobChassisFromGenerated(chassis fleetapi.ModelsOobChassis) OOBChassis {
 		PowerState:   stringValue(chassis.PowerState),
 		SerialNumber: stringValue(chassis.SerialNumber),
 		SKU:          stringValue(chassis.Sku),
+		Status:       oobInventoryStatusFromGenerated(chassis.Status),
 		StatusState:  stringValue(chassis.StatusState),
 	}
 	if chassis.PcieDevices != nil {
@@ -323,6 +370,7 @@ func oobPCIeDeviceFromGenerated(device fleetapi.ModelsOobPcieDevice) OOBPCIeDevi
 		PartNumber:      stringValue(device.PartNumber),
 		SerialNumber:    stringValue(device.SerialNumber),
 		SKU:             stringValue(device.Sku),
+		Status:          oobInventoryStatusFromGenerated(device.Status),
 		StatusState:     stringValue(device.StatusState),
 		UUID:            stringValue(device.Uuid),
 	}
@@ -337,9 +385,53 @@ func oobFirmwareFromGenerated(firmware fleetapi.ModelsOobFirmware) OOBFirmware {
 		ODataID:      stringValue(firmware.OdataId),
 		ReleaseDate:  stringValue(firmware.ReleaseDate),
 		ServiceID:    firmware.ServiceId,
+		Status:       oobInventoryStatusFromGenerated(firmware.Status),
 		StatusState:  stringValue(firmware.StatusState),
 		Version:      stringValue(firmware.Version),
 	}
+}
+
+func oobNodeKindFromGenerated(kind *fleetapi.ModelsOobNodeKind) OOBNodeKind {
+	if kind == nil {
+		return ""
+	}
+	return OOBNodeKind(*kind)
+}
+
+func oobInventoryStatusFromGenerated(status *fleetapi.ModelsOobInventoryStatus) *OOBInventoryStatus {
+	if status == nil {
+		return nil
+	}
+	out := &OOBInventoryStatus{
+		Health:       stringValue(status.Health),
+		HealthRollup: stringValue(status.HealthRollup),
+		State:        stringValue(status.State),
+	}
+	if status.Conditions != nil {
+		out.Conditions = make([]OOBInventoryCondition, 0, len(*status.Conditions))
+		for _, condition := range *status.Conditions {
+			out.Conditions = append(out.Conditions, oobInventoryConditionFromGenerated(condition))
+		}
+	}
+	return out
+}
+
+func oobInventoryConditionFromGenerated(condition fleetapi.ModelsOobInventoryCondition) OOBInventoryCondition {
+	out := OOBInventoryCondition{
+		ConditionType: stringValue(condition.ConditionType),
+		Message:       stringValue(condition.Message),
+		MessageID:     condition.MessageId,
+		Resolution:    stringValue(condition.Resolution),
+		Severity:      stringValue(condition.Severity),
+		Timestamp:     stringValue(condition.Timestamp),
+	}
+	if condition.MessageArgs != nil {
+		out.MessageArgs = append([]string(nil), (*condition.MessageArgs)...)
+	}
+	if condition.OriginOfCondition != nil {
+		out.OriginOfCondition = &OOBInventoryReference{ODataID: condition.OriginOfCondition.OdataId}
+	}
+	return out
 }
 
 func oobDomainErrorFromGenerated(domainError fleetapi.ModelsOobDomainError) OOBDomainError {

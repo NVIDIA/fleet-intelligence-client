@@ -6783,11 +6783,15 @@ components:
           example: module
           type: string
         health:
+          description: 'Deprecated: use status.health.'
           example: OK
           type: string
+          deprecated: true
         healthRollup:
+          description: 'Deprecated: use status.healthRollup.'
           example: OK
           type: string
+          deprecated: true
         id:
           example: HGX_GPU_SXM_1
           type: string
@@ -6819,9 +6823,13 @@ components:
         sku:
           example: '0x37040020'
           type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
         statusState:
+          description: 'Deprecated: use status.state.'
           example: Enabled
           type: string
+          deprecated: true
       required:
         - id
       type: object
@@ -6861,11 +6869,15 @@ components:
     models.OobFirmware:
       properties:
         health:
+          description: 'Deprecated: use status.health.'
           example: OK
           type: string
+          deprecated: true
         healthRollup:
+          description: 'Deprecated: use status.healthRollup.'
           example: OK
           type: string
+          deprecated: true
         id:
           example: HGX_FW_GPU_SXM_1
           type: string
@@ -6881,9 +6893,13 @@ components:
         serviceId:
           example: FirmwareInventory
           type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
         statusState:
+          description: 'Deprecated: use status.state.'
           example: Enabled
           type: string
+          deprecated: true
         version:
           example: 96.00.DA.00.0C
           type: string
@@ -6917,6 +6933,8 @@ components:
             $ref: '#/components/schemas/models.OobManager'
           type: array
           uniqueItems: false
+        nodeKind:
+          $ref: '#/components/schemas/models.OobNodeKind'
         primarySystemId:
           description: 'Optional fields — omitted from the response when absent:'
           example: DGX
@@ -6945,6 +6963,36 @@ components:
         - collectedAt
         - schemaVersion
         - source
+      type: object
+    models.OobInventoryCondition:
+      properties:
+        conditionType:
+          example: Alert
+          type: string
+        message:
+          example: One or more errors were detected.
+          type: string
+        messageArgs:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        messageId:
+          example: ResourceEvent.1.0.ResourceErrorsDetected
+          type: string
+        originOfCondition:
+          $ref: '#/components/schemas/models.OobInventoryReference'
+        resolution:
+          example: Review the related resource and replace the failed component.
+          type: string
+        severity:
+          example: Critical
+          type: string
+        timestamp:
+          example: '2026-07-23T17:20:43Z'
+          type: string
+      required:
+        - messageId
       type: object
     models.OobInventoryNode:
       properties:
@@ -7010,6 +7058,14 @@ components:
           example: 'Attestation verification unavailable: SDK error'
           type: string
       type: object
+    models.OobInventoryReference:
+      properties:
+        '@odata.id':
+          example: /redfish/v1/Chassis/HGX_GPU_SXM_1
+          type: string
+      required:
+        - '@odata.id'
+      type: object
     models.OobInventoryReportResponse:
       properties:
         hasMore:
@@ -7030,17 +7086,38 @@ components:
           example: 100
           type: integer
       type: object
+    models.OobInventoryStatus:
+      properties:
+        conditions:
+          items:
+            $ref: '#/components/schemas/models.OobInventoryCondition'
+          type: array
+          uniqueItems: false
+        health:
+          example: OK
+          type: string
+        healthRollup:
+          example: Warning
+          type: string
+        state:
+          example: Enabled
+          type: string
+      type: object
     models.OobManager:
       properties:
         firmwareVersion:
           example: 26.03.03
           type: string
         health:
+          description: 'Deprecated: use status.health.'
           example: OK
           type: string
+          deprecated: true
         healthRollup:
+          description: 'Deprecated: use status.healthRollup.'
           example: OK
           type: string
+          deprecated: true
         id:
           example: BMC
           type: string
@@ -7053,9 +7130,13 @@ components:
         odataId:
           example: /redfish/v1/Managers/BMC
           type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
         statusState:
+          description: 'Deprecated: use status.state.'
           example: Enabled
           type: string
+          deprecated: true
         uuid:
           example: 6b00139a-bfde-1000-02b9-f2e9fb35ff5c
           type: string
@@ -7110,6 +7191,8 @@ components:
         nodeGroup:
           example: node-group-1
           type: string
+        nodeKind:
+          $ref: '#/components/schemas/models.OobNodeKind'
         nodeName:
           description: NodeName is the optional machine name configured on the OOB
             collector.
@@ -7197,6 +7280,8 @@ components:
         nodeGroupId:
           example: 550e8400-e29b-41d4-a716-446655440001
           type: string
+        nodeKind:
+          $ref: '#/components/schemas/models.OobNodeKind'
         nodeName:
           description: NodeName is the optional machine name configured on the OOB
             collector.
@@ -7228,6 +7313,20 @@ components:
       required:
         - nodeUUID
       type: object
+    models.OobNodeKind:
+      default: unknown
+      enum:
+        - unknown
+        - compute
+        - nvswitch
+        - power_shelf
+      example: compute
+      type: string
+      x-enum-varnames:
+        - OobNodeKindUnknown
+        - OobNodeKindCompute
+        - OobNodeKindNvSwitch
+        - OobNodeKindPowerShelf
     models.OobNodesResponse:
       properties:
         hasMore:
@@ -7257,11 +7356,15 @@ components:
           example: 96.00.DA.00.0C
           type: string
         health:
+          description: 'Deprecated: use status.health.'
           example: OK
           type: string
+          deprecated: true
         healthRollup:
+          description: 'Deprecated: use status.healthRollup.'
           example: OK
           type: string
+          deprecated: true
         id:
           example: GPU_SXM_1
           type: string
@@ -7283,9 +7386,13 @@ components:
         sku:
           example: '0x37040020'
           type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
         statusState:
+          description: 'Deprecated: use status.state.'
           example: Enabled
           type: string
+          deprecated: true
         uuid:
           example: beea8cdf-7b7d-035c-ed07-360e311fcbe1
           type: string
@@ -7295,11 +7402,15 @@ components:
     models.OobProcessor:
       properties:
         health:
+          description: 'Deprecated: use status.health.'
           example: OK
           type: string
+          deprecated: true
         healthRollup:
+          description: 'Deprecated: use status.healthRollup.'
           example: OK
           type: string
+          deprecated: true
         id:
           example: DevType1_CPU0
           type: string
@@ -7327,9 +7438,13 @@ components:
         socket:
           example: CPU0
           type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
         statusState:
+          description: 'Deprecated: use status.state.'
           example: Enabled
           type: string
+          deprecated: true
         totalCores:
           example: 56
           type: integer
@@ -7385,11 +7500,15 @@ components:
           example: Intel(R) Xeon(R) Platinum 8480CL
           type: string
         health:
+          description: 'Deprecated: use status.health.'
           example: OK
           type: string
+          deprecated: true
         healthRollup:
+          description: 'Deprecated: use status.healthRollup.'
           example: OK
           type: string
+          deprecated: true
         hostName:
           example: dgx-01
           type: string
@@ -7425,9 +7544,13 @@ components:
         sku:
           example: 920-24387-2540-000
           type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
         statusState:
+          description: 'Deprecated: use status.state.'
           example: Enabled
           type: string
+          deprecated: true
         uuid:
           example: 936672d4-bfde-1000-02bc-5cff35fbe9f2
           type: string

@@ -276,7 +276,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
+				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		default:
@@ -299,7 +299,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"In-band", "node-inband", "gpu-001", "GPU TYPE",
-		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "bmc-001", "BMC HOSTNAME",
+		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "nvswitch", "NODE KIND", "bmc-001", "BMC HOSTNAME",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("combined table missing %q: %q", want, got)
@@ -330,7 +330,8 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 	if len(combined.Inband.Nodes) != 1 || combined.Inband.Nodes[0]["nodeUUID"] != "node-inband" {
 		t.Fatalf("unexpected in-band JSON: %#v", combined.Inband)
 	}
-	if len(combined.OOB.Nodes) != 1 || combined.OOB.Nodes[0]["nodeUUID"] != "node-oob" {
+	if len(combined.OOB.Nodes) != 1 || combined.OOB.Nodes[0]["nodeUUID"] != "node-oob" ||
+		combined.OOB.Nodes[0]["nodeKind"] != "nvswitch" {
 		t.Fatalf("unexpected OOB JSON: %#v", combined.OOB)
 	}
 	if combined.Inband.Page != 1 || combined.OOB.Page != 1 {
@@ -656,9 +657,10 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
+				"nodeKind":"nvswitch",
 				"schemaVersion":"inventory.v1alpha1",
 				"source":{"sourceType":"redfish","vendor":"Dell","address":"192.0.2.10:443","mac":"00:11:22:33:44:55","redfishVersion":"1.17.0"},
-				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","statusState":"Enabled","health":"OK","healthRollup":"Warning","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"statusState":"Enabled","health":"OK","healthRollup":"OK"},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
+				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning","conditions":[{"messageId":"ResourceEvent.1.0.ResourceErrorsDetected","severity":"Critical","message":"nested status condition"}]},"statusState":"Enabled","health":"OK","healthRollup":"Warning","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"statusState":"Enabled","health":"OK","healthRollup":"OK"},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
 				"managers":[{"id":"iDRAC.Embedded.1","uuid":"manager-uuid","model":"iDRAC","managerType":"bmc","firmwareVersion":"7.10.00.00","statusState":"Enabled","health":"OK","healthRollup":"OK"}],
 				"chassis":[{"id":"System.Embedded.1","chassisType":"rack_mount","manufacturer":"Dell","model":"XE9680","sku":"sku-1","serialNumber":"serial-1","partNumber":"part-1","assetTag":"asset-1","powerState":"on","statusState":"Enabled","health":"OK","healthRollup":"Warning","pcieDevices":[{"id":"GPU.Slot.1","uuid":"gpu-uuid","deviceType":"single_function","manufacturer":"NVIDIA","model":"NVIDIA H100","sku":"gpu-sku","serialNumber":"gpu-serial","partNumber":"gpu-part","firmwareVersion":"96.00.00","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
 				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","releaseDate":"2026-01-01","statusState":"Enabled","health":"OK","healthRollup":"Warning"}],
@@ -684,6 +686,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 		"FIELD", "VALUE",
 		"BMC HOSTNAME", "bmc-001",
 		"INVENTORY SCHEMA VERSION", "inventory.v1alpha1",
+		"NODE KIND", "nvswitch",
 		"SOURCE ADDRESS", "192.0.2.10:443", "SOURCE MAC", "00:11:22:33:44:55", "SOURCE VENDOR", "Dell",
 		"INVENTORY DOMAIN ERROR 1", "storage: Disk.1: collection failed",
 	} {
@@ -694,6 +697,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	for _, unwanted := range []string{
 		"\nHOSTNAME ", "\nAGENT TYPE ", "\nGPU TYPE ", "\nGPU COUNT ",
 		"\nFIRMWARE CHECK ", "\nPUBLIC IP ", "\nPRIVATE IP ",
+		"nested status condition", "ResourceEvent.1.0.ResourceErrorsDetected",
 	} {
 		if strings.Contains(got, unwanted) {
 			t.Fatalf("OOB summary unexpectedly contains %q: %q", unwanted, got)
@@ -756,6 +760,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	got = out.String()
 	for _, want := range []string{
 		"FIELD", "INVENTORY SCHEMA VERSION", "SOURCE ADDRESS",
+		"NODE KIND", "nvswitch",
 		"\nManagers\n", "iDRAC.Embedded.1", "manager-uuid", "7.10.00.00",
 		"\nSystems\n", "\nCPUs\n", "\nGPUs\n",
 		"\nChassis\n", "\nPCIe Devices\n",
@@ -763,6 +768,29 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("all sections output missing %q: %q", want, got)
+		}
+	}
+	if strings.Contains(got, "nested status condition") ||
+		strings.Contains(got, "ResourceEvent.1.0.ResourceErrorsDetected") {
+		t.Fatalf("table output unexpectedly contains nested status details: %q", got)
+	}
+
+	out.Reset()
+	cmd = newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--agent-type", "oob", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("JSON command failed: %v", err)
+	}
+	jsonOutput := out.String()
+	for _, want := range []string{
+		`"nodeKind":"nvswitch"`,
+		`"status":{`,
+		`"messageId":"ResourceEvent.1.0.ResourceErrorsDetected"`,
+		`"message":"nested status condition"`,
+	} {
+		if !strings.Contains(jsonOutput, want) {
+			t.Fatalf("JSON output missing %q: %q", want, jsonOutput)
 		}
 	}
 }
@@ -848,17 +876,18 @@ func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 		UUID:        "node-1",
 		Hostname:    "inband-hostname",
 		NodeName:    "machine-001",
+		NodeKind:    nvfleetint.OOBNodeKindNVSwitch,
 		BMCHostname: "bmc-001",
 		BMCIP:       "192.0.2.10:443",
 	}})
 
-	if len(rows) != 1 || len(rows[0]) != 9 {
+	if len(rows) != 1 || len(rows[0]) != 10 {
 		t.Fatalf("unexpected OOB row shape: %#v", rows)
 	}
 	if slices.Contains(rows[0], "inband-hostname") {
 		t.Fatalf("OOB row contains in-band hostname: %#v", rows[0])
 	}
-	if rows[0][1] != "machine-001" || rows[0][2] != "bmc-001" || rows[0][3] != "192.0.2.10:443" {
+	if rows[0][1] != "machine-001" || rows[0][2] != "nvswitch" || rows[0][3] != "bmc-001" || rows[0][4] != "192.0.2.10:443" {
 		t.Fatalf("unexpected OOB identity columns: %#v", rows[0])
 	}
 }

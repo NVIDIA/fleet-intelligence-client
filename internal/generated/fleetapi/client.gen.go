@@ -395,6 +395,30 @@ func (e ModelsNotificationScopeType) Valid() bool {
 	}
 }
 
+// Defines values for ModelsOobNodeKind.
+const (
+	OobNodeKindCompute    ModelsOobNodeKind = "compute"
+	OobNodeKindNvSwitch   ModelsOobNodeKind = "nvswitch"
+	OobNodeKindPowerShelf ModelsOobNodeKind = "power_shelf"
+	OobNodeKindUnknown    ModelsOobNodeKind = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the ModelsOobNodeKind enum.
+func (e ModelsOobNodeKind) Valid() bool {
+	switch e {
+	case OobNodeKindCompute:
+		return true
+	case OobNodeKindNvSwitch:
+		return true
+	case OobNodeKindPowerShelf:
+		return true
+	case OobNodeKindUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelsVerificationCheck.
 const (
 	VerificationCheckDegraded    ModelsVerificationCheck = "Degraded"
@@ -2563,9 +2587,15 @@ type ModelsNotificationTarget struct {
 
 // ModelsOobChassis defines model for models.OobChassis.
 type ModelsOobChassis struct {
-	AssetTag     *string                   `json:"assetTag,omitempty"`
-	ChassisType  *string                   `json:"chassisType,omitempty"`
-	Health       *string                   `json:"health,omitempty"`
+	AssetTag    *string `json:"assetTag,omitempty"`
+	ChassisType *string `json:"chassisType,omitempty"`
+
+	// Health Deprecated: use status.health.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Health *string `json:"health,omitempty"`
+
+	// HealthRollup Deprecated: use status.healthRollup.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	HealthRollup *string                   `json:"healthRollup,omitempty"`
 	Id           string                    `json:"id"`
 	Location     *ModelsOobChassisLocation `json:"location,omitempty"`
@@ -2577,7 +2607,11 @@ type ModelsOobChassis struct {
 	PowerState   *string                   `json:"powerState,omitempty"`
 	SerialNumber *string                   `json:"serialNumber,omitempty"`
 	Sku          *string                   `json:"sku,omitempty"`
-	StatusState  *string                   `json:"statusState,omitempty"`
+	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
+
+	// StatusState Deprecated: use status.state.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	StatusState *string `json:"statusState,omitempty"`
 }
 
 // ModelsOobChassisLocation defines model for models.OobChassisLocation.
@@ -2598,15 +2632,24 @@ type ModelsOobDomainError struct {
 
 // ModelsOobFirmware defines model for models.OobFirmware.
 type ModelsOobFirmware struct {
-	Health       *string `json:"health,omitempty"`
-	HealthRollup *string `json:"healthRollup,omitempty"`
-	Id           string  `json:"id"`
-	Name         string  `json:"name"`
-	OdataId      *string `json:"odataId,omitempty"`
-	ReleaseDate  *string `json:"releaseDate,omitempty"`
-	ServiceId    string  `json:"serviceId"`
-	StatusState  *string `json:"statusState,omitempty"`
-	Version      *string `json:"version,omitempty"`
+	// Health Deprecated: use status.health.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Health *string `json:"health,omitempty"`
+
+	// HealthRollup Deprecated: use status.healthRollup.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HealthRollup *string                   `json:"healthRollup,omitempty"`
+	Id           string                    `json:"id"`
+	Name         string                    `json:"name"`
+	OdataId      *string                   `json:"odataId,omitempty"`
+	ReleaseDate  *string                   `json:"releaseDate,omitempty"`
+	ServiceId    string                    `json:"serviceId"`
+	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
+
+	// StatusState Deprecated: use status.state.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	StatusState *string `json:"statusState,omitempty"`
+	Version     *string `json:"version,omitempty"`
 }
 
 // ModelsOobInventory defines model for models.OobInventory.
@@ -2616,6 +2659,7 @@ type ModelsOobInventory struct {
 	DomainErrors *[]ModelsOobDomainError `json:"domainErrors,omitempty"`
 	Firmware     *[]ModelsOobFirmware    `json:"firmware,omitempty"`
 	Managers     *[]ModelsOobManager     `json:"managers,omitempty"`
+	NodeKind     *ModelsOobNodeKind      `json:"nodeKind,omitempty"`
 
 	// PrimarySystemId Optional fields — omitted from the response when absent:
 	PrimarySystemId *string `json:"primarySystemId,omitempty"`
@@ -2630,6 +2674,18 @@ type ModelsOobInventory struct {
 	// Systems List sections — always emitted as a JSON array, possibly empty:
 	Systems     *[]ModelsOobSystem `json:"systems,omitempty"`
 	TargetError *string            `json:"targetError,omitempty"`
+}
+
+// ModelsOobInventoryCondition defines model for models.OobInventoryCondition.
+type ModelsOobInventoryCondition struct {
+	ConditionType     *string                      `json:"conditionType,omitempty"`
+	Message           *string                      `json:"message,omitempty"`
+	MessageArgs       *[]string                    `json:"messageArgs,omitempty"`
+	MessageId         string                       `json:"messageId"`
+	OriginOfCondition *ModelsOobInventoryReference `json:"originOfCondition,omitempty"`
+	Resolution        *string                      `json:"resolution,omitempty"`
+	Severity          *string                      `json:"severity,omitempty"`
+	Timestamp         *string                      `json:"timestamp,omitempty"`
 }
 
 // ModelsOobInventoryNode defines model for models.OobInventoryNode.
@@ -2670,6 +2726,11 @@ type ModelsOobInventoryNode struct {
 	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
 
+// ModelsOobInventoryReference defines model for models.OobInventoryReference.
+type ModelsOobInventoryReference struct {
+	OdataId string `json:"@odata.id"`
+}
+
 // ModelsOobInventoryReportResponse defines model for models.OobInventoryReportResponse.
 type ModelsOobInventoryReportResponse struct {
 	HasMore  *bool                     `json:"hasMore,omitempty"`
@@ -2679,17 +2740,35 @@ type ModelsOobInventoryReportResponse struct {
 	Total    *int                      `json:"total,omitempty"`
 }
 
+// ModelsOobInventoryStatus defines model for models.OobInventoryStatus.
+type ModelsOobInventoryStatus struct {
+	Conditions   *[]ModelsOobInventoryCondition `json:"conditions,omitempty"`
+	Health       *string                        `json:"health,omitempty"`
+	HealthRollup *string                        `json:"healthRollup,omitempty"`
+	State        *string                        `json:"state,omitempty"`
+}
+
 // ModelsOobManager defines model for models.OobManager.
 type ModelsOobManager struct {
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
-	Health          *string `json:"health,omitempty"`
-	HealthRollup    *string `json:"healthRollup,omitempty"`
-	Id              string  `json:"id"`
-	ManagerType     *string `json:"managerType,omitempty"`
-	Model           *string `json:"model,omitempty"`
-	OdataId         *string `json:"odataId,omitempty"`
-	StatusState     *string `json:"statusState,omitempty"`
-	Uuid            *string `json:"uuid,omitempty"`
+
+	// Health Deprecated: use status.health.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Health *string `json:"health,omitempty"`
+
+	// HealthRollup Deprecated: use status.healthRollup.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HealthRollup *string                   `json:"healthRollup,omitempty"`
+	Id           string                    `json:"id"`
+	ManagerType  *string                   `json:"managerType,omitempty"`
+	Model        *string                   `json:"model,omitempty"`
+	OdataId      *string                   `json:"odataId,omitempty"`
+	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
+
+	// StatusState Deprecated: use status.state.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	StatusState *string `json:"statusState,omitempty"`
+	Uuid        *string `json:"uuid,omitempty"`
 }
 
 // ModelsOobNode defines model for models.OobNode.
@@ -2716,10 +2795,11 @@ type ModelsOobNode struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS    *string `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS *string `json:"lastVerificationCheckTS,omitempty"`
-	NodeGroup               *string `json:"nodeGroup,omitempty"`
+	LastIntegrityCheckTS    *string            `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string            `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string            `json:"lastVerificationCheckTS,omitempty"`
+	NodeGroup               *string            `json:"nodeGroup,omitempty"`
+	NodeKind                *ModelsOobNodeKind `json:"nodeKind,omitempty"`
 
 	// NodeName NodeName is the optional machine name configured on the OOB collector.
 	NodeName                   *string                           `json:"nodeName,omitempty"`
@@ -2761,12 +2841,13 @@ type ModelsOobNodeDetailsResponse struct {
 
 	// LastIntegrityCheckTS Deprecated: use lastVerificationCheckTS.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	LastIntegrityCheckTS    *string         `json:"lastIntegrityCheckTS,omitempty"`
-	LastUpdatedTS           *string         `json:"lastUpdatedTS,omitempty"`
-	LastVerificationCheckTS *string         `json:"lastVerificationCheckTS,omitempty"`
-	Location                *ModelsLocation `json:"location,omitempty"`
-	NodeGroup               *string         `json:"nodeGroup,omitempty"`
-	NodeGroupId             *string         `json:"nodeGroupId,omitempty"`
+	LastIntegrityCheckTS    *string            `json:"lastIntegrityCheckTS,omitempty"`
+	LastUpdatedTS           *string            `json:"lastUpdatedTS,omitempty"`
+	LastVerificationCheckTS *string            `json:"lastVerificationCheckTS,omitempty"`
+	Location                *ModelsLocation    `json:"location,omitempty"`
+	NodeGroup               *string            `json:"nodeGroup,omitempty"`
+	NodeGroupId             *string            `json:"nodeGroupId,omitempty"`
+	NodeKind                *ModelsOobNodeKind `json:"nodeKind,omitempty"`
 
 	// NodeName NodeName is the optional machine name configured on the OOB collector.
 	NodeName                   *string                           `json:"nodeName,omitempty"`
@@ -2778,6 +2859,9 @@ type ModelsOobNodeDetailsResponse struct {
 	VerificationCheckExtraInfo *ModelsVerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
 	VerificationCheckReason    *string                           `json:"verificationCheckReason,omitempty"`
 }
+
+// ModelsOobNodeKind defines model for models.OobNodeKind.
+type ModelsOobNodeKind string
 
 // ModelsOobNodesResponse defines model for models.OobNodesResponse.
 type ModelsOobNodesResponse struct {
@@ -2792,35 +2876,54 @@ type ModelsOobNodesResponse struct {
 type ModelsOobPcieDevice struct {
 	DeviceType      *string `json:"deviceType,omitempty"`
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
-	Health          *string `json:"health,omitempty"`
-	HealthRollup    *string `json:"healthRollup,omitempty"`
-	Id              string  `json:"id"`
-	Manufacturer    *string `json:"manufacturer,omitempty"`
-	Model           *string `json:"model,omitempty"`
-	OdataId         *string `json:"odataId,omitempty"`
-	PartNumber      *string `json:"partNumber,omitempty"`
-	SerialNumber    *string `json:"serialNumber,omitempty"`
-	Sku             *string `json:"sku,omitempty"`
-	StatusState     *string `json:"statusState,omitempty"`
-	Uuid            *string `json:"uuid,omitempty"`
+
+	// Health Deprecated: use status.health.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Health *string `json:"health,omitempty"`
+
+	// HealthRollup Deprecated: use status.healthRollup.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HealthRollup *string                   `json:"healthRollup,omitempty"`
+	Id           string                    `json:"id"`
+	Manufacturer *string                   `json:"manufacturer,omitempty"`
+	Model        *string                   `json:"model,omitempty"`
+	OdataId      *string                   `json:"odataId,omitempty"`
+	PartNumber   *string                   `json:"partNumber,omitempty"`
+	SerialNumber *string                   `json:"serialNumber,omitempty"`
+	Sku          *string                   `json:"sku,omitempty"`
+	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
+
+	// StatusState Deprecated: use status.state.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	StatusState *string `json:"statusState,omitempty"`
+	Uuid        *string `json:"uuid,omitempty"`
 }
 
 // ModelsOobProcessor defines model for models.OobProcessor.
 type ModelsOobProcessor struct {
-	Health                *string `json:"health,omitempty"`
-	HealthRollup          *string `json:"healthRollup,omitempty"`
-	Id                    string  `json:"id"`
-	InstructionSet        *string `json:"instructionSet,omitempty"`
-	Manufacturer          *string `json:"manufacturer,omitempty"`
-	MaxSpeedMhz           *int    `json:"maxSpeedMhz,omitempty"`
-	Model                 *string `json:"model,omitempty"`
-	OdataId               *string `json:"odataId,omitempty"`
-	ProcessorArchitecture *string `json:"processorArchitecture,omitempty"`
-	ProcessorType         *string `json:"processorType,omitempty"`
-	Socket                *string `json:"socket,omitempty"`
-	StatusState           *string `json:"statusState,omitempty"`
-	TotalCores            *int    `json:"totalCores,omitempty"`
-	TotalThreads          *int    `json:"totalThreads,omitempty"`
+	// Health Deprecated: use status.health.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Health *string `json:"health,omitempty"`
+
+	// HealthRollup Deprecated: use status.healthRollup.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HealthRollup          *string                   `json:"healthRollup,omitempty"`
+	Id                    string                    `json:"id"`
+	InstructionSet        *string                   `json:"instructionSet,omitempty"`
+	Manufacturer          *string                   `json:"manufacturer,omitempty"`
+	MaxSpeedMhz           *int                      `json:"maxSpeedMhz,omitempty"`
+	Model                 *string                   `json:"model,omitempty"`
+	OdataId               *string                   `json:"odataId,omitempty"`
+	ProcessorArchitecture *string                   `json:"processorArchitecture,omitempty"`
+	ProcessorType         *string                   `json:"processorType,omitempty"`
+	Socket                *string                   `json:"socket,omitempty"`
+	Status                *ModelsOobInventoryStatus `json:"status,omitempty"`
+
+	// StatusState Deprecated: use status.state.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	StatusState  *string `json:"statusState,omitempty"`
+	TotalCores   *int    `json:"totalCores,omitempty"`
+	TotalThreads *int    `json:"totalThreads,omitempty"`
 }
 
 // ModelsOobSource defines model for models.OobSource.
@@ -2836,26 +2939,36 @@ type ModelsOobSource struct {
 
 // ModelsOobSystem defines model for models.OobSystem.
 type ModelsOobSystem struct {
-	AssetTag          *string               `json:"assetTag,omitempty"`
-	BiosVersion       *string               `json:"biosVersion,omitempty"`
-	CpuCoreCount      *int                  `json:"cpuCoreCount,omitempty"`
-	CpuCount          *int                  `json:"cpuCount,omitempty"`
-	CpuModel          *string               `json:"cpuModel,omitempty"`
-	Health            *string               `json:"health,omitempty"`
-	HealthRollup      *string               `json:"healthRollup,omitempty"`
-	HostName          *string               `json:"hostName,omitempty"`
-	Id                string                `json:"id"`
-	Manufacturer      *string               `json:"manufacturer,omitempty"`
-	MemoryGib         *float32              `json:"memoryGib,omitempty"`
-	Model             *string               `json:"model,omitempty"`
-	OdataId           *string               `json:"odataId,omitempty"`
-	PowerState        *string               `json:"powerState,omitempty"`
-	Processors        *[]ModelsOobProcessor `json:"processors,omitempty"`
-	SecureBootEnabled *bool                 `json:"secureBootEnabled,omitempty"`
-	SerialNumber      *string               `json:"serialNumber,omitempty"`
-	Sku               *string               `json:"sku,omitempty"`
-	StatusState       *string               `json:"statusState,omitempty"`
-	Uuid              *string               `json:"uuid,omitempty"`
+	AssetTag     *string `json:"assetTag,omitempty"`
+	BiosVersion  *string `json:"biosVersion,omitempty"`
+	CpuCoreCount *int    `json:"cpuCoreCount,omitempty"`
+	CpuCount     *int    `json:"cpuCount,omitempty"`
+	CpuModel     *string `json:"cpuModel,omitempty"`
+
+	// Health Deprecated: use status.health.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Health *string `json:"health,omitempty"`
+
+	// HealthRollup Deprecated: use status.healthRollup.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HealthRollup      *string                   `json:"healthRollup,omitempty"`
+	HostName          *string                   `json:"hostName,omitempty"`
+	Id                string                    `json:"id"`
+	Manufacturer      *string                   `json:"manufacturer,omitempty"`
+	MemoryGib         *float32                  `json:"memoryGib,omitempty"`
+	Model             *string                   `json:"model,omitempty"`
+	OdataId           *string                   `json:"odataId,omitempty"`
+	PowerState        *string                   `json:"powerState,omitempty"`
+	Processors        *[]ModelsOobProcessor     `json:"processors,omitempty"`
+	SecureBootEnabled *bool                     `json:"secureBootEnabled,omitempty"`
+	SerialNumber      *string                   `json:"serialNumber,omitempty"`
+	Sku               *string                   `json:"sku,omitempty"`
+	Status            *ModelsOobInventoryStatus `json:"status,omitempty"`
+
+	// StatusState Deprecated: use status.state.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	StatusState *string `json:"statusState,omitempty"`
+	Uuid        *string `json:"uuid,omitempty"`
 }
 
 // ModelsOptions defines model for models.Options.
