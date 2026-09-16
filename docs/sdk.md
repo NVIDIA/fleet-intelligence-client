@@ -58,7 +58,7 @@ node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNo
 	AgentType: nvfleetint.NodeAgentTypeOOB,
 })
 if err == nil && node.OOBInventory != nil {
-	fmt.Println(node.OOBInventory.SchemaVersion, node.OOBInventory.NodeKind)
+	fmt.Println(node.OOBInventory.SchemaVersion, node.NodeKind)
 	for _, system := range node.OOBInventory.Systems {
 		if system.Status != nil {
 			fmt.Println(system.Status.State, system.Status.Health, system.Status.Conditions)

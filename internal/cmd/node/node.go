@@ -882,6 +882,7 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 		{"NODE NAME", clioutput.DisplayString(node.NodeName)},
+		{"NODE KIND", clioutput.DisplayString(string(node.NodeKind))},
 		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
@@ -1015,7 +1016,6 @@ func oobInventorySummaryRows(inventory *nvfleetint.OOBInventory) [][]string {
 	return [][]string{
 		{"INVENTORY SCHEMA VERSION", clioutput.DisplayString(inventory.SchemaVersion)},
 		{"INVENTORY COLLECTED AT", clioutput.DisplayString(inventory.CollectedAt)},
-		{"NODE KIND", clioutput.DisplayString(string(inventory.NodeKind))},
 		{"INVENTORY PRIMARY SYSTEM", clioutput.DisplayString(inventory.PrimarySystemID)},
 		{"INVENTORY MANAGERS", strconv.Itoa(len(inventory.Managers))},
 		{"INVENTORY SYSTEMS", strconv.Itoa(len(inventory.Systems))},

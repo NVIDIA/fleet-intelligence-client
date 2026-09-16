@@ -651,13 +651,13 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"nodeUUID":"node-oob-1",
+			"nodeKind":"nvswitch",
 			"hostname":"host-001",
 			"agentType":"oob",
 			"bmcHostname":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
-				"nodeKind":"nvswitch",
 				"schemaVersion":"inventory.v1alpha1",
 				"source":{"sourceType":"redfish","vendor":"Dell","address":"192.0.2.10:443","mac":"00:11:22:33:44:55","redfishVersion":"1.17.0"},
 				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning","conditions":[{"messageId":"ResourceEvent.1.0.ResourceErrorsDetected","severity":"Critical","message":"nested status condition"}]},"statusState":"Enabled","health":"OK","healthRollup":"Warning","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"statusState":"Enabled","health":"OK","healthRollup":"OK"},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],

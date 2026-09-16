@@ -6933,8 +6933,6 @@ components:
             $ref: '#/components/schemas/models.OobManager'
           type: array
           uniqueItems: false
-        nodeKind:
-          $ref: '#/components/schemas/models.NodeKind'
         primarySystemId:
           description: 'Optional fields — omitted from the response when absent:'
           example: DGX

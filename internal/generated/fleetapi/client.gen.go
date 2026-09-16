@@ -2662,7 +2662,6 @@ type ModelsOobInventory struct {
 	DomainErrors *[]ModelsOobDomainError `json:"domainErrors,omitempty"`
 	Firmware     *[]ModelsOobFirmware    `json:"firmware,omitempty"`
 	Managers     *[]ModelsOobManager     `json:"managers,omitempty"`
-	NodeKind     *ModelsNodeKind         `json:"nodeKind,omitempty"`
 
 	// PrimarySystemId Optional fields — omitted from the response when absent:
 	PrimarySystemId *string `json:"primarySystemId,omitempty"`

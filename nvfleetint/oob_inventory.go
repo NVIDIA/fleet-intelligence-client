@@ -21,7 +21,6 @@ type OOBInventory struct {
 	CollectedAt     string           `json:"collectedAt"`
 	DomainErrors    []OOBDomainError `json:"domainErrors,omitempty"`
 	Firmware        []OOBFirmware    `json:"firmware,omitempty"`
-	NodeKind        NodeKind         `json:"nodeKind,omitempty"`
 	Managers        []OOBManager     `json:"managers,omitempty"`
 	PrimarySystemID string           `json:"primarySystemId,omitempty"`
 	SchemaVersion   string           `json:"schemaVersion"`
@@ -199,7 +198,6 @@ func oobInventoryFromGenerated(inventory *fleetapi.ModelsOobInventory) *OOBInven
 
 	out := &OOBInventory{
 		CollectedAt:     inventory.CollectedAt,
-		NodeKind:        nodeKindFromGenerated(inventory.NodeKind),
 		PrimarySystemID: stringValue(inventory.PrimarySystemId),
 		SchemaVersion:   inventory.SchemaVersion,
 		Source:          oobSourceFromGenerated(inventory.Source),
