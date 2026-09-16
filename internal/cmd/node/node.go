@@ -695,7 +695,7 @@ func writeNodeTable(
 	if agentType == nvfleetint.NodeAgentTypeOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
@@ -754,6 +754,7 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 		rows = append(rows, []string{
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.NodeName),
+			clioutput.DisplayString(string(node.NodeKind)),
 			clioutput.DisplayString(node.BMCHostname),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
@@ -881,6 +882,7 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 		{"NODE NAME", clioutput.DisplayString(node.NodeName)},
+		{"NODE KIND", clioutput.DisplayString(string(node.NodeKind))},
 		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
