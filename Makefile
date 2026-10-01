@@ -95,7 +95,3 @@ clean: ## Remove local build artifacts
 .PHONY: help
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-
-.PHONY: test-commit-conventions
-test-commit-conventions: ## Validate commit subjects and PR titles
-	sh scripts/test-commit-conventions.sh
