@@ -119,7 +119,8 @@ Additional labels must be applied to indicate whether the change is a feature, i
 ### Local Git hooks
 
 Local hooks are optional but recommended. They check commit subject formatting
-and scan staged files for secrets before commit.
+and scan staged files for secrets before commit. See the shared conventions
+below for the shared conventions and PR-title validation.
 
 Install `trufflehog` before enabling the hooks:
 
@@ -155,21 +156,39 @@ Release branches may be created for stabilization or hotfix work when needed.
 If a release branch exists, maintainers will document the target branch in the
 issue or release notes.
 
-### Branch naming
+## Commit and Pull Request Conventions
 
-Branches used to create PRs should have a name of the form `<type>/<name>`,
-where `<type>` is one of:
+Use the same format for commit subjects and pull request titles:
 
-- `feat` for new features.
-- `fix` for bugs or regressions.
-- `docs` for documentation changes.
-- `test` for test-only changes.
-- `chore` for maintenance.
+```text
+<type>(<scope>): <description>
+```
 
-Use a short dash-separated name after the slash, for example `feat/node-tags`
-or `docs/report-examples`.
+- Allowed types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`, `revert`.
+- Scope is optional and lowercase, for example `cli`, `inventory`, or `deps`.
+- Write a concise, imperative description, for example `fix(inventory): handle missing chassis`.
+- For breaking changes, add `!` after the type/scope, for example `feat(cli)!: remove deprecated flag`, and explain the impact and migration in the PR body.
+- Sign off every commit with `git commit -s`, using your real name and a valid email address, to comply with the DCO.
+- Name branches `<type>/<short-dash-separated-name>`, for example `fix/missing-chassis` or `docs/configuration-guide`. Use one of the allowed types above.
+- Target `main` unless maintainers specify a release branch.
 
-### Release notes
+PR descriptions must explain the behavior change, link related GitHub issues
+(use `Closes #123` when appropriate), report validation and remaining limitations,
+and highlight breaking changes. Add relevant tests and documentation, follow the
+PR template, and ensure CI passes. PR titles describe the final user-visible
+result and may appear in release notes.
 
-Pull request titles are used to generate release notes. Make them concise and
-descriptive of the user-visible change.
+Maintainers should **squash merge** each focused PR, using the PR title as the
+final commit subject. Contributors may keep separate review commits; they do not
+need to squash before review. Preserve all contributors' DCO `Signed-off-by:`
+trailers in the final squash commit and verify the final message before merging.
+
+### PR title validation
+
+The **Contribution conventions / PR title** GitHub Actions check validates PR
+titles when a PR is opened, edited, or updated. Maintainers should require this
+check in branch protection and configure squash merging to use the PR title as
+the final commit subject. Local commit-format hooks are optional; individual
+commit messages do not become target-branch subjects when squash merging.
+Contributors must still sign off every commit, and maintainers must preserve
+those sign-offs in the final squash commit.
