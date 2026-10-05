@@ -187,7 +187,7 @@ func decodeBasicComputeZones(data []byte) (ComputeZonesPage, error) {
 // Maps detail API models into SDK values
 func computeZoneFromOverview(zone fleetapi.ModelsComputeZoneOverview) ComputeZone {
 	return ComputeZone{
-		ID:        stringValue(zone.Id),
+		ID:        zone.Id,
 		Name:      stringValue(zone.Name),
 		Type:      enumStringValue(zone.Type),
 		Location:  locationFromGenerated(zone.Location),
@@ -198,7 +198,7 @@ func computeZoneFromOverview(zone fleetapi.ModelsComputeZoneOverview) ComputeZon
 // Maps basic API models into SDK values
 func computeZoneFromSimple(zone fleetapi.ModelsSimpleComputeZone) ComputeZone {
 	return ComputeZone{
-		ID:       stringValue(zone.Id),
+		ID:       zone.Id,
 		Name:     stringValue(zone.Name),
 		Type:     enumStringValue(zone.Type),
 		Location: locationFromGenerated(zone.Location),
@@ -312,7 +312,7 @@ func (c *Client) UpdateComputeZone(ctx context.Context, zoneID string, opts Upda
 	result := computeZoneUpdateResult(body)
 	// The backend echoes the zone it wrote; fall back to the requested ID so
 	// the result always names the zone even if that field is omitted.
-	if id := stringValue(data.Id); id != "" {
+	if id := data.Id; id != "" {
 		result.ID = id
 	}
 	result.RawJSON = append([]byte(nil), resp.Body...)

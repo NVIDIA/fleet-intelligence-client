@@ -151,7 +151,7 @@ func TestAlertTimelineTables(t *testing.T) {
 			if got := query.Get("active"); got != "true" {
 				t.Fatalf("unexpected active: %q", got)
 			}
-			for name, want := range map[string]string{"hostname": "gpu", "sortBy": "alert", "order": "desc"} {
+			for name, want := range map[string]string{"nameSearch": "gpu", "sortBy": "alert", "order": "desc"} {
 				if got := query.Get(name); got != want {
 					t.Fatalf("unexpected %s: %q", name, got)
 				}

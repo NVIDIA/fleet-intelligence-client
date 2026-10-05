@@ -264,7 +264,7 @@ func decodeBasicNodeGroups(data []byte) (NodeGroupsPage, error) {
 // Maps detail API models into SDK values
 func nodeGroupFromOverview(group fleetapi.ModelsNodeGroupOverview) NodeGroup {
 	return NodeGroup{
-		ID:               stringValue(group.Id),
+		ID:               group.Id,
 		Name:             stringValue(group.Name),
 		ComputeZoneID:    stringValue(group.ComputeZoneId),
 		ComputeZoneName:  stringValue(group.ComputeZoneName),
@@ -277,7 +277,7 @@ func nodeGroupFromOverview(group fleetapi.ModelsNodeGroupOverview) NodeGroup {
 // Maps basic API models into SDK values
 func nodeGroupFromSimple(group fleetapi.ModelsSimpleNodeGroup) NodeGroup {
 	return NodeGroup{
-		ID:              stringValue(group.Id),
+		ID:              group.Id,
 		Name:            stringValue(group.Name),
 		ComputeZoneID:   stringValue(group.ComputeZoneId),
 		ComputeZoneName: stringValue(group.ComputeZoneName),

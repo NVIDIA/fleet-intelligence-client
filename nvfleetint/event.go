@@ -265,8 +265,8 @@ func validateEventRFC3339(name, value string) error {
 // Maps an event API model into SDK values
 func eventFromGenerated(event fleetapi.ModelsEvent) Event {
 	out := Event{
-		EventID:   stringValue(event.EventId),
-		NodeUUID:  stringValue(event.NodeUUID),
+		EventID:   event.EventId,
+		NodeUUID:  event.NodeUUID,
 		Component: stringValue(event.Component),
 		Name:      stringValue(event.Name),
 		Type:      stringValue(event.Type),

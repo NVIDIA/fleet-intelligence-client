@@ -284,8 +284,8 @@ func validateListXIDBurstsOptions(opts ListXIDBurstsOptions) error {
 // Maps XID burst list items into SDK values
 func xidBurstFromGenerated(item fleetapi.ModelsXIDBurstListItem) XIDBurst {
 	return XIDBurst{
-		BurstID:                         stringValue(item.BurstId),
-		NodeUUID:                        stringValue(item.NodeUuid),
+		BurstID:                         item.BurstId,
+		NodeUUID:                        item.NodeUuid,
 		Hostname:                        stringValue(item.Hostname),
 		NodeGroup:                       stringValue(item.NodeGroup),
 		NodeGroupID:                     stringValue(item.NodeGroupId),

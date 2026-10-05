@@ -195,17 +195,20 @@ paths:
   /v1/alert_timeline/filter_options:
     get:
       description: Get the set of filter values (GPU types, node groups, compute zones,
-        component types, alert states) available for the alert panel, returned in
-        the shared options envelope (filters.fields[] + sorting) used by the node
-        and node-group options endpoints. Every value is scoped to the customer's
-        alerts in the chosen view, so each option is guaranteed to return results
-        when applied as a filter. Use the 'active' parameter to switch between the
-        Active and Historical views; the historical view may additionally surface
-        the Resolved alert state. Object-valued options ({id, value}) carry the filter
-        id and its display value (node group / compute zone ids and names; component
-        identifier and display name); gpuTypes and alertStates are plain strings.
-        The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility
-        is resolved server-side from the caller's persona.
+        component types, alert states, data sources, in-band agent statuses, OOB agent
+        statuses) available for the alert panel, returned in the shared options envelope
+        (filters.fields[] + sorting) used by the node and node-group options endpoints.
+        GPU types use the resolved node value independently of alert source. Every
+        value is scoped to the customer's alerts in the chosen view, so each option
+        is guaranteed to return results when applied as a filter. Agent-status options
+        are dynamically derived from the matching nodes and use online, offline, or
+        not_enrolled. Use the 'active' parameter to switch between the Active and
+        Historical views; the historical view may additionally surface the Resolved
+        alert state. Object-valued options ({id, value}) carry the filter id and its
+        display value (node group / compute zone ids and names; component identifier
+        and display name); gpuTypes, alertStates, dataSources, and agent statuses
+        are plain strings. The sorting block advertises the Level 1 nodes-list sort
+        columns. componentVisibility is resolved server-side from the caller's persona.
       operationId: getV1AlertTimelineFilterOptions
       parameters:
         - description: 'Active Alerts view when true; Historical Alerts when false
@@ -247,7 +250,8 @@ paths:
   /v1/alert_timeline/nodes:
     get:
       description: Returns a paginated list of nodes with per-node alert counts and
-        inventory metadata for the Alerts panel. Use active=true for the Active Alerts
+        inventory metadata for the Alerts panel. GPU type uses the node's resolved
+        value independently of alert source. Use active=true for the Active Alerts
         view (only nodes with currently active alerts) or active=false for Historical
         Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount,
         etc.) reflect the full filtered result set and drive table header counts.
@@ -274,27 +278,40 @@ paths:
           schema:
             default: 50
             type: integer
-        - description: Case-insensitive partial match on hostname
+        - description: Case-insensitive substring matched against the in-band hostname,
+            OOB machine name, BMC hostname, and node UUID
           in: query
-          name: hostname
+          name: nameSearch
           schema:
             type: string
-        - description: When true, return only nodes whose liveness state is Healthy/Degraded
-            and has no unhealthy in-band or OOB liveness state. Omit or use false
-            to return all nodes.
+        - description: In-band agent machine status (online, offline, not_enrolled).
+            Repeated values are ORed.
           in: query
-          name: onlineOnly
+          name: inbandAgentStatuses
           schema:
-            default: false
-            type: boolean
-        - description: Sortable table-header column. alert ranks by critical then
-            warning count.
+            items:
+              $ref: '#/components/schemas/models.AlertAgentStatus'
+            type: array
+        - description: OOB collector machine status (online, offline, not_enrolled).
+            Repeated values are ORed; this filter is ANDed with inbandAgentStatuses.
+          in: query
+          name: oobAgentStatuses
+          schema:
+            items:
+              $ref: '#/components/schemas/models.AlertAgentStatus'
+            type: array
+        - description: Sortable table-header column. nodeName and bmcHostname sort
+            OOB identities; nodeUUID sorts the Machine ID column; alert ranks by critical
+            then warning count. Missing names sort last.
           in: query
           name: sortBy
           schema:
             default: alert
             enum:
               - hostname
+              - nodeName
+              - bmcHostname
+              - nodeUUID
               - alert
               - gpuType
               - nodeGroup
@@ -310,7 +327,8 @@ paths:
               - asc
               - desc
             type: string
-        - description: Filter to nodes with matching GPU types (OR within dimension)
+        - description: Filter to nodes with matching resolved GPU types (OR within
+            dimension)
           in: query
           name: gpuTypes
           schema:
@@ -343,6 +361,18 @@ paths:
                 - Critical
                 - Warning
                 - Resolved
+              type: string
+            type: array
+        - description: Filter alerts by producing data source (inband or oob). Repeated
+            values are ORed; omitted means both sources. Counts and pagination reflect
+            matching alerts.
+          in: query
+          name: dataSources
+          schema:
+            items:
+              enum:
+                - inband
+                - oob
               type: string
             type: array
         - description: Filter to nodes with alerts on matching component types. Use
@@ -416,7 +446,8 @@ paths:
           schema:
             default: false
             type: boolean
-        - description: Sortable table-header column.
+        - description: Sortable table-header column. dataSource sorts the source shown
+            for each alert.
           in: query
           name: sortBy
           schema:
@@ -424,6 +455,7 @@ paths:
             enum:
               - startTime
               - lastUpdate
+              - dataSource
             type: string
         - description: Sort direction for sortBy
           in: query
@@ -447,6 +479,17 @@ paths:
                 - Resolved
               type: string
             type: array
+        - description: Filter alerts by producing data source (inband or oob). Repeated
+            values are ORed; omitted means both sources.
+          in: query
+          name: dataSources
+          schema:
+            items:
+              enum:
+                - inband
+                - oob
+              type: string
+            type: array
         - description: Filter to alerts on matching component types. Use the value
             'psirt' to match all security-vulnerability CVEs (the collapsed 'Security
             Vulnerability' option).
@@ -457,7 +500,7 @@ paths:
               type: string
             type: array
         - description: 'Node-level filter carried from Level 1: match the node''s
-            GPU type (OR within dimension)'
+            resolved GPU type (OR within dimension)'
           in: query
           name: gpuTypes
           schema:
@@ -940,9 +983,9 @@ paths:
         - computezones
   /v1/events:
     get:
-      description: Get list of events with optional filtering by node UUID, component,
-        and time range. Returns events from the events table for the specified time
-        period.
+      description: Get events with optional inventory, table, and time-range filters.
+        Each row includes the node's resolved GPU type, independent of the event data
+        source. Events associated with soft-deleted nodes are excluded.
       operationId: getV1Events
       parameters:
         - description: Start time in RFC3339 format (required for absolute mode, e.g.,
@@ -981,6 +1024,105 @@ paths:
           in: query
           name: component
           schema:
+            type: string
+        - description: Filter by node group IDs
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by compute zone IDs
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exclude node group IDs
+          in: query
+          name: excludeNodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exclude compute zone IDs
+          in: query
+          name: excludeComputeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Case-insensitive substring matched against the in-band hostname,
+            OOB machine name, BMC hostname, and node UUID
+          in: query
+          name: nameSearch
+          schema:
+            type: string
+        - description: Exact event names
+          in: query
+          name: eventNames
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact severity values
+          in: query
+          name: severities
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact component values; cannot be combined with component
+          in: query
+          name: components
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Event data sources
+          in: query
+          name: dataSources
+          schema:
+            items:
+              enum:
+                - inband
+                - oob
+              type: string
+            type: array
+        - description: Resolved node GPU types
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Sortable column
+          in: query
+          name: sortBy
+          schema:
+            default: timestamp
+            enum:
+              - timestamp
+              - eventName
+              - severity
+              - component
+              - gpuType
+              - hostname
+              - nodeName
+              - bmcHostname
+              - nodeUUID
+              - nodeGroup
+              - computeZone
+            type: string
+        - description: Sort direction
+          in: query
+          name: sortOrder
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
             type: string
         - description: Page number (0-indexed)
           in: query
@@ -1043,7 +1185,8 @@ paths:
   /v1/events/buckets:
     get:
       description: Returns time-bucketed event counts for histogram display. The server
-        picks a clean bucket interval based on the maxBuckets hint.
+        picks a clean bucket interval based on the maxBuckets hint. GPU type filtering
+        uses the node's resolved GPU type independently of event data source.
       operationId: getV1EventsBuckets
       parameters:
         - description: Start time in RFC3339 format (required for absolute mode, e.g.,
@@ -1083,6 +1226,78 @@ paths:
           name: component
           schema:
             type: string
+        - description: Filter by node group IDs
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Filter by compute zone IDs
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exclude node group IDs
+          in: query
+          name: excludeNodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exclude compute zone IDs
+          in: query
+          name: excludeComputeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Case-insensitive substring matched against the in-band hostname,
+            OOB machine name, BMC hostname, and node UUID
+          in: query
+          name: nameSearch
+          schema:
+            type: string
+        - description: Exact event names
+          in: query
+          name: eventNames
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact severity values
+          in: query
+          name: severities
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Exact component values; cannot be combined with component
+          in: query
+          name: components
+          schema:
+            items:
+              type: string
+            type: array
+        - description: Event data sources
+          in: query
+          name: dataSources
+          schema:
+            items:
+              enum:
+                - inband
+                - oob
+              type: string
+            type: array
+        - description: Resolved node GPU types
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
         - description: 'Maximum number of buckets (default: 100, max: 1000)'
           in: query
           name: maxBuckets
@@ -1133,6 +1348,51 @@ paths:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Service Unavailable
       summary: Get event counts bucketed by time
+      tags:
+        - events
+  /v1/events/options:
+    get:
+      description: Returns the Event Name, Severity, Component, Data Source, and resolved
+        GPU Type filters supported by the events list, plus the sortable columns.
+        This endpoint does not query event storage and ignores time and inventory
+        filters. Event Name, Component, Data Source, and source-specific identity
+        Sort Fields are limited to the agent types the customer has enrolled. Resolved
+        GPU types come from active nodes and are independent of the event data source.
+        eventNames always ends with the Others option, which matches every stored
+        name the catalog does not list.
+      operationId: getV1EventsOptions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.EventFilterOptionsResponse'
+          description: OK
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get event filter options
       tags:
         - events
   /v1/info:
@@ -1196,21 +1456,35 @@ paths:
           name: type
           schema:
             type: string
+        - description: 'Filter the catalog by data source: inband, oob, or all. Omitted
+            defaults to all sources.'
+          in: query
+          name: dataSource
+          schema:
+            enum:
+              - inband
+              - oob
+              - all
+            type: string
         - description: 'Include active PSIRT CVE sub-components (default: false)'
           in: query
           name: psirtComponent
           schema:
             type: boolean
-        - description: Optional entity scope for architecture-aware filtering. Currently
-            only 'node' is supported.
+        - description: Optional entity scope. Components an entity cannot produce
+            are omitted, so an empty result is the signal that a scope has no nodes
+            of the requested data source. 'node' additionally filters by GPU/CPU architecture
+            and probes per-sensor availability.
           in: query
           name: entityLevel
           schema:
             enum:
               - node
+              - nodegroup
+              - computezone
             type: string
-        - description: Entity ID for architecture-aware filtering. Required when entityLevel
-            is set.
+        - description: 'Entity ID matching entityLevel: node UUID, node group UUID,
+            or compute zone UUID. Required when entityLevel is set.'
           in: query
           name: entityID
           schema:
@@ -1446,9 +1720,9 @@ paths:
   /v1/node_removal_policy:
     get:
       description: 'Returns the customer''s "Auto remove machines" settings. Customers
-        that never
+        without an
 
-        configured the policy get the defaults (disabled, offlineThreshold omitted).'
+        explicit policy get the defaults (enabled, offlineThresholdDays 7).'
       operationId: getV1NodeRemovalPolicy
       responses:
         '200':
@@ -1486,15 +1760,15 @@ paths:
         - node_removal_policy
     put:
       description: 'Updates the customer''s "Auto remove machines" settings. When
-        offlineThreshold
+        offlineThresholdDays
 
-        is omitted the stored threshold is kept (disabling never clears it), so it
-        is
+        is omitted, an existing threshold is kept or the seven-day default is used
+        for a
 
-        required only when enabling for the first time. The equivalent duration must
-        be
+        missing policy. Disabling never clears the threshold. The duration must be
+        at least
 
-        at least 1 day (whole numbers). An omitted enabled binds as false.
+        1 day (whole numbers). An omitted enabled binds as false.
 
         Returns 204 No Content on success.'
       operationId: putV1NodeRemovalPolicy
@@ -1610,7 +1884,8 @@ paths:
                 - Unknown
               type: string
             type: array
-        - description: '[DETAIL VIEW ONLY] Filter by GPU type values (e.g., ?gpuTypes=NVIDIA-H100-80GB-HBM3)'
+        - description: '[DETAIL VIEW ONLY] Filter node groups containing nodes with
+            any of the specified GPU types (e.g., ?gpuTypes=NVIDIA-H100-80GB-HBM3).'
           in: query
           name: gpuTypes
           schema:
@@ -1700,6 +1975,8 @@ paths:
       description: 'Returns available filters and sorting options for querying node
         groups.
 
+        Available GPU types are based on active nodes.
+
         Filter options may be simple strings (e.g., health statuses, GPU types) or
         hierarchical objects (e.g., compute zones with nested nodegroups).
 
@@ -1754,13 +2031,23 @@ paths:
       parameters:
         - description: 'Agent enrollment to soft delete: inband (default) or oob'
           in: query
-          name: agentType
+          name: dataSource
           schema:
             default: inband
             enum:
               - inband
               - oob
             type: string
+        - description: 'Deprecated: use dataSource. When both parameters are supplied,
+            their values must match.'
+          in: query
+          name: agentType
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+          deprecated: true
       requestBody:
         content:
           application/json:
@@ -1843,22 +2130,32 @@ paths:
               - detail
               - basic
             type: string
-        - description: 'Select the in-band or OOB (BMC/Redfish) view: returns only
-            nodes enrolled by that agent type. nodeName is source-specific metadata
-            configured on the OOB collector and is absent from in-band responses.
-            In the OOB view, nodes expose nodeName, bmcHostname/bmcIP and BMC-based
-            verification, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions
+        - description: Select the in-band or OOB (BMC/Redfish) data source. Returns
+            only nodes enrolled through that source. nodeName is OOB-specific metadata
+            and is absent from in-band responses. In the OOB view, nodes expose nodeName,
+            bmcHostname/bmcIP, optional gpuType/gpuCount and BMC-based verification,
+            while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuFirmwareVersions
             are empty. Empty defaults to the in-band view for view=detail; for view=basic,
-            an empty agentType returns a combined view that merges the OOB nodeName
-            and BMC identity alongside the in-band hostname.'
+            omitting both dataSource and agentType returns a combined view that merges
+            OOB and in-band identity.
           in: query
-          name: agentType
+          name: dataSource
           schema:
-            default: inband
             enum:
               - inband
               - oob
             type: string
+        - description: 'Deprecated: use dataSource. Alias for selecting the in-band
+            or OOB data source; when both parameters are supplied, their values must
+            match.'
+          in: query
+          name: agentType
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+          deprecated: true
         - description: Page number (0-indexed)
           in: query
           name: page
@@ -1920,16 +2217,16 @@ paths:
             items:
               type: string
             type: array
-        - description: Filter by GPU type values in the in-band view. Empty means
-            all GPU types; rejected for OOB and combined views.
+        - description: Filter by GPU type values from the selected source, or the
+            shared GPU info in combined basic view. Empty means all GPU types.
           in: query
           name: gpuTypes
           schema:
             items:
               type: string
             type: array
-        - description: Filter by GPU count values in the in-band view. Empty means
-            all GPU counts; rejected for OOB and combined views.
+        - description: Filter by GPU count values from the selected source, or the
+            shared GPU info in combined basic view. Empty means all GPU counts.
           in: query
           name: gpuCounts
           schema:
@@ -1975,7 +2272,9 @@ paths:
             items:
               $ref: '#/components/schemas/models.FirmwareCheck'
             type: array
-        - description: Filter by agent status values
+        - description: Filter by agent status for the selected dataSource. Healthy
+            liveness is Online; every other, missing, or unrecognized liveness value
+            is Offline.
           in: query
           name: agentStatuses
           schema:
@@ -1983,30 +2282,31 @@ paths:
               $ref: '#/components/schemas/models.AgentStatus'
             type: array
         - description: Case-insensitive substring search across nodeUUID and source-appropriate
-            node identity fields. Searches nodeUUID or hostname for agentType=inband;
-            nodeUUID, nodeName, or bmcHostname for agentType=oob; and nodeUUID plus
-            all three names for the combined basic view (view=basic with agentType
-            omitted). Leading and trailing whitespace is ignored; blank means no search.
+            node identity fields. Searches nodeUUID or hostname for dataSource=inband;
+            nodeUUID, nodeName, or bmcHostname for dataSource=oob; and nodeUUID plus
+            all three names for the combined basic view (view=basic with both source
+            parameters omitted). Leading and trailing whitespace is ignored; blank
+            means no search.
           in: query
           name: search
           schema:
             type: string
         - description: Filter by the in-band OS hostname (case-insensitive partial
             match). Applies to the in-band view and to active in-band identities in
-            the combined basic view; rejected for agentType=oob.
+            the combined basic view; rejected for dataSource=oob.
           in: query
           name: hostname
           schema:
             type: string
         - description: Filter by the configured node name (case-insensitive partial
-            match). Applies to the OOB view (agentType=oob) and the combined basic
+            match). Applies to the OOB view (dataSource=oob) and the combined basic
             view; rejected for the in-band view.
           in: query
           name: nodeName
           schema:
             type: string
         - description: Filter by BMC hostname (case-insensitive partial match). Applies
-            to the OOB view (agentType=oob) and the combined basic view; rejected
+            to the OOB view (dataSource=oob) and the combined basic view; rejected
             for the in-band view.
           in: query
           name: bmcHostname
@@ -2015,11 +2315,13 @@ paths:
         - description: Field to sort by. Use verificationCheck; integrityCheck remains
             a deprecated alias. Defaults to hostname (in-band view) or bmcHostname
             (OOB view). nodeName and bmcHostname apply only to OOB-capable views;
-            the in-band-only GPU/kernel/driver/agentVersion keys apply only to the
-            in-band view. A key not valid for the selected agentType is rejected.
-            gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions
-            to the top, then sorts the remaining (uniform) nodes by that common vbios
-            in the requested order.
+            the in-band-only GPU firmware/kernel/driver/agentVersion keys apply only
+            to the in-band view. Combined basic view supports only hostname, nodeName,
+            bmcHostname, nodeUUID, nodeGroup, computeZone, gpuType, and gpuCount,
+            matching its filterable fields. A key not valid for the selected dataSource
+            is rejected. gpuFirmwareVersions pins nodes whose GPUs have mismatched
+            vbios versions to the top, then sorts the remaining (uniform) nodes by
+            that common vbios in the requested order.
           in: query
           name: sortBy
           schema:
@@ -2193,21 +2495,45 @@ paths:
         "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`
 
 
-        The available options depend on the agentType view. The OOB view omits the
-        gpuTypes filter and the GPU/kernel/driver/firmware/agentVersion sort fields,
-        which apply only to in-band-enrolled nodes.'
+        The available options depend on the selected dataSource. The gpuTypes filter
+        applies to both in-band and OOB views. The OOB view omits the kernel/driver/firmware/agentVersion
+        sort fields, which apply only to in-band-enrolled nodes.
+
+        In detail view, the agentStatuses filter is source-scoped and offers exactly
+        Online and Offline. Basic view omits health-dependent filters and sorts.'
       operationId: getV1NodesOptions
       parameters:
-        - description: Select the in-band (default) or OOB (BMC/Redfish) view. The
-            OOB view returns a reduced set of filter and sorting options.
+        - description: Select detail or basic options. Basic omits health-dependent
+            filters and sorts; without a source parameter, basic uses combined node
+            GPU info.
           in: query
-          name: agentType
+          name: view
           schema:
-            default: inband
+            default: detail
+            enum:
+              - detail
+              - basic
+            type: string
+        - description: Select in-band or OOB data. Omitted defaults to in-band for
+            detail and combined sources for basic.
+          in: query
+          name: dataSource
+          schema:
             enum:
               - inband
               - oob
             type: string
+        - description: 'Deprecated: use dataSource. Alias for selecting the in-band
+            or OOB data source; when both parameters are supplied, their values must
+            match.'
+          in: query
+          name: agentType
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+          deprecated: true
       responses:
         '200':
           content:
@@ -2220,7 +2546,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Bad Request - invalid agentType
+          description: Bad Request - invalid dataSource, deprecated agentType alias,
+            or conflicting source parameters
         '401':
           content:
             application/json:
@@ -2262,13 +2589,23 @@ paths:
             type: string
         - description: 'Agent enrollment to soft delete: inband (default) or oob'
           in: query
-          name: agentType
+          name: dataSource
           schema:
             default: inband
             enum:
               - inband
               - oob
             type: string
+        - description: 'Deprecated: use dataSource. When both parameters are supplied,
+            their values must match.'
+          in: query
+          name: agentType
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+          deprecated: true
       responses:
         '200':
           content:
@@ -2334,15 +2671,25 @@ paths:
           required: true
           schema:
             type: string
-        - description: 'Agent type view: inband (default) or oob'
+        - description: 'Data source view: inband (default) or oob'
           in: query
-          name: agentType
+          name: dataSource
           schema:
             default: inband
             enum:
               - inband
               - oob
             type: string
+        - description: 'Deprecated: use dataSource. When both parameters are supplied,
+            their values must match.'
+          in: query
+          name: agentType
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+          deprecated: true
       responses:
         '200':
           content:
@@ -2351,7 +2698,7 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/models.InbandNodeDetailsResponse'
                   - $ref: '#/components/schemas/models.OobNodeDetailsResponse'
-          description: OOB detail (agentType=oob)
+          description: OOB detail (dataSource=oob)
         '400':
           content:
             application/json:
@@ -3199,7 +3546,7 @@ paths:
   /v1/reports/inventory:
     get:
       description: 'Get an agent-source-specific inventory report in JSON or CSV format.
-        agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob
+        dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob
         returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default
         response is JSON. For CSV download, set format=csv. For a signed CSV bundle
         (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv
@@ -3246,13 +3593,23 @@ paths:
         - description: 'Inventory source: inband (default) or oob. The JSON and CSV
             fields are source-specific.'
           in: query
-          name: agentType
+          name: dataSource
           schema:
             default: inband
             enum:
               - inband
               - oob
             type: string
+        - description: 'Deprecated: use dataSource. When both parameters are supplied,
+            their values must match.'
+          in: query
+          name: agentType
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+          deprecated: true
         - description: Filter by computezone IDs. Empty means all computezones
           in: query
           name: computeZoneIds
@@ -3335,7 +3692,7 @@ paths:
             text/csv:
               schema:
                 type: string
-          description: OOB JSON response (agentType=oob). CSV responses use a source-specific
+          description: OOB JSON response (dataSource=oob). CSV responses use a source-specific
             header; signed CSV returns application/zip.
         '400':
           content:
@@ -3482,6 +3839,157 @@ paths:
       summary: Update data retention policy
       tags:
         - retention_policy
+  /v1/stats:
+    get:
+      description: Returns aligned daily categorical chart data for a customer, node
+        group, or compute zone over a trailing window ending at the current server
+        time. Historical points come from stored stats. The final point is calculated
+        live at request time and replaces any stored data for the current day. A missing
+        historical record retains its scheduled timestamp and has null at the same
+        index in every series; zero is an observed count. timestamps[i] identifies
+        the point for every series.values[i], and all arrays have the same length.
+        The agentStatus stat currently returns Online and Offline series in that order
+        and requires dataSource. Healthy liveness counts as Online; every other, missing,
+        or unrecognized liveness value counts as Offline.
+      operationId: getV1Stats
+      parameters:
+        - description: The stat to query
+          example: agentStatus
+          in: query
+          name: name
+          required: true
+          schema:
+            enum:
+              - agentStatus
+            type: string
+        - description: Data source to query. Required for agentStatus.
+          example: inband
+          in: query
+          name: dataSource
+          schema:
+            enum:
+              - inband
+              - oob
+            type: string
+        - description: The aggregation level to group stats by
+          example: nodegroup
+          in: query
+          name: groupBy
+          required: true
+          schema:
+            enum:
+              - customer
+              - nodegroup
+              - computezone
+            type: string
+        - description: Entity ID. Required when groupBy is nodegroup or computezone;
+            omit when groupBy is customer.
+          example: 550e8400-e29b-41d4-a716-446655440000
+          in: query
+          name: groupId
+          schema:
+            type: string
+        - description: Trailing daily window ending at the current server time. Must
+            be a positive whole multiple of 24h and cannot exceed 8760h (365 days);
+            use 240h for 10 days. 'd' is not supported.
+          example: 240h
+          in: query
+          name: window
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              example:
+                series:
+                  - name: Online
+                    values:
+                      - 100
+                      - 105
+                      - null
+                      - 103
+                      - 108
+                      - 110
+                      - 109
+                      - null
+                      - 111
+                      - 113
+                  - name: Offline
+                    values:
+                      - 80
+                      - 90
+                      - null
+                      - 87
+                      - 82
+                      - 81
+                      - 84
+                      - null
+                      - 80
+                      - 79
+                timeRange:
+                  end: '2024-07-06T15:30:00Z'
+                  start: '2024-06-26T15:30:00Z'
+                timestamps:
+                  - 1719489600
+                  - 1719576000
+                  - 1719662400
+                  - 1719748800
+                  - 1719835200
+                  - 1719921600
+                  - 1720008000
+                  - 1720094400
+                  - 1720180800
+                  - 1720279800
+              schema:
+                $ref: '#/components/schemas/models.StatsResponse'
+          description: Categorical time series for the requested stat
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Requested scope not found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get categorical stats time series
+      tags:
+        - stats
   /v1/tags:
     get:
       description: 'Returns all unique tags for the customer with optional filtering.
@@ -3659,16 +4167,16 @@ paths:
         callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue,
         XID catalog descriptions, and DC-admin actions. Action text is resolved from
         the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid,
-        hostname, and the node''s current nodeGroup/computeZone (display names and
-        IDs), matching alert timeline Level 1 inventory enrichment.
+        the node''s resolved GPU type, identities, and current nodeGroup/computeZone.
+        GPU type is independent of the selected burst data source.
 
-        Bursts are detected independently on each observation path, selected by agentType:
+        Bursts are detected independently on each observation path, selected by dataSource:
         in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both
-        in one page. Each item echoes the single path that detected it, so on a combined
-        page a node that reported the same fault through both paths appears as two
-        rows with different agentType values — that is the observation, not a duplicate
-        to be merged. Sorting and paging are identical for every agentType. Every
-        item also carries all three node identities (hostname, nodeName, bmcHostname);
+        in one page. Each item echoes the single source that detected it, so on a
+        combined page a node that reported the same fault through both paths appears
+        as two rows with different dataSource values — that is the observation, not
+        a duplicate to be merged. Sorting and paging are identical for every dataSource.
+        Every item also carries all three node identities (hostname, nodeName, bmcHostname);
         each is empty unless the source owning it is currently enrolled, so an out-of-band-only
         node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch
         matches any of the three. For out-of-band bursts the deviceIds keys are resolved
@@ -3676,9 +4184,9 @@ paths:
         otherwise remain the raw token, so treat the key as an opaque device label.'
       operationId: getV1XIDBursts
       parameters:
-        - description: Observation path to list bursts from, or all for both
+        - description: Observation source to list bursts from, or all for both
           in: query
-          name: agentType
+          name: dataSource
           schema:
             default: inband
             enum:
@@ -3767,6 +4275,13 @@ paths:
           schema:
             items:
               type: integer
+            type: array
+        - description: Resolved node GPU types; independent of dataSource
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
             type: array
         - description: 'Case-insensitive substring matched against any of the node''s
             identities: hostname, nodeName, or bmcHostname. Takes precedence when
@@ -3878,7 +4393,11 @@ paths:
               - xidCount
               - burstDurationSeconds
               - nodeUuid
+              - dataSource
               - hostname
+              - nodeName
+              - bmcHostname
+              - gpuType
               - nodeGroup
               - computeZone
               - startTime
@@ -3972,11 +4491,11 @@ paths:
         filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather
         than a distinct-hostname options list.
 
-        Options are scoped by agentType and echoed in the response, so they always
+        Options are scoped by dataSource and echoed in the response, so they always
         match what GET /v1/xid/bursts returns for that same value. Request them again
-        when switching paths, and pass agentType=all when the table itself was fetched
-        with agentType=all — single-path options would otherwise omit filters for
-        rows already on screen.'
+        when switching sources, and pass dataSource=all when the table itself was
+        fetched with dataSource=all. GPU type options use each matching node''s resolved
+        GPU type, independent of which source detected the burst.'
       operationId: getV1XIDBurstOptions
       parameters:
         - description: Optional RFC3339 start time
@@ -4030,9 +4549,9 @@ paths:
             items:
               type: string
             type: array
-        - description: Observation path to compute options for, or all for both
+        - description: Observation source to compute options for, or all for both
           in: query
-          name: agentType
+          name: dataSource
           schema:
             default: inband
             enum:
@@ -4052,7 +4571,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Invalid agentType, invalid time range, or conflicting inventory
+          description: Invalid dataSource, invalid time range, or conflicting inventory
             filters
         '401':
           content:
@@ -4091,13 +4610,12 @@ paths:
         actions. Cloud-provider/NCP callers additionally receive category, subcategory,
         platform-attributed disruption, XID catalog descriptions, and all tenant plus
         DC-admin actions. Suggested action text is resolved from the persona-appropriate
-        Guidance Classes catalog. The response includes nodeUuid, all three node identities
-        (hostname, nodeName, bmcHostname), and the node''s current nodeGroup/computeZone
-        (display names and IDs).
+        Guidance Classes catalog. The response includes nodeUuid, resolved GPU type,
+        all three node identities, and the node''s current nodeGroup/computeZone.
 
-        This endpoint takes no agentType parameter: burst IDs are unique across observation
-        paths, so one ID resolves without one. The returned agentType field reports
-        which path detected the burst.'
+        This endpoint takes no dataSource parameter: burst IDs are unique across observation
+        paths, so one ID resolves without one. The returned dataSource field reports
+        which source detected the burst.'
       operationId: getV1XIDBurstDetail
       parameters:
         - description: XID burst UUID
@@ -4325,13 +4843,11 @@ components:
       enum:
         - Online
         - Offline
-        - Unknown
       example: Online
       type: string
       x-enum-varnames:
         - AgentStatusOnline
         - AgentStatusOffline
-        - AgentStatusUnknown
     models.Aggregation:
       enum:
         - average
@@ -4356,6 +4872,11 @@ components:
         componentDisplayName:
           type: string
         customerId:
+          type: string
+        dataSource:
+          description: 'DataSource is the persisted source that produced the alert:
+            inband or oob.'
+          example: inband
           type: string
         detectedAt:
           type: string
@@ -4387,6 +4908,41 @@ components:
           type: string
         triggeredAt:
           type: string
+      required:
+        - alertUUID
+        - nodeUUID
+      type: object
+    models.AlertAgentSourceStatus:
+      properties:
+        lastSeenAt:
+          example: '2026-09-15T20:30:00Z'
+          type: string
+        status:
+          $ref: '#/components/schemas/models.AlertAgentStatus'
+      type: object
+    models.AlertAgentStatus:
+      enum:
+        - online
+        - offline
+        - not_enrolled
+      example: online
+      type: string
+      x-enum-varnames:
+        - AlertAgentStatusOnline
+        - AlertAgentStatusOffline
+        - AlertAgentStatusNotEnrolled
+    models.AlertAgentStatuses:
+      description: 'AgentStatus contains source-specific liveness and timestamps.
+        Each source''s
+
+        lastSeenAt follows the Nodes API precedence: active liveness alert detectedAt,
+
+        liveness health-state updatedAt, then its inventory row updatedAt.'
+      properties:
+        inband:
+          $ref: '#/components/schemas/models.AlertAgentSourceStatus'
+        oob:
+          $ref: '#/components/schemas/models.AlertAgentSourceStatus'
       type: object
     models.AlertEventType:
       enum:
@@ -4549,6 +5105,9 @@ components:
         total:
           example: 120
           type: integer
+      required:
+        - alertUuid
+        - nodeUuid
       type: object
     models.AlertTimelineEvent:
       properties:
@@ -4582,6 +5141,12 @@ components:
       type: object
     models.AlertTimelineNode:
       properties:
+        agentStatus:
+          $ref: '#/components/schemas/models.AlertAgentStatuses'
+        bmcHostname:
+          description: OOB BMC hostname.
+          example: bmc-a.example.com
+          type: string
         computeZone:
           description: Compute zone display name
           example: Compute Zone Name
@@ -4592,8 +5157,11 @@ components:
           example: 4
           type: integer
         gpuType:
-          description: GPU product name from node inventory
-          example: H100
+          description: 'GPUType is the node''s resolved GPU product, independent of
+            which source
+
+            produced the alert.'
+          example: NVIDIA-H100-80GB-HBM3
           type: string
         hostStatus:
           description: 'Deprecated: use criticalCount/warningCount; kept for backward
@@ -4601,6 +5169,7 @@ components:
           example: Active
           type: string
         hostname:
+          description: In-band OS hostname.
           example: gpu-node-01
           type: string
         lastAlertTime:
@@ -4609,6 +5178,10 @@ components:
         nodeGroup:
           description: Node group display name
           example: Node Group Name 1
+          type: string
+        nodeName:
+          description: OOB collector-configured machine name.
+          example: machine-001
           type: string
         nodeUuid:
           example: node-uuid-456
@@ -4621,6 +5194,8 @@ components:
           description: Count of Warning alerts on this node
           example: 2
           type: integer
+      required:
+        - nodeUuid
       type: object
     models.AlertTimelineNodeAlert:
       properties:
@@ -4638,6 +5213,10 @@ components:
         componentDisplayName:
           example: GPU
           type: string
+        dataSource:
+          description: 'Source that produced the alert: inband or oob.'
+          example: inband
+          type: string
         lastEventTime:
           example: '2024-12-01T10:00:00Z'
           type: string
@@ -4645,6 +5224,8 @@ components:
           description: When the alert was first detected
           example: '2024-11-30T08:00:00Z'
           type: string
+      required:
+        - alertUuid
       type: object
     models.AlertTimelineNodeAlertsResponse:
       properties:
@@ -4672,6 +5253,8 @@ components:
           description: Total number of alerts for this node
           example: 10
           type: integer
+      required:
+        - nodeUuid
       type: object
     models.AlertTimelineNodesResponse:
       properties:
@@ -4973,8 +5556,8 @@ components:
       type: object
     models.ComponentMetricList:
       properties:
-        agentType:
-          description: 'AgentType is the agent enrollment that produces this component:
+        dataSource:
+          description: 'DataSource is the agent enrollment that produces this component:
             "inband"
 
             or "oob". Every component is one agent''s data, so this is the authoritative
@@ -4984,7 +5567,7 @@ components:
 
             Agent Connectivity, which carry no metrics to classify.
 
-            Values: AgentTypeInband / AgentTypeOob.'
+            Values: inband / oob.'
           type: string
         displayName:
           type: string
@@ -5003,6 +5586,15 @@ components:
             type: string
           type: array
           uniqueItems: false
+      type: object
+    models.ComponentTypeOption:
+      properties:
+        component:
+          example: GPU
+          type: string
+        componentDisplayName:
+          example: GPU
+          type: string
       type: object
     models.ComponentsInfo:
       properties:
@@ -5080,6 +5672,8 @@ components:
         updatedAt:
           example: '2024-01-15T14:30:00Z'
           type: string
+      required:
+        - id
       type: object
     models.ComputeZoneType:
       enum:
@@ -5276,16 +5870,42 @@ components:
       type: object
     models.Event:
       properties:
+        bmcHostname:
+          description: BMC hostname of the node's OOB enrollment
+          example: bmc-a.example.com
+          type: string
         component:
           description: Component name
           example: gpu
           type: string
+        computeZone:
+          description: Current compute zone name
+          example: compute-zone-1
+          type: string
+        computeZoneId:
+          description: Current compute zone ID
+          example: 550e8400-e29b-41d4-a716-446655440002
+          type: string
         createdAt:
           example: '2024-01-15T14:30:00Z'
+          type: string
+        dataSource:
+          description: Data source derived from the persisted event or configured
+            component
+          example: inband
           type: string
         eventId:
           description: Unique event identifier
           example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        gpuType:
+          description: Current resolved node GPU type
+          example: NVIDIA-H100-80GB-HBM3
+          type: string
+        hostname:
+          description: Current in-band OS hostname; empty for a node with no in-band
+            enrollment
+          example: node-001
           type: string
         message:
           example: GPU error occurred
@@ -5293,6 +5913,18 @@ components:
         name:
           description: Event name
           example: gpu_error
+          type: string
+        nodeGroup:
+          description: Current node group name
+          example: node-group-1
+          type: string
+        nodeGroupId:
+          description: Current node group ID
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        nodeName:
+          description: Machine name configured on the OOB collector
+          example: node-001
           type: string
         nodeUUID:
           description: Node UUID
@@ -5311,6 +5943,9 @@ components:
           description: Event type
           example: Warning
           type: string
+      required:
+        - eventId
+        - nodeUUID
       type: object
     models.EventBucket:
       properties:
@@ -5335,6 +5970,43 @@ components:
         buckets:
           items:
             $ref: '#/components/schemas/models.EventBucket'
+          type: array
+          uniqueItems: false
+      type: object
+    models.EventFilterOptionsResponse:
+      properties:
+        components:
+          description: 'Components provides the raw component identifier used by the
+            events
+
+            filter together with its configured display name for the dropdown.'
+          items:
+            $ref: '#/components/schemas/models.ComponentTypeOption'
+          type: array
+          uniqueItems: false
+        dataSources:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        eventNames:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        gpuTypes:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        severities:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        sortFields:
+          items:
+            type: string
           type: array
           uniqueItems: false
       type: object
@@ -5405,8 +6077,11 @@ components:
     models.GPUDevice:
       properties:
         boardID:
+          description: 'Deprecated: This field is no longer populated by current agents
+            and remains for backward compatibility.'
           example: 0
           type: integer
+          deprecated: true
         busID:
           example: '00000000:01:00.0'
           type: string
@@ -5671,13 +6346,18 @@ components:
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
+          description: 'Deprecated: use dataSource.'
           example: inband
           type: string
+          deprecated: true
         agentVersion:
           example: 1.2.3
           type: string
         computeZone:
           example: compute-zone-1
+          type: string
+        dataSource:
+          example: inband
           type: string
         firmwareCheck:
           $ref: '#/components/schemas/models.FirmwareCheck'
@@ -5747,6 +6427,7 @@ components:
           example: 'Attestation verification unavailable: SDK error'
           type: string
       required:
+        - dataSource
         - nodeUUID
       type: object
     models.InbandNodeDetailsResponse:
@@ -5754,8 +6435,10 @@ components:
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
+          description: 'Deprecated: use dataSource.'
           example: inband
           type: string
+          deprecated: true
         agentVersion:
           example: 1.2.3
           type: string
@@ -5764,6 +6447,9 @@ components:
           type: string
         computeZoneId:
           example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        dataSource:
+          example: inband
           type: string
         degradedComponentCount:
           example: 1
@@ -5866,6 +6552,7 @@ components:
           example: 'Attestation verification unavailable: SDK error'
           type: string
       required:
+        - dataSource
         - nodeUUID
       type: object
     models.InbandNodesResponse:
@@ -6131,25 +6818,24 @@ components:
           example: memory
           type: string
         unit:
-          example: percent
-          type: string
+          $ref: '#/components/schemas/models.MetricUnit'
         value:
           example: 72.3
           type: number
       type: object
     models.MetricInfo:
       properties:
-        agentType:
-          description: 'AgentType is set only for metrics that carry their own agent
+        dataSource:
+          description: 'DataSource is set only for metrics that carry their own agent
             gate: "oob"
 
             for BMC sensor charts. Its absence means "no gate of its own", not
 
-            "in-band" — read the enclosing component''s agentType to classify a metric,
+            "in-band" — read the enclosing component''s dataSource to classify a metric,
 
             which a metric may repeat but never contradict.
 
-            Values: AgentTypeInband / AgentTypeOob.'
+            Values: inband / oob.'
           type: string
         displayName:
           type: string
@@ -6158,7 +6844,7 @@ components:
         type:
           type: string
         unit:
-          type: string
+          $ref: '#/components/schemas/models.MetricUnit'
       type: object
     models.MetricQueryWarning:
       description: e.g. omitted invalid metric points; null when no issues
@@ -6244,8 +6930,7 @@ components:
         unavailable:
           $ref: '#/components/schemas/models.MetricUnavailable'
         unit:
-          example: ratio
-          type: string
+          $ref: '#/components/schemas/models.MetricUnit'
         warning:
           $ref: '#/components/schemas/models.MetricQueryWarning'
       required:
@@ -6272,6 +6957,57 @@ components:
           type: string
       type: object
       x-nullable: true
+    models.MetricUnit:
+      enum:
+        - MHz
+        - count
+        - °C
+        - °F
+        - celsius
+        - watts
+        - boolean
+        - MB
+        - ratio
+        - MB/s
+        - ber
+        - nanoseconds
+        - ms
+        - seconds
+        - s
+        - bytes
+        - bytes/s
+        - millijoules
+        - load
+        - cores
+        - percent
+        - rpm
+        - volts
+      example: ratio
+      type: string
+      x-enum-varnames:
+        - MetricUnitMegahertz
+        - MetricUnitCount
+        - MetricUnitDegreesCelsius
+        - MetricUnitDegreesFahrenheit
+        - MetricUnitCelsius
+        - MetricUnitWatts
+        - MetricUnitBoolean
+        - MetricUnitMegabyte
+        - MetricUnitRatio
+        - MetricUnitMegabytesPerSecond
+        - MetricUnitBitErrorRate
+        - MetricUnitNanoseconds
+        - MetricUnitMilliseconds
+        - MetricUnitSeconds
+        - MetricUnitSecond
+        - MetricUnitBytes
+        - MetricUnitBytesPerSecond
+        - MetricUnitMillijoules
+        - MetricUnitLoad
+        - MetricUnitCores
+        - MetricUnitPercent
+        - MetricUnitRPM
+        - MetricUnitVolts
     models.MetricsAggregationResponse:
       properties:
         metrics:
@@ -6368,6 +7104,8 @@ components:
           type: string
         pageSize:
           type: integer
+      required:
+        - nodeUUID
       type: object
     models.NodeGroupMembership:
       properties:
@@ -6490,6 +7228,8 @@ components:
         updatedAt:
           example: '2024-01-15T14:28:00Z'
           type: string
+      required:
+        - id
       type: object
     models.NodeGroupsResponse:
       properties:
@@ -6567,6 +7307,20 @@ components:
           example: 100
           type: integer
       type: object
+    models.NodeKind:
+      default: unknown
+      enum:
+        - unknown
+        - compute
+        - nvswitch
+        - power_shelf
+      example: compute
+      type: string
+      x-enum-varnames:
+        - NodeKindUnknown
+        - NodeKindCompute
+        - NodeKindNvSwitch
+        - NodeKindPowerShelf
     models.NodeRemovalPolicy:
       properties:
         createdAt:
@@ -6576,17 +7330,17 @@ components:
           example: true
           type: boolean
         lastCheckedAt:
-          description: 'LastCheckedAt is the most recent time the node reaper evaluated
-            this customer.
+          description: 'LastCheckedAt is the most recent reaper evaluation. It is
+            zero for a new or
 
-            Zero until the reaper first runs against the customer (DB column is NULL),
-            and
+            backfilled policy until the reaper runs (DB column is NULL), and omitted
+            from
 
-            omitted from the response until then.'
+            the response until then.'
           example: '2024-01-15T10:30:00Z'
           type: string
         offlineThresholdDays:
-          example: 30
+          example: 7
           type: integer
         updatedAt:
           example: '2024-01-15T10:30:00Z'
@@ -6678,8 +7432,8 @@ components:
           example: true
           type: boolean
         components:
-          description: 'Components this preference applies to (e.g. GPU, CPU, NVLink,
-            agent_liveness). At least one;
+          description: 'Components this preference applies to (e.g. GPU, CPU, NVLink).
+            At least one;
 
             all settings below apply equally to every listed component.'
           example:
@@ -6780,7 +7534,9 @@ components:
           example: Free form asset tag
           type: string
         chassisType:
-          example: module
+          example: Module
+          type: string
+        description:
           type: string
         health:
           description: 'Deprecated: use status.health.'
@@ -6795,6 +7551,8 @@ components:
         id:
           example: HGX_GPU_SXM_1
           type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
         location:
           $ref: '#/components/schemas/models.OobChassisLocation'
         manufacturer:
@@ -6802,6 +7560,8 @@ components:
           type: string
         model:
           example: H100 80GB HBM3
+          type: string
+        name:
           type: string
         odataId:
           example: /redfish/v1/Chassis/HGX_GPU_SXM_1
@@ -6815,7 +7575,7 @@ components:
           type: array
           uniqueItems: false
         powerState:
-          example: 'on'
+          example: 'On'
           type: string
         serialNumber:
           example: '1655023015625'
@@ -6835,21 +7595,32 @@ components:
       type: object
     models.OobChassisLocation:
       properties:
+        partLocation:
+          $ref: '#/components/schemas/models.OobPartLocation'
+        partLocationContext:
+          type: string
+        placement:
+          $ref: '#/components/schemas/models.OobPlacement'
         rack:
           example: Rack-1
           type: string
+          deprecated: true
         rackOffset:
           example: 10
           type: integer
+          deprecated: true
         room:
           example: DC-1
           type: string
+          deprecated: true
         row:
           example: Row-A
           type: string
+          deprecated: true
         serviceLabel:
           example: SXM1
           type: string
+          deprecated: true
       type: object
     models.OobDomainError:
       properties:
@@ -6866,8 +7637,43 @@ components:
         - domain
         - message
       type: object
+    models.OobFabric:
+      properties:
+        description:
+          example: NVLink switch fabric
+          type: string
+        fabricType:
+          example: NVLink
+          type: string
+        id:
+          example: NVLinkFabric
+          type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
+        name:
+          example: NVLinkFabric
+          type: string
+        odataId:
+          example: /redfish/v1/Fabrics/NVLinkFabric
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+        switches:
+          items:
+            $ref: '#/components/schemas/models.OobSwitch'
+          type: array
+          uniqueItems: false
+        uuid:
+          example: f0919d16-12df-4a38-8cf5-908c88bde738
+          type: string
+      required:
+        - id
+        - name
+      type: object
     models.OobFirmware:
       properties:
+        description:
+          type: string
         health:
           description: 'Deprecated: use status.health.'
           example: OK
@@ -6881,12 +7687,19 @@ components:
         id:
           example: HGX_FW_GPU_SXM_1
           type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
         name:
           example: HGX_FW_GPU_SXM_1
           type: string
         odataId:
           example: /redfish/v1/UpdateService/FirmwareInventory/HGX_FW_GPU_SXM_1
           type: string
+        relatedItem:
+          items:
+            $ref: '#/components/schemas/models.OobInventoryReference'
+          type: array
+          uniqueItems: false
         releaseDate:
           example: '2026-05-01'
           type: string
@@ -6921,6 +7734,11 @@ components:
         domainErrors:
           items:
             $ref: '#/components/schemas/models.OobDomainError'
+          type: array
+          uniqueItems: false
+        fabrics:
+          items:
+            $ref: '#/components/schemas/models.OobFabric'
           type: array
           uniqueItems: false
         firmware:
@@ -6992,6 +7810,12 @@ components:
       required:
         - messageId
       type: object
+    models.OobInventoryLinks:
+      additionalProperties:
+        items:
+          $ref: '#/components/schemas/models.OobInventoryReference'
+        type: array
+      type: object
     models.OobInventoryNode:
       properties:
         agentVersion:
@@ -7058,11 +7882,11 @@ components:
       type: object
     models.OobInventoryReference:
       properties:
-        '@odata.id':
+        odataId:
           example: /redfish/v1/Chassis/HGX_GPU_SXM_1
           type: string
       required:
-        - '@odata.id'
+        - odataId
       type: object
     models.OobInventoryReportResponse:
       properties:
@@ -7103,6 +7927,8 @@ components:
       type: object
     models.OobManager:
       properties:
+        description:
+          type: string
         firmwareVersion:
           example: 26.03.03
           type: string
@@ -7119,11 +7945,15 @@ components:
         id:
           example: BMC
           type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
         managerType:
-          example: bmc
+          example: BMC
           type: string
         model:
           example: '77171220'
+          type: string
+        name:
           type: string
         odataId:
           example: /redfish/v1/Managers/BMC
@@ -7141,13 +7971,55 @@ components:
       required:
         - id
       type: object
+    models.OobMemorySummary:
+      properties:
+        memoryMirroring:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+        totalSystemMemoryGiB:
+          type: number
+        totalSystemPersistentMemoryGiB:
+          type: number
+      type: object
+    models.OobNVLinkTopology:
+      properties:
+        chassisSerialNumber:
+          type: string
+        hostId:
+          type: integer
+        ibGuid:
+          description: IBGUID is raw Redfish hexadecimal text. Consumers matching
+            NMX-C device UIDs must apply the required little-endian decode.
+          type: string
+        lsbIbGuid:
+          type: string
+        moduleId:
+          type: integer
+        peerType:
+          type: string
+        systemGuid:
+          description: SystemGUID is raw Redfish hexadecimal text. The collector does
+            not decode byte order.
+          type: string
+        traySerialNumber:
+          description: TraySerialNumber is raw Redfish text. "NA" means not reported
+            and must be treated as absent, never as a rack or chassis serial.
+          type: string
+        traySlotIndex:
+          type: integer
+        traySlotNumber:
+          type: integer
+      type: object
     models.OobNode:
       properties:
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
+          description: 'Deprecated: use dataSource.'
           example: inband
           type: string
+          deprecated: true
         agentVersion:
           example: 1.2.3
           type: string
@@ -7159,6 +8031,15 @@ components:
           type: string
         computeZone:
           example: compute-zone-1
+          type: string
+        dataSource:
+          example: inband
+          type: string
+        gpuCount:
+          example: 4
+          type: integer
+        gpuType:
+          example: NVIDIA-T400-4GB
           type: string
         healthStatus:
           $ref: '#/components/schemas/models.HealthState'
@@ -7207,6 +8088,7 @@ components:
           example: 'Attestation verification unavailable: SDK error'
           type: string
       required:
+        - dataSource
         - nodeUUID
       type: object
     models.OobNodeDetailsResponse:
@@ -7214,8 +8096,10 @@ components:
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
+          description: 'Deprecated: use dataSource.'
           example: inband
           type: string
+          deprecated: true
         agentVersion:
           example: 1.2.3
           type: string
@@ -7231,6 +8115,9 @@ components:
         computeZoneId:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
+        dataSource:
+          example: inband
+          type: string
         degradedComponentCount:
           example: 1
           type: integer
@@ -7241,6 +8128,12 @@ components:
           $ref: '#/components/schemas/models.GeoLocation'
           deprecated: true
           description: 'Deprecated: use location.'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuType:
+          example: NVIDIA-T400-4GB
+          type: string
         healthStatus:
           $ref: '#/components/schemas/models.HealthState'
         healthyComponentCount:
@@ -7309,22 +8202,9 @@ components:
           example: 'Attestation verification unavailable: SDK error'
           type: string
       required:
+        - dataSource
         - nodeUUID
       type: object
-    models.NodeKind:
-      default: unknown
-      enum:
-        - unknown
-        - compute
-        - nvswitch
-        - power_shelf
-      example: compute
-      type: string
-      x-enum-varnames:
-        - NodeKindUnknown
-        - NodeKindCompute
-        - NodeKindNvSwitch
-        - NodeKindPowerShelf
     models.OobNodesResponse:
       properties:
         hasMore:
@@ -7345,10 +8225,64 @@ components:
           example: 100
           type: integer
       type: object
+    models.OobNvidiaGPU:
+      properties:
+        ccDevModeEnabled:
+          type: boolean
+        ccModeEnabled:
+          type: boolean
+        defaultBoostClockSpeedMhz:
+          type: integer
+        egmModeEnabled:
+          type: boolean
+        maxBoostClockSpeedMhz:
+          type: integer
+        migModeEnabled:
+          type: boolean
+        nvlinkTopology:
+          $ref: '#/components/schemas/models.OobNVLinkTopology'
+        protectedPcieModeEnabled:
+          type: boolean
+        totalNvLinks:
+          type: integer
+      type: object
+    models.OobNvidiaSwitch:
+      properties:
+        deviceId:
+          example: '0x1234'
+          type: string
+        pcieReferenceClockEnabled:
+          example: true
+          type: boolean
+        protectedPcieModeEnabled:
+          example: false
+          type: boolean
+        switchIsolationMode:
+          example: SwitchCommunicationEnabled
+          type: string
+        vendorId:
+          example: '0x10DE'
+          type: string
+      type: object
+    models.OobPartLocation:
+      properties:
+        locationOrdinalValue:
+          type: integer
+        locationType:
+          type: string
+        orientation:
+          type: string
+        reference:
+          type: string
+        serviceLabel:
+          type: string
+      type: object
     models.OobPcieDevice:
       properties:
+        description:
+          type: string
         deviceType:
-          example: single_function
+          example: SingleFunction
           type: string
         firmwareVersion:
           example: 96.00.DA.00.0C
@@ -7366,11 +8300,15 @@ components:
         id:
           example: GPU_SXM_1
           type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
         manufacturer:
           example: NVIDIA
           type: string
         model:
           example: H100 80GB HBM3
+          type: string
+        name:
           type: string
         odataId:
           example: /redfish/v1/Chassis/HGX_GPU_SXM_1/PCIeDevices/GPU_SXM_1
@@ -7397,8 +8335,27 @@ components:
       required:
         - id
       type: object
+    models.OobPlacement:
+      properties:
+        additionalInfo:
+          type: string
+        facilityName:
+          type: string
+        rack:
+          type: string
+        rackOffset:
+          type: integer
+        rackOffsetUnits:
+          type: string
+        room:
+          type: string
+        row:
+          type: string
+      type: object
     models.OobProcessor:
       properties:
+        description:
+          type: string
         health:
           description: 'Deprecated: use status.health.'
           example: OK
@@ -7415,6 +8372,10 @@ components:
         instructionSet:
           example: x86-64
           type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
+        location:
+          $ref: '#/components/schemas/models.OobChassisLocation'
         manufacturer:
           example: Intel(R) Corporation
           type: string
@@ -7424,14 +8385,24 @@ components:
         model:
           example: Intel(R) Xeon(R) Platinum 8480CL
           type: string
+        name:
+          type: string
+        nvidiaGpu:
+          $ref: '#/components/schemas/models.OobNvidiaGPU'
         odataId:
           example: /redfish/v1/Systems/DGX/Processors/DevType1_CPU0
+          type: string
+        partNumber:
+          example: 2941-892-A1
           type: string
         processorArchitecture:
           example: x86
           type: string
         processorType:
-          example: cpu
+          example: CPU
+          type: string
+        serialNumber:
+          example: CPU123456789
           type: string
         socket:
           example: CPU0
@@ -7449,8 +8420,26 @@ components:
         totalThreads:
           example: 112
           type: integer
+        uuid:
+          example: 61a34398-33c9-4192-88db-7fe41c56eb47
+          type: string
       required:
         - id
+      type: object
+    models.OobProcessorSummary:
+      properties:
+        coreCount:
+          type: integer
+        count:
+          type: integer
+        logicalProcessorCount:
+          type: integer
+        model:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+        threadingEnabled:
+          type: boolean
       type: object
     models.OobSource:
       properties:
@@ -7480,6 +8469,56 @@ components:
         - mac
         - sourceType
       type: object
+    models.OobSwitch:
+      properties:
+        description:
+          example: NVLink switch ASIC
+          type: string
+        firmwareVersion:
+          example: 1.2.3
+          type: string
+        id:
+          example: NVSwitch0
+          type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
+        location:
+          $ref: '#/components/schemas/models.OobChassisLocation'
+        manufacturer:
+          example: NVIDIA
+          type: string
+        model:
+          example: NVSwitch
+          type: string
+        name:
+          example: NVSwitch 0
+          type: string
+        nvidiaSwitch:
+          $ref: '#/components/schemas/models.OobNvidiaSwitch'
+        odataId:
+          example: /redfish/v1/Fabrics/NVLinkFabric/Switches/NVSwitch0
+          type: string
+        partNumber:
+          example: 699-24787-0000-100
+          type: string
+        serialNumber:
+          example: NVSW123456789
+          type: string
+        sku:
+          example: 920-24787-2530-000
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+        switchType:
+          example: NVLink
+          type: string
+        uuid:
+          example: 147727a3-b9ea-44eb-969a-718ee9c41f37
+          type: string
+      required:
+        - id
+        - name
+      type: object
     models.OobSystem:
       properties:
         assetTag:
@@ -7491,11 +8530,16 @@ components:
         cpuCoreCount:
           example: 112
           type: integer
+          deprecated: true
         cpuCount:
           example: 2
           type: integer
+          deprecated: true
         cpuModel:
           example: Intel(R) Xeon(R) Platinum 8480CL
+          type: string
+          deprecated: true
+        description:
           type: string
         health:
           description: 'Deprecated: use status.health.'
@@ -7513,21 +8557,30 @@ components:
         id:
           example: DGX
           type: string
+        links:
+          $ref: '#/components/schemas/models.OobInventoryLinks'
         manufacturer:
           example: NVIDIA
           type: string
         memoryGib:
           example: 2048
           type: number
+          deprecated: true
+        memorySummary:
+          $ref: '#/components/schemas/models.OobMemorySummary'
         model:
           example: DGXH100
+          type: string
+        name:
           type: string
         odataId:
           example: /redfish/v1/Systems/DGX
           type: string
         powerState:
-          example: 'on'
+          example: 'On'
           type: string
+        processorSummary:
+          $ref: '#/components/schemas/models.OobProcessorSummary'
         processors:
           items:
             $ref: '#/components/schemas/models.OobProcessor'
@@ -7685,6 +8738,8 @@ components:
         updatedAt:
           example: '2024-01-15T14:30:00Z'
           type: string
+      required:
+        - id
       type: object
     models.SimpleNode:
       properties:
@@ -7724,6 +8779,8 @@ components:
         name:
           example: GPU Cluster 1
           type: string
+      required:
+        - id
       type: object
     models.SingleCommand:
       properties:
@@ -7773,6 +8830,38 @@ components:
             - desc
           items:
             type: string
+          type: array
+          uniqueItems: false
+      type: object
+    models.StatsResponse:
+      properties:
+        series:
+          items:
+            $ref: '#/components/schemas/models.StatsSeries'
+          type: array
+          uniqueItems: false
+        timeRange:
+          $ref: '#/components/schemas/models.TimeRange'
+        timestamps:
+          example:
+            - 1719489600
+            - 1719576000
+            - 1719662400
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+      type: object
+    models.StatsSeries:
+      properties:
+        name:
+          example: Online
+          type: string
+        values:
+          items:
+            oneOf:
+              - type: integer
+              - type: 'null'
           type: array
           uniqueItems: false
       type: object
@@ -7869,6 +8958,8 @@ components:
         id:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
+      required:
+        - id
       type: object
     models.UpdateMuteRuleRequest:
       properties:
@@ -7947,15 +9038,6 @@ components:
       type: object
     models.XIDBurstDetail:
       properties:
-        agentType:
-          description: 'AgentType is the observation path the burst was detected on:
-            "inband" or
-
-            "oob". This endpoint takes no agentType parameter — burst IDs are unique
-
-            across paths — so this field is the only way to tell them apart.'
-          example: inband
-          type: string
         bmcHostname:
           example: bmc-hostname-1
           type: string
@@ -7975,6 +9057,15 @@ components:
         computeZoneId:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
+        dataSource:
+          description: 'DataSource is the observation path the burst was detected
+            on: "inband" or
+
+            "oob". This endpoint takes no dataSource parameter — burst IDs are unique
+
+            across paths — so this field is the only way to tell them apart.'
+          example: inband
+          type: string
         deviceIds:
           additionalProperties:
             items:
@@ -7988,6 +9079,9 @@ components:
         endTime:
           example: '2026-07-17T11:33:59Z'
           format: date-time
+          type: string
+        gpuType:
+          example: NVIDIA-H100-80GB-HBM3
           type: string
         hostname:
           description: 'Hostname, NodeName, and BMCHostname carry the same node-scoped
@@ -8052,18 +9146,26 @@ components:
             $ref: '#/components/schemas/models.XIDBurstXID'
           type: array
           uniqueItems: false
+      required:
+        - burstId
+        - nodeUuid
       type: object
     models.XIDBurstFilterOptionsResponse:
       properties:
-        agentType:
-          description: 'AgentType echoes the observation path the options were computed
+        categories:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        dataSource:
+          description: 'DataSource echoes the observation path the options were computed
             from, so
 
             a client that caches options per path can tell them apart. It may be
 
             "all", and must be when the table it filters was fetched with
 
-            agentType=all: options for one path never include values seen only on
+            dataSource=all: options for one path never include values seen only on
             the
 
             other, so pairing a combined table with single-path options would hide
@@ -8071,7 +9173,7 @@ components:
             filters for rows on screen.'
           example: inband
           type: string
-        categories:
+        gpuTypes:
           items:
             type: string
           type: array
@@ -8117,19 +9219,6 @@ components:
       type: object
     models.XIDBurstListItem:
       properties:
-        agentType:
-          description: 'AgentType is the observation path the burst was detected on:
-            "inband" or
-
-            "oob". Never "all", even for an agentType=all request — "all" selects
-
-            which rows to return, and every row was still found by exactly one path.
-
-            On a combined page this is what tells the two apart, so a node that
-
-            reported one fault on both appears as two rows labelled differently.'
-          example: inband
-          type: string
         bmcHostname:
           example: bmc-hostname-1
           type: string
@@ -8149,6 +9238,19 @@ components:
         computeZoneId:
           example: 550e8400-e29b-41d4-a716-446655440000
           type: string
+        dataSource:
+          description: 'DataSource is the observation path the burst was detected
+            on: "inband" or
+
+            "oob". Never "all", even for a dataSource=all request — "all" selects
+
+            which rows to return, and every row was still found by exactly one path.
+
+            On a combined page this is what tells the two apart, so a node that
+
+            reported one fault on both appears as two rows labelled differently.'
+          example: inband
+          type: string
         deviceIds:
           additionalProperties:
             items:
@@ -8163,6 +9265,9 @@ components:
           example: '2026-07-17T11:33:59Z'
           format: date-time
           type: string
+        gpuType:
+          example: NVIDIA-H100-80GB-HBM3
+          type: string
         hostname:
           description: 'Hostname is the in-band OS hostname; NodeName and BMCHostname
             are the
@@ -8171,7 +9276,7 @@ components:
 
             burst, so a dual-enrolled node returns every identity it has regardless
 
-            of AgentType. Each is empty when the source owning it is not enrolled.'
+            of DataSource. Each is empty when the source owning it is not enrolled.'
           example: machine-hostname-1
           type: string
         jobDisruption:
@@ -8230,6 +9335,9 @@ components:
             $ref: '#/components/schemas/models.XIDBurstXID'
           type: array
           uniqueItems: false
+      required:
+        - burstId
+        - nodeUuid
       type: object
     models.XIDBurstXID:
       properties:

@@ -57,7 +57,6 @@ func (e ModelsActionType) Valid() bool {
 const (
 	AgentStatusOffline ModelsAgentStatus = "Offline"
 	AgentStatusOnline  ModelsAgentStatus = "Online"
-	AgentStatusUnknown ModelsAgentStatus = "Unknown"
 )
 
 // Valid indicates whether the value is a known member of the ModelsAgentStatus enum.
@@ -66,8 +65,6 @@ func (e ModelsAgentStatus) Valid() bool {
 	case AgentStatusOffline:
 		return true
 	case AgentStatusOnline:
-		return true
-	case AgentStatusUnknown:
 		return true
 	default:
 		return false
@@ -95,6 +92,27 @@ func (e ModelsAggregation) Valid() bool {
 	case AggregationNone:
 		return true
 	case AggregationSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModelsAlertAgentStatus.
+const (
+	AlertAgentStatusNotEnrolled ModelsAlertAgentStatus = "not_enrolled"
+	AlertAgentStatusOffline     ModelsAlertAgentStatus = "offline"
+	AlertAgentStatusOnline      ModelsAlertAgentStatus = "online"
+)
+
+// Valid indicates whether the value is a known member of the ModelsAlertAgentStatus enum.
+func (e ModelsAlertAgentStatus) Valid() bool {
+	switch e {
+	case AlertAgentStatusNotEnrolled:
+		return true
+	case AlertAgentStatusOffline:
+		return true
+	case AlertAgentStatusOnline:
 		return true
 	default:
 		return false
@@ -347,6 +365,87 @@ func (e ModelsIntegrityCheck) Valid() bool {
 	}
 }
 
+// Defines values for ModelsMetricUnit.
+const (
+	MetricUnitBitErrorRate       ModelsMetricUnit = "ber"
+	MetricUnitBoolean            ModelsMetricUnit = "boolean"
+	MetricUnitBytes              ModelsMetricUnit = "bytes"
+	MetricUnitBytesPerSecond     ModelsMetricUnit = "bytes/s"
+	MetricUnitCelsius            ModelsMetricUnit = "celsius"
+	MetricUnitCores              ModelsMetricUnit = "cores"
+	MetricUnitCount              ModelsMetricUnit = "count"
+	MetricUnitDegreesCelsius     ModelsMetricUnit = "°C"
+	MetricUnitDegreesFahrenheit  ModelsMetricUnit = "°F"
+	MetricUnitLoad               ModelsMetricUnit = "load"
+	MetricUnitMegabyte           ModelsMetricUnit = "MB"
+	MetricUnitMegabytesPerSecond ModelsMetricUnit = "MB/s"
+	MetricUnitMegahertz          ModelsMetricUnit = "MHz"
+	MetricUnitMillijoules        ModelsMetricUnit = "millijoules"
+	MetricUnitMilliseconds       ModelsMetricUnit = "ms"
+	MetricUnitNanoseconds        ModelsMetricUnit = "nanoseconds"
+	MetricUnitPercent            ModelsMetricUnit = "percent"
+	MetricUnitRPM                ModelsMetricUnit = "rpm"
+	MetricUnitRatio              ModelsMetricUnit = "ratio"
+	MetricUnitSecond             ModelsMetricUnit = "s"
+	MetricUnitSeconds            ModelsMetricUnit = "seconds"
+	MetricUnitVolts              ModelsMetricUnit = "volts"
+	MetricUnitWatts              ModelsMetricUnit = "watts"
+)
+
+// Valid indicates whether the value is a known member of the ModelsMetricUnit enum.
+func (e ModelsMetricUnit) Valid() bool {
+	switch e {
+	case MetricUnitBitErrorRate:
+		return true
+	case MetricUnitBoolean:
+		return true
+	case MetricUnitBytes:
+		return true
+	case MetricUnitBytesPerSecond:
+		return true
+	case MetricUnitCelsius:
+		return true
+	case MetricUnitCores:
+		return true
+	case MetricUnitCount:
+		return true
+	case MetricUnitDegreesCelsius:
+		return true
+	case MetricUnitDegreesFahrenheit:
+		return true
+	case MetricUnitLoad:
+		return true
+	case MetricUnitMegabyte:
+		return true
+	case MetricUnitMegabytesPerSecond:
+		return true
+	case MetricUnitMegahertz:
+		return true
+	case MetricUnitMillijoules:
+		return true
+	case MetricUnitMilliseconds:
+		return true
+	case MetricUnitNanoseconds:
+		return true
+	case MetricUnitPercent:
+		return true
+	case MetricUnitRPM:
+		return true
+	case MetricUnitRatio:
+		return true
+	case MetricUnitSecond:
+		return true
+	case MetricUnitSeconds:
+		return true
+	case MetricUnitVolts:
+		return true
+	case MetricUnitWatts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelsNodeKind.
 const (
 	NodeKindCompute    ModelsNodeKind = "compute"
@@ -452,17 +551,22 @@ func (e ModelsVerificationCheck) Valid() bool {
 // Defines values for GetV1AlertTimelineNodesParamsSortBy.
 const (
 	GetV1AlertTimelineNodesParamsSortByAlert       GetV1AlertTimelineNodesParamsSortBy = "alert"
+	GetV1AlertTimelineNodesParamsSortByBmcHostname GetV1AlertTimelineNodesParamsSortBy = "bmcHostname"
 	GetV1AlertTimelineNodesParamsSortByComputeZone GetV1AlertTimelineNodesParamsSortBy = "computeZone"
 	GetV1AlertTimelineNodesParamsSortByGpuType     GetV1AlertTimelineNodesParamsSortBy = "gpuType"
 	GetV1AlertTimelineNodesParamsSortByHostname    GetV1AlertTimelineNodesParamsSortBy = "hostname"
 	GetV1AlertTimelineNodesParamsSortByLastUpdate  GetV1AlertTimelineNodesParamsSortBy = "lastUpdate"
 	GetV1AlertTimelineNodesParamsSortByNodeGroup   GetV1AlertTimelineNodesParamsSortBy = "nodeGroup"
+	GetV1AlertTimelineNodesParamsSortByNodeName    GetV1AlertTimelineNodesParamsSortBy = "nodeName"
+	GetV1AlertTimelineNodesParamsSortByNodeUUID    GetV1AlertTimelineNodesParamsSortBy = "nodeUUID"
 )
 
 // Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesParamsSortBy enum.
 func (e GetV1AlertTimelineNodesParamsSortBy) Valid() bool {
 	switch e {
 	case GetV1AlertTimelineNodesParamsSortByAlert:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByBmcHostname:
 		return true
 	case GetV1AlertTimelineNodesParamsSortByComputeZone:
 		return true
@@ -473,6 +577,10 @@ func (e GetV1AlertTimelineNodesParamsSortBy) Valid() bool {
 	case GetV1AlertTimelineNodesParamsSortByLastUpdate:
 		return true
 	case GetV1AlertTimelineNodesParamsSortByNodeGroup:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByNodeName:
+		return true
+	case GetV1AlertTimelineNodesParamsSortByNodeUUID:
 		return true
 	default:
 		return false
@@ -518,8 +626,27 @@ func (e GetV1AlertTimelineNodesParamsAlertStates) Valid() bool {
 	}
 }
 
+// Defines values for GetV1AlertTimelineNodesParamsDataSources.
+const (
+	GetV1AlertTimelineNodesParamsDataSourcesInband GetV1AlertTimelineNodesParamsDataSources = "inband"
+	GetV1AlertTimelineNodesParamsDataSourcesOob    GetV1AlertTimelineNodesParamsDataSources = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesParamsDataSources enum.
+func (e GetV1AlertTimelineNodesParamsDataSources) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesParamsDataSourcesInband:
+		return true
+	case GetV1AlertTimelineNodesParamsDataSourcesOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy.
 const (
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByDataSource GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy = "dataSource"
 	GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByLastUpdate GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy = "lastUpdate"
 	GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByStartTime  GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy = "startTime"
 )
@@ -527,6 +654,8 @@ const (
 // Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy enum.
 func (e GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy) Valid() bool {
 	switch e {
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByDataSource:
+		return true
 	case GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByLastUpdate:
 		return true
 	case GetV1AlertTimelineNodesNodeUuidAlertsParamsSortByStartTime:
@@ -569,6 +698,24 @@ func (e GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates) Valid() bool {
 	case GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesResolved:
 		return true
 	case GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStatesWarning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources.
+const (
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSourcesInband GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources = "inband"
+	GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSourcesOob    GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources enum.
+func (e GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources) Valid() bool {
+	switch e {
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSourcesInband:
+		return true
+	case GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSourcesOob:
 		return true
 	default:
 		return false
@@ -629,6 +776,87 @@ func (e GetV1EventsParamsTimeMode) Valid() bool {
 	}
 }
 
+// Defines values for GetV1EventsParamsDataSources.
+const (
+	GetV1EventsParamsDataSourcesInband GetV1EventsParamsDataSources = "inband"
+	GetV1EventsParamsDataSourcesOob    GetV1EventsParamsDataSources = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsParamsDataSources enum.
+func (e GetV1EventsParamsDataSources) Valid() bool {
+	switch e {
+	case GetV1EventsParamsDataSourcesInband:
+		return true
+	case GetV1EventsParamsDataSourcesOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsParamsSortBy.
+const (
+	GetV1EventsParamsSortByBmcHostname GetV1EventsParamsSortBy = "bmcHostname"
+	GetV1EventsParamsSortByComponent   GetV1EventsParamsSortBy = "component"
+	GetV1EventsParamsSortByComputeZone GetV1EventsParamsSortBy = "computeZone"
+	GetV1EventsParamsSortByEventName   GetV1EventsParamsSortBy = "eventName"
+	GetV1EventsParamsSortByGpuType     GetV1EventsParamsSortBy = "gpuType"
+	GetV1EventsParamsSortByHostname    GetV1EventsParamsSortBy = "hostname"
+	GetV1EventsParamsSortByNodeGroup   GetV1EventsParamsSortBy = "nodeGroup"
+	GetV1EventsParamsSortByNodeName    GetV1EventsParamsSortBy = "nodeName"
+	GetV1EventsParamsSortByNodeUUID    GetV1EventsParamsSortBy = "nodeUUID"
+	GetV1EventsParamsSortBySeverity    GetV1EventsParamsSortBy = "severity"
+	GetV1EventsParamsSortByTimestamp   GetV1EventsParamsSortBy = "timestamp"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsParamsSortBy enum.
+func (e GetV1EventsParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1EventsParamsSortByBmcHostname:
+		return true
+	case GetV1EventsParamsSortByComponent:
+		return true
+	case GetV1EventsParamsSortByComputeZone:
+		return true
+	case GetV1EventsParamsSortByEventName:
+		return true
+	case GetV1EventsParamsSortByGpuType:
+		return true
+	case GetV1EventsParamsSortByHostname:
+		return true
+	case GetV1EventsParamsSortByNodeGroup:
+		return true
+	case GetV1EventsParamsSortByNodeName:
+		return true
+	case GetV1EventsParamsSortByNodeUUID:
+		return true
+	case GetV1EventsParamsSortBySeverity:
+		return true
+	case GetV1EventsParamsSortByTimestamp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsParamsSortOrder.
+const (
+	GetV1EventsParamsSortOrderAsc  GetV1EventsParamsSortOrder = "asc"
+	GetV1EventsParamsSortOrderDesc GetV1EventsParamsSortOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsParamsSortOrder enum.
+func (e GetV1EventsParamsSortOrder) Valid() bool {
+	switch e {
+	case GetV1EventsParamsSortOrderAsc:
+		return true
+	case GetV1EventsParamsSortOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1EventsBucketsParamsTimeMode.
 const (
 	GetV1EventsBucketsParamsTimeModeAbsolute GetV1EventsBucketsParamsTimeMode = "absolute"
@@ -647,15 +875,60 @@ func (e GetV1EventsBucketsParamsTimeMode) Valid() bool {
 	}
 }
 
+// Defines values for GetV1EventsBucketsParamsDataSources.
+const (
+	GetV1EventsBucketsParamsDataSourcesInband GetV1EventsBucketsParamsDataSources = "inband"
+	GetV1EventsBucketsParamsDataSourcesOob    GetV1EventsBucketsParamsDataSources = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsBucketsParamsDataSources enum.
+func (e GetV1EventsBucketsParamsDataSources) Valid() bool {
+	switch e {
+	case GetV1EventsBucketsParamsDataSourcesInband:
+		return true
+	case GetV1EventsBucketsParamsDataSourcesOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1MetricsParamsDataSource.
+const (
+	GetV1MetricsParamsDataSourceAll    GetV1MetricsParamsDataSource = "all"
+	GetV1MetricsParamsDataSourceInband GetV1MetricsParamsDataSource = "inband"
+	GetV1MetricsParamsDataSourceOob    GetV1MetricsParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1MetricsParamsDataSource enum.
+func (e GetV1MetricsParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1MetricsParamsDataSourceAll:
+		return true
+	case GetV1MetricsParamsDataSourceInband:
+		return true
+	case GetV1MetricsParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1MetricsParamsEntityLevel.
 const (
-	GetV1MetricsParamsEntityLevelNode GetV1MetricsParamsEntityLevel = "node"
+	GetV1MetricsParamsEntityLevelComputezone GetV1MetricsParamsEntityLevel = "computezone"
+	GetV1MetricsParamsEntityLevelNode        GetV1MetricsParamsEntityLevel = "node"
+	GetV1MetricsParamsEntityLevelNodegroup   GetV1MetricsParamsEntityLevel = "nodegroup"
 )
 
 // Valid indicates whether the value is a known member of the GetV1MetricsParamsEntityLevel enum.
 func (e GetV1MetricsParamsEntityLevel) Valid() bool {
 	switch e {
+	case GetV1MetricsParamsEntityLevelComputezone:
+		return true
 	case GetV1MetricsParamsEntityLevelNode:
+		return true
+	case GetV1MetricsParamsEntityLevelNodegroup:
 		return true
 	default:
 		return false
@@ -773,6 +1046,24 @@ func (e GetV1NodegroupsParamsOrder) Valid() bool {
 	}
 }
 
+// Defines values for DeleteV1NodesParamsDataSource.
+const (
+	DeleteV1NodesParamsDataSourceInband DeleteV1NodesParamsDataSource = "inband"
+	DeleteV1NodesParamsDataSourceOob    DeleteV1NodesParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the DeleteV1NodesParamsDataSource enum.
+func (e DeleteV1NodesParamsDataSource) Valid() bool {
+	switch e {
+	case DeleteV1NodesParamsDataSourceInband:
+		return true
+	case DeleteV1NodesParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeleteV1NodesParamsAgentType.
 const (
 	DeleteV1NodesParamsAgentTypeInband DeleteV1NodesParamsAgentType = "inband"
@@ -803,6 +1094,24 @@ func (e GetV1NodesParamsView) Valid() bool {
 	case GetV1NodesParamsViewBasic:
 		return true
 	case GetV1NodesParamsViewDetail:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1NodesParamsDataSource.
+const (
+	GetV1NodesParamsDataSourceInband GetV1NodesParamsDataSource = "inband"
+	GetV1NodesParamsDataSourceOob    GetV1NodesParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1NodesParamsDataSource enum.
+func (e GetV1NodesParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1NodesParamsDataSourceInband:
+		return true
+	case GetV1NodesParamsDataSourceOob:
 		return true
 	default:
 		return false
@@ -950,6 +1259,42 @@ func (e GetV1NodesHistoryParamsActorType) Valid() bool {
 	}
 }
 
+// Defines values for GetV1NodesOptionsParamsView.
+const (
+	GetV1NodesOptionsParamsViewBasic  GetV1NodesOptionsParamsView = "basic"
+	GetV1NodesOptionsParamsViewDetail GetV1NodesOptionsParamsView = "detail"
+)
+
+// Valid indicates whether the value is a known member of the GetV1NodesOptionsParamsView enum.
+func (e GetV1NodesOptionsParamsView) Valid() bool {
+	switch e {
+	case GetV1NodesOptionsParamsViewBasic:
+		return true
+	case GetV1NodesOptionsParamsViewDetail:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1NodesOptionsParamsDataSource.
+const (
+	GetV1NodesOptionsParamsDataSourceInband GetV1NodesOptionsParamsDataSource = "inband"
+	GetV1NodesOptionsParamsDataSourceOob    GetV1NodesOptionsParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1NodesOptionsParamsDataSource enum.
+func (e GetV1NodesOptionsParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1NodesOptionsParamsDataSourceInband:
+		return true
+	case GetV1NodesOptionsParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1NodesOptionsParamsAgentType.
 const (
 	GetV1NodesOptionsParamsAgentTypeInband GetV1NodesOptionsParamsAgentType = "inband"
@@ -968,6 +1313,24 @@ func (e GetV1NodesOptionsParamsAgentType) Valid() bool {
 	}
 }
 
+// Defines values for DeleteV1NodesNodeUuidParamsDataSource.
+const (
+	DeleteV1NodesNodeUuidParamsDataSourceInband DeleteV1NodesNodeUuidParamsDataSource = "inband"
+	DeleteV1NodesNodeUuidParamsDataSourceOob    DeleteV1NodesNodeUuidParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the DeleteV1NodesNodeUuidParamsDataSource enum.
+func (e DeleteV1NodesNodeUuidParamsDataSource) Valid() bool {
+	switch e {
+	case DeleteV1NodesNodeUuidParamsDataSourceInband:
+		return true
+	case DeleteV1NodesNodeUuidParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeleteV1NodesNodeUuidParamsAgentType.
 const (
 	DeleteV1NodesNodeUuidParamsAgentTypeInband DeleteV1NodesNodeUuidParamsAgentType = "inband"
@@ -980,6 +1343,24 @@ func (e DeleteV1NodesNodeUuidParamsAgentType) Valid() bool {
 	case DeleteV1NodesNodeUuidParamsAgentTypeInband:
 		return true
 	case DeleteV1NodesNodeUuidParamsAgentTypeOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1NodesNodeUuidParamsDataSource.
+const (
+	GetV1NodesNodeUuidParamsDataSourceInband GetV1NodesNodeUuidParamsDataSource = "inband"
+	GetV1NodesNodeUuidParamsDataSourceOob    GetV1NodesNodeUuidParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1NodesNodeUuidParamsDataSource enum.
+func (e GetV1NodesNodeUuidParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1NodesNodeUuidParamsDataSourceInband:
+		return true
+	case GetV1NodesNodeUuidParamsDataSourceOob:
 		return true
 	default:
 		return false
@@ -1079,6 +1460,24 @@ func (e GetV1ReportsInventoryParamsFormat) Valid() bool {
 	}
 }
 
+// Defines values for GetV1ReportsInventoryParamsDataSource.
+const (
+	GetV1ReportsInventoryParamsDataSourceInband GetV1ReportsInventoryParamsDataSource = "inband"
+	GetV1ReportsInventoryParamsDataSourceOob    GetV1ReportsInventoryParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ReportsInventoryParamsDataSource enum.
+func (e GetV1ReportsInventoryParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1ReportsInventoryParamsDataSourceInband:
+		return true
+	case GetV1ReportsInventoryParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1ReportsInventoryParamsAgentType.
 const (
 	GetV1ReportsInventoryParamsAgentTypeInband GetV1ReportsInventoryParamsAgentType = "inband"
@@ -1172,21 +1571,75 @@ func (e GetV1ReportsInventoryParamsOrder) Valid() bool {
 	}
 }
 
-// Defines values for GetV1XIDBurstsParamsAgentType.
+// Defines values for GetV1StatsParamsName.
 const (
-	GetV1XIDBurstsParamsAgentTypeAll    GetV1XIDBurstsParamsAgentType = "all"
-	GetV1XIDBurstsParamsAgentTypeInband GetV1XIDBurstsParamsAgentType = "inband"
-	GetV1XIDBurstsParamsAgentTypeOob    GetV1XIDBurstsParamsAgentType = "oob"
+	GetV1StatsParamsNameAgentStatus GetV1StatsParamsName = "agentStatus"
 )
 
-// Valid indicates whether the value is a known member of the GetV1XIDBurstsParamsAgentType enum.
-func (e GetV1XIDBurstsParamsAgentType) Valid() bool {
+// Valid indicates whether the value is a known member of the GetV1StatsParamsName enum.
+func (e GetV1StatsParamsName) Valid() bool {
 	switch e {
-	case GetV1XIDBurstsParamsAgentTypeAll:
+	case GetV1StatsParamsNameAgentStatus:
 		return true
-	case GetV1XIDBurstsParamsAgentTypeInband:
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1StatsParamsDataSource.
+const (
+	GetV1StatsParamsDataSourceInband GetV1StatsParamsDataSource = "inband"
+	GetV1StatsParamsDataSourceOob    GetV1StatsParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1StatsParamsDataSource enum.
+func (e GetV1StatsParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1StatsParamsDataSourceInband:
 		return true
-	case GetV1XIDBurstsParamsAgentTypeOob:
+	case GetV1StatsParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1StatsParamsGroupBy.
+const (
+	GetV1StatsParamsGroupByComputezone GetV1StatsParamsGroupBy = "computezone"
+	GetV1StatsParamsGroupByCustomer    GetV1StatsParamsGroupBy = "customer"
+	GetV1StatsParamsGroupByNodegroup   GetV1StatsParamsGroupBy = "nodegroup"
+)
+
+// Valid indicates whether the value is a known member of the GetV1StatsParamsGroupBy enum.
+func (e GetV1StatsParamsGroupBy) Valid() bool {
+	switch e {
+	case GetV1StatsParamsGroupByComputezone:
+		return true
+	case GetV1StatsParamsGroupByCustomer:
+		return true
+	case GetV1StatsParamsGroupByNodegroup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstsParamsDataSource.
+const (
+	GetV1XIDBurstsParamsDataSourceAll    GetV1XIDBurstsParamsDataSource = "all"
+	GetV1XIDBurstsParamsDataSourceInband GetV1XIDBurstsParamsDataSource = "inband"
+	GetV1XIDBurstsParamsDataSourceOob    GetV1XIDBurstsParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstsParamsDataSource enum.
+func (e GetV1XIDBurstsParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1XIDBurstsParamsDataSourceAll:
+		return true
+	case GetV1XIDBurstsParamsDataSourceInband:
+		return true
+	case GetV1XIDBurstsParamsDataSourceOob:
 		return true
 	default:
 		return false
@@ -1213,15 +1666,19 @@ func (e GetV1XIDBurstsParamsTimeMode) Valid() bool {
 
 // Defines values for GetV1XIDBurstsParamsSortBy.
 const (
+	GetV1XIDBurstsParamsSortByBmcHostname                     GetV1XIDBurstsParamsSortBy = "bmcHostname"
 	GetV1XIDBurstsParamsSortByBurstDurationSeconds            GetV1XIDBurstsParamsSortBy = "burstDurationSeconds"
 	GetV1XIDBurstsParamsSortByCategory                        GetV1XIDBurstsParamsSortBy = "category"
 	GetV1XIDBurstsParamsSortByComputeZone                     GetV1XIDBurstsParamsSortBy = "computeZone"
+	GetV1XIDBurstsParamsSortByDataSource                      GetV1XIDBurstsParamsSortBy = "dataSource"
 	GetV1XIDBurstsParamsSortByDcAdminAction                   GetV1XIDBurstsParamsSortBy = "dcAdminAction"
 	GetV1XIDBurstsParamsSortByDcAdminInvestigation            GetV1XIDBurstsParamsSortBy = "dcAdminInvestigation"
+	GetV1XIDBurstsParamsSortByGpuType                         GetV1XIDBurstsParamsSortBy = "gpuType"
 	GetV1XIDBurstsParamsSortByHostname                        GetV1XIDBurstsParamsSortBy = "hostname"
 	GetV1XIDBurstsParamsSortByJobDisruption                   GetV1XIDBurstsParamsSortBy = "jobDisruption"
 	GetV1XIDBurstsParamsSortByJobDisruptionDueToPlatformIssue GetV1XIDBurstsParamsSortBy = "jobDisruptionDueToPlatformIssue"
 	GetV1XIDBurstsParamsSortByNodeGroup                       GetV1XIDBurstsParamsSortBy = "nodeGroup"
+	GetV1XIDBurstsParamsSortByNodeName                        GetV1XIDBurstsParamsSortBy = "nodeName"
 	GetV1XIDBurstsParamsSortByNodeUuid                        GetV1XIDBurstsParamsSortBy = "nodeUuid"
 	GetV1XIDBurstsParamsSortByStartTime                       GetV1XIDBurstsParamsSortBy = "startTime"
 	GetV1XIDBurstsParamsSortBySubcategory                     GetV1XIDBurstsParamsSortBy = "subcategory"
@@ -1234,15 +1691,21 @@ const (
 // Valid indicates whether the value is a known member of the GetV1XIDBurstsParamsSortBy enum.
 func (e GetV1XIDBurstsParamsSortBy) Valid() bool {
 	switch e {
+	case GetV1XIDBurstsParamsSortByBmcHostname:
+		return true
 	case GetV1XIDBurstsParamsSortByBurstDurationSeconds:
 		return true
 	case GetV1XIDBurstsParamsSortByCategory:
 		return true
 	case GetV1XIDBurstsParamsSortByComputeZone:
 		return true
+	case GetV1XIDBurstsParamsSortByDataSource:
+		return true
 	case GetV1XIDBurstsParamsSortByDcAdminAction:
 		return true
 	case GetV1XIDBurstsParamsSortByDcAdminInvestigation:
+		return true
+	case GetV1XIDBurstsParamsSortByGpuType:
 		return true
 	case GetV1XIDBurstsParamsSortByHostname:
 		return true
@@ -1251,6 +1714,8 @@ func (e GetV1XIDBurstsParamsSortBy) Valid() bool {
 	case GetV1XIDBurstsParamsSortByJobDisruptionDueToPlatformIssue:
 		return true
 	case GetV1XIDBurstsParamsSortByNodeGroup:
+		return true
+	case GetV1XIDBurstsParamsSortByNodeName:
 		return true
 	case GetV1XIDBurstsParamsSortByNodeUuid:
 		return true
@@ -1307,21 +1772,21 @@ func (e GetV1XIDBurstOptionsParamsTimeMode) Valid() bool {
 	}
 }
 
-// Defines values for GetV1XIDBurstOptionsParamsAgentType.
+// Defines values for GetV1XIDBurstOptionsParamsDataSource.
 const (
-	GetV1XIDBurstOptionsParamsAgentTypeAll    GetV1XIDBurstOptionsParamsAgentType = "all"
-	GetV1XIDBurstOptionsParamsAgentTypeInband GetV1XIDBurstOptionsParamsAgentType = "inband"
-	GetV1XIDBurstOptionsParamsAgentTypeOob    GetV1XIDBurstOptionsParamsAgentType = "oob"
+	GetV1XIDBurstOptionsParamsDataSourceAll    GetV1XIDBurstOptionsParamsDataSource = "all"
+	GetV1XIDBurstOptionsParamsDataSourceInband GetV1XIDBurstOptionsParamsDataSource = "inband"
+	GetV1XIDBurstOptionsParamsDataSourceOob    GetV1XIDBurstOptionsParamsDataSource = "oob"
 )
 
-// Valid indicates whether the value is a known member of the GetV1XIDBurstOptionsParamsAgentType enum.
-func (e GetV1XIDBurstOptionsParamsAgentType) Valid() bool {
+// Valid indicates whether the value is a known member of the GetV1XIDBurstOptionsParamsDataSource enum.
+func (e GetV1XIDBurstOptionsParamsDataSource) Valid() bool {
 	switch e {
-	case GetV1XIDBurstOptionsParamsAgentTypeAll:
+	case GetV1XIDBurstOptionsParamsDataSourceAll:
 		return true
-	case GetV1XIDBurstOptionsParamsAgentTypeInband:
+	case GetV1XIDBurstOptionsParamsDataSourceInband:
 		return true
-	case GetV1XIDBurstOptionsParamsAgentTypeOob:
+	case GetV1XIDBurstOptionsParamsDataSourceOob:
 		return true
 	default:
 		return false
@@ -1384,25 +1849,45 @@ type ModelsAggregation string
 
 // ModelsAlert defines model for models.Alert.
 type ModelsAlert struct {
-	AlertUUID            *string              `json:"alertUUID,omitempty"`
-	Component            *string              `json:"component,omitempty"`
-	ComponentDisplayName *string              `json:"componentDisplayName,omitempty"`
-	CustomerId           *string              `json:"customerId,omitempty"`
-	DetectedAt           *string              `json:"detectedAt,omitempty"`
-	Error                *string              `json:"error,omitempty"`
-	EventTimestamp       *string              `json:"eventTimestamp,omitempty"`
-	ExtraInfo            *string              `json:"extraInfo,omitempty"`
-	Incidents            *string              `json:"incidents,omitempty"`
-	IsMuted              *bool                `json:"isMuted,omitempty"`
-	LastUpdated          *string              `json:"lastUpdated,omitempty"`
-	Message              *string              `json:"message,omitempty"`
-	MutedAt              *string              `json:"mutedAt,omitempty"`
-	MutedBy              *string              `json:"mutedBy,omitempty"`
-	NodeUUID             *string              `json:"nodeUUID,omitempty"`
-	Severity             *ModelsAlertSeverity `json:"severity,omitempty"`
-	State                *ModelsAlertState    `json:"state,omitempty"`
-	SuggestedActions     *string              `json:"suggestedActions,omitempty"`
-	TriggeredAt          *string              `json:"triggeredAt,omitempty"`
+	AlertUUID            string  `json:"alertUUID"`
+	Component            *string `json:"component,omitempty"`
+	ComponentDisplayName *string `json:"componentDisplayName,omitempty"`
+	CustomerId           *string `json:"customerId,omitempty"`
+
+	// DataSource DataSource is the persisted source that produced the alert: inband or oob.
+	DataSource       *string              `json:"dataSource,omitempty"`
+	DetectedAt       *string              `json:"detectedAt,omitempty"`
+	Error            *string              `json:"error,omitempty"`
+	EventTimestamp   *string              `json:"eventTimestamp,omitempty"`
+	ExtraInfo        *string              `json:"extraInfo,omitempty"`
+	Incidents        *string              `json:"incidents,omitempty"`
+	IsMuted          *bool                `json:"isMuted,omitempty"`
+	LastUpdated      *string              `json:"lastUpdated,omitempty"`
+	Message          *string              `json:"message,omitempty"`
+	MutedAt          *string              `json:"mutedAt,omitempty"`
+	MutedBy          *string              `json:"mutedBy,omitempty"`
+	NodeUUID         string               `json:"nodeUUID"`
+	Severity         *ModelsAlertSeverity `json:"severity,omitempty"`
+	State            *ModelsAlertState    `json:"state,omitempty"`
+	SuggestedActions *string              `json:"suggestedActions,omitempty"`
+	TriggeredAt      *string              `json:"triggeredAt,omitempty"`
+}
+
+// ModelsAlertAgentSourceStatus defines model for models.AlertAgentSourceStatus.
+type ModelsAlertAgentSourceStatus struct {
+	LastSeenAt *string                 `json:"lastSeenAt,omitempty"`
+	Status     *ModelsAlertAgentStatus `json:"status,omitempty"`
+}
+
+// ModelsAlertAgentStatus defines model for models.AlertAgentStatus.
+type ModelsAlertAgentStatus string
+
+// ModelsAlertAgentStatuses AgentStatus contains source-specific liveness and timestamps. Each source's
+// lastSeenAt follows the Nodes API precedence: active liveness alert detectedAt,
+// liveness health-state updatedAt, then its inventory row updatedAt.
+type ModelsAlertAgentStatuses struct {
+	Inband *ModelsAlertAgentSourceStatus `json:"inband,omitempty"`
+	Oob    *ModelsAlertAgentSourceStatus `json:"oob,omitempty"`
 }
 
 // ModelsAlertEventType defines model for models.AlertEventType.
@@ -1438,7 +1923,7 @@ type ModelsAlertState string
 type ModelsAlertTimelineDetailResponse struct {
 	// AlertStatus Current alert status: severity if active, state if resolved/detected
 	AlertStatus          *string `json:"alertStatus,omitempty"`
-	AlertUuid            *string `json:"alertUuid,omitempty"`
+	AlertUuid            string  `json:"alertUuid"`
 	Component            *string `json:"component,omitempty"`
 	ComponentDisplayName *string `json:"componentDisplayName,omitempty"`
 
@@ -1450,7 +1935,7 @@ type ModelsAlertTimelineDetailResponse struct {
 
 	// NodeGroup Node group display name from node inventory
 	NodeGroup *string `json:"nodeGroup,omitempty"`
-	NodeUuid  *string `json:"nodeUuid,omitempty"`
+	NodeUuid  string  `json:"nodeUuid"`
 
 	// Page Pagination metadata for the timeline events. These fields are populated only when the caller
 	// opts into pagination by supplying the pageSize query parameter; they are omitted entirely
@@ -1480,23 +1965,37 @@ type ModelsAlertTimelineEvent struct {
 
 // ModelsAlertTimelineNode defines model for models.AlertTimelineNode.
 type ModelsAlertTimelineNode struct {
+	// AgentStatus AgentStatus contains source-specific liveness and timestamps. Each source's
+	// lastSeenAt follows the Nodes API precedence: active liveness alert detectedAt,
+	// liveness health-state updatedAt, then its inventory row updatedAt.
+	AgentStatus *ModelsAlertAgentStatuses `json:"agentStatus,omitempty"`
+
+	// BmcHostname OOB BMC hostname.
+	BmcHostname *string `json:"bmcHostname,omitempty"`
+
 	// ComputeZone Compute zone display name
 	ComputeZone *string `json:"computeZone,omitempty"`
 
 	// CriticalCount Count of Critical alerts on this node (respects filters and component visibility)
 	CriticalCount *int `json:"criticalCount,omitempty"`
 
-	// GpuType GPU product name from node inventory
+	// GpuType GPUType is the node's resolved GPU product, independent of which source
+	// produced the alert.
 	GpuType *string `json:"gpuType,omitempty"`
 
 	// HostStatus Deprecated: use criticalCount/warningCount; kept for backward compatibility
-	HostStatus    *string `json:"hostStatus,omitempty"`
+	HostStatus *string `json:"hostStatus,omitempty"`
+
+	// Hostname In-band OS hostname.
 	Hostname      *string `json:"hostname,omitempty"`
 	LastAlertTime *string `json:"lastAlertTime,omitempty"`
 
 	// NodeGroup Node group display name
 	NodeGroup *string `json:"nodeGroup,omitempty"`
-	NodeUuid  *string `json:"nodeUuid,omitempty"`
+
+	// NodeName OOB collector-configured machine name.
+	NodeName *string `json:"nodeName,omitempty"`
+	NodeUuid string  `json:"nodeUuid"`
 
 	// ResolvedCount Count of Resolved alerts; historical view only (0 when active=true)
 	ResolvedCount *int `json:"resolvedCount,omitempty"`
@@ -1509,10 +2008,13 @@ type ModelsAlertTimelineNode struct {
 type ModelsAlertTimelineNodeAlert struct {
 	// AlertStatus "Critical"/"Warning" if active (in alerts table), "Detected"/"Resolved" if inactive (from alert_audit)
 	AlertStatus          *string `json:"alertStatus,omitempty"`
-	AlertUuid            *string `json:"alertUuid,omitempty"`
+	AlertUuid            string  `json:"alertUuid"`
 	Component            *string `json:"component,omitempty"`
 	ComponentDisplayName *string `json:"componentDisplayName,omitempty"`
-	LastEventTime        *string `json:"lastEventTime,omitempty"`
+
+	// DataSource Source that produced the alert: inband or oob.
+	DataSource    *string `json:"dataSource,omitempty"`
+	LastEventTime *string `json:"lastEventTime,omitempty"`
 
 	// StartTime When the alert was first detected
 	StartTime *string `json:"startTime,omitempty"`
@@ -1523,7 +2025,7 @@ type ModelsAlertTimelineNodeAlertsResponse struct {
 	Alerts   *[]ModelsAlertTimelineNodeAlert `json:"alerts,omitempty"`
 	HasMore  *bool                           `json:"hasMore,omitempty"`
 	Hostname *string                         `json:"hostname,omitempty"`
-	NodeUuid *string                         `json:"nodeUuid,omitempty"`
+	NodeUuid string                          `json:"nodeUuid"`
 	Page     *int                            `json:"page,omitempty"`
 	PageSize *int                            `json:"pageSize,omitempty"`
 
@@ -1681,12 +2183,12 @@ type ModelsComponentInfo struct {
 
 // ModelsComponentMetricList defines model for models.ComponentMetricList.
 type ModelsComponentMetricList struct {
-	// AgentType AgentType is the agent enrollment that produces this component: "inband"
+	// DataSource DataSource is the agent enrollment that produces this component: "inband"
 	// or "oob". Every component is one agent's data, so this is the authoritative
 	// place to tell the two apart — including for backend components such as OOB
 	// Agent Connectivity, which carry no metrics to classify.
-	// Values: AgentTypeInband / AgentTypeOob.
-	AgentType          *string             `json:"agentType,omitempty"`
+	// Values: inband / oob.
+	DataSource         *string             `json:"dataSource,omitempty"`
 	DisplayName        *string             `json:"displayName,omitempty"`
 	IsBackendComponent *bool               `json:"isBackendComponent,omitempty"`
 	Metrics            *[]ModelsMetricInfo `json:"metrics,omitempty"`
@@ -1694,6 +2196,12 @@ type ModelsComponentMetricList struct {
 
 	// SubComponents Dynamic children (e.g., active PSIRT CVEs)
 	SubComponents *[]string `json:"subComponents,omitempty"`
+}
+
+// ModelsComponentTypeOption defines model for models.ComponentTypeOption.
+type ModelsComponentTypeOption struct {
+	Component            *string `json:"component,omitempty"`
+	ComponentDisplayName *string `json:"componentDisplayName,omitempty"`
 }
 
 // ModelsComponentsInfo defines model for models.ComponentsInfo.
@@ -1717,7 +2225,7 @@ type ModelsComputeZoneOverview struct {
 	HealthPercentage    *float32               `json:"healthPercentage,omitempty"`
 	HealthState         *ModelsHealthState     `json:"healthState,omitempty"`
 	HealthyNodesCount   *int                   `json:"healthyNodesCount,omitempty"`
-	Id                  *string                `json:"id,omitempty"`
+	Id                  string                 `json:"id"`
 	Location            *ModelsLocation        `json:"location,omitempty"`
 	Metrics             *[]ModelsMetric        `json:"metrics,omitempty"`
 	Name                *string                `json:"name,omitempty"`
@@ -1839,19 +2347,46 @@ type ModelsErrorTimeSeriesByError struct {
 
 // ModelsEvent defines model for models.Event.
 type ModelsEvent struct {
+	// BmcHostname BMC hostname of the node's OOB enrollment
+	BmcHostname *string `json:"bmcHostname,omitempty"`
+
 	// Component Component name
 	Component *string `json:"component,omitempty"`
-	CreatedAt *string `json:"createdAt,omitempty"`
+
+	// ComputeZone Current compute zone name
+	ComputeZone *string `json:"computeZone,omitempty"`
+
+	// ComputeZoneId Current compute zone ID
+	ComputeZoneId *string `json:"computeZoneId,omitempty"`
+	CreatedAt     *string `json:"createdAt,omitempty"`
+
+	// DataSource Data source derived from the persisted event or configured component
+	DataSource *string `json:"dataSource,omitempty"`
 
 	// EventId Unique event identifier
-	EventId *string `json:"eventId,omitempty"`
-	Message *string `json:"message,omitempty"`
+	EventId string `json:"eventId"`
+
+	// GpuType Current resolved node GPU type
+	GpuType *string `json:"gpuType,omitempty"`
+
+	// Hostname Current in-band OS hostname; empty for a node with no in-band enrollment
+	Hostname *string `json:"hostname,omitempty"`
+	Message  *string `json:"message,omitempty"`
 
 	// Name Event name
 	Name *string `json:"name,omitempty"`
 
+	// NodeGroup Current node group name
+	NodeGroup *string `json:"nodeGroup,omitempty"`
+
+	// NodeGroupId Current node group ID
+	NodeGroupId *string `json:"nodeGroupId,omitempty"`
+
+	// NodeName Machine name configured on the OOB collector
+	NodeName *string `json:"nodeName,omitempty"`
+
 	// NodeUUID Node UUID
-	NodeUUID *string `json:"nodeUUID,omitempty"`
+	NodeUUID string `json:"nodeUUID"`
 
 	// SuggestedActions Suggested actions for resolving the event
 	SuggestedActions *[]ModelsSuggestedAction `json:"suggestedActions,omitempty"`
@@ -1873,6 +2408,18 @@ type ModelsEventBucket struct {
 type ModelsEventBucketsResponse struct {
 	BucketInterval *string              `json:"bucketInterval,omitempty"`
 	Buckets        *[]ModelsEventBucket `json:"buckets,omitempty"`
+}
+
+// ModelsEventFilterOptionsResponse defines model for models.EventFilterOptionsResponse.
+type ModelsEventFilterOptionsResponse struct {
+	// Components Components provides the raw component identifier used by the events
+	// filter together with its configured display name for the dropdown.
+	Components  *[]ModelsComponentTypeOption `json:"components,omitempty"`
+	DataSources *[]string                    `json:"dataSources,omitempty"`
+	EventNames  *[]string                    `json:"eventNames,omitempty"`
+	GpuTypes    *[]string                    `json:"gpuTypes,omitempty"`
+	Severities  *[]string                    `json:"severities,omitempty"`
+	SortFields  *[]string                    `json:"sortFields,omitempty"`
 }
 
 // ModelsEventSeverity defines model for models.EventSeverity.
@@ -1906,6 +2453,8 @@ type ModelsFirmwareCheck string
 
 // ModelsGPUDevice defines model for models.GPUDevice.
 type ModelsGPUDevice struct {
+	// BoardID Deprecated: This field is no longer populated by current agents and remains for backward compatibility.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	BoardID      *int    `json:"boardID,omitempty"`
 	BusID        *string `json:"busID,omitempty"`
 	ChassisSN    *string `json:"chassisSN,omitempty"`
@@ -2035,10 +2584,14 @@ type ModelsInbandInventoryReportResponse struct {
 
 // ModelsInbandNode defines model for models.InbandNode.
 type ModelsInbandNode struct {
-	AgentStatus         *ModelsAgentStatus          `json:"agentStatus,omitempty"`
+	AgentStatus *ModelsAgentStatus `json:"agentStatus,omitempty"`
+
+	// AgentType Deprecated: use dataSource.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType           *string                     `json:"agentType,omitempty"`
 	AgentVersion        *string                     `json:"agentVersion,omitempty"`
 	ComputeZone         *string                     `json:"computeZone,omitempty"`
+	DataSource          string                      `json:"dataSource"`
 	FirmwareCheck       *ModelsFirmwareCheck        `json:"firmwareCheck,omitempty"`
 	GpuCount            *int                        `json:"gpuCount,omitempty"`
 	GpuDriverVersion    *string                     `json:"gpuDriverVersion,omitempty"`
@@ -2076,11 +2629,15 @@ type ModelsInbandNode struct {
 
 // ModelsInbandNodeDetailsResponse defines model for models.InbandNodeDetailsResponse.
 type ModelsInbandNodeDetailsResponse struct {
-	AgentStatus            *ModelsAgentStatus   `json:"agentStatus,omitempty"`
+	AgentStatus *ModelsAgentStatus `json:"agentStatus,omitempty"`
+
+	// AgentType Deprecated: use dataSource.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType              *string              `json:"agentType,omitempty"`
 	AgentVersion           *string              `json:"agentVersion,omitempty"`
 	ComputeZone            *string              `json:"computeZone,omitempty"`
 	ComputeZoneId          *string              `json:"computeZoneId,omitempty"`
+	DataSource             string               `json:"dataSource"`
 	DegradedComponentCount *int                 `json:"degradedComponentCount,omitempty"`
 	EnrolledAt             *string              `json:"enrolledAt,omitempty"`
 	FirmwareCheck          *ModelsFirmwareCheck `json:"firmwareCheck,omitempty"`
@@ -2264,22 +2821,22 @@ type ModelsMetric struct {
 	Description *string            `json:"description,omitempty"`
 	LastUpdated *string            `json:"lastUpdated,omitempty"`
 	Name        *string            `json:"name,omitempty"`
-	Unit        *string            `json:"unit,omitempty"`
+	Unit        *ModelsMetricUnit  `json:"unit,omitempty"`
 	Value       *float32           `json:"value,omitempty"`
 }
 
 // ModelsMetricInfo defines model for models.MetricInfo.
 type ModelsMetricInfo struct {
-	// AgentType AgentType is set only for metrics that carry their own agent gate: "oob"
+	// DataSource DataSource is set only for metrics that carry their own agent gate: "oob"
 	// for BMC sensor charts. Its absence means "no gate of its own", not
-	// "in-band" — read the enclosing component's agentType to classify a metric,
+	// "in-band" — read the enclosing component's dataSource to classify a metric,
 	// which a metric may repeat but never contradict.
-	// Values: AgentTypeInband / AgentTypeOob.
-	AgentType   *string `json:"agentType,omitempty"`
-	DisplayName *string `json:"displayName,omitempty"`
-	Name        *string `json:"name,omitempty"`
-	Type        *string `json:"type,omitempty"`
-	Unit        *string `json:"unit,omitempty"`
+	// Values: inband / oob.
+	DataSource  *string           `json:"dataSource,omitempty"`
+	DisplayName *string           `json:"displayName,omitempty"`
+	Name        *string           `json:"name,omitempty"`
+	Type        *string           `json:"type,omitempty"`
+	Unit        *ModelsMetricUnit `json:"unit,omitempty"`
 }
 
 // ModelsMetricQueryWarning e.g. omitted invalid metric points; null when no issues
@@ -2332,7 +2889,7 @@ type ModelsMetricTimeSeries struct {
 	// data in the window. Always null for aggregated levels, where sensor presence
 	// is not a single answer across the group.
 	Unavailable ModelsMetricUnavailable `json:"unavailable"`
-	Unit        *string                 `json:"unit,omitempty"`
+	Unit        *ModelsMetricUnit       `json:"unit,omitempty"`
 
 	// Warning e.g. omitted invalid metric points; null when no issues
 	Warning ModelsMetricQueryWarning `json:"warning"`
@@ -2347,6 +2904,9 @@ type ModelsMetricUnavailable struct {
 	Code    *string `json:"code,omitempty"`
 	Message *string `json:"message,omitempty"`
 }
+
+// ModelsMetricUnit defines model for models.MetricUnit.
+type ModelsMetricUnit string
 
 // ModelsMetricsAggregationResponse defines model for models.MetricsAggregationResponse.
 type ModelsMetricsAggregationResponse struct {
@@ -2397,7 +2957,7 @@ type ModelsNodeAlertComponent struct {
 type ModelsNodeAlertResponse struct {
 	Alert          *[]ModelsNodeAlertComponent `json:"alert,omitempty"`
 	CustomerId     *string                     `json:"customerId,omitempty"`
-	NodeUUID       *string                     `json:"nodeUUID,omitempty"`
+	NodeUUID       string                      `json:"nodeUUID"`
 	Page           *int                        `json:"page,omitempty"`
 	PageCursorNext *string                     `json:"pageCursorNext,omitempty"`
 	PageSize       *int                        `json:"pageSize,omitempty"`
@@ -2445,7 +3005,7 @@ type ModelsNodeGroupOverview struct {
 	HealthPercentage    *float32           `json:"healthPercentage,omitempty"`
 	HealthState         *ModelsHealthState `json:"healthState,omitempty"`
 	HealthyNodesCount   *int               `json:"healthyNodesCount,omitempty"`
-	Id                  *string            `json:"id,omitempty"`
+	Id                  string             `json:"id"`
 	Metrics             *[]ModelsMetric    `json:"metrics,omitempty"`
 	Name                *string            `json:"name,omitempty"`
 	NodesCount          *int               `json:"nodesCount,omitempty"`
@@ -2499,9 +3059,9 @@ type ModelsNodeRemovalPolicy struct {
 	CreatedAt *string `json:"createdAt,omitempty"`
 	Enabled   *bool   `json:"enabled,omitempty"`
 
-	// LastCheckedAt LastCheckedAt is the most recent time the node reaper evaluated this customer.
-	// Zero until the reaper first runs against the customer (DB column is NULL), and
-	// omitted from the response until then.
+	// LastCheckedAt LastCheckedAt is the most recent reaper evaluation. It is zero for a new or
+	// backfilled policy until the reaper runs (DB column is NULL), and omitted from
+	// the response until then.
 	LastCheckedAt        *string `json:"lastCheckedAt,omitempty"`
 	OfflineThresholdDays *int    `json:"offlineThresholdDays,omitempty"`
 	UpdatedAt            *string `json:"updatedAt,omitempty"`
@@ -2541,7 +3101,7 @@ type ModelsNotificationPreferenceRequest struct {
 	// existing value is preserved.
 	Active *bool `json:"active,omitempty"`
 
-	// Components Components this preference applies to (e.g. GPU, CPU, NVLink, agent_liveness). At least one;
+	// Components Components this preference applies to (e.g. GPU, CPU, NVLink). At least one;
 	// all settings below apply equally to every listed component.
 	Components []string `json:"components"`
 
@@ -2592,6 +3152,7 @@ type ModelsNotificationTarget struct {
 type ModelsOobChassis struct {
 	AssetTag    *string `json:"assetTag,omitempty"`
 	ChassisType *string `json:"chassisType,omitempty"`
+	Description *string `json:"description,omitempty"`
 
 	// Health Deprecated: use status.health.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -2601,9 +3162,11 @@ type ModelsOobChassis struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	HealthRollup *string                   `json:"healthRollup,omitempty"`
 	Id           string                    `json:"id"`
+	Links        *ModelsOobInventoryLinks  `json:"links,omitempty"`
 	Location     *ModelsOobChassisLocation `json:"location,omitempty"`
 	Manufacturer *string                   `json:"manufacturer,omitempty"`
 	Model        *string                   `json:"model,omitempty"`
+	Name         *string                   `json:"name,omitempty"`
 	OdataId      *string                   `json:"odataId,omitempty"`
 	PartNumber   *string                   `json:"partNumber,omitempty"`
 	PcieDevices  *[]ModelsOobPcieDevice    `json:"pcieDevices,omitempty"`
@@ -2619,10 +3182,18 @@ type ModelsOobChassis struct {
 
 // ModelsOobChassisLocation defines model for models.OobChassisLocation.
 type ModelsOobChassisLocation struct {
-	Rack         *string `json:"rack,omitempty"`
-	RackOffset   *int    `json:"rackOffset,omitempty"`
-	Room         *string `json:"room,omitempty"`
-	Row          *string `json:"row,omitempty"`
+	PartLocation        *ModelsOobPartLocation `json:"partLocation,omitempty"`
+	PartLocationContext *string                `json:"partLocationContext,omitempty"`
+	Placement           *ModelsOobPlacement    `json:"placement,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Rack *string `json:"rack,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	RackOffset *int `json:"rackOffset,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Room *string `json:"room,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Row *string `json:"row,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ServiceLabel *string `json:"serviceLabel,omitempty"`
 }
 
@@ -2633,21 +3204,38 @@ type ModelsOobDomainError struct {
 	Resource *string `json:"resource,omitempty"`
 }
 
+// ModelsOobFabric defines model for models.OobFabric.
+type ModelsOobFabric struct {
+	Description *string                   `json:"description,omitempty"`
+	FabricType  *string                   `json:"fabricType,omitempty"`
+	Id          string                    `json:"id"`
+	Links       *ModelsOobInventoryLinks  `json:"links,omitempty"`
+	Name        string                    `json:"name"`
+	OdataId     *string                   `json:"odataId,omitempty"`
+	Status      *ModelsOobInventoryStatus `json:"status,omitempty"`
+	Switches    *[]ModelsOobSwitch        `json:"switches,omitempty"`
+	Uuid        *string                   `json:"uuid,omitempty"`
+}
+
 // ModelsOobFirmware defines model for models.OobFirmware.
 type ModelsOobFirmware struct {
+	Description *string `json:"description,omitempty"`
+
 	// Health Deprecated: use status.health.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Health *string `json:"health,omitempty"`
 
 	// HealthRollup Deprecated: use status.healthRollup.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup *string                   `json:"healthRollup,omitempty"`
-	Id           string                    `json:"id"`
-	Name         string                    `json:"name"`
-	OdataId      *string                   `json:"odataId,omitempty"`
-	ReleaseDate  *string                   `json:"releaseDate,omitempty"`
-	ServiceId    string                    `json:"serviceId"`
-	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
+	HealthRollup *string                        `json:"healthRollup,omitempty"`
+	Id           string                         `json:"id"`
+	Links        *ModelsOobInventoryLinks       `json:"links,omitempty"`
+	Name         string                         `json:"name"`
+	OdataId      *string                        `json:"odataId,omitempty"`
+	RelatedItem  *[]ModelsOobInventoryReference `json:"relatedItem,omitempty"`
+	ReleaseDate  *string                        `json:"releaseDate,omitempty"`
+	ServiceId    string                         `json:"serviceId"`
+	Status       *ModelsOobInventoryStatus      `json:"status,omitempty"`
 
 	// StatusState Deprecated: use status.state.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -2660,6 +3248,7 @@ type ModelsOobInventory struct {
 	Chassis      *[]ModelsOobChassis     `json:"chassis,omitempty"`
 	CollectedAt  string                  `json:"collectedAt"`
 	DomainErrors *[]ModelsOobDomainError `json:"domainErrors,omitempty"`
+	Fabrics      *[]ModelsOobFabric      `json:"fabrics,omitempty"`
 	Firmware     *[]ModelsOobFirmware    `json:"firmware,omitempty"`
 	Managers     *[]ModelsOobManager     `json:"managers,omitempty"`
 
@@ -2689,6 +3278,9 @@ type ModelsOobInventoryCondition struct {
 	Severity          *string                      `json:"severity,omitempty"`
 	Timestamp         *string                      `json:"timestamp,omitempty"`
 }
+
+// ModelsOobInventoryLinks defines model for models.OobInventoryLinks.
+type ModelsOobInventoryLinks map[string][]ModelsOobInventoryReference
 
 // ModelsOobInventoryNode defines model for models.OobInventoryNode.
 type ModelsOobInventoryNode struct {
@@ -2730,7 +3322,7 @@ type ModelsOobInventoryNode struct {
 
 // ModelsOobInventoryReference defines model for models.OobInventoryReference.
 type ModelsOobInventoryReference struct {
-	OdataId string `json:"@odata.id"`
+	OdataId string `json:"odataId"`
 }
 
 // ModelsOobInventoryReportResponse defines model for models.OobInventoryReportResponse.
@@ -2752,6 +3344,7 @@ type ModelsOobInventoryStatus struct {
 
 // ModelsOobManager defines model for models.OobManager.
 type ModelsOobManager struct {
+	Description     *string `json:"description,omitempty"`
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
 
 	// Health Deprecated: use status.health.
@@ -2762,8 +3355,10 @@ type ModelsOobManager struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	HealthRollup *string                   `json:"healthRollup,omitempty"`
 	Id           string                    `json:"id"`
+	Links        *ModelsOobInventoryLinks  `json:"links,omitempty"`
 	ManagerType  *string                   `json:"managerType,omitempty"`
 	Model        *string                   `json:"model,omitempty"`
+	Name         *string                   `json:"name,omitempty"`
 	OdataId      *string                   `json:"odataId,omitempty"`
 	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
 
@@ -2773,14 +3368,48 @@ type ModelsOobManager struct {
 	Uuid        *string `json:"uuid,omitempty"`
 }
 
+// ModelsOobMemorySummary defines model for models.OobMemorySummary.
+type ModelsOobMemorySummary struct {
+	MemoryMirroring                *string                   `json:"memoryMirroring,omitempty"`
+	Status                         *ModelsOobInventoryStatus `json:"status,omitempty"`
+	TotalSystemMemoryGiB           *float32                  `json:"totalSystemMemoryGiB,omitempty"`
+	TotalSystemPersistentMemoryGiB *float32                  `json:"totalSystemPersistentMemoryGiB,omitempty"`
+}
+
+// ModelsOobNVLinkTopology defines model for models.OobNVLinkTopology.
+type ModelsOobNVLinkTopology struct {
+	ChassisSerialNumber *string `json:"chassisSerialNumber,omitempty"`
+	HostId              *int    `json:"hostId,omitempty"`
+
+	// IbGuid IBGUID is raw Redfish hexadecimal text. Consumers matching NMX-C device UIDs must apply the required little-endian decode.
+	IbGuid    *string `json:"ibGuid,omitempty"`
+	LsbIbGuid *string `json:"lsbIbGuid,omitempty"`
+	ModuleId  *int    `json:"moduleId,omitempty"`
+	PeerType  *string `json:"peerType,omitempty"`
+
+	// SystemGuid SystemGUID is raw Redfish hexadecimal text. The collector does not decode byte order.
+	SystemGuid *string `json:"systemGuid,omitempty"`
+
+	// TraySerialNumber TraySerialNumber is raw Redfish text. "NA" means not reported and must be treated as absent, never as a rack or chassis serial.
+	TraySerialNumber *string `json:"traySerialNumber,omitempty"`
+	TraySlotIndex    *int    `json:"traySlotIndex,omitempty"`
+	TraySlotNumber   *int    `json:"traySlotNumber,omitempty"`
+}
+
 // ModelsOobNode defines model for models.OobNode.
 type ModelsOobNode struct {
-	AgentStatus  *ModelsAgentStatus `json:"agentStatus,omitempty"`
+	AgentStatus *ModelsAgentStatus `json:"agentStatus,omitempty"`
+
+	// AgentType Deprecated: use dataSource.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType    *string            `json:"agentType,omitempty"`
 	AgentVersion *string            `json:"agentVersion,omitempty"`
 	BmcHostname  *string            `json:"bmcHostname,omitempty"`
 	BmcIP        *string            `json:"bmcIP,omitempty"`
 	ComputeZone  *string            `json:"computeZone,omitempty"`
+	DataSource   string             `json:"dataSource"`
+	GpuCount     *int               `json:"gpuCount,omitempty"`
+	GpuType      *string            `json:"gpuType,omitempty"`
 	HealthStatus *ModelsHealthState `json:"healthStatus,omitempty"`
 
 	// IntegrityCheck Deprecated: use verificationCheck.
@@ -2813,19 +3442,25 @@ type ModelsOobNode struct {
 
 // ModelsOobNodeDetailsResponse defines model for models.OobNodeDetailsResponse.
 type ModelsOobNodeDetailsResponse struct {
-	AgentStatus            *ModelsAgentStatus `json:"agentStatus,omitempty"`
-	AgentType              *string            `json:"agentType,omitempty"`
-	AgentVersion           *string            `json:"agentVersion,omitempty"`
-	BmcHostname            *string            `json:"bmcHostname,omitempty"`
-	BmcIP                  *string            `json:"bmcIP,omitempty"`
-	ComputeZone            *string            `json:"computeZone,omitempty"`
-	ComputeZoneId          *string            `json:"computeZoneId,omitempty"`
-	DegradedComponentCount *int               `json:"degradedComponentCount,omitempty"`
-	EnrolledAt             *string            `json:"enrolledAt,omitempty"`
+	AgentStatus *ModelsAgentStatus `json:"agentStatus,omitempty"`
+
+	// AgentType Deprecated: use dataSource.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	AgentType              *string `json:"agentType,omitempty"`
+	AgentVersion           *string `json:"agentVersion,omitempty"`
+	BmcHostname            *string `json:"bmcHostname,omitempty"`
+	BmcIP                  *string `json:"bmcIP,omitempty"`
+	ComputeZone            *string `json:"computeZone,omitempty"`
+	ComputeZoneId          *string `json:"computeZoneId,omitempty"`
+	DataSource             string  `json:"dataSource"`
+	DegradedComponentCount *int    `json:"degradedComponentCount,omitempty"`
+	EnrolledAt             *string `json:"enrolledAt,omitempty"`
 
 	// GeoLocation Deprecated: use location.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation           *ModelsGeoLocation `json:"geoLocation,omitempty"`
+	GpuCount              *int               `json:"gpuCount,omitempty"`
+	GpuType               *string            `json:"gpuType,omitempty"`
 	HealthStatus          *ModelsHealthState `json:"healthStatus,omitempty"`
 	HealthyComponentCount *int               `json:"healthyComponentCount,omitempty"`
 
@@ -2871,8 +3506,40 @@ type ModelsOobNodesResponse struct {
 	Total    *int             `json:"total,omitempty"`
 }
 
+// ModelsOobNvidiaGPU defines model for models.OobNvidiaGPU.
+type ModelsOobNvidiaGPU struct {
+	CcDevModeEnabled          *bool                    `json:"ccDevModeEnabled,omitempty"`
+	CcModeEnabled             *bool                    `json:"ccModeEnabled,omitempty"`
+	DefaultBoostClockSpeedMhz *int                     `json:"defaultBoostClockSpeedMhz,omitempty"`
+	EgmModeEnabled            *bool                    `json:"egmModeEnabled,omitempty"`
+	MaxBoostClockSpeedMhz     *int                     `json:"maxBoostClockSpeedMhz,omitempty"`
+	MigModeEnabled            *bool                    `json:"migModeEnabled,omitempty"`
+	NvlinkTopology            *ModelsOobNVLinkTopology `json:"nvlinkTopology,omitempty"`
+	ProtectedPcieModeEnabled  *bool                    `json:"protectedPcieModeEnabled,omitempty"`
+	TotalNvLinks              *int                     `json:"totalNvLinks,omitempty"`
+}
+
+// ModelsOobNvidiaSwitch defines model for models.OobNvidiaSwitch.
+type ModelsOobNvidiaSwitch struct {
+	DeviceId                  *string `json:"deviceId,omitempty"`
+	PcieReferenceClockEnabled *bool   `json:"pcieReferenceClockEnabled,omitempty"`
+	ProtectedPcieModeEnabled  *bool   `json:"protectedPcieModeEnabled,omitempty"`
+	SwitchIsolationMode       *string `json:"switchIsolationMode,omitempty"`
+	VendorId                  *string `json:"vendorId,omitempty"`
+}
+
+// ModelsOobPartLocation defines model for models.OobPartLocation.
+type ModelsOobPartLocation struct {
+	LocationOrdinalValue *int    `json:"locationOrdinalValue,omitempty"`
+	LocationType         *string `json:"locationType,omitempty"`
+	Orientation          *string `json:"orientation,omitempty"`
+	Reference            *string `json:"reference,omitempty"`
+	ServiceLabel         *string `json:"serviceLabel,omitempty"`
+}
+
 // ModelsOobPcieDevice defines model for models.OobPcieDevice.
 type ModelsOobPcieDevice struct {
+	Description     *string `json:"description,omitempty"`
 	DeviceType      *string `json:"deviceType,omitempty"`
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
 
@@ -2884,8 +3551,10 @@ type ModelsOobPcieDevice struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	HealthRollup *string                   `json:"healthRollup,omitempty"`
 	Id           string                    `json:"id"`
+	Links        *ModelsOobInventoryLinks  `json:"links,omitempty"`
 	Manufacturer *string                   `json:"manufacturer,omitempty"`
 	Model        *string                   `json:"model,omitempty"`
+	Name         *string                   `json:"name,omitempty"`
 	OdataId      *string                   `json:"odataId,omitempty"`
 	PartNumber   *string                   `json:"partNumber,omitempty"`
 	SerialNumber *string                   `json:"serialNumber,omitempty"`
@@ -2898,8 +3567,21 @@ type ModelsOobPcieDevice struct {
 	Uuid        *string `json:"uuid,omitempty"`
 }
 
+// ModelsOobPlacement defines model for models.OobPlacement.
+type ModelsOobPlacement struct {
+	AdditionalInfo  *string `json:"additionalInfo,omitempty"`
+	FacilityName    *string `json:"facilityName,omitempty"`
+	Rack            *string `json:"rack,omitempty"`
+	RackOffset      *int    `json:"rackOffset,omitempty"`
+	RackOffsetUnits *string `json:"rackOffsetUnits,omitempty"`
+	Room            *string `json:"room,omitempty"`
+	Row             *string `json:"row,omitempty"`
+}
+
 // ModelsOobProcessor defines model for models.OobProcessor.
 type ModelsOobProcessor struct {
+	Description *string `json:"description,omitempty"`
+
 	// Health Deprecated: use status.health.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Health *string `json:"health,omitempty"`
@@ -2909,12 +3591,18 @@ type ModelsOobProcessor struct {
 	HealthRollup          *string                   `json:"healthRollup,omitempty"`
 	Id                    string                    `json:"id"`
 	InstructionSet        *string                   `json:"instructionSet,omitempty"`
+	Links                 *ModelsOobInventoryLinks  `json:"links,omitempty"`
+	Location              *ModelsOobChassisLocation `json:"location,omitempty"`
 	Manufacturer          *string                   `json:"manufacturer,omitempty"`
 	MaxSpeedMhz           *int                      `json:"maxSpeedMhz,omitempty"`
 	Model                 *string                   `json:"model,omitempty"`
+	Name                  *string                   `json:"name,omitempty"`
+	NvidiaGpu             *ModelsOobNvidiaGPU       `json:"nvidiaGpu,omitempty"`
 	OdataId               *string                   `json:"odataId,omitempty"`
+	PartNumber            *string                   `json:"partNumber,omitempty"`
 	ProcessorArchitecture *string                   `json:"processorArchitecture,omitempty"`
 	ProcessorType         *string                   `json:"processorType,omitempty"`
+	SerialNumber          *string                   `json:"serialNumber,omitempty"`
 	Socket                *string                   `json:"socket,omitempty"`
 	Status                *ModelsOobInventoryStatus `json:"status,omitempty"`
 
@@ -2923,6 +3611,17 @@ type ModelsOobProcessor struct {
 	StatusState  *string `json:"statusState,omitempty"`
 	TotalCores   *int    `json:"totalCores,omitempty"`
 	TotalThreads *int    `json:"totalThreads,omitempty"`
+	Uuid         *string `json:"uuid,omitempty"`
+}
+
+// ModelsOobProcessorSummary defines model for models.OobProcessorSummary.
+type ModelsOobProcessorSummary struct {
+	CoreCount             *int                      `json:"coreCount,omitempty"`
+	Count                 *int                      `json:"count,omitempty"`
+	LogicalProcessorCount *int                      `json:"logicalProcessorCount,omitempty"`
+	Model                 *string                   `json:"model,omitempty"`
+	Status                *ModelsOobInventoryStatus `json:"status,omitempty"`
+	ThreadingEnabled      *bool                     `json:"threadingEnabled,omitempty"`
 }
 
 // ModelsOobSource defines model for models.OobSource.
@@ -2936,13 +3635,37 @@ type ModelsOobSource struct {
 	Vendor         *string `json:"vendor,omitempty"`
 }
 
+// ModelsOobSwitch defines model for models.OobSwitch.
+type ModelsOobSwitch struct {
+	Description     *string                   `json:"description,omitempty"`
+	FirmwareVersion *string                   `json:"firmwareVersion,omitempty"`
+	Id              string                    `json:"id"`
+	Links           *ModelsOobInventoryLinks  `json:"links,omitempty"`
+	Location        *ModelsOobChassisLocation `json:"location,omitempty"`
+	Manufacturer    *string                   `json:"manufacturer,omitempty"`
+	Model           *string                   `json:"model,omitempty"`
+	Name            string                    `json:"name"`
+	NvidiaSwitch    *ModelsOobNvidiaSwitch    `json:"nvidiaSwitch,omitempty"`
+	OdataId         *string                   `json:"odataId,omitempty"`
+	PartNumber      *string                   `json:"partNumber,omitempty"`
+	SerialNumber    *string                   `json:"serialNumber,omitempty"`
+	Sku             *string                   `json:"sku,omitempty"`
+	Status          *ModelsOobInventoryStatus `json:"status,omitempty"`
+	SwitchType      *string                   `json:"switchType,omitempty"`
+	Uuid            *string                   `json:"uuid,omitempty"`
+}
+
 // ModelsOobSystem defines model for models.OobSystem.
 type ModelsOobSystem struct {
-	AssetTag     *string `json:"assetTag,omitempty"`
-	BiosVersion  *string `json:"biosVersion,omitempty"`
-	CpuCoreCount *int    `json:"cpuCoreCount,omitempty"`
-	CpuCount     *int    `json:"cpuCount,omitempty"`
-	CpuModel     *string `json:"cpuModel,omitempty"`
+	AssetTag    *string `json:"assetTag,omitempty"`
+	BiosVersion *string `json:"biosVersion,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	CpuCoreCount *int `json:"cpuCoreCount,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	CpuCount *int `json:"cpuCount,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	CpuModel    *string `json:"cpuModel,omitempty"`
+	Description *string `json:"description,omitempty"`
 
 	// Health Deprecated: use status.health.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -2950,19 +3673,24 @@ type ModelsOobSystem struct {
 
 	// HealthRollup Deprecated: use status.healthRollup.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup      *string                   `json:"healthRollup,omitempty"`
-	HostName          *string                   `json:"hostName,omitempty"`
-	Id                string                    `json:"id"`
-	Manufacturer      *string                   `json:"manufacturer,omitempty"`
-	MemoryGib         *float32                  `json:"memoryGib,omitempty"`
-	Model             *string                   `json:"model,omitempty"`
-	OdataId           *string                   `json:"odataId,omitempty"`
-	PowerState        *string                   `json:"powerState,omitempty"`
-	Processors        *[]ModelsOobProcessor     `json:"processors,omitempty"`
-	SecureBootEnabled *bool                     `json:"secureBootEnabled,omitempty"`
-	SerialNumber      *string                   `json:"serialNumber,omitempty"`
-	Sku               *string                   `json:"sku,omitempty"`
-	Status            *ModelsOobInventoryStatus `json:"status,omitempty"`
+	HealthRollup *string                  `json:"healthRollup,omitempty"`
+	HostName     *string                  `json:"hostName,omitempty"`
+	Id           string                   `json:"id"`
+	Links        *ModelsOobInventoryLinks `json:"links,omitempty"`
+	Manufacturer *string                  `json:"manufacturer,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	MemoryGib         *float32                   `json:"memoryGib,omitempty"`
+	MemorySummary     *ModelsOobMemorySummary    `json:"memorySummary,omitempty"`
+	Model             *string                    `json:"model,omitempty"`
+	Name              *string                    `json:"name,omitempty"`
+	OdataId           *string                    `json:"odataId,omitempty"`
+	PowerState        *string                    `json:"powerState,omitempty"`
+	ProcessorSummary  *ModelsOobProcessorSummary `json:"processorSummary,omitempty"`
+	Processors        *[]ModelsOobProcessor      `json:"processors,omitempty"`
+	SecureBootEnabled *bool                      `json:"secureBootEnabled,omitempty"`
+	SerialNumber      *string                    `json:"serialNumber,omitempty"`
+	Sku               *string                    `json:"sku,omitempty"`
+	Status            *ModelsOobInventoryStatus  `json:"status,omitempty"`
 
 	// StatusState Deprecated: use status.state.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -3035,7 +3763,7 @@ type ModelsSimpleComputeZone struct {
 	// GeoLocation Deprecated: use location.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation *ModelsGeoLocation     `json:"geoLocation,omitempty"`
-	Id          *string                `json:"id,omitempty"`
+	Id          string                 `json:"id"`
 	Location    *ModelsLocation        `json:"location,omitempty"`
 	Name        *string                `json:"name,omitempty"`
 	Type        *ModelsComputeZoneType `json:"type,omitempty"`
@@ -3058,7 +3786,7 @@ type ModelsSimpleNode struct {
 type ModelsSimpleNodeGroup struct {
 	ComputeZoneId   *string `json:"computeZoneId,omitempty"`
 	ComputeZoneName *string `json:"computeZoneName,omitempty"`
-	Id              *string `json:"id,omitempty"`
+	Id              string  `json:"id"`
 	Name            *string `json:"name,omitempty"`
 }
 
@@ -3081,6 +3809,19 @@ type ModelsSortingOptions struct {
 	Defaults *ModelsSortingDefaults `json:"defaults,omitempty"`
 	Fields   *[]string              `json:"fields,omitempty"`
 	Orders   *[]string              `json:"orders,omitempty"`
+}
+
+// ModelsStatsResponse defines model for models.StatsResponse.
+type ModelsStatsResponse struct {
+	Series     *[]ModelsStatsSeries `json:"series,omitempty"`
+	TimeRange  *ModelsTimeRange     `json:"timeRange,omitempty"`
+	Timestamps *[]int               `json:"timestamps,omitempty"`
+}
+
+// ModelsStatsSeries defines model for models.StatsSeries.
+type ModelsStatsSeries struct {
+	Name   *string `json:"name,omitempty"`
+	Values *[]*int `json:"values,omitempty"`
 }
 
 // ModelsSuggestedAction defines model for models.SuggestedAction.
@@ -3134,7 +3875,7 @@ type ModelsUpdateComputeZoneRequest struct {
 
 // ModelsUpdateComputeZoneResponse defines model for models.UpdateComputeZoneResponse.
 type ModelsUpdateComputeZoneResponse struct {
-	Id *string `json:"id,omitempty"`
+	Id string `json:"id"`
 }
 
 // ModelsUpdateMuteRuleRequest defines model for models.UpdateMuteRuleRequest.
@@ -3169,23 +3910,25 @@ type ModelsVerificationCheckExtraInfo struct {
 
 // ModelsXIDBurstDetail defines model for models.XIDBurstDetail.
 type ModelsXIDBurstDetail struct {
-	// AgentType AgentType is the observation path the burst was detected on: "inband" or
-	// "oob". This endpoint takes no agentType parameter — burst IDs are unique
-	// across paths — so this field is the only way to tell them apart.
-	AgentType            *string `json:"agentType,omitempty"`
 	BmcHostname          *string `json:"bmcHostname,omitempty"`
 	BurstDurationSeconds *int    `json:"burstDurationSeconds,omitempty"`
-	BurstId              *string `json:"burstId,omitempty"`
+	BurstId              string  `json:"burstId"`
 
 	// Category Category and Subcategory are cloud-provider/NCP-only fields.
 	Category      *string `json:"category,omitempty"`
 	ComputeZone   *string `json:"computeZone,omitempty"`
 	ComputeZoneId *string `json:"computeZoneId,omitempty"`
 
+	// DataSource DataSource is the observation path the burst was detected on: "inband" or
+	// "oob". This endpoint takes no dataSource parameter — burst IDs are unique
+	// across paths — so this field is the only way to tell them apart.
+	DataSource *string `json:"dataSource,omitempty"`
+
 	// DeviceIds DeviceIDs maps each impacted GPU PCI device ID to the distinct XID
 	// numbers observed on that device in the burst.
 	DeviceIds *map[string][]int `json:"deviceIds,omitempty"`
 	EndTime   *time.Time        `json:"endTime,omitempty"`
+	GpuType   *string           `json:"gpuType,omitempty"`
 
 	// Hostname Hostname, NodeName, and BMCHostname carry the same node-scoped meaning as
 	// on XIDBurstListItem.
@@ -3201,7 +3944,7 @@ type ModelsXIDBurstDetail struct {
 	NodeGroup                       *string    `json:"nodeGroup,omitempty"`
 	NodeGroupId                     *string    `json:"nodeGroupId,omitempty"`
 	NodeName                        *string    `json:"nodeName,omitempty"`
-	NodeUuid                        *string    `json:"nodeUuid,omitempty"`
+	NodeUuid                        string     `json:"nodeUuid"`
 	StartTime                       *time.Time `json:"startTime,omitempty"`
 	StickyXidsSuppressed            *int       `json:"stickyXidsSuppressed,omitempty"`
 	Subcategory                     *string    `json:"subcategory,omitempty"`
@@ -3217,14 +3960,16 @@ type ModelsXIDBurstDetail struct {
 
 // ModelsXIDBurstFilterOptionsResponse defines model for models.XIDBurstFilterOptionsResponse.
 type ModelsXIDBurstFilterOptionsResponse struct {
-	// AgentType AgentType echoes the observation path the options were computed from, so
+	Categories *[]string `json:"categories,omitempty"`
+
+	// DataSource DataSource echoes the observation path the options were computed from, so
 	// a client that caches options per path can tell them apart. It may be
 	// "all", and must be when the table it filters was fetched with
-	// agentType=all: options for one path never include values seen only on the
+	// dataSource=all: options for one path never include values seen only on the
 	// other, so pairing a combined table with single-path options would hide
 	// filters for rows on screen.
-	AgentType     *string   `json:"agentType,omitempty"`
-	Categories    *[]string `json:"categories,omitempty"`
+	DataSource    *string   `json:"dataSource,omitempty"`
+	GpuTypes      *[]string `json:"gpuTypes,omitempty"`
 	JobDisruption *[]bool   `json:"jobDisruption,omitempty"`
 
 	// JobDisruptionDueToPlatformIssue JobDisruptionDueToPlatformIssue is omitted for tenant callers.
@@ -3240,30 +3985,32 @@ type ModelsXIDBurstFilterOptionsResponse struct {
 
 // ModelsXIDBurstListItem defines model for models.XIDBurstListItem.
 type ModelsXIDBurstListItem struct {
-	// AgentType AgentType is the observation path the burst was detected on: "inband" or
-	// "oob". Never "all", even for an agentType=all request — "all" selects
-	// which rows to return, and every row was still found by exactly one path.
-	// On a combined page this is what tells the two apart, so a node that
-	// reported one fault on both appears as two rows labelled differently.
-	AgentType            *string `json:"agentType,omitempty"`
 	BmcHostname          *string `json:"bmcHostname,omitempty"`
 	BurstDurationSeconds *int    `json:"burstDurationSeconds,omitempty"`
-	BurstId              *string `json:"burstId,omitempty"`
+	BurstId              string  `json:"burstId"`
 
 	// Category Category and Subcategory are cloud-provider/NCP-only fields.
 	Category      *string `json:"category,omitempty"`
 	ComputeZone   *string `json:"computeZone,omitempty"`
 	ComputeZoneId *string `json:"computeZoneId,omitempty"`
 
+	// DataSource DataSource is the observation path the burst was detected on: "inband" or
+	// "oob". Never "all", even for a dataSource=all request — "all" selects
+	// which rows to return, and every row was still found by exactly one path.
+	// On a combined page this is what tells the two apart, so a node that
+	// reported one fault on both appears as two rows labelled differently.
+	DataSource *string `json:"dataSource,omitempty"`
+
 	// DeviceIds DeviceIDs maps each impacted GPU PCI device ID to the distinct XID
 	// numbers observed on that device in the burst.
 	DeviceIds *map[string][]int `json:"deviceIds,omitempty"`
 	EndTime   *time.Time        `json:"endTime,omitempty"`
+	GpuType   *string           `json:"gpuType,omitempty"`
 
 	// Hostname Hostname is the in-band OS hostname; NodeName and BMCHostname are the
 	// OOB machine name and BMC hostname. All three describe the node, not the
 	// burst, so a dual-enrolled node returns every identity it has regardless
-	// of AgentType. Each is empty when the source owning it is not enrolled.
+	// of DataSource. Each is empty when the source owning it is not enrolled.
 	Hostname *string `json:"hostname,omitempty"`
 
 	// JobDisruption JobDisruption is true when any XID in the burst is job-fatal. It is
@@ -3276,7 +4023,7 @@ type ModelsXIDBurstListItem struct {
 	NodeGroup                       *string    `json:"nodeGroup,omitempty"`
 	NodeGroupId                     *string    `json:"nodeGroupId,omitempty"`
 	NodeName                        *string    `json:"nodeName,omitempty"`
-	NodeUuid                        *string    `json:"nodeUuid,omitempty"`
+	NodeUuid                        string     `json:"nodeUuid"`
 	StartTime                       *time.Time `json:"startTime,omitempty"`
 	StickyXidsSuppressed            *int       `json:"stickyXidsSuppressed,omitempty"`
 	Subcategory                     *string    `json:"subcategory,omitempty"`
@@ -3325,19 +4072,22 @@ type GetV1AlertTimelineNodesParams struct {
 	// PageSize Number of nodes per page
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 
-	// Hostname Case-insensitive partial match on hostname
-	Hostname *string `form:"hostname,omitempty" json:"hostname,omitempty"`
+	// NameSearch Case-insensitive substring matched against the in-band hostname, OOB machine name, BMC hostname, and node UUID
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
 
-	// OnlineOnly When true, return only nodes whose liveness state is Healthy/Degraded and has no unhealthy in-band or OOB liveness state. Omit or use false to return all nodes.
-	OnlineOnly *bool `form:"onlineOnly,omitempty" json:"onlineOnly,omitempty"`
+	// InbandAgentStatuses In-band agent machine status (online, offline, not_enrolled). Repeated values are ORed.
+	InbandAgentStatuses *[]ModelsAlertAgentStatus `form:"inbandAgentStatuses,omitempty" json:"inbandAgentStatuses,omitempty"`
 
-	// SortBy Sortable table-header column. alert ranks by critical then warning count.
+	// OobAgentStatuses OOB collector machine status (online, offline, not_enrolled). Repeated values are ORed; this filter is ANDed with inbandAgentStatuses.
+	OobAgentStatuses *[]ModelsAlertAgentStatus `form:"oobAgentStatuses,omitempty" json:"oobAgentStatuses,omitempty"`
+
+	// SortBy Sortable table-header column. nodeName and bmcHostname sort OOB identities; nodeUUID sorts the Machine ID column; alert ranks by critical then warning count. Missing names sort last.
 	SortBy *GetV1AlertTimelineNodesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort direction for sortBy
 	Order *GetV1AlertTimelineNodesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 
-	// GpuTypes Filter to nodes with matching GPU types (OR within dimension)
+	// GpuTypes Filter to nodes with matching resolved GPU types (OR within dimension)
 	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
 	// NodeGroupIds Filter to nodes in matching node groups by node group ID (OR within dimension)
@@ -3348,6 +4098,9 @@ type GetV1AlertTimelineNodesParams struct {
 
 	// AlertStates Filter to nodes with at least one alert whose state matches (OR within dimension). Resolved applies to the Historical view only (active=false).
 	AlertStates *[]GetV1AlertTimelineNodesParamsAlertStates `form:"alertStates,omitempty" json:"alertStates,omitempty"`
+
+	// DataSources Filter alerts by producing data source (inband or oob). Repeated values are ORed; omitted means both sources. Counts and pagination reflect matching alerts.
+	DataSources *[]GetV1AlertTimelineNodesParamsDataSources `form:"dataSources,omitempty" json:"dataSources,omitempty"`
 
 	// ComponentTypes Filter to nodes with alerts on matching component types. Use the value 'psirt' to match all security-vulnerability CVEs (the collapsed 'Security Vulnerability' option).
 	ComponentTypes *[]string `form:"componentTypes,omitempty" json:"componentTypes,omitempty"`
@@ -3362,6 +4115,9 @@ type GetV1AlertTimelineNodesParamsOrder string
 // GetV1AlertTimelineNodesParamsAlertStates defines parameters for GetV1AlertTimelineNodes.
 type GetV1AlertTimelineNodesParamsAlertStates string
 
+// GetV1AlertTimelineNodesParamsDataSources defines parameters for GetV1AlertTimelineNodes.
+type GetV1AlertTimelineNodesParamsDataSources string
+
 // GetV1AlertTimelineNodesNodeUuidAlertsParams defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
 type GetV1AlertTimelineNodesNodeUuidAlertsParams struct {
 	// Active Active Alerts view when true; Historical Alerts when false (default: false)
@@ -3370,7 +4126,7 @@ type GetV1AlertTimelineNodesNodeUuidAlertsParams struct {
 	// WithoutPsirt Exclude PSIRT alerts from results (default: false)
 	WithoutPsirt *bool `form:"withoutPsirt,omitempty" json:"withoutPsirt,omitempty"`
 
-	// SortBy Sortable table-header column.
+	// SortBy Sortable table-header column. dataSource sorts the source shown for each alert.
 	SortBy *GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort direction for sortBy
@@ -3379,10 +4135,13 @@ type GetV1AlertTimelineNodesNodeUuidAlertsParams struct {
 	// AlertStates Filter to alerts whose state matches (OR within dimension), carried from the Level 1 filter. Resolved applies to the Historical view only (active=false).
 	AlertStates *[]GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates `form:"alertStates,omitempty" json:"alertStates,omitempty"`
 
+	// DataSources Filter alerts by producing data source (inband or oob). Repeated values are ORed; omitted means both sources.
+	DataSources *[]GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources `form:"dataSources,omitempty" json:"dataSources,omitempty"`
+
 	// ComponentTypes Filter to alerts on matching component types. Use the value 'psirt' to match all security-vulnerability CVEs (the collapsed 'Security Vulnerability' option).
 	ComponentTypes *[]string `form:"componentTypes,omitempty" json:"componentTypes,omitempty"`
 
-	// GpuTypes Node-level filter carried from Level 1: match the node's GPU type (OR within dimension)
+	// GpuTypes Node-level filter carried from Level 1: match the node's resolved GPU type (OR within dimension)
 	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
 	// NodeGroupIds Node-level filter carried from Level 1: match the node's node group by ID (OR within dimension)
@@ -3406,6 +4165,9 @@ type GetV1AlertTimelineNodesNodeUuidAlertsParamsOrder string
 
 // GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
 type GetV1AlertTimelineNodesNodeUuidAlertsParamsAlertStates string
+
+// GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources defines parameters for GetV1AlertTimelineNodesNodeUuidAlerts.
+type GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources string
 
 // GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams defines parameters for GetV1AlertTimelineNodesNodeUuidAlertsAlertUuid.
 type GetV1AlertTimelineNodesNodeUuidAlertsAlertUuidParams struct {
@@ -3507,6 +4269,42 @@ type GetV1EventsParams struct {
 	// Component Filter by component (optional)
 	Component *string `form:"component,omitempty" json:"component,omitempty"`
 
+	// NodeGroupIds Filter by node group IDs
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Filter by compute zone IDs
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Exclude node group IDs
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Exclude compute zone IDs
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// NameSearch Case-insensitive substring matched against the in-band hostname, OOB machine name, BMC hostname, and node UUID
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// EventNames Exact event names
+	EventNames *[]string `form:"eventNames,omitempty" json:"eventNames,omitempty"`
+
+	// Severities Exact severity values
+	Severities *[]string `form:"severities,omitempty" json:"severities,omitempty"`
+
+	// Components Exact component values; cannot be combined with component
+	Components *[]string `form:"components,omitempty" json:"components,omitempty"`
+
+	// DataSources Event data sources
+	DataSources *[]GetV1EventsParamsDataSources `form:"dataSources,omitempty" json:"dataSources,omitempty"`
+
+	// GpuTypes Resolved node GPU types
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// SortBy Sortable column
+	SortBy *GetV1EventsParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// SortOrder Sort direction
+	SortOrder *GetV1EventsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+
 	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
@@ -3516,6 +4314,15 @@ type GetV1EventsParams struct {
 
 // GetV1EventsParamsTimeMode defines parameters for GetV1Events.
 type GetV1EventsParamsTimeMode string
+
+// GetV1EventsParamsDataSources defines parameters for GetV1Events.
+type GetV1EventsParamsDataSources string
+
+// GetV1EventsParamsSortBy defines parameters for GetV1Events.
+type GetV1EventsParamsSortBy string
+
+// GetV1EventsParamsSortOrder defines parameters for GetV1Events.
+type GetV1EventsParamsSortOrder string
 
 // GetV1EventsBucketsParams defines parameters for GetV1EventsBuckets.
 type GetV1EventsBucketsParams struct {
@@ -3537,12 +4344,45 @@ type GetV1EventsBucketsParams struct {
 	// Component Filter by component (optional)
 	Component *string `form:"component,omitempty" json:"component,omitempty"`
 
+	// NodeGroupIds Filter by node group IDs
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Filter by compute zone IDs
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Exclude node group IDs
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Exclude compute zone IDs
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// NameSearch Case-insensitive substring matched against the in-band hostname, OOB machine name, BMC hostname, and node UUID
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// EventNames Exact event names
+	EventNames *[]string `form:"eventNames,omitempty" json:"eventNames,omitempty"`
+
+	// Severities Exact severity values
+	Severities *[]string `form:"severities,omitempty" json:"severities,omitempty"`
+
+	// Components Exact component values; cannot be combined with component
+	Components *[]string `form:"components,omitempty" json:"components,omitempty"`
+
+	// DataSources Event data sources
+	DataSources *[]GetV1EventsBucketsParamsDataSources `form:"dataSources,omitempty" json:"dataSources,omitempty"`
+
+	// GpuTypes Resolved node GPU types
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
 	// MaxBuckets Maximum number of buckets (default: 100, max: 1000)
 	MaxBuckets *int `form:"maxBuckets,omitempty" json:"maxBuckets,omitempty"`
 }
 
 // GetV1EventsBucketsParamsTimeMode defines parameters for GetV1EventsBuckets.
 type GetV1EventsBucketsParamsTimeMode string
+
+// GetV1EventsBucketsParamsDataSources defines parameters for GetV1EventsBuckets.
+type GetV1EventsBucketsParamsDataSources string
 
 // GetV1MetricsParams defines parameters for GetV1Metrics.
 type GetV1MetricsParams struct {
@@ -3555,15 +4395,21 @@ type GetV1MetricsParams struct {
 	// Type If set, only metrics matching this type are returned (e.g., 'utilization', 'limit'). If absent, all metrics are returned.
 	Type *string `form:"type,omitempty" json:"type,omitempty"`
 
+	// DataSource Filter the catalog by data source: inband, oob, or all. Omitted defaults to all sources.
+	DataSource *GetV1MetricsParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
 	// PsirtComponent Include active PSIRT CVE sub-components (default: false)
 	PsirtComponent *bool `form:"psirtComponent,omitempty" json:"psirtComponent,omitempty"`
 
-	// EntityLevel Optional entity scope for architecture-aware filtering. Currently only 'node' is supported.
+	// EntityLevel Optional entity scope. Components an entity cannot produce are omitted, so an empty result is the signal that a scope has no nodes of the requested data source. 'node' additionally filters by GPU/CPU architecture and probes per-sensor availability.
 	EntityLevel *GetV1MetricsParamsEntityLevel `form:"entityLevel,omitempty" json:"entityLevel,omitempty"`
 
-	// EntityID Entity ID for architecture-aware filtering. Required when entityLevel is set.
+	// EntityID Entity ID matching entityLevel: node UUID, node group UUID, or compute zone UUID. Required when entityLevel is set.
 	EntityID *string `form:"entityID,omitempty" json:"entityID,omitempty"`
 }
+
+// GetV1MetricsParamsDataSource defines parameters for GetV1Metrics.
+type GetV1MetricsParamsDataSource string
 
 // GetV1MetricsParamsEntityLevel defines parameters for GetV1Metrics.
 type GetV1MetricsParamsEntityLevel string
@@ -3642,7 +4488,7 @@ type GetV1NodegroupsParams struct {
 	// HealthStatuses [DETAIL VIEW ONLY] Filter by node health status values (e.g., ?healthStatuses=Healthy&healthStatuses=Degraded)
 	HealthStatuses *[]GetV1NodegroupsParamsHealthStatuses `form:"healthStatuses,omitempty" json:"healthStatuses,omitempty"`
 
-	// GpuTypes [DETAIL VIEW ONLY] Filter by GPU type values (e.g., ?gpuTypes=NVIDIA-H100-80GB-HBM3)
+	// GpuTypes [DETAIL VIEW ONLY] Filter node groups containing nodes with any of the specified GPU types (e.g., ?gpuTypes=NVIDIA-H100-80GB-HBM3).
 	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
 	// SortBy Field to sort by (health, nodes)
@@ -3677,9 +4523,16 @@ type GetV1Nodegroups200JSONResponseBody struct {
 
 // DeleteV1NodesParams defines parameters for DeleteV1Nodes.
 type DeleteV1NodesParams struct {
-	// AgentType Agent enrollment to soft delete: inband (default) or oob
+	// DataSource Agent enrollment to soft delete: inband (default) or oob
+	DataSource *DeleteV1NodesParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// AgentType Deprecated: use dataSource. When both parameters are supplied, their values must match.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType *DeleteV1NodesParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 }
+
+// DeleteV1NodesParamsDataSource defines parameters for DeleteV1Nodes.
+type DeleteV1NodesParamsDataSource string
 
 // DeleteV1NodesParamsAgentType defines parameters for DeleteV1Nodes.
 type DeleteV1NodesParamsAgentType string
@@ -3689,7 +4542,11 @@ type GetV1NodesParams struct {
 	// View View mode: 'detail' for full response (default) or 'basic' for nodeUUID + hostname + optional OOB nodeName + bmcHostname/bmcIP only (lightweight query, does not support filtering or sorting by healthStatuses, verificationChecks, firmwareChecks, or agentStatuses).
 	View *GetV1NodesParamsView `form:"view,omitempty" json:"view,omitempty"`
 
-	// AgentType Select the in-band or OOB (BMC/Redfish) view: returns only nodes enrolled by that agent type. nodeName is source-specific metadata configured on the OOB collector and is absent from in-band responses. In the OOB view, nodes expose nodeName, bmcHostname/bmcIP and BMC-based verification, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuType/gpuCount/gpuFirmwareVersions are empty. Empty defaults to the in-band view for view=detail; for view=basic, an empty agentType returns a combined view that merges the OOB nodeName and BMC identity alongside the in-band hostname.
+	// DataSource Select the in-band or OOB (BMC/Redfish) data source. Returns only nodes enrolled through that source. nodeName is OOB-specific metadata and is absent from in-band responses. In the OOB view, nodes expose nodeName, bmcHostname/bmcIP, optional gpuType/gpuCount and BMC-based verification, while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuFirmwareVersions are empty. Empty defaults to the in-band view for view=detail; for view=basic, omitting both dataSource and agentType returns a combined view that merges OOB and in-band identity.
+	DataSource *GetV1NodesParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// AgentType Deprecated: use dataSource. Alias for selecting the in-band or OOB data source; when both parameters are supplied, their values must match.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType *GetV1NodesParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 
 	// Page Page number (0-indexed)
@@ -3716,10 +4573,10 @@ type GetV1NodesParams struct {
 	// NodeGroupNames Filter by nodegroup names (partial match). Empty means all nodegroups
 	NodeGroupNames *[]string `form:"nodeGroupNames,omitempty" json:"nodeGroupNames,omitempty"`
 
-	// GpuTypes Filter by GPU type values in the in-band view. Empty means all GPU types; rejected for OOB and combined views.
+	// GpuTypes Filter by GPU type values from the selected source, or the shared GPU info in combined basic view. Empty means all GPU types.
 	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
-	// GpuCounts Filter by GPU count values in the in-band view. Empty means all GPU counts; rejected for OOB and combined views.
+	// GpuCounts Filter by GPU count values from the selected source, or the shared GPU info in combined basic view. Empty means all GPU counts.
 	GpuCounts *[]int `form:"gpuCounts,omitempty" json:"gpuCounts,omitempty"`
 
 	// PublicIPs Filter by public IP addresses in the in-band view. Empty means all public IPs; rejected for OOB and combined views.
@@ -3738,22 +4595,22 @@ type GetV1NodesParams struct {
 	// FirmwareChecks Filter by firmware check status
 	FirmwareChecks *[]ModelsFirmwareCheck `form:"firmwareChecks,omitempty" json:"firmwareChecks,omitempty"`
 
-	// AgentStatuses Filter by agent status values
+	// AgentStatuses Filter by agent status for the selected dataSource. Healthy liveness is Online; every other, missing, or unrecognized liveness value is Offline.
 	AgentStatuses *[]ModelsAgentStatus `form:"agentStatuses,omitempty" json:"agentStatuses,omitempty"`
 
-	// Search Case-insensitive substring search across nodeUUID and source-appropriate node identity fields. Searches nodeUUID or hostname for agentType=inband; nodeUUID, nodeName, or bmcHostname for agentType=oob; and nodeUUID plus all three names for the combined basic view (view=basic with agentType omitted). Leading and trailing whitespace is ignored; blank means no search.
+	// Search Case-insensitive substring search across nodeUUID and source-appropriate node identity fields. Searches nodeUUID or hostname for dataSource=inband; nodeUUID, nodeName, or bmcHostname for dataSource=oob; and nodeUUID plus all three names for the combined basic view (view=basic with both source parameters omitted). Leading and trailing whitespace is ignored; blank means no search.
 	Search *string `form:"search,omitempty" json:"search,omitempty"`
 
-	// Hostname Filter by the in-band OS hostname (case-insensitive partial match). Applies to the in-band view and to active in-band identities in the combined basic view; rejected for agentType=oob.
+	// Hostname Filter by the in-band OS hostname (case-insensitive partial match). Applies to the in-band view and to active in-band identities in the combined basic view; rejected for dataSource=oob.
 	Hostname *string `form:"hostname,omitempty" json:"hostname,omitempty"`
 
-	// NodeName Filter by the configured node name (case-insensitive partial match). Applies to the OOB view (agentType=oob) and the combined basic view; rejected for the in-band view.
+	// NodeName Filter by the configured node name (case-insensitive partial match). Applies to the OOB view (dataSource=oob) and the combined basic view; rejected for the in-band view.
 	NodeName *string `form:"nodeName,omitempty" json:"nodeName,omitempty"`
 
-	// BmcHostname Filter by BMC hostname (case-insensitive partial match). Applies to the OOB view (agentType=oob) and the combined basic view; rejected for the in-band view.
+	// BmcHostname Filter by BMC hostname (case-insensitive partial match). Applies to the OOB view (dataSource=oob) and the combined basic view; rejected for the in-band view.
 	BmcHostname *string `form:"bmcHostname,omitempty" json:"bmcHostname,omitempty"`
 
-	// SortBy Field to sort by. Use verificationCheck; integrityCheck remains a deprecated alias. Defaults to hostname (in-band view) or bmcHostname (OOB view). nodeName and bmcHostname apply only to OOB-capable views; the in-band-only GPU/kernel/driver/agentVersion keys apply only to the in-band view. A key not valid for the selected agentType is rejected. gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions to the top, then sorts the remaining (uniform) nodes by that common vbios in the requested order.
+	// SortBy Field to sort by. Use verificationCheck; integrityCheck remains a deprecated alias. Defaults to hostname (in-band view) or bmcHostname (OOB view). nodeName and bmcHostname apply only to OOB-capable views; the in-band-only GPU firmware/kernel/driver/agentVersion keys apply only to the in-band view. Combined basic view supports only hostname, nodeName, bmcHostname, nodeUUID, nodeGroup, computeZone, gpuType, and gpuCount, matching its filterable fields. A key not valid for the selected dataSource is rejected. gpuFirmwareVersions pins nodes whose GPUs have mismatched vbios versions to the top, then sorts the remaining (uniform) nodes by that common vbios in the requested order.
 	SortBy *GetV1NodesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort order (asc, desc)
@@ -3762,6 +4619,9 @@ type GetV1NodesParams struct {
 
 // GetV1NodesParamsView defines parameters for GetV1Nodes.
 type GetV1NodesParamsView string
+
+// GetV1NodesParamsDataSource defines parameters for GetV1Nodes.
+type GetV1NodesParamsDataSource string
 
 // GetV1NodesParamsAgentType defines parameters for GetV1Nodes.
 type GetV1NodesParamsAgentType string
@@ -3797,27 +4657,54 @@ type GetV1NodesHistoryParamsActorType string
 
 // GetV1NodesOptionsParams defines parameters for GetV1NodesOptions.
 type GetV1NodesOptionsParams struct {
-	// AgentType Select the in-band (default) or OOB (BMC/Redfish) view. The OOB view returns a reduced set of filter and sorting options.
+	// View Select detail or basic options. Basic omits health-dependent filters and sorts; without a source parameter, basic uses combined node GPU info.
+	View *GetV1NodesOptionsParamsView `form:"view,omitempty" json:"view,omitempty"`
+
+	// DataSource Select in-band or OOB data. Omitted defaults to in-band for detail and combined sources for basic.
+	DataSource *GetV1NodesOptionsParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// AgentType Deprecated: use dataSource. Alias for selecting the in-band or OOB data source; when both parameters are supplied, their values must match.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType *GetV1NodesOptionsParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 }
+
+// GetV1NodesOptionsParamsView defines parameters for GetV1NodesOptions.
+type GetV1NodesOptionsParamsView string
+
+// GetV1NodesOptionsParamsDataSource defines parameters for GetV1NodesOptions.
+type GetV1NodesOptionsParamsDataSource string
 
 // GetV1NodesOptionsParamsAgentType defines parameters for GetV1NodesOptions.
 type GetV1NodesOptionsParamsAgentType string
 
 // DeleteV1NodesNodeUuidParams defines parameters for DeleteV1NodesNodeUuid.
 type DeleteV1NodesNodeUuidParams struct {
-	// AgentType Agent enrollment to soft delete: inband (default) or oob
+	// DataSource Agent enrollment to soft delete: inband (default) or oob
+	DataSource *DeleteV1NodesNodeUuidParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// AgentType Deprecated: use dataSource. When both parameters are supplied, their values must match.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType *DeleteV1NodesNodeUuidParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 }
+
+// DeleteV1NodesNodeUuidParamsDataSource defines parameters for DeleteV1NodesNodeUuid.
+type DeleteV1NodesNodeUuidParamsDataSource string
 
 // DeleteV1NodesNodeUuidParamsAgentType defines parameters for DeleteV1NodesNodeUuid.
 type DeleteV1NodesNodeUuidParamsAgentType string
 
 // GetV1NodesNodeUuidParams defines parameters for GetV1NodesNodeUuid.
 type GetV1NodesNodeUuidParams struct {
-	// AgentType Agent type view: inband (default) or oob
+	// DataSource Data source view: inband (default) or oob
+	DataSource *GetV1NodesNodeUuidParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// AgentType Deprecated: use dataSource. When both parameters are supplied, their values must match.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType *GetV1NodesNodeUuidParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 }
+
+// GetV1NodesNodeUuidParamsDataSource defines parameters for GetV1NodesNodeUuid.
+type GetV1NodesNodeUuidParamsDataSource string
 
 // GetV1NodesNodeUuidParamsAgentType defines parameters for GetV1NodesNodeUuid.
 type GetV1NodesNodeUuidParamsAgentType string
@@ -3948,7 +4835,11 @@ type GetV1ReportsInventoryParams struct {
 	// Signed Sign the CSV with NVIDIA's signing key and return a zip containing the CSV plus a .sig.bundle (cosign-verifiable Sigstore bundle). Only valid with format=csv.
 	Signed *bool `form:"signed,omitempty" json:"signed,omitempty"`
 
-	// AgentType Inventory source: inband (default) or oob. The JSON and CSV fields are source-specific.
+	// DataSource Inventory source: inband (default) or oob. The JSON and CSV fields are source-specific.
+	DataSource *GetV1ReportsInventoryParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// AgentType Deprecated: use dataSource. When both parameters are supplied, their values must match.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType *GetV1ReportsInventoryParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
 
 	// ComputeZoneIds Filter by computezone IDs. Empty means all computezones
@@ -3976,6 +4867,9 @@ type GetV1ReportsInventoryParams struct {
 // GetV1ReportsInventoryParamsFormat defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventoryParamsFormat string
 
+// GetV1ReportsInventoryParamsDataSource defines parameters for GetV1ReportsInventory.
+type GetV1ReportsInventoryParamsDataSource string
+
 // GetV1ReportsInventoryParamsAgentType defines parameters for GetV1ReportsInventory.
 type GetV1ReportsInventoryParamsAgentType string
 
@@ -3989,6 +4883,33 @@ type GetV1ReportsInventoryParamsOrder string
 type GetV1ReportsInventory200JSONResponseBody struct {
 	union json.RawMessage
 }
+
+// GetV1StatsParams defines parameters for GetV1Stats.
+type GetV1StatsParams struct {
+	// Name The stat to query
+	Name GetV1StatsParamsName `form:"name" json:"name"`
+
+	// DataSource Data source to query. Required for agentStatus.
+	DataSource *GetV1StatsParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// GroupBy The aggregation level to group stats by
+	GroupBy GetV1StatsParamsGroupBy `form:"groupBy" json:"groupBy"`
+
+	// GroupId Entity ID. Required when groupBy is nodegroup or computezone; omit when groupBy is customer.
+	GroupId *string `form:"groupId,omitempty" json:"groupId,omitempty"`
+
+	// Window Trailing daily window ending at the current server time. Must be a positive whole multiple of 24h and cannot exceed 8760h (365 days); use 240h for 10 days. 'd' is not supported.
+	Window string `form:"window" json:"window"`
+}
+
+// GetV1StatsParamsName defines parameters for GetV1Stats.
+type GetV1StatsParamsName string
+
+// GetV1StatsParamsDataSource defines parameters for GetV1Stats.
+type GetV1StatsParamsDataSource string
+
+// GetV1StatsParamsGroupBy defines parameters for GetV1Stats.
+type GetV1StatsParamsGroupBy string
 
 // GetV1TagsParams defines parameters for GetV1Tags.
 type GetV1TagsParams struct {
@@ -4007,8 +4928,8 @@ type GetV1TagsParams struct {
 
 // GetV1XIDBurstsParams defines parameters for GetV1XIDBursts.
 type GetV1XIDBurstsParams struct {
-	// AgentType Observation path to list bursts from, or all for both
-	AgentType *GetV1XIDBurstsParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
+	// DataSource Observation source to list bursts from, or all for both
+	DataSource *GetV1XIDBurstsParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
 
 	// StartTime Start time in RFC3339 format (required for absolute mode, e.g. 2024-01-01T01:00:00Z).
 	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
@@ -4045,6 +4966,9 @@ type GetV1XIDBurstsParams struct {
 
 	// XidNumbers Exact XID numbers; burst matches if it contains any of them (OR semantics)
 	XidNumbers *[]int `form:"xidNumbers,omitempty" json:"xidNumbers,omitempty"`
+
+	// GpuTypes Resolved node GPU types; independent of dataSource
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
 	// NameSearch Case-insensitive substring matched against any of the node's identities: hostname, nodeName, or bmcHostname. Takes precedence when both nameSearch and deprecated hostnameSearch are supplied.
 	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
@@ -4102,8 +5026,8 @@ type GetV1XIDBurstsParams struct {
 	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
-// GetV1XIDBurstsParamsAgentType defines parameters for GetV1XIDBursts.
-type GetV1XIDBurstsParamsAgentType string
+// GetV1XIDBurstsParamsDataSource defines parameters for GetV1XIDBursts.
+type GetV1XIDBurstsParamsDataSource string
 
 // GetV1XIDBurstsParamsTimeMode defines parameters for GetV1XIDBursts.
 type GetV1XIDBurstsParamsTimeMode string
@@ -4140,15 +5064,15 @@ type GetV1XIDBurstOptionsParams struct {
 	// ExcludeComputeZoneIds Excluded compute zone IDs
 	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
 
-	// AgentType Observation path to compute options for, or all for both
-	AgentType *GetV1XIDBurstOptionsParamsAgentType `form:"agentType,omitempty" json:"agentType,omitempty"`
+	// DataSource Observation source to compute options for, or all for both
+	DataSource *GetV1XIDBurstOptionsParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
 }
 
 // GetV1XIDBurstOptionsParamsTimeMode defines parameters for GetV1XIDBurstOptions.
 type GetV1XIDBurstOptionsParamsTimeMode string
 
-// GetV1XIDBurstOptionsParamsAgentType defines parameters for GetV1XIDBurstOptions.
-type GetV1XIDBurstOptionsParamsAgentType string
+// GetV1XIDBurstOptionsParamsDataSource defines parameters for GetV1XIDBurstOptions.
+type GetV1XIDBurstOptionsParamsDataSource string
 
 // GetV2MetricsParams defines parameters for GetV2Metrics.
 type GetV2MetricsParams struct {
@@ -4811,14 +5735,14 @@ type ClientInterface interface {
 
 	// GetV1AlertTimelineFilterOptions Get filter dropdown options for the alert panel
 	//
-	// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes and alertStates are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
+	// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states, data sources, in-band agent statuses, OOB agent statuses) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. GPU types use the resolved node value independently of alert source. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Agent-status options are dynamically derived from the matching nodes and use online, offline, or not_enrolled. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes, alertStates, dataSources, and agent statuses are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
 	//
 	// Corresponds with GET /v1/alert_timeline/filter_options (the `GetV1AlertTimelineFilterOptions` operationId).
 	GetV1AlertTimelineFilterOptions(ctx context.Context, params *GetV1AlertTimelineFilterOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1AlertTimelineNodes List impacted machines with alert summary (level 1)
 	//
-	// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
+	// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. GPU type uses the node's resolved value independently of alert source. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
 	//
 	// Corresponds with GET /v1/alert_timeline/nodes (the `GetV1AlertTimelineNodes` operationId).
 	GetV1AlertTimelineNodes(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4885,17 +5809,24 @@ type ClientInterface interface {
 
 	// GetV1Events Get events
 	//
-	// Get list of events with optional filtering by node UUID, component, and time range. Returns events from the events table for the specified time period.
+	// Get events with optional inventory, table, and time-range filters. Each row includes the node's resolved GPU type, independent of the event data source. Events associated with soft-deleted nodes are excluded.
 	//
 	// Corresponds with GET /v1/events (the `GetV1Events` operationId).
 	GetV1Events(ctx context.Context, params *GetV1EventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1EventsBuckets Get event counts bucketed by time
 	//
-	// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint.
+	// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint. GPU type filtering uses the node's resolved GPU type independently of event data source.
 	//
 	// Corresponds with GET /v1/events/buckets (the `GetV1EventsBuckets` operationId).
 	GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1EventsOptions Get event filter options
+	//
+	// Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
+	//
+	// Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
+	GetV1EventsOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1Info Get application info
 	//
@@ -4928,18 +5859,18 @@ type ClientInterface interface {
 
 	// GetV1NodeRemovalPolicy Get auto node removal policy
 	//
-	// Returns the customer's "Auto remove machines" settings. Customers that never
-	// configured the policy get the defaults (disabled, offlineThreshold omitted).
+	// Returns the customer's "Auto remove machines" settings. Customers without an
+	// explicit policy get the defaults (enabled, offlineThresholdDays 7).
 	//
 	// Corresponds with GET /v1/node_removal_policy (the `GetV1NodeRemovalPolicy` operationId).
 	GetV1NodeRemovalPolicy(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutV1NodeRemovalPolicyWithBody Update auto node removal policy
 	//
-	// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-	// is omitted the stored threshold is kept (disabling never clears it), so it is
-	// required only when enabling for the first time. The equivalent duration must be
-	// at least 1 day (whole numbers). An omitted enabled binds as false.
+	// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+	// is omitted, an existing threshold is kept or the seven-day default is used for a
+	// missing policy. Disabling never clears the threshold. The duration must be at least
+	// 1 day (whole numbers). An omitted enabled binds as false.
 	// Returns 204 No Content on success.
 	//
 	// Takes any type of body and a specified content type.
@@ -4949,10 +5880,10 @@ type ClientInterface interface {
 
 	// PutV1NodeRemovalPolicy Update auto node removal policy
 	//
-	// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-	// is omitted the stored threshold is kept (disabling never clears it), so it is
-	// required only when enabling for the first time. The equivalent duration must be
-	// at least 1 day (whole numbers). An omitted enabled binds as false.
+	// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+	// is omitted, an existing threshold is kept or the seven-day default is used for a
+	// missing policy. Disabling never clears the threshold. The duration must be at least
+	// 1 day (whole numbers). An omitted enabled binds as false.
 	// Returns 204 No Content on success.
 	//
 	// Takes a body of the `application/json` content type.
@@ -4970,6 +5901,7 @@ type ClientInterface interface {
 	// GetV1NodegroupsOptions Get available query options for node groups
 	//
 	// Returns available filters and sorting options for querying node groups.
+	// Available GPU types are based on active nodes.
 	// Filter options may be simple strings (e.g., health statuses, GPU types) or hierarchical objects (e.g., compute zones with nested nodegroups).
 	//
 	// Filter options examples:
@@ -5023,7 +5955,8 @@ type ClientInterface interface {
 	// - Simple strings: `{"name": "healthStatuses", "options": ["Healthy", "Degraded", "Unhealthy"]}`
 	// - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1", "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`
 	//
-	// The available options depend on the agentType view. The OOB view omits the gpuTypes filter and the GPU/kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+	// The available options depend on the selected dataSource. The gpuTypes filter applies to both in-band and OOB views. The OOB view omits the kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+	// In detail view, the agentStatuses filter is source-scoped and offers exactly Online and Offline. Basic view omits health-dependent filters and sorts.
 	//
 	// Corresponds with GET /v1/nodes/options (the `GetV1NodesOptions` operationId).
 	GetV1NodesOptions(ctx context.Context, params *GetV1NodesOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5189,7 +6122,7 @@ type ClientInterface interface {
 
 	// GetV1ReportsInventory Get inventory report
 	//
-	// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+	// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 	// Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
 	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 	//
@@ -5220,6 +6153,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with PUT /v1/retention_policy (the `PutV1RetentionPolicy` operationId).
 	PutV1RetentionPolicy(ctx context.Context, body PutV1RetentionPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1Stats Get categorical stats time series
+	//
+	// Returns aligned daily categorical chart data for a customer, node group, or compute zone over a trailing window ending at the current server time. Historical points come from stored stats. The final point is calculated live at request time and replaces any stored data for the current day. A missing historical record retains its scheduled timestamp and has null at the same index in every series; zero is an observed count. timestamps[i] identifies the point for every series.values[i], and all arrays have the same length. The agentStatus stat currently returns Online and Offline series in that order and requires dataSource. Healthy liveness counts as Online; every other, missing, or unrecognized liveness value counts as Offline.
+	//
+	// Corresponds with GET /v1/stats (the `GetV1Stats` operationId).
+	GetV1Stats(ctx context.Context, params *GetV1StatsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1Tags List all unique tags
 	//
@@ -5277,8 +6217,8 @@ type ClientInterface interface {
 	// The selected time range applies to burst start time using [startTime, endTime) and is required, matching GET /v1/events. Relative mode requires timeMode=relative and a positive Go duration window; absolute mode (default) requires startTime and endTime. Do not combine window with startTime/endTime. Absolute endTime must be after startTime.
 	// Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 	// Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
-	// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
-	// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
+	// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, the node's resolved GPU type, identities, and current nodeGroup/computeZone. GPU type is independent of the selected burst data source.
+	// Bursts are detected independently on each observation path, selected by dataSource: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single source that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different dataSource values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every dataSource. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 	//
 	// Corresponds with GET /v1/xid/bursts (the `GetV1XIDBursts` operationId).
 	GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5288,7 +6228,7 @@ type ClientInterface interface {
 	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 	// Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
-	// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
+	// Options are scoped by dataSource and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching sources, and pass dataSource=all when the table itself was fetched with dataSource=all. GPU type options use each matching node's resolved GPU type, independent of which source detected the burst.
 	//
 	// Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 	GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5296,8 +6236,8 @@ type ClientInterface interface {
 	// GetV1XIDBurstDetail Get finalized XID burst details
 	//
 	// Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
-	// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
+	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, resolved GPU type, all three node identities, and the node's current nodeGroup/computeZone.
+	// This endpoint takes no dataSource parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned dataSource field reports which source detected the burst.
 	//
 	// Corresponds with GET /v1/xid/bursts/{burstId} (the `GetV1XIDBurstDetail` operationId).
 	GetV1XIDBurstDetail(ctx context.Context, burstId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5439,7 +6379,7 @@ func (c *Client) PutV1AlertMuteRules(ctx context.Context, body PutV1AlertMuteRul
 
 // GetV1AlertTimelineFilterOptions Get filter dropdown options for the alert panel
 //
-// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes and alertStates are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
+// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states, data sources, in-band agent statuses, OOB agent statuses) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. GPU types use the resolved node value independently of alert source. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Agent-status options are dynamically derived from the matching nodes and use online, offline, or not_enrolled. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes, alertStates, dataSources, and agent statuses are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
 //
 // Corresponds with GET /v1/alert_timeline/filter_options (the `GetV1AlertTimelineFilterOptions` operationId).
 func (c *Client) GetV1AlertTimelineFilterOptions(ctx context.Context, params *GetV1AlertTimelineFilterOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5456,7 +6396,7 @@ func (c *Client) GetV1AlertTimelineFilterOptions(ctx context.Context, params *Ge
 
 // GetV1AlertTimelineNodes List impacted machines with alert summary (level 1)
 //
-// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
+// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. GPU type uses the node's resolved value independently of alert source. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
 //
 // Corresponds with GET /v1/alert_timeline/nodes (the `GetV1AlertTimelineNodes` operationId).
 func (c *Client) GetV1AlertTimelineNodes(ctx context.Context, params *GetV1AlertTimelineNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5613,7 +6553,7 @@ func (c *Client) PutV1Computezones(ctx context.Context, body PutV1ComputezonesJS
 
 // GetV1Events Get events
 //
-// Get list of events with optional filtering by node UUID, component, and time range. Returns events from the events table for the specified time period.
+// Get events with optional inventory, table, and time-range filters. Each row includes the node's resolved GPU type, independent of the event data source. Events associated with soft-deleted nodes are excluded.
 //
 // Corresponds with GET /v1/events (the `GetV1Events` operationId).
 func (c *Client) GetV1Events(ctx context.Context, params *GetV1EventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5630,11 +6570,28 @@ func (c *Client) GetV1Events(ctx context.Context, params *GetV1EventsParams, req
 
 // GetV1EventsBuckets Get event counts bucketed by time
 //
-// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint.
+// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint. GPU type filtering uses the node's resolved GPU type independently of event data source.
 //
 // Corresponds with GET /v1/events/buckets (the `GetV1EventsBuckets` operationId).
 func (c *Client) GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1EventsBucketsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetV1EventsOptions Get event filter options
+//
+// Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
+//
+// Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
+func (c *Client) GetV1EventsOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1EventsOptionsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -5716,8 +6673,8 @@ func (c *Client) GetV1NodeGroupMemberships(ctx context.Context, params *GetV1Nod
 
 // GetV1NodeRemovalPolicy Get auto node removal policy
 //
-// Returns the customer's "Auto remove machines" settings. Customers that never
-// configured the policy get the defaults (disabled, offlineThreshold omitted).
+// Returns the customer's "Auto remove machines" settings. Customers without an
+// explicit policy get the defaults (enabled, offlineThresholdDays 7).
 //
 // Corresponds with GET /v1/node_removal_policy (the `GetV1NodeRemovalPolicy` operationId).
 func (c *Client) GetV1NodeRemovalPolicy(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5734,10 +6691,10 @@ func (c *Client) GetV1NodeRemovalPolicy(ctx context.Context, reqEditors ...Reque
 
 // PutV1NodeRemovalPolicyWithBody Update auto node removal policy
 //
-// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-// is omitted the stored threshold is kept (disabling never clears it), so it is
-// required only when enabling for the first time. The equivalent duration must be
-// at least 1 day (whole numbers). An omitted enabled binds as false.
+// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+// is omitted, an existing threshold is kept or the seven-day default is used for a
+// missing policy. Disabling never clears the threshold. The duration must be at least
+// 1 day (whole numbers). An omitted enabled binds as false.
 // Returns 204 No Content on success.
 //
 // Takes any type of body and a specified content type.
@@ -5757,10 +6714,10 @@ func (c *Client) PutV1NodeRemovalPolicyWithBody(ctx context.Context, contentType
 
 // PutV1NodeRemovalPolicy Update auto node removal policy
 //
-// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-// is omitted the stored threshold is kept (disabling never clears it), so it is
-// required only when enabling for the first time. The equivalent duration must be
-// at least 1 day (whole numbers). An omitted enabled binds as false.
+// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+// is omitted, an existing threshold is kept or the seven-day default is used for a
+// missing policy. Disabling never clears the threshold. The duration must be at least
+// 1 day (whole numbers). An omitted enabled binds as false.
 // Returns 204 No Content on success.
 //
 // Takes a body of the `application/json` content type.
@@ -5798,6 +6755,7 @@ func (c *Client) GetV1Nodegroups(ctx context.Context, params *GetV1NodegroupsPar
 // GetV1NodegroupsOptions Get available query options for node groups
 //
 // Returns available filters and sorting options for querying node groups.
+// Available GPU types are based on active nodes.
 // Filter options may be simple strings (e.g., health statuses, GPU types) or hierarchical objects (e.g., compute zones with nested nodegroups).
 //
 // Filter options examples:
@@ -5901,7 +6859,8 @@ func (c *Client) GetV1NodesHistory(ctx context.Context, params *GetV1NodesHistor
 // - Simple strings: `{"name": "healthStatuses", "options": ["Healthy", "Degraded", "Unhealthy"]}`
 // - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1", "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`
 //
-// The available options depend on the agentType view. The OOB view omits the gpuTypes filter and the GPU/kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+// The available options depend on the selected dataSource. The gpuTypes filter applies to both in-band and OOB views. The OOB view omits the kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+// In detail view, the agentStatuses filter is source-scoped and offers exactly Online and Offline. Basic view omits health-dependent filters and sorts.
 //
 // Corresponds with GET /v1/nodes/options (the `GetV1NodesOptions` operationId).
 func (c *Client) GetV1NodesOptions(ctx context.Context, params *GetV1NodesOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6227,7 +7186,7 @@ func (c *Client) GetV1ReportsError(ctx context.Context, params *GetV1ReportsErro
 
 // GetV1ReportsInventory Get inventory report
 //
-// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 // Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
 // JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 //
@@ -6289,6 +7248,23 @@ func (c *Client) PutV1RetentionPolicyWithBody(ctx context.Context, contentType s
 // Corresponds with PUT /v1/retention_policy (the `PutV1RetentionPolicy` operationId).
 func (c *Client) PutV1RetentionPolicy(ctx context.Context, body PutV1RetentionPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutV1RetentionPolicyRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetV1Stats Get categorical stats time series
+//
+// Returns aligned daily categorical chart data for a customer, node group, or compute zone over a trailing window ending at the current server time. Historical points come from stored stats. The final point is calculated live at request time and replaces any stored data for the current day. A missing historical record retains its scheduled timestamp and has null at the same index in every series; zero is an observed count. timestamps[i] identifies the point for every series.values[i], and all arrays have the same length. The agentStatus stat currently returns Online and Offline series in that order and requires dataSource. Healthy liveness counts as Online; every other, missing, or unrecognized liveness value counts as Offline.
+//
+// Corresponds with GET /v1/stats (the `GetV1Stats` operationId).
+func (c *Client) GetV1Stats(ctx context.Context, params *GetV1StatsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1StatsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -6385,8 +7361,8 @@ func (c *Client) PatchV1Tags(ctx context.Context, body PatchV1TagsJSONRequestBod
 // The selected time range applies to burst start time using [startTime, endTime) and is required, matching GET /v1/events. Relative mode requires timeMode=relative and a positive Go duration window; absolute mode (default) requires startTime and endTime. Do not combine window with startTime/endTime. Absolute endTime must be after startTime.
 // Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 // Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
-// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
-// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
+// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, the node's resolved GPU type, identities, and current nodeGroup/computeZone. GPU type is independent of the selected burst data source.
+// Bursts are detected independently on each observation path, selected by dataSource: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single source that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different dataSource values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every dataSource. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 //
 // Corresponds with GET /v1/xid/bursts (the `GetV1XIDBursts` operationId).
 func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6406,7 +7382,7 @@ func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParam
 // Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 // Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 // jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
-// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
+// Options are scoped by dataSource and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching sources, and pass dataSource=all when the table itself was fetched with dataSource=all. GPU type options use each matching node's resolved GPU type, independent of which source detected the burst.
 //
 // Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 func (c *Client) GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6424,8 +7400,8 @@ func (c *Client) GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurst
 // GetV1XIDBurstDetail Get finalized XID burst details
 //
 // Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
-// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
+// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, resolved GPU type, all three node identities, and the node's current nodeGroup/computeZone.
+// This endpoint takes no dataSource parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned dataSource field reports which source detected the burst.
 //
 // Corresponds with GET /v1/xid/bursts/{burstId} (the `GetV1XIDBurstDetail` operationId).
 func (c *Client) GetV1XIDBurstDetail(ctx context.Context, burstId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6726,9 +7702,9 @@ func NewGetV1AlertTimelineNodesRequest(server string, params *GetV1AlertTimeline
 
 		}
 
-		if params.Hostname != nil {
+		if params.NameSearch != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hostname", *params.Hostname, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -6738,9 +7714,21 @@ func NewGetV1AlertTimelineNodesRequest(server string, params *GetV1AlertTimeline
 
 		}
 
-		if params.OnlineOnly != nil {
+		if params.InbandAgentStatuses != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "onlineOnly", *params.OnlineOnly, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "inbandAgentStatuses", *params.InbandAgentStatuses, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.OobAgentStatuses != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "oobAgentStatuses", *params.OobAgentStatuses, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -6813,6 +7801,18 @@ func NewGetV1AlertTimelineNodesRequest(server string, params *GetV1AlertTimeline
 		if params.AlertStates != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "alertStates", *params.AlertStates, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSources != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSources", *params.DataSources, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -6934,6 +7934,18 @@ func NewGetV1AlertTimelineNodesNodeUuidAlertsRequest(server string, nodeUUID str
 		if params.AlertStates != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "alertStates", *params.AlertStates, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSources != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSources", *params.DataSources, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -7613,6 +8625,150 @@ func NewGetV1EventsRequest(server string, params *GetV1EventsParams) (*http.Requ
 
 		}
 
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EventNames != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "eventNames", *params.EventNames, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Severities != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "severities", *params.Severities, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Components != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "components", *params.Components, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSources != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSources", *params.DataSources, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortOrder", *params.SortOrder, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Page != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
@@ -7751,6 +8907,126 @@ func NewGetV1EventsBucketsRequest(server string, params *GetV1EventsBucketsParam
 
 		}
 
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EventNames != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "eventNames", *params.EventNames, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Severities != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "severities", *params.Severities, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Components != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "components", *params.Components, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSources != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSources", *params.DataSources, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.MaxBuckets != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "maxBuckets", *params.MaxBuckets, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
@@ -7767,6 +9043,33 @@ func NewGetV1EventsBucketsRequest(server string, params *GetV1EventsBucketsParam
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
 		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1EventsOptionsRequest constructs an http.Request for the GetV1EventsOptions method
+func NewGetV1EventsOptionsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/events/options")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -7859,6 +9162,18 @@ func NewGetV1MetricsRequest(server string, params *GetV1MetricsParams) (*http.Re
 		if params.Type != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "type", *params.Type, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -8457,6 +9772,18 @@ func NewDeleteV1NodesRequestWithBody(server string, params *DeleteV1NodesParams,
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.AgentType != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -8516,6 +9843,18 @@ func NewGetV1NodesRequest(server string, params *GetV1NodesParams) (*http.Reques
 		if params.View != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "view", *params.View, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -8921,6 +10260,30 @@ func NewGetV1NodesOptionsRequest(server string, params *GetV1NodesOptionsParams)
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
+		if params.View != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "view", *params.View, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.AgentType != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -8982,6 +10345,18 @@ func NewDeleteV1NodesNodeUuidRequest(server string, nodeUUID string, params *Del
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.AgentType != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -9042,6 +10417,18 @@ func NewGetV1NodesNodeUuidRequest(server string, nodeUUID string, params *GetV1N
 		// styled parameters, preserving literal commas as delimiters
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
 
 		if params.AgentType != nil {
 
@@ -9861,6 +11248,18 @@ func NewGetV1ReportsInventoryRequest(server string, params *GetV1ReportsInventor
 
 		}
 
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.AgentType != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -10038,6 +11437,96 @@ func NewPutV1RetentionPolicyRequestWithBody(server string, contentType string, b
 	return req, nil
 }
 
+// NewGetV1StatsRequest constructs an http.Request for the GetV1Stats method
+func NewGetV1StatsRequest(server string, params *GetV1StatsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/stats")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "name", params.Name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "groupBy", params.GroupBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.GroupId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "groupId", *params.GroupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV1TagsRequest constructs an http.Request for the GetV1Tags method
 func NewGetV1TagsRequest(server string, params *GetV1TagsParams) (*http.Request, error) {
 	var err error
@@ -10196,9 +11685,9 @@ func NewGetV1XIDBurstsRequest(server string, params *GetV1XIDBurstsParams) (*htt
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.AgentType != nil {
+		if params.DataSource != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -10343,6 +11832,18 @@ func NewGetV1XIDBurstsRequest(server string, params *GetV1XIDBurstsParams) (*htt
 		if params.XidNumbers != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "xidNumbers", *params.XidNumbers, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -10706,9 +12207,9 @@ func NewGetV1XIDBurstOptionsRequest(server string, params *GetV1XIDBurstOptionsP
 
 		}
 
-		if params.AgentType != nil {
+		if params.DataSource != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentType", *params.AgentType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -11081,7 +12582,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1AlertTimelineFilterOptionsWithResponse Get filter dropdown options for the alert panel
 	//
-	// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes and alertStates are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
+	// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states, data sources, in-band agent statuses, OOB agent statuses) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. GPU types use the resolved node value independently of alert source. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Agent-status options are dynamically derived from the matching nodes and use online, offline, or not_enrolled. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes, alertStates, dataSources, and agent statuses are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11090,7 +12591,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1AlertTimelineNodesWithResponse List impacted machines with alert summary (level 1)
 	//
-	// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
+	// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. GPU type uses the node's resolved value independently of alert source. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11171,7 +12672,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1EventsWithResponse Get events
 	//
-	// Get list of events with optional filtering by node UUID, component, and time range. Returns events from the events table for the specified time period.
+	// Get events with optional inventory, table, and time-range filters. Each row includes the node's resolved GPU type, independent of the event data source. Events associated with soft-deleted nodes are excluded.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11180,12 +12681,21 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1EventsBucketsWithResponse Get event counts bucketed by time
 	//
-	// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint.
+	// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint. GPU type filtering uses the node's resolved GPU type independently of event data source.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/events/buckets (the `GetV1EventsBuckets` operationId).
 	GetV1EventsBucketsWithResponse(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*GetV1EventsBucketsResponse, error)
+
+	// GetV1EventsOptionsWithResponse Get event filter options
+	//
+	// Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
+	GetV1EventsOptionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1EventsOptionsResponse, error)
 
 	// GetV1InfoWithResponse Get application info
 	//
@@ -11226,8 +12736,8 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1NodeRemovalPolicyWithResponse Get auto node removal policy
 	//
-	// Returns the customer's "Auto remove machines" settings. Customers that never
-	// configured the policy get the defaults (disabled, offlineThreshold omitted).
+	// Returns the customer's "Auto remove machines" settings. Customers without an
+	// explicit policy get the defaults (enabled, offlineThresholdDays 7).
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11236,10 +12746,10 @@ type ClientWithResponsesInterface interface {
 
 	// PutV1NodeRemovalPolicyWithBodyWithResponse Update auto node removal policy
 	//
-	// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-	// is omitted the stored threshold is kept (disabling never clears it), so it is
-	// required only when enabling for the first time. The equivalent duration must be
-	// at least 1 day (whole numbers). An omitted enabled binds as false.
+	// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+	// is omitted, an existing threshold is kept or the seven-day default is used for a
+	// missing policy. Disabling never clears the threshold. The duration must be at least
+	// 1 day (whole numbers). An omitted enabled binds as false.
 	// Returns 204 No Content on success.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -11249,10 +12759,10 @@ type ClientWithResponsesInterface interface {
 
 	// PutV1NodeRemovalPolicyWithResponse Update auto node removal policy
 	//
-	// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-	// is omitted the stored threshold is kept (disabling never clears it), so it is
-	// required only when enabling for the first time. The equivalent duration must be
-	// at least 1 day (whole numbers). An omitted enabled binds as false.
+	// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+	// is omitted, an existing threshold is kept or the seven-day default is used for a
+	// missing policy. Disabling never clears the threshold. The duration must be at least
+	// 1 day (whole numbers). An omitted enabled binds as false.
 	// Returns 204 No Content on success.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -11272,6 +12782,7 @@ type ClientWithResponsesInterface interface {
 	// GetV1NodegroupsOptionsWithResponse Get available query options for node groups
 	//
 	// Returns available filters and sorting options for querying node groups.
+	// Available GPU types are based on active nodes.
 	// Filter options may be simple strings (e.g., health statuses, GPU types) or hierarchical objects (e.g., compute zones with nested nodegroups).
 	//
 	// Filter options examples:
@@ -11331,7 +12842,8 @@ type ClientWithResponsesInterface interface {
 	// - Simple strings: `{"name": "healthStatuses", "options": ["Healthy", "Degraded", "Unhealthy"]}`
 	// - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1", "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`
 	//
-	// The available options depend on the agentType view. The OOB view omits the gpuTypes filter and the GPU/kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+	// The available options depend on the selected dataSource. The gpuTypes filter applies to both in-band and OOB views. The OOB view omits the kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+	// In detail view, the agentStatuses filter is source-scoped and offers exactly Online and Offline. Basic view omits health-dependent filters and sorts.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11517,7 +13029,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1ReportsInventoryWithResponse Get inventory report
 	//
-	// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+	// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 	// Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
 	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 	//
@@ -11552,6 +13064,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PUT /v1/retention_policy (the `PutV1RetentionPolicy` operationId).
 	PutV1RetentionPolicyWithResponse(ctx context.Context, body PutV1RetentionPolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*PutV1RetentionPolicyResponse, error)
+
+	// GetV1StatsWithResponse Get categorical stats time series
+	//
+	// Returns aligned daily categorical chart data for a customer, node group, or compute zone over a trailing window ending at the current server time. Historical points come from stored stats. The final point is calculated live at request time and replaces any stored data for the current day. A missing historical record retains its scheduled timestamp and has null at the same index in every series; zero is an observed count. timestamps[i] identifies the point for every series.values[i], and all arrays have the same length. The agentStatus stat currently returns Online and Offline series in that order and requires dataSource. Healthy liveness counts as Online; every other, missing, or unrecognized liveness value counts as Offline.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/stats (the `GetV1Stats` operationId).
+	GetV1StatsWithResponse(ctx context.Context, params *GetV1StatsParams, reqEditors ...RequestEditorFn) (*GetV1StatsResponse, error)
 
 	// GetV1TagsWithResponse List all unique tags
 	//
@@ -11611,8 +13132,8 @@ type ClientWithResponsesInterface interface {
 	// The selected time range applies to burst start time using [startTime, endTime) and is required, matching GET /v1/events. Relative mode requires timeMode=relative and a positive Go duration window; absolute mode (default) requires startTime and endTime. Do not combine window with startTime/endTime. Absolute endTime must be after startTime.
 	// Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 	// Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
-	// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
-	// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
+	// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, the node's resolved GPU type, identities, and current nodeGroup/computeZone. GPU type is independent of the selected burst data source.
+	// Bursts are detected independently on each observation path, selected by dataSource: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single source that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different dataSource values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every dataSource. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11624,7 +13145,7 @@ type ClientWithResponsesInterface interface {
 	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 	// Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 	// jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
-	// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
+	// Options are scoped by dataSource and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching sources, and pass dataSource=all when the table itself was fetched with dataSource=all. GPU type options use each matching node's resolved GPU type, independent of which source detected the burst.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -11634,8 +13155,8 @@ type ClientWithResponsesInterface interface {
 	// GetV1XIDBurstDetailWithResponse Get finalized XID burst details
 	//
 	// Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
-	// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
+	// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, resolved GPU type, all three node identities, and the node's current nodeGroup/computeZone.
+	// This endpoint takes no dataSource parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned dataSource field reports which source detected the burst.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -12718,6 +14239,75 @@ func (r GetV1EventsBucketsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetV1EventsBucketsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1EventsOptionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ModelsEventFilterOptionsResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ModelsErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ModelsErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ModelsErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ModelsErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetV1EventsOptionsResponse) GetJSON200() *ModelsEventFilterOptionsResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetV1EventsOptionsResponse) GetJSON401() *ModelsErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetV1EventsOptionsResponse) GetJSON403() *ModelsErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetV1EventsOptionsResponse) GetJSON500() *ModelsErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetV1EventsOptionsResponse) GetJSON503() *ModelsErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetV1EventsOptionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1EventsOptionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1EventsOptionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1EventsOptionsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -14867,6 +16457,96 @@ func (r PutV1RetentionPolicyResponse) ContentType() string {
 	return ""
 }
 
+type GetV1StatsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ModelsStatsResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ModelsErrorResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ModelsErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ModelsErrorResponse
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ModelsErrorResponse
+	// JSON499 the response for an HTTP 499 `application/json` response
+	JSON499 *ModelsErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ModelsErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ModelsErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetV1StatsResponse) GetJSON200() *ModelsStatsResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetV1StatsResponse) GetJSON400() *ModelsErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetV1StatsResponse) GetJSON401() *ModelsErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetV1StatsResponse) GetJSON403() *ModelsErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetV1StatsResponse) GetJSON404() *ModelsErrorResponse {
+	return r.JSON404
+}
+
+// GetJSON499 returns the response for an HTTP 499 `application/json` response
+func (r GetV1StatsResponse) GetJSON499() *ModelsErrorResponse {
+	return r.JSON499
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetV1StatsResponse) GetJSON500() *ModelsErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetV1StatsResponse) GetJSON503() *ModelsErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetV1StatsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1StatsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1StatsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1StatsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV1TagsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -15459,7 +17139,7 @@ func (c *ClientWithResponses) PutV1AlertMuteRulesWithResponse(ctx context.Contex
 
 // GetV1AlertTimelineFilterOptionsWithResponse Get filter dropdown options for the alert panel
 //
-// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes and alertStates are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
+// Get the set of filter values (GPU types, node groups, compute zones, component types, alert states, data sources, in-band agent statuses, OOB agent statuses) available for the alert panel, returned in the shared options envelope (filters.fields[] + sorting) used by the node and node-group options endpoints. GPU types use the resolved node value independently of alert source. Every value is scoped to the customer's alerts in the chosen view, so each option is guaranteed to return results when applied as a filter. Agent-status options are dynamically derived from the matching nodes and use online, offline, or not_enrolled. Use the 'active' parameter to switch between the Active and Historical views; the historical view may additionally surface the Resolved alert state. Object-valued options ({id, value}) carry the filter id and its display value (node group / compute zone ids and names; component identifier and display name); gpuTypes, alertStates, dataSources, and agent statuses are plain strings. The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility is resolved server-side from the caller's persona.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15474,7 +17154,7 @@ func (c *ClientWithResponses) GetV1AlertTimelineFilterOptionsWithResponse(ctx co
 
 // GetV1AlertTimelineNodesWithResponse List impacted machines with alert summary (level 1)
 //
-// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
+// Returns a paginated list of nodes with per-node alert counts and inventory metadata for the Alerts panel. GPU type uses the node's resolved value independently of alert source. Use active=true for the Active Alerts view (only nodes with currently active alerts) or active=false for Historical Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect the full filtered result set and drive table header counts. componentVisibility is resolved server-side from the user's auth persona and is not an HTTP parameter.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15609,7 +17289,7 @@ func (c *ClientWithResponses) PutV1ComputezonesWithResponse(ctx context.Context,
 
 // GetV1EventsWithResponse Get events
 //
-// Get list of events with optional filtering by node UUID, component, and time range. Returns events from the events table for the specified time period.
+// Get events with optional inventory, table, and time-range filters. Each row includes the node's resolved GPU type, independent of the event data source. Events associated with soft-deleted nodes are excluded.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15624,7 +17304,7 @@ func (c *ClientWithResponses) GetV1EventsWithResponse(ctx context.Context, param
 
 // GetV1EventsBucketsWithResponse Get event counts bucketed by time
 //
-// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint.
+// Returns time-bucketed event counts for histogram display. The server picks a clean bucket interval based on the maxBuckets hint. GPU type filtering uses the node's resolved GPU type independently of event data source.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15635,6 +17315,21 @@ func (c *ClientWithResponses) GetV1EventsBucketsWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseGetV1EventsBucketsResponse(rsp)
+}
+
+// GetV1EventsOptionsWithResponse Get event filter options
+//
+// Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
+func (c *ClientWithResponses) GetV1EventsOptionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1EventsOptionsResponse, error) {
+	rsp, err := c.GetV1EventsOptions(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1EventsOptionsResponse(rsp)
 }
 
 // GetV1InfoWithResponse Get application info
@@ -15700,8 +17395,8 @@ func (c *ClientWithResponses) GetV1NodeGroupMembershipsWithResponse(ctx context.
 
 // GetV1NodeRemovalPolicyWithResponse Get auto node removal policy
 //
-// Returns the customer's "Auto remove machines" settings. Customers that never
-// configured the policy get the defaults (disabled, offlineThreshold omitted).
+// Returns the customer's "Auto remove machines" settings. Customers without an
+// explicit policy get the defaults (enabled, offlineThresholdDays 7).
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -15716,10 +17411,10 @@ func (c *ClientWithResponses) GetV1NodeRemovalPolicyWithResponse(ctx context.Con
 
 // PutV1NodeRemovalPolicyWithBodyWithResponse Update auto node removal policy
 //
-// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-// is omitted the stored threshold is kept (disabling never clears it), so it is
-// required only when enabling for the first time. The equivalent duration must be
-// at least 1 day (whole numbers). An omitted enabled binds as false.
+// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+// is omitted, an existing threshold is kept or the seven-day default is used for a
+// missing policy. Disabling never clears the threshold. The duration must be at least
+// 1 day (whole numbers). An omitted enabled binds as false.
 // Returns 204 No Content on success.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -15735,10 +17430,10 @@ func (c *ClientWithResponses) PutV1NodeRemovalPolicyWithBodyWithResponse(ctx con
 
 // PutV1NodeRemovalPolicyWithResponse Update auto node removal policy
 //
-// Updates the customer's "Auto remove machines" settings. When offlineThreshold
-// is omitted the stored threshold is kept (disabling never clears it), so it is
-// required only when enabling for the first time. The equivalent duration must be
-// at least 1 day (whole numbers). An omitted enabled binds as false.
+// Updates the customer's "Auto remove machines" settings. When offlineThresholdDays
+// is omitted, an existing threshold is kept or the seven-day default is used for a
+// missing policy. Disabling never clears the threshold. The duration must be at least
+// 1 day (whole numbers). An omitted enabled binds as false.
 // Returns 204 No Content on success.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -15770,6 +17465,7 @@ func (c *ClientWithResponses) GetV1NodegroupsWithResponse(ctx context.Context, p
 // GetV1NodegroupsOptionsWithResponse Get available query options for node groups
 //
 // Returns available filters and sorting options for querying node groups.
+// Available GPU types are based on active nodes.
 // Filter options may be simple strings (e.g., health statuses, GPU types) or hierarchical objects (e.g., compute zones with nested nodegroups).
 //
 // Filter options examples:
@@ -15859,7 +17555,8 @@ func (c *ClientWithResponses) GetV1NodesHistoryWithResponse(ctx context.Context,
 // - Simple strings: `{"name": "healthStatuses", "options": ["Healthy", "Degraded", "Unhealthy"]}`
 // - Hierarchical objects: `{"name": "computeZones", "options": [{"id": "cz-1", "value": "Zone 1", "options": [{"id": "ng-1", "value": "Node Group 1"}]}]}`
 //
-// The available options depend on the agentType view. The OOB view omits the gpuTypes filter and the GPU/kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+// The available options depend on the selected dataSource. The gpuTypes filter applies to both in-band and OOB views. The OOB view omits the kernel/driver/firmware/agentVersion sort fields, which apply only to in-band-enrolled nodes.
+// In detail view, the agentStatuses filter is source-scoped and offers exactly Online and Offline. Basic view omits health-dependent filters and sorts.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -16141,7 +17838,7 @@ func (c *ClientWithResponses) GetV1ReportsErrorWithResponse(ctx context.Context,
 
 // GetV1ReportsInventoryWithResponse Get inventory report
 //
-// Get an agent-source-specific inventory report in JSON or CSV format. agentType=inband preserves the existing GPU/OS inventory shape; agentType=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 // Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
 // JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
 //
@@ -16199,6 +17896,21 @@ func (c *ClientWithResponses) PutV1RetentionPolicyWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParsePutV1RetentionPolicyResponse(rsp)
+}
+
+// GetV1StatsWithResponse Get categorical stats time series
+//
+// Returns aligned daily categorical chart data for a customer, node group, or compute zone over a trailing window ending at the current server time. Historical points come from stored stats. The final point is calculated live at request time and replaces any stored data for the current day. A missing historical record retains its scheduled timestamp and has null at the same index in every series; zero is an observed count. timestamps[i] identifies the point for every series.values[i], and all arrays have the same length. The agentStatus stat currently returns Online and Offline series in that order and requires dataSource. Healthy liveness counts as Online; every other, missing, or unrecognized liveness value counts as Offline.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/stats (the `GetV1Stats` operationId).
+func (c *ClientWithResponses) GetV1StatsWithResponse(ctx context.Context, params *GetV1StatsParams, reqEditors ...RequestEditorFn) (*GetV1StatsResponse, error) {
+	rsp, err := c.GetV1Stats(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1StatsResponse(rsp)
 }
 
 // GetV1TagsWithResponse List all unique tags
@@ -16277,8 +17989,8 @@ func (c *ClientWithResponses) PatchV1TagsWithResponse(ctx context.Context, body 
 // The selected time range applies to burst start time using [startTime, endTime) and is required, matching GET /v1/events. Relative mode requires timeMode=relative and a positive Go duration window; absolute mode (default) requires startTime and endTime. Do not combine window with startTime/endTime. Absolute endTime must be after startTime.
 // Node-group and compute-zone filters use customer-scoped UUIDs, matching the node and alert APIs. Values are OR-combined within each dimension and AND-combined across dimensions. Exclusion filters select every assignment except the supplied IDs and cannot be combined with the inclusive filter for the same dimension. Filter option IDs and labels are available from GET /v1/nodes/options. Bursts on soft-deleted nodes are never returned.
 // Multiple xidNumbers are OR-combined: a burst matches if it contains any of the requested XIDs (including bursts that contain only one of them, or both). String search parameters are case-insensitive substring filters. Categories, subcategories, and action-code array parameters (e.g. tenantActions) are exact-match checkbox-style filters, OR-combined within the same parameter; their values come from GET /v1/xid/bursts/options. All filters across different columns/parameters are AND-combined, including a *Search param and its exact-match sibling. Action filters and searches match catalog action codes (not Guidance Classes text) and expand public alias codes (e.g. CONTACT_SUPPORT) to the raw DB forms they replace (RETURN_TO_PROVIDER, PULL_FROM_SERVICE), so options-published codes match stored bursts.
-// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, hostname, and the node's current nodeGroup/computeZone (display names and IDs), matching alert timeline Level 1 inventory enrichment.
-// Bursts are detected independently on each observation path, selected by agentType: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single path that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different agentType values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every agentType. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
+// Response fields are shaped server-side from the caller's persona. Tenants receive jobDisruption, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, jobDisruptionDueToPlatformIssue, XID catalog descriptions, and DC-admin actions. Action text is resolved from the persona-appropriate Guidance Classes catalog. Each item includes nodeUuid, the node's resolved GPU type, identities, and current nodeGroup/computeZone. GPU type is independent of the selected burst data source.
+// Bursts are detected independently on each observation path, selected by dataSource: in-band agent logs (default), out-of-band BMC/Redfish logs, or all for both in one page. Each item echoes the single source that detected it, so on a combined page a node that reported the same fault through both paths appears as two rows with different dataSource values — that is the observation, not a duplicate to be merged. Sorting and paging are identical for every dataSource. Every item also carries all three node identities (hostname, nodeName, bmcHostname); each is empty unless the source owning it is currently enrolled, so an out-of-band-only node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch matches any of the three. For out-of-band bursts the deviceIds keys are resolved from the Redfish resource token to the GPU UUID where inventory allows, and otherwise remain the raw token, so treat the key as an opaque device label.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -16296,7 +18008,7 @@ func (c *ClientWithResponses) GetV1XIDBurstsWithResponse(ctx context.Context, pa
 // Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
 // Tenant callers receive public disruption values, XIDs, and tenant actions. Cloud-provider/NCP callers additionally receive platform-disruption values, categories, subcategories, and DC-admin actions. suggestedActions uses the shared action model; clients group it by persona and type. Category and action labels are resolved from the persona-appropriate catalogs.
 // jobDisruption and jobDisruptionDueToPlatformIssue are always the full [true, false] domain. XID numbers, categories, subcategories, and suggestedActions reflect the distinct values actually present across the customer's finalized bursts (still unfiltered by the current table filters). Action codes are alias-normalized and de-duplicated after normalization, matching GET /v1/xid/bursts. Hostname filtering uses the free-text nameSearch parameter on GET /v1/xid/bursts rather than a distinct-hostname options list.
-// Options are scoped by agentType and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching paths, and pass agentType=all when the table itself was fetched with agentType=all — single-path options would otherwise omit filters for rows already on screen.
+// Options are scoped by dataSource and echoed in the response, so they always match what GET /v1/xid/bursts returns for that same value. Request them again when switching sources, and pass dataSource=all when the table itself was fetched with dataSource=all. GPU type options use each matching node's resolved GPU type, independent of which source detected the burst.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -16312,8 +18024,8 @@ func (c *ClientWithResponses) GetV1XIDBurstOptionsWithResponse(ctx context.Conte
 // GetV1XIDBurstDetailWithResponse Get finalized XID burst details
 //
 // Returns the side-panel details for one finalized burst belonging to the authenticated customer.
-// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, all three node identities (hostname, nodeName, bmcHostname), and the node's current nodeGroup/computeZone (display names and IDs).
-// This endpoint takes no agentType parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned agentType field reports which path detected the burst.
+// Response fields are shaped server-side from the caller's persona. Tenants receive the public job-disruption value, XID numbers with mnemonics, and tenant actions. Cloud-provider/NCP callers additionally receive category, subcategory, platform-attributed disruption, XID catalog descriptions, and all tenant plus DC-admin actions. Suggested action text is resolved from the persona-appropriate Guidance Classes catalog. The response includes nodeUuid, resolved GPU type, all three node identities, and the node's current nodeGroup/computeZone.
+// This endpoint takes no dataSource parameter: burst IDs are unique across observation paths, so one ID resolves without one. The returned dataSource field reports which source detected the burst.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -17180,6 +18892,60 @@ func ParseGetV1EventsBucketsResponse(rsp *http.Response) (*GetV1EventsBucketsRes
 			return nil, err
 		}
 		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1EventsOptionsResponse parses an HTTP response from a GetV1EventsOptionsWithResponse call
+func ParseGetV1EventsOptionsResponse(rsp *http.Response) (*GetV1EventsOptionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1EventsOptionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsEventFilterOptionsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ModelsErrorResponse
@@ -18929,6 +20695,81 @@ func ParsePutV1RetentionPolicyResponse(rsp *http.Response) (*PutV1RetentionPolic
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1StatsResponse parses an HTTP response from a GetV1StatsWithResponse call
+func ParseGetV1StatsResponse(rsp *http.Response) (*GetV1StatsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1StatsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsStatsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
 		var dest ModelsErrorResponse

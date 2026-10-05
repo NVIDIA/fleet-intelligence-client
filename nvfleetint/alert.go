@@ -372,7 +372,7 @@ func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimel
 		Active:         optionalTrueBool(opts.Active),
 		Page:           cloneInt(opts.Page),
 		PageSize:       cloneInt(opts.PageSize),
-		Hostname:       optionalString(opts.Hostname),
+		NameSearch:     optionalString(opts.Hostname),
 		SortBy:         optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsSortBy](opts.SortBy),
 		Order:          optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsOrder](opts.Order),
 		GpuTypes:       optionalSlice(opts.GPUTypes),
@@ -623,7 +623,7 @@ func decodeNodeAlertTimeline(data []byte) (NodeAlertTimelinePage, error) {
 	}
 
 	page := NodeAlertTimelinePage{
-		NodeUUID: stringValue(resp.NodeUuid),
+		NodeUUID: resp.NodeUuid,
 		Hostname: stringValue(resp.Hostname),
 		HasMore:  boolValue(resp.HasMore),
 		Page:     intValue(resp.Page),
@@ -647,8 +647,8 @@ func alertFromGenerated(alert fleetapi.ModelsAlert) Alert {
 	triggeredAt := stringValue(alert.TriggeredAt)
 	eventTimestamp := stringValue(alert.EventTimestamp)
 	return Alert{
-		UUID:                 stringValue(alert.AlertUUID),
-		NodeUUID:             stringValue(alert.NodeUUID),
+		UUID:                 alert.AlertUUID,
+		NodeUUID:             alert.NodeUUID,
 		Component:            stringValue(alert.Component),
 		ComponentDisplayName: stringValue(alert.ComponentDisplayName),
 		Severity:             enumStringValue(alert.Severity),
@@ -666,7 +666,7 @@ func alertFromGenerated(alert fleetapi.ModelsAlert) Alert {
 // Maps timeline node API models into SDK values
 func alertTimelineNodeFromGenerated(node fleetapi.ModelsAlertTimelineNode) AlertTimelineNode {
 	return AlertTimelineNode{
-		NodeUUID:      stringValue(node.NodeUuid),
+		NodeUUID:      node.NodeUuid,
 		Hostname:      stringValue(node.Hostname),
 		ComputeZone:   stringValue(node.ComputeZone),
 		NodeGroup:     stringValue(node.NodeGroup),
@@ -682,7 +682,7 @@ func alertTimelineNodeFromGenerated(node fleetapi.ModelsAlertTimelineNode) Alert
 // Maps timeline alert API models into SDK values
 func alertTimelineNodeAlertFromGenerated(alert fleetapi.ModelsAlertTimelineNodeAlert) AlertTimelineNodeAlert {
 	return AlertTimelineNodeAlert{
-		AlertUUID:            stringValue(alert.AlertUuid),
+		AlertUUID:            alert.AlertUuid,
 		Component:            stringValue(alert.Component),
 		ComponentDisplayName: stringValue(alert.ComponentDisplayName),
 		AlertStatus:          stringValue(alert.AlertStatus),
@@ -694,8 +694,8 @@ func alertTimelineNodeAlertFromGenerated(alert fleetapi.ModelsAlertTimelineNodeA
 // Maps timeline detail API models into SDK values
 func alertTimelineDetailsFromGenerated(details fleetapi.ModelsAlertTimelineDetailResponse) AlertTimelineDetails {
 	out := AlertTimelineDetails{
-		AlertUUID:            stringValue(details.AlertUuid),
-		NodeUUID:             stringValue(details.NodeUuid),
+		AlertUUID:            details.AlertUuid,
+		NodeUUID:             details.NodeUuid,
 		Component:            stringValue(details.Component),
 		ComponentDisplayName: stringValue(details.ComponentDisplayName),
 		AlertStatus:          stringValue(details.AlertStatus),
