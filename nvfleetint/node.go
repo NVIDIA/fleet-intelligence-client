@@ -18,9 +18,6 @@ const (
 	NodeViewDetail NodeView = "detail"
 	NodeViewBasic  NodeView = "basic"
 
-	NodeDataSourceInband NodeDataSource = "inband"
-	NodeDataSourceOOB    NodeDataSource = "oob"
-
 	NodeHealthHealthy   NodeHealthStatus = "Healthy"
 	NodeHealthDegraded  NodeHealthStatus = "Degraded"
 	NodeHealthUnhealthy NodeHealthStatus = "Unhealthy"
@@ -74,22 +71,6 @@ func (view NodeView) Valid() bool {
 	return fleetapi.GetV1NodesParamsView(view).Valid()
 }
 
-// NodeDataSource selects an in-band or OOB enrollment.
-type NodeDataSource string
-
-// Valid reports whether the data source is accepted by the API.
-func (source NodeDataSource) Valid() bool {
-	return fleetapi.GetV1NodesParamsDataSource(source).Valid()
-}
-
-// Validate checks an optional data source. Empty preserves the endpoint default.
-func (source NodeDataSource) Validate() error {
-	if source != "" && !source.Valid() {
-		return invalidOption("dataSource", "node data source", string(source), nodeDataSourceValues)
-	}
-	return nil
-}
-
 // Represents supported health filters for listing nodes
 type NodeHealthStatus string
 
@@ -141,7 +122,7 @@ func (order NodeSortOrder) Valid() bool {
 // Represents request options for listing nodes
 type ListNodesOptions struct {
 	View               NodeView
-	DataSource         NodeDataSource
+	DataSource         DataSource
 	NodeUUIDs          []string
 	HealthStatuses     []NodeHealthStatus
 	ComputeZoneIDs     []string
@@ -294,7 +275,7 @@ type NodeDetails struct {
 
 // Represents request options for describing a node
 type DescribeNodeOptions struct {
-	DataSource NodeDataSource
+	DataSource DataSource
 }
 
 // Represents hardware and network resource metadata for a node
@@ -437,7 +418,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if view == NodeViewBasic {
 		return decodeBasicNodes(resp.Body)
 	}
-	if opts.DataSource == NodeDataSourceOOB {
+	if opts.DataSource == DataSourceOOB {
 		return decodeOOBDetailNodes(resp.Body)
 	}
 
@@ -477,7 +458,7 @@ func (c *Client) DescribeNodeWithOptions(
 	}
 
 	var node NodeDetails
-	if opts.DataSource == NodeDataSourceOOB {
+	if opts.DataSource == DataSourceOOB {
 		var data fleetapi.ModelsOobNodeDetailsResponse
 		if err := json.Unmarshal(resp.Body, &data); err != nil {
 			return NodeDetails{}, err
@@ -498,7 +479,6 @@ func (c *Client) DescribeNodeWithOptions(
 // The accepted values named in each node option's error
 const (
 	nodeViewValues              = "basic or detail"
-	nodeDataSourceValues        = "inband or oob"
 	nodeHealthValues            = "Healthy, Degraded, Unhealthy, or Unknown"
 	nodeAgentStatusValues       = "Online or Offline"
 	nodeVerificationCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"

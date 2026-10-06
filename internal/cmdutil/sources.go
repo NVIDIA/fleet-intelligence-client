@@ -20,15 +20,15 @@ func WriteBothSourceTables[T any](
 	ctx context.Context,
 	w io.Writer,
 	resource string,
-	fetch func(context.Context, nvfleetint.NodeDataSource) (T, error),
+	fetch func(context.Context, nvfleetint.DataSource) (T, error),
 	write func(io.Writer, T) error,
 ) error {
 	sources := [2]struct {
-		source nvfleetint.NodeDataSource
+		source nvfleetint.DataSource
 		label  string
 	}{
-		{nvfleetint.NodeDataSourceInband, "In-band"},
-		{nvfleetint.NodeDataSourceOOB, "Out-of-band"},
+		{nvfleetint.DataSourceInband, "In-band"},
+		{nvfleetint.DataSourceOOB, "Out-of-band"},
 	}
 	var results [2]T
 	var errs [2]error

@@ -272,7 +272,7 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.DescribeNodeWithOptions(context.Background(), "node-oob-1", DescribeNodeOptions{
-		DataSource: NodeDataSourceOOB,
+		DataSource: DataSourceOOB,
 	})
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
@@ -318,7 +318,7 @@ func TestListNodesOOB(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		DataSource:  NodeDataSourceOOB,
+		DataSource:  DataSourceOOB,
 		NodeName:    "machine",
 		BMCHostname: "bmc",
 		SortBy:      NodeSortByNodeName,
@@ -391,7 +391,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		want string
 	}{
 		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
-		{name: "data source", opts: ListNodesOptions{DataSource: "sideband"}, want: "invalid node data source"},
+		{name: "data source", opts: ListNodesOptions{DataSource: "sideband"}, want: "invalid data source"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
 		{name: "verification", opts: ListNodesOptions{VerificationChecks: []NodeVerificationCheck{"Missing"}}, want: "invalid node verification check"},

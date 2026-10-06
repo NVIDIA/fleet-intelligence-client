@@ -50,12 +50,12 @@ source options:
 
 ```go
 page, err := client.ListNodes(ctx, nvfleetint.ListNodesOptions{
-	DataSource:   nvfleetint.NodeDataSourceOOB,
+	DataSource:   nvfleetint.DataSourceOOB,
 	BMCHostname: "bmc-01",
 })
 
 node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-	DataSource: nvfleetint.NodeDataSourceOOB,
+	DataSource: nvfleetint.DataSourceOOB,
 })
 if err == nil && node.OOBInventory != nil {
 	fmt.Println(node.OOBInventory.SchemaVersion, node.NodeKind)
@@ -67,10 +67,14 @@ if err == nil && node.OOBInventory != nil {
 }
 ```
 
+The shared `DataSource` type and `DataSourceInband` / `DataSourceOOB` constants
+are used by nodes, inventory reports, and alerts. Node and inventory requests
+accept one source; alert timeline filters accept `[]DataSource`.
+
 Use `DataSource` on `ListNodesOptions`, `DescribeNodeOptions`,
 `NodeFilterOptionsRequest`, and `InventoryReportOptions`. This is a breaking
 rename: `AgentType`, `NodeAgentType`, and its constants have been removed from
-the public SDK. Use `NodeDataSourceInband` or `NodeDataSourceOOB`; node results
+the public SDK. Use `DataSourceInband` or `DataSourceOOB`; node results
 expose `DataSource` only.
 
 With source omitted, SDK detail queries and inventory reports default to
@@ -84,10 +88,10 @@ SDK defaults are unchanged.
 ```go
 options, err := client.GetNodeFilterOptionsWithOptions(ctx, nvfleetint.NodeFilterOptionsRequest{
     View: nvfleetint.NodeViewBasic,
-    DataSource: nvfleetint.NodeDataSourceOOB,
+    DataSource: nvfleetint.DataSourceOOB,
 })
 report, err := client.GetInventoryReport(ctx, nvfleetint.InventoryReportOptions{
-    DataSource: nvfleetint.NodeDataSourceOOB,
+    DataSource: nvfleetint.DataSourceOOB,
     SortBy: nvfleetint.InventoryReportSortByBMCHostname,
 })
 ```
@@ -98,7 +102,7 @@ information. GPU fields come from the selected source; a missing GPU count
 remains nil, while a reported zero remains zero. Both sources support
 `InventoryReportSortByGPUType` and `InventoryReportSortByGPUCount`. Source selection
 also applies to CSV and signed bundle downloads. `GetNodeFilterOptions(ctx, dataSource)`
-accepts `NodeDataSource` for detail-view callers.
+accepts `DataSource` for detail-view callers.
 
 OOB node list/detail results now retain optional `GPUType` and `GPUCount`.
 Basic node queries support GPU filters and inventory sorting while returning
@@ -136,6 +140,28 @@ Alert timeline filter values and sorting choices are available through
 ```go
 options, err := client.GetAlertTimelineFilterOptions(ctx, true)
 ```
+
+`ListAlertTimelineNodesOptions` and `ListNodeAlertTimelineOptions` accept
+`DataSources` using the shared `DataSource` type. Omission includes both
+alert-producing sources, and multiple values are ORed. Summary options also
+accept `InbandAgentStatuses` and `OOBAgentStatuses`. Status values within one
+filter are ORed; the two filters are ANDed. Omitted status filters impose no
+restriction. `Active` selects active versus historical alerts, while the
+agent-status fields describe current source liveness/enrollment.
+
+```go
+nodes, err := client.ListAlertTimelineNodes(ctx, nvfleetint.ListAlertTimelineNodesOptions{
+    Active: true,
+    DataSources: []nvfleetint.DataSource{nvfleetint.DataSourceOOB},
+    InbandAgentStatuses: []nvfleetint.AlertAgentStatus{
+        nvfleetint.AlertAgentOffline, nvfleetint.AlertAgentNotEnrolled,
+    },
+    OOBAgentStatuses: []nvfleetint.AlertAgentStatus{nvfleetint.AlertAgentOnline},
+})
+```
+
+Summary `AgentStatus` and its per-source objects are optional. Absent objects
+remain nil, distinct from an explicit `not_enrolled` status.
 
 ## Writes
 

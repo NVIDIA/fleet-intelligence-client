@@ -16,12 +16,12 @@ import (
 func TestNodeSourceRequestsAndResponses(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		source NodeDataSource
+		source DataSource
 		want   string
 	}{
 		{name: "default"},
-		{name: "inband", source: NodeDataSourceInband, want: "inband"},
-		{name: "oob", source: NodeDataSourceOOB, want: "oob"},
+		{name: "inband", source: DataSourceInband, want: "inband"},
+		{name: "oob", source: DataSourceOOB, want: "oob"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			requests := 0
@@ -86,7 +86,7 @@ func TestNodeSourceRequestsAndResponses(t *testing.T) {
 			}
 			if source == "oob" {
 				n := report.Nodes[0]
-				if report.DataSource != NodeDataSourceOOB || n.NodeName != "machine" || n.BMCHostname != "bmc" || n.BMCIP != "192.0.2.1" || n.EnrolledAt == "" || n.RemovedAt == "" || n.VerificationCheck != "Verified" || n.Location == nil || n.GPUType != "H100" || n.GPUCount == nil || *n.GPUCount != 8 {
+				if report.DataSource != DataSourceOOB || n.NodeName != "machine" || n.BMCHostname != "bmc" || n.BMCIP != "192.0.2.1" || n.EnrolledAt == "" || n.RemovedAt == "" || n.VerificationCheck != "Verified" || n.Location == nil || n.GPUType != "H100" || n.GPUCount == nil || *n.GPUCount != 8 {
 					t.Fatalf("lost OOB report fields: %#v", report)
 				}
 			}
@@ -106,12 +106,12 @@ func TestNodeSourcesRejectInvalidValuesBeforeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		source NodeDataSource
+		source DataSource
 		want   string
 	}{
-		{"all", "invalid node data source"},
-		{"bad", "invalid node data source"},
-		{"sideband", "invalid node data source"},
+		{"all", "invalid data source"},
+		{"bad", "invalid data source"},
+		{"sideband", "invalid data source"},
 	} {
 		ctx := context.Background()
 		_, listErr := client.ListNodes(ctx, ListNodesOptions{DataSource: tc.source})
@@ -160,7 +160,7 @@ func TestOOBInventoryReportDownloadSource(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			report, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{DataSource: NodeDataSourceOOB, Format: ReportFormatCSV, Signed: signed})
+			report, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{DataSource: DataSourceOOB, Format: ReportFormatCSV, Signed: signed})
 			if err != nil {
 				t.Fatal(err)
 			}

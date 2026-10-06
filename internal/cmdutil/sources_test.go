@@ -19,13 +19,13 @@ import (
 func TestWriteBothSourceTablesConcurrentFetchOrderedOutput(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	started := make(chan nvfleetint.NodeDataSource, 2)
+	started := make(chan nvfleetint.DataSource, 2)
 	release := make(chan struct{})
 	done := make(chan error, 1)
 	var out bytes.Buffer
 	go func() {
 		done <- WriteBothSourceTables(ctx, &out, "test report",
-			func(ctx context.Context, source nvfleetint.NodeDataSource) (string, error) {
+			func(ctx context.Context, source nvfleetint.DataSource) (string, error) {
 				started <- source
 				select {
 				case <-release:
@@ -41,7 +41,7 @@ func TestWriteBothSourceTablesConcurrentFetchOrderedOutput(t *testing.T) {
 		)
 	}()
 	// Neither fetch can finish until both have started.
-	seen := map[nvfleetint.NodeDataSource]bool{}
+	seen := map[nvfleetint.DataSource]bool{}
 	for range 2 {
 		select {
 		case source := <-started:
@@ -54,7 +54,7 @@ func TestWriteBothSourceTablesConcurrentFetchOrderedOutput(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	if !seen[nvfleetint.NodeDataSourceInband] || !seen[nvfleetint.NodeDataSourceOOB] {
+	if !seen[nvfleetint.DataSourceInband] || !seen[nvfleetint.DataSourceOOB] {
 		t.Fatalf("wrong sources: %v", seen)
 	}
 	if want := "In-band\ninband\n\nOut-of-band\noob\n"; out.String() != want {
@@ -63,13 +63,13 @@ func TestWriteBothSourceTablesConcurrentFetchOrderedOutput(t *testing.T) {
 }
 
 func TestWriteBothSourceTablesFetchFailurePreventsRendering(t *testing.T) {
-	for _, source := range []nvfleetint.NodeDataSource{nvfleetint.NodeDataSourceInband, nvfleetint.NodeDataSourceOOB} {
+	for _, source := range []nvfleetint.DataSource{nvfleetint.DataSourceInband, nvfleetint.DataSourceOOB} {
 		t.Run(string(source), func(t *testing.T) {
 			failure := errors.New("request failed")
 			var out bytes.Buffer
 			writes := 0
 			err := WriteBothSourceTables(context.Background(), &out, "test report",
-				func(_ context.Context, requested nvfleetint.NodeDataSource) (string, error) {
+				func(_ context.Context, requested nvfleetint.DataSource) (string, error) {
 					if requested == source {
 						return "", failure
 					}
@@ -78,7 +78,7 @@ func TestWriteBothSourceTablesFetchFailurePreventsRendering(t *testing.T) {
 				func(io.Writer, string) error { writes++; return nil },
 			)
 			label := "In-band"
-			if source == nvfleetint.NodeDataSourceOOB {
+			if source == nvfleetint.DataSourceOOB {
 				label = "Out-of-band"
 			}
 			if !errors.Is(err, failure) || !strings.Contains(err.Error(), "fetch "+label+" test report") {
@@ -96,7 +96,7 @@ func TestWriteBothSourceTablesStopsOnRenderError(t *testing.T) {
 	var out bytes.Buffer
 	writes := 0
 	err := WriteBothSourceTables(context.Background(), &out, "test report",
-		func(_ context.Context, source nvfleetint.NodeDataSource) (string, error) { return string(source), nil },
+		func(_ context.Context, source nvfleetint.DataSource) (string, error) { return string(source), nil },
 		func(io.Writer, string) error { writes++; return failure },
 	)
 	if !errors.Is(err, failure) || writes != 1 || strings.Contains(out.String(), "Out-of-band") {

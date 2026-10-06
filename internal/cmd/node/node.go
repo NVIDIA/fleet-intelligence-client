@@ -54,7 +54,7 @@ type nodeListFlags struct {
 type nodeListOutput struct {
 	Nodes      []nvfleetint.Node
 	View       string
-	DataSource nvfleetint.NodeDataSource
+	DataSource nvfleetint.DataSource
 	JSONValue  any
 	RawJSON    []byte
 	Page       *clioutput.Pagination
@@ -222,7 +222,7 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 	dataSource := opts.DataSource
 	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewDetail && dataSource == "" {
 		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "node list",
-			func(ctx context.Context, source nvfleetint.NodeDataSource) (nodeListOutput, error) {
+			func(ctx context.Context, source nvfleetint.DataSource) (nodeListOutput, error) {
 				sourceOpts := opts
 				sourceOpts.DataSource = source
 				return fetchNodeList(ctx, client, sourceOpts, common)
@@ -298,7 +298,7 @@ func runNodeDescribe(
 	if nodeUUID == "" {
 		return errors.New("node UUID is required")
 	}
-	dataSource := nvfleetint.NodeDataSource(flags.dataSource)
+	dataSource := nvfleetint.DataSource(flags.dataSource)
 	if err := dataSource.Validate(); err != nil {
 		return cmdutil.RenderOptionError(err, nodeListFlagNames)
 	}
@@ -330,7 +330,7 @@ func describeNodeResult(
 	ctx context.Context,
 	client *nvfleetint.Client,
 	nodeUUID string,
-	dataSource nvfleetint.NodeDataSource,
+	dataSource nvfleetint.DataSource,
 ) (nodeDescribeResult, error) {
 	if dataSource != "" {
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
@@ -339,7 +339,7 @@ func describeNodeResult(
 		if err != nil {
 			return nodeDescribeResult{}, err
 		}
-		if dataSource == nvfleetint.NodeDataSourceOOB {
+		if dataSource == nvfleetint.DataSourceOOB {
 			return nodeDescribeResult{OOB: &node}, nil
 		}
 		return nodeDescribeResult{Inband: &node}, nil
@@ -353,7 +353,7 @@ func describeNodeResult(
 	go func() {
 		defer waitGroup.Done()
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			DataSource: nvfleetint.NodeDataSourceInband,
+			DataSource: nvfleetint.DataSourceInband,
 		})
 		if err != nil {
 			inbandErr = err
@@ -364,7 +364,7 @@ func describeNodeResult(
 	go func() {
 		defer waitGroup.Done()
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			DataSource: nvfleetint.NodeDataSourceOOB,
+			DataSource: nvfleetint.DataSourceOOB,
 		})
 		if err != nil {
 			oobErr = err
@@ -396,12 +396,12 @@ func apiErrorHasStatus(err error, statusCode int) bool {
 func writeNodeDescribeJSON(
 	w io.Writer,
 	result nodeDescribeResult,
-	dataSource nvfleetint.NodeDataSource,
+	dataSource nvfleetint.DataSource,
 ) error {
-	if dataSource == nvfleetint.NodeDataSourceInband && result.Inband != nil {
+	if dataSource == nvfleetint.DataSourceInband && result.Inband != nil {
 		return clioutput.WriteRawJSON(w, result.Inband.RawJSON)
 	}
-	if dataSource == nvfleetint.NodeDataSourceOOB && result.OOB != nil {
+	if dataSource == nvfleetint.DataSourceOOB && result.OOB != nil {
 		return clioutput.WriteRawJSON(w, result.OOB.RawJSON)
 	}
 
@@ -417,7 +417,7 @@ func writeNodeDescribeJSON(
 
 func parseOOBInventorySections(
 	flags nodeDescribeFlags,
-	dataSource nvfleetint.NodeDataSource,
+	dataSource nvfleetint.DataSource,
 	output string,
 ) (nodeDescribeRenderOptions, error) {
 	values, err := cmdutil.ParseCommaList(flags.sections)
@@ -435,7 +435,7 @@ func parseOOBInventorySections(
 	}
 	if len(values) > 0 &&
 		dataSource != "" &&
-		dataSource != nvfleetint.NodeDataSourceOOB {
+		dataSource != nvfleetint.DataSourceOOB {
 		return nodeDescribeRenderOptions{}, errors.New("--section requires the OOB view")
 	}
 	if len(values) > 0 && output == clioutput.FormatJSON {
@@ -496,7 +496,7 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 
 	opts := nvfleetint.ListNodesOptions{
 		View:        nvfleetint.NodeView(flags.view),
-		DataSource:  nvfleetint.NodeDataSource(flags.dataSource),
+		DataSource:  nvfleetint.DataSource(flags.dataSource),
 		Hostname:    strings.TrimSpace(flags.hostname),
 		NodeName:    strings.TrimSpace(flags.nodeName),
 		BMCHostname: strings.TrimSpace(flags.bmcHostname),
@@ -576,7 +576,7 @@ func writeNodeListOutput(w io.Writer, common cmdutil.Resolved, result nodeListOu
 func writeNodeTable(
 	w io.Writer,
 	view string,
-	dataSource nvfleetint.NodeDataSource,
+	dataSource nvfleetint.DataSource,
 	nodes []nvfleetint.Node,
 ) error {
 	if nvfleetint.NodeView(view) == nvfleetint.NodeViewBasic {
@@ -586,7 +586,7 @@ func writeNodeTable(
 			basicNodeRows(nodes),
 		)
 	}
-	if dataSource == nvfleetint.NodeDataSourceOOB || nodeListIsOOB(nodes) {
+	if dataSource == nvfleetint.DataSourceOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
 			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "AGENT STATUS"},
@@ -599,7 +599,7 @@ func writeNodeTable(
 // Reports whether a node list contains OOB-view records
 func nodeListIsOOB(nodes []nvfleetint.Node) bool {
 	for _, node := range nodes {
-		if node.DataSource == string(nvfleetint.NodeDataSourceOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
+		if node.DataSource == string(nvfleetint.DataSourceOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
 			return true
 		}
 	}
@@ -667,13 +667,13 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 func writeNodeDescribeResultTable(
 	w io.Writer,
 	result nodeDescribeResult,
-	dataSource nvfleetint.NodeDataSource,
+	dataSource nvfleetint.DataSource,
 	options nodeDescribeRenderOptions,
 ) error {
-	if dataSource == nvfleetint.NodeDataSourceInband && result.Inband != nil {
+	if dataSource == nvfleetint.DataSourceInband && result.Inband != nil {
 		return writeNodeDescribeTable(w, *result.Inband, options)
 	}
-	if dataSource == nvfleetint.NodeDataSourceOOB && result.OOB != nil {
+	if dataSource == nvfleetint.DataSourceOOB && result.OOB != nil {
 		return writeNodeDescribeTable(w, *result.OOB, options)
 	}
 
@@ -734,7 +734,7 @@ func writeNodeDescribeTable(
 
 func nodeDescribeSummaryRows(node nvfleetint.NodeDetails) [][]string {
 	rows := nodeDescribeRows(node)
-	if node.DataSource == string(nvfleetint.NodeDataSourceOOB) || node.OOBInventory != nil {
+	if node.DataSource == string(nvfleetint.DataSourceOOB) || node.OOBInventory != nil {
 		rows = oobNodeDescribeRows(node)
 	}
 	if node.OOBInventory == nil {
@@ -1208,7 +1208,7 @@ func runNodeOptions(cmd *cobra.Command, flags nodeOptionsFlags, common cmdutil.R
 	}
 	opts := nvfleetint.NodeFilterOptionsRequest{
 		View:       nvfleetint.NodeView(flags.view),
-		DataSource: nvfleetint.NodeDataSource(strings.TrimSpace(flags.dataSource)),
+		DataSource: nvfleetint.DataSource(strings.TrimSpace(flags.dataSource)),
 	}
 	if err := opts.Validate(); err != nil {
 		return cmdutil.RenderOptionError(err, nodeListFlagNames)
@@ -1224,7 +1224,7 @@ func runNodeOptions(cmd *cobra.Command, flags nodeOptionsFlags, common cmdutil.R
 	}
 	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic {
 		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "node options",
-			func(ctx context.Context, source nvfleetint.NodeDataSource) (nvfleetint.FilterOptions, error) {
+			func(ctx context.Context, source nvfleetint.DataSource) (nvfleetint.FilterOptions, error) {
 				sourceOpts := opts
 				sourceOpts.DataSource = source
 				return client.GetNodeFilterOptionsWithOptions(ctx, sourceOpts)

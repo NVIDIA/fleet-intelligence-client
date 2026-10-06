@@ -97,6 +97,7 @@ nvfleetint alert list --severity Critical --output json
 nvfleetint alert list --node <node-uuid> --state Triggered --output json
 nvfleetint alert summary --output json
 nvfleetint alert summary --view historical --output json
+nvfleetint alert summary --data-source oob --oob-agent-status offline --output json
 nvfleetint alert node <node-uuid> --output json
 nvfleetint alert node <node-uuid> --view historical --output json
 nvfleetint alert describe <alert-uuid> --node <node-uuid> --output json
@@ -106,6 +107,10 @@ nvfleetint event buckets --window 168h --max-buckets 50 --output json
 ```
 
 Alert severity is Critical/Warning; state is Detected/Triggered/Resolved. `alert summary`, `alert node`, and `alert options` default to the active view; use `--view historical` for history. Summary returns impacted nodes plus fleet-wide alert aggregates. Node returns alerts for one node. Describe returns one alert's event history. In node-alert results, Critical/Warning values are active severity; Detected/Resolved are inactive audit values. Don't count every non-Resolved row as active.
+
+Use `alert options` to discover filter values before narrowing an investigation.
+See the [CLI contract](references/cli-contract.md) for alert source/status
+filter semantics and how to interpret missing status data.
 
 Events require `--window` or both `--start`/`--end`. Durations use Go units through hours—no `d`. Event list paginates; buckets do not.
 

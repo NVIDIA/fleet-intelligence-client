@@ -96,7 +96,7 @@ type SortingDefaults struct {
 // With no source, detail defaults to in-band and basic combines both sources.
 type NodeFilterOptionsRequest struct {
 	View       NodeView
-	DataSource NodeDataSource
+	DataSource DataSource
 }
 
 // Validate checks the view and source before a request is made.
@@ -108,7 +108,7 @@ func (opts NodeFilterOptionsRequest) Validate() error {
 }
 
 // GetNodeFilterOptions gets the filters and sorting choices for detail view.
-func (c *Client) GetNodeFilterOptions(ctx context.Context, dataSource NodeDataSource) (FilterOptions, error) {
+func (c *Client) GetNodeFilterOptions(ctx context.Context, dataSource DataSource) (FilterOptions, error) {
 	return c.GetNodeFilterOptionsWithOptions(ctx, NodeFilterOptionsRequest{DataSource: dataSource})
 }
 

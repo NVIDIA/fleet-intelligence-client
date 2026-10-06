@@ -390,7 +390,7 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common c
 
 	if opts.DataSource == "" {
 		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "inventory report",
-			func(ctx context.Context, source nvfleetint.NodeDataSource) (reportInventoryOutput, error) {
+			func(ctx context.Context, source nvfleetint.DataSource) (reportInventoryOutput, error) {
 				sourceOpts := opts
 				sourceOpts.DataSource = source
 				return fetchInventoryReport(ctx, client, sourceOpts, common)
@@ -522,7 +522,7 @@ func runReportErrorAll(cmd *cobra.Command, client *nvfleetint.Client, opts nvfle
 // flags. See errorReportOptions for why parsing and validation are one pass.
 func inventoryReportOptions(flags reportInventoryFlags, common cmdutil.Resolved) (nvfleetint.InventoryReportOptions, error) {
 	opts := nvfleetint.InventoryReportOptions{
-		DataSource: nvfleetint.NodeDataSource(flags.dataSource),
+		DataSource: nvfleetint.DataSource(flags.dataSource),
 		Format:     nvfleetint.ReportFormat(flags.format),
 		Signed:     flags.signed,
 		StartTime:  strings.TrimSpace(flags.start),
@@ -809,7 +809,7 @@ func writeReportErrorOutput(w io.Writer, common cmdutil.Resolved, result reportE
 
 // Renders the fields supplied by the selected inventory source, including empty reports.
 func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.InventoryReport) error {
-	if report.DataSource != nvfleetint.NodeDataSourceOOB {
+	if report.DataSource != nvfleetint.DataSourceOOB {
 		return writeReportInventoryTable(w, report.Nodes)
 	}
 	rows := make([][]string, 0, len(report.Nodes))

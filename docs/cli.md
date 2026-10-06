@@ -198,6 +198,26 @@ complete event timeline. `alert list` separately provides the fleet-wide flat
 alert records. `alert summary`, `alert node`, and `alert options` default to the
 active view; pass `--view historical` for history.
 
+`alert summary` and `alert node` accept `--data-source inband|oob` or
+`--data-source inband,oob`. Omission includes both sources in the same API
+response. This filters the source that produced the alert, independently of
+current agent status.
+
+`alert summary` also accepts `--inband-agent-status` and `--oob-agent-status`:
+`online`, `offline`, or `not_enrolled`. Values within each comma-separated
+filter are ORed; when both flags are supplied, both conditions must match.
+Omitting a status flag leaves that source's status unrestricted. Statuses
+describe current enrollment/liveness even in historical view; missing status
+data does not mean `not_enrolled`.
+
+Use `alert options` to discover available filter values for the selected view,
+and each command's `--help` for supported flags and sort keys.
+
+```bash
+nvfleetint alert summary --inband-agent-status offline,not_enrolled --oob-agent-status online
+nvfleetint alert node <node-uuid> --view historical --data-source oob --all --output json
+```
+
 `xidburst list` requires a time range (`--window`, or `--start` and `--end`),
 which applies to each burst's start time. Some of its filters and response
 fields — category, subcategory, platform-attributed disruption, XID

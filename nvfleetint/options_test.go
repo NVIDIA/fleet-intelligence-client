@@ -39,7 +39,7 @@ func TestGetNodeFilterOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
-	options, err := client.GetNodeFilterOptions(context.Background(), NodeDataSourceOOB)
+	options, err := client.GetNodeFilterOptions(context.Background(), DataSourceOOB)
 	if err != nil {
 		t.Fatalf("get node filter options failed: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestGetNodeFilterOptionsRejectsDataSource(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	_, err = client.GetNodeFilterOptions(context.Background(), "bmc")
-	if err == nil || !strings.Contains(err.Error(), "invalid node data source") {
+	if err == nil || !strings.Contains(err.Error(), "invalid data source") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if requests != 0 {

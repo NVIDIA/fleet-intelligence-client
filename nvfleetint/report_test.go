@@ -526,7 +526,7 @@ func TestGetOOBInventoryReportGPUFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sortBy := range []InventoryReportSortBy{InventoryReportSortByGPUType, InventoryReportSortByGPUCount} {
-		report, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{DataSource: NodeDataSourceOOB, SortBy: sortBy})
+		report, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{DataSource: DataSourceOOB, SortBy: sortBy})
 		if err != nil {
 			t.Fatal(err)
 		}

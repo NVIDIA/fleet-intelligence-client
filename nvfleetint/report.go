@@ -127,7 +127,7 @@ func (order InventoryReportSortOrder) Valid() bool {
 // Represents request options for inventory reports
 type InventoryReportOptions struct {
 	// DataSource defaults to in-band when omitted.
-	DataSource     NodeDataSource
+	DataSource     DataSource
 	Format         ReportFormat
 	Signed         bool
 	ComputeZoneIDs []string
@@ -144,7 +144,7 @@ type InventoryReportOptions struct {
 // Represents an inventory report response
 type InventoryReport struct {
 	// DataSource records the selected source for source-specific rendering.
-	DataSource NodeDataSource  `json:"-"`
+	DataSource DataSource      `json:"-"`
 	Nodes      []InventoryNode `json:"nodes"`
 	HasMore    bool            `json:"hasMore"`
 	Page       int             `json:"page"`
@@ -330,7 +330,7 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 	}
 
 	var report InventoryReport
-	if normalized.DataSource == NodeDataSourceOOB {
+	if normalized.DataSource == DataSourceOOB {
 		report, err = decodeOOBInventoryReport(resp.Body)
 	} else {
 		report, err = decodeInventoryReport(resp.Body)
