@@ -98,7 +98,7 @@ func TestReportInventoryTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--compute-zone-ids", "cz-1,cz-2", "--nodegroup-ids", "ng-1", "--tags", "prod,h100", "--start", "2026-05-01T00:00:00Z", "--end", "2026-05-02T00:00:00Z", "--sort-by", "hostname", "--order", "asc"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--compute-zone-ids", "cz-1,cz-2", "--nodegroup-ids", "ng-1", "--tags", "prod,h100", "--start", "2026-05-01T00:00:00Z", "--end", "2026-05-02T00:00:00Z", "--sort-by", "hostname", "--order", "asc"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -138,7 +138,7 @@ func TestReportInventoryCSV(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -158,7 +158,7 @@ func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 		t.Run(output, func(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetOut(&bytes.Buffer{})
-			cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--output", output})
+			cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--output", output})
 
 			err := cmd.Execute()
 			if err == nil {
@@ -233,7 +233,7 @@ func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -270,7 +270,7 @@ func TestReportInventorySignedJSONStatus(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output", "json"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed", "--output", "json"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -305,7 +305,7 @@ func TestReportInventorySignedOutputPath(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output-path", target})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed", "--output-path", target})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -338,7 +338,7 @@ func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output-path", dir})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed", "--output-path", dir})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)

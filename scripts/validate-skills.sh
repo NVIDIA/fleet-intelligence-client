@@ -186,7 +186,7 @@ nvfleet_skill="$repo_root/skills/nvfleetint/SKILL.md"
 required_nvfleet_rules=(
   '--compute-zone-names'
   '--nodegroup-names'
-  'supports sorting by `hostname`, `nodeUUID`, or `bmcHostname`'
+  'supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting'
   'alert summary --output json'
   'alert node <node-uuid> --output json'
   'It does not support'
@@ -206,7 +206,7 @@ done
 node_skill="$repo_root/skills/node-rca-rcca/SKILL.md"
 for required in 'nvfleetint auth list --output json' \
   'nvfleetint auth status --profile <profile> --output json' \
-  'node list --hostname <hostname> --view basic --all' \
+  'node list --hostname <hostname> --data-source inband --view basic --all' \
   'node describe <node_uuid> --profile <profile> --output json' \
   'Fetch current alerts and complete historical alerts' \
   'Aggregate current and historical alerts by component ID/display name and status' \

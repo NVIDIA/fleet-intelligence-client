@@ -18,14 +18,14 @@ const nodeOptionsBody = `{"filters":{"fields":[` +
 	`{"name":"gpuTypes","options":["NVIDIA-H100"]}` +
 	`]},"sorting":{"fields":["hostname","nodeGroup"],"orders":["asc","desc"],"defaults":{"field":"hostname","order":"asc"}}}`
 
-// Verifies node filter options send the agent type and decode nested options.
+// Verifies node filter options send the data source and decode nested options.
 func TestGetNodeFilterOptions(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes/options" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		if got := r.URL.Query().Get("agentType"); got != "oob" {
-			t.Fatalf("unexpected agentType: %q", got)
+		if got := r.URL.Query().Get("dataSource"); got != "oob" {
+			t.Fatalf("unexpected dataSource: %q", got)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Fatalf("unexpected auth header: %q", got)
@@ -39,7 +39,7 @@ func TestGetNodeFilterOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
-	options, err := client.GetNodeFilterOptions(context.Background(), NodeAgentTypeOOB)
+	options, err := client.GetNodeFilterOptions(context.Background(), NodeDataSourceOOB)
 	if err != nil {
 		t.Fatalf("get node filter options failed: %v", err)
 	}
@@ -70,11 +70,11 @@ func TestGetNodeFilterOptions(t *testing.T) {
 	}
 }
 
-// Verifies an empty agent type omits the query parameter entirely.
-func TestGetNodeFilterOptionsOmitsEmptyAgentType(t *testing.T) {
+// Verifies an empty data source omits the query parameter entirely.
+func TestGetNodeFilterOptionsOmitsEmptyDataSource(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.URL.Query()["agentType"]; ok {
-			t.Fatalf("agentType should be omitted, got %q", r.URL.RawQuery)
+		if _, ok := r.URL.Query()["dataSource"]; ok {
+			t.Fatalf("dataSource should be omitted, got %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(nodeOptionsBody))
@@ -90,8 +90,8 @@ func TestGetNodeFilterOptionsOmitsEmptyAgentType(t *testing.T) {
 	}
 }
 
-// Verifies an unsupported agent type is rejected before any request is made.
-func TestGetNodeFilterOptionsRejectsAgentType(t *testing.T) {
+// Verifies an unsupported data source is rejected before any request is made.
+func TestGetNodeFilterOptionsRejectsDataSource(t *testing.T) {
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		requests++
@@ -103,7 +103,7 @@ func TestGetNodeFilterOptionsRejectsAgentType(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	_, err = client.GetNodeFilterOptions(context.Background(), "bmc")
-	if err == nil || !strings.Contains(err.Error(), "invalid node agent type") {
+	if err == nil || !strings.Contains(err.Error(), "invalid node data source") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if requests != 0 {

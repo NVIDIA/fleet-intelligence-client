@@ -111,9 +111,9 @@ nvfleetint overview
 nvfleetint computezone list
 nvfleetint nodegroup list
 nvfleetint node list
-nvfleetint node list --agent-type oob --bmc-hostname bmc-01
+nvfleetint node list --data-source oob --bmc-hostname bmc-01
 nvfleetint node describe <node-uuid>
-nvfleetint node describe <node-uuid> --agent-type oob --section all
+nvfleetint node describe <node-uuid> --data-source oob --section all
 
 # Health, alerts, and events
 nvfleetint node health <node-uuid> \
@@ -149,14 +149,47 @@ List commands support shared flags including `--all`, `--page`, `--page-size`,
 `--timeout`, and `--output json`.
 
 Detailed node list and describe commands query both in-band and out-of-band
-(OOB) views by default. Table output labels the two sections; JSON output uses
-top-level `inband` and `oob` objects. Use `--agent-type inband` or
-`--agent-type oob` to request one view. OOB lists accept `--bmc-hostname` and
+(OOB) views by default for table output, with labeled sections. Detail
+`node list --output json` requires `--data-source inband` or `--data-source oob`,
+including with `--all`, and returns one source without an `inband`/`oob` wrapper.
+Default `node describe` JSON still uses top-level `inband` and `oob` objects;
+select a source to request one view. OOB lists accept `--bmc-hostname` and
 the `bmcHostname` sort key. OOB describe tables can be narrowed with
 `--section managers,systems,chassis,firmware`; `--section all` includes every
 inventory section. Both the out-of-band node list and summary table include
 `NODE KIND`. JSON describe output always includes
 the full inventory, including nested Redfish status and condition details.
+
+`--agent-type` has been removed from node commands; use `--data-source`.
+Detail-list filters and sorting require an explicit source. Basic lists can filter by GPU type/count and sort by identity,
+node group, compute zone, GPU type, or GPU count without selecting a source.
+Basic responses still contain identity fields only. Agent-status filters accept
+`Online` or `Offline`; healthy liveness is online and all other liveness states
+are offline.
+
+`node options --view basic` returns the choices for combined basic queries.
+Without a source, `node options` displays both detail sources in separate
+In-band and Out-of-band table sections. Detail `node options --output json` requires
+`--data-source inband` or `--data-source oob` and keeps the original
+single-response JSON shape. For both list and options, `--view basic --output json`
+allows source omission and returns one combined API response. OOB list/detail tables include GPU
+type and count when available.
+
+`report inventory` tables default to separate In-band and Out-of-band sections.
+`--page` and `--page-size` apply independently to each source; `--all` fetches
+all pages for each. JSON output, CSV, and signed CSV bundles require
+`--data-source inband` or `--data-source oob` and contain one source.
+An explicit source also selects a single table. OOB rows use node name, BMC hostname, and BMC
+IP; shared enrollment/removal times and verification fields remain available.
+In-band-only report sorts include hostname, GPU fields, and public/private IP;
+OOB identity sorts are `nodeName`, `bmcHostname`, and `bmcIP`.
+
+```bash
+nvfleetint node list --view basic --gpu-type NVIDIA-H100 --sort-by gpuCount
+nvfleetint node options --view basic --data-source oob
+nvfleetint report inventory --data-source oob --sort-by bmcHostname --all
+nvfleetint report inventory --data-source oob --format csv
+```
 
 The investigative alert workflow is `summary → node → describe`: start with
 impacted-node counts, inspect one node's alerts, then retrieve one alert's
@@ -202,13 +235,13 @@ replacing them.
 Write an inventory report to a file:
 
 ```bash
-nvfleetint report inventory --format csv > inventory.csv
+nvfleetint report inventory --data-source inband --format csv > inventory.csv
 ```
 
 Download and verify a signed inventory bundle:
 
 ```bash
-nvfleetint report inventory --format csv --signed \
+nvfleetint report inventory --data-source inband --format csv --signed \
   --output-path inventory-report.zip
 unzip -l inventory-report.zip
 unzip inventory-report.zip

@@ -47,27 +47,36 @@ nvfleetint nodegroup list --gpu-type H100 --sort-by health --order desc --output
 ### Nodes
 
 ```bash
-nvfleetint node list --agent-type inband --health Degraded,Unhealthy --output json
-nvfleetint node list --agent-type inband --agent-status Offline --output json
-nvfleetint node list --agent-type inband --hostname gpu-node-7 --view basic --output json
-nvfleetint node list --agent-type inband --compute-zone-names ord --output json
-nvfleetint node list --agent-type inband --nodegroup-names training --output json
-nvfleetint node list --agent-type oob --bmc-hostname bmc-01 --output json
+nvfleetint node list --data-source inband --health Degraded,Unhealthy --output json
+nvfleetint node list --data-source inband --agent-status Offline --output json
+nvfleetint node list --data-source inband --hostname gpu-node-7 --view basic --output json
+nvfleetint node list --data-source inband --compute-zone-names ord --output json
+nvfleetint node list --data-source inband --nodegroup-names training --output json
+nvfleetint node list --data-source oob --bmc-hostname bmc-01 --output json
 nvfleetint node describe <node-uuid> --output json
-nvfleetint node describe <node-uuid> --agent-type oob --output json
+nvfleetint node describe <node-uuid> --data-source oob --output json
 nvfleetint node health <node-uuid> --start <rfc3339> --end <rfc3339> --output json
 ```
 
 Ask users for human-readable zone/group names, never IDs. Name filters are comma-separated partial matches. For exact scope, resolve with `computezone list --view basic` or `nodegroup list --view basic`, clarify ambiguous names with recognizable detail metadata, then use IDs internally. Accept an ID already supplied by the user.
 
-Detailed node list and describe query both agent views by default and return
-`{inband: ..., oob: ...}` in JSON. Use `--agent-type inband|oob` when only one
-view is needed; `node list` requires `--agent-type` whenever any filter or
+Detailed node list and describe tables query both sources by default. Detail
+`node list --output json` requires `--data-source inband|oob`, including with
+`--all`, and returns one source without a wrapper. Default node describe JSON
+returns `{inband: ..., oob: ...}`; select a source for one view.
+Detail `node list` also requires `--data-source` whenever any filter or
 `--sort-by`/`--order` flag is set, since in-band and OOB nodes carry different
 fields. OOB list supports `--bmc-hostname`; OOB describe includes full
 inventory JSON and supports table sections `managers`, `systems`, `chassis`,
 and `firmware`. Node basic rejects health, agent, verification, and firmware
-filters and supports sorting by `hostname`, `nodeUUID`, or `bmcHostname`.
+filters and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting.
+`node options` shows separate in-band/OOB detail tables by default. Detail
+JSON requires `--data-source` and returns a single response.
+`node options --view basic` discovers combined basic-view filters and sorts;
+basic list and options JSON allow source omission.
+`report inventory` tables show both sources by default, with independent
+pagination and `--all` traversal. JSON, CSV, and signed downloads require
+`--data-source inband|oob`; an explicit source selects one report. `--agent-type` is no longer accepted; use `--data-source`.
 `node health` requires both absolute boundaries. It does not support `--window`.
 
 Filter values:
@@ -75,7 +84,7 @@ Filter values:
 | Flag | Values |
 | --- | --- |
 | `--health` | Healthy, Degraded, Unhealthy, Unknown |
-| `--agent-status` | Online, Offline, Unknown |
+| `--agent-status` | Online, Offline |
 | `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
@@ -105,8 +114,8 @@ Events require `--window` or both `--start`/`--end`. Durations use Go units thro
 ```bash
 nvfleetint tag list --prefix gpu --output json
 nvfleetint tag list --computezone <zone-id> --output json
-nvfleetint report inventory --compute-zone-ids <zone-id> --nodegroup-ids <group-id> --all --output json
-nvfleetint report inventory --format csv --signed --output-path ./reports/
+nvfleetint report inventory --data-source inband --compute-zone-ids <zone-id> --nodegroup-ids <group-id> --all --output json
+nvfleetint report inventory --data-source inband --format csv --signed --output-path ./reports/
 nvfleetint report error --view list --group-by error --window 168h --severities Critical,Fatal --output json
 nvfleetint report error --view graph --window 24h --step 5m --output json
 nvfleetint report verify --csv report.csv --bundle report.sig.bundle

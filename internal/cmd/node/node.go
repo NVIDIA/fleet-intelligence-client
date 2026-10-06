@@ -29,7 +29,7 @@ const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone
 // Stores local flag values for node list
 type nodeListFlags struct {
 	view              string
-	agentType         string
+	dataSource        string
 	nodeUUIDs         string
 	health            string
 	computeZoneIDs    string
@@ -52,27 +52,17 @@ type nodeListFlags struct {
 
 // Stores data ready for node list rendering
 type nodeListOutput struct {
-	Nodes     []nvfleetint.Node
-	View      string
-	AgentType nvfleetint.NodeAgentType
-	JSONValue any
-	RawJSON   []byte
-	Page      *clioutput.Pagination
-}
-
-type nodeListResult struct {
-	Inband *nodeListOutput
-	OOB    *nodeListOutput
-}
-
-type combinedNodeListJSON struct {
-	Inband any `json:"inband"`
-	OOB    any `json:"oob"`
+	Nodes      []nvfleetint.Node
+	View       string
+	DataSource nvfleetint.NodeDataSource
+	JSONValue  any
+	RawJSON    []byte
+	Page       *clioutput.Pagination
 }
 
 type nodeDescribeFlags struct {
-	agentType string
-	sections  string
+	dataSource string
+	sections   string
 }
 
 type nodeDescribeRenderOptions struct {
@@ -133,8 +123,8 @@ func newNodeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List nodes",
 		Long: "List nodes.\n\n" +
-			"--agent-type is required whenever any filter or --sort-by/--order flag is set, " +
-			"since in-band and OOB nodes carry different fields.\n\n" +
+			"Detail tables default to separate in-band and OOB results. Use --data-source for detail JSON, filtering, or sorting.\n" +
+			"Basic view without a source combines identities and supports shared GPU filters and sorts.\n\n" +
 			cmdutil.OptionsHelpNote("nvfleetint node options",
 				"--health", "--compute-zone-ids", "--nodegroup-ids",
 				"--gpu-type", "--agent-status", "--sort-by", "--order"),
@@ -145,12 +135,7 @@ func newNodeListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
-	cmd.Flags().StringVar(
-		&flags.agentType,
-		"agent-type",
-		flags.agentType,
-		"Agent type view: inband or oob (detail view defaults to both)",
-	)
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (required for detail JSON; omitted: both in detail tables, combined in basic)")
 	cmd.Flags().StringVar(&flags.nodeUUIDs, "node-uuids", "", "Comma-separated node UUIDs to filter")
 	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
@@ -164,7 +149,7 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.nodeName, "node-name", "", "Node name partial match (OOB view)")
 	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
-	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter")
+	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online or Offline")
 	cmd.Flags().StringVar(&flags.verificationCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field (including verificationCheck)")
@@ -187,12 +172,7 @@ func newNodeDescribeCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(
-		&flags.agentType,
-		"agent-type",
-		flags.agentType,
-		"Agent type view: inband or oob (default: both)",
-	)
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (default: both)")
 	cmd.Flags().StringVar(
 		&flags.sections,
 		"section",
@@ -204,10 +184,8 @@ func newNodeDescribeCmd() *cobra.Command {
 	return cmd
 }
 
-// Flags that filter or sort node list results. --agent-type is required
-// whenever any of these is set, because in-band and OOB nodes carry
-// different fields and a filter or sort spelled for one view silently
-// misbehaves against the other.
+// Detail queries require an explicit source for filters and sorting because
+// the default fetches separate in-band and OOB pages. Basic queries are combined.
 var nodeListFilterAndSortFlagNames = []string{
 	"node-uuids", "health", "compute-zone-ids", "compute-zone-names",
 	"nodegroup-ids", "nodegroup-names", "gpu-type", "gpu-count",
@@ -224,10 +202,13 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 	if err != nil {
 		return err
 	}
-	if flags.agentType == "" {
+	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic {
+		if common.Output == clioutput.FormatJSON {
+			return errors.New("--data-source is required for detail JSON output; choose inband or oob")
+		}
 		for _, name := range nodeListFilterAndSortFlagNames {
 			if cmd.Flags().Changed(name) {
-				return fmt.Errorf("--agent-type is required when using --%s", name)
+				return fmt.Errorf("--data-source is required when using --%s", name)
 			}
 		}
 	}
@@ -238,13 +219,18 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 	}
 
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
-	agentType := nvfleetint.NodeAgentType(flags.agentType)
-	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewDetail && agentType == "" {
-		result, err := listNodeViews(cmd.Context(), client, opts, common)
-		if err != nil {
-			return err
-		}
-		return writeNodeListResult(cmd.OutOrStdout(), common, result)
+	dataSource := opts.DataSource
+	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewDetail && dataSource == "" {
+		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "node list",
+			func(ctx context.Context, source nvfleetint.NodeDataSource) (nodeListOutput, error) {
+				sourceOpts := opts
+				sourceOpts.DataSource = source
+				return fetchNodeList(ctx, client, sourceOpts, common)
+			},
+			func(w io.Writer, result nodeListOutput) error {
+				return writeNodeListOutput(w, common, result)
+			},
+		)
 	}
 
 	result, err := fetchNodeList(cmd.Context(), client, opts, common)
@@ -252,45 +238,6 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 		return err
 	}
 	return writeNodeListOutput(cmd.OutOrStdout(), common, result)
-}
-
-func listNodeViews(
-	ctx context.Context,
-	client *nvfleetint.Client,
-	opts nvfleetint.ListNodesOptions,
-	common cmdutil.Resolved,
-) (nodeListResult, error) {
-	var result nodeListResult
-	var inbandOutput nodeListOutput
-	var oobOutput nodeListOutput
-	var inbandErr error
-	var oobErr error
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(2)
-
-	go func() {
-		defer waitGroup.Done()
-		inbandOptions := opts
-		inbandOptions.AgentType = nvfleetint.NodeAgentTypeInband
-		inbandOutput, inbandErr = fetchNodeList(ctx, client, inbandOptions, common)
-	}()
-	go func() {
-		defer waitGroup.Done()
-		oobOptions := opts
-		oobOptions.AgentType = nvfleetint.NodeAgentTypeOOB
-		oobOutput, oobErr = fetchNodeList(ctx, client, oobOptions, common)
-	}()
-	waitGroup.Wait()
-
-	if inbandErr != nil {
-		return nodeListResult{}, fmt.Errorf("fetch in-band node list: %w", inbandErr)
-	}
-	if oobErr != nil {
-		return nodeListResult{}, fmt.Errorf("fetch OOB node list: %w", oobErr)
-	}
-	result.Inband = &inbandOutput
-	result.OOB = &oobOutput
-	return result, nil
 }
 
 func fetchNodeList(
@@ -312,10 +259,10 @@ func fetchNodeList(
 			return nodeListOutput{}, err
 		}
 		return nodeListOutput{
-			Nodes:     nodes,
-			View:      string(opts.View),
-			AgentType: opts.AgentType,
-			JSONValue: result,
+			Nodes:      nodes,
+			View:       string(opts.View),
+			DataSource: opts.DataSource,
+			JSONValue:  result,
 		}, nil
 	}
 
@@ -324,10 +271,10 @@ func fetchNodeList(
 		return nodeListOutput{}, err
 	}
 	return nodeListOutput{
-		Nodes:     page.Nodes,
-		View:      string(opts.View),
-		AgentType: opts.AgentType,
-		RawJSON:   page.RawJSON,
+		Nodes:      page.Nodes,
+		View:       string(opts.View),
+		DataSource: opts.DataSource,
+		RawJSON:    page.RawJSON,
 		Page: &clioutput.Pagination{
 			Page:     page.Page,
 			PageSize: page.PageSize,
@@ -351,11 +298,11 @@ func runNodeDescribe(
 	if nodeUUID == "" {
 		return errors.New("node UUID is required")
 	}
-	agentType := nvfleetint.NodeAgentType(flags.agentType)
-	if agentType != "" && !agentType.Valid() {
-		return fmt.Errorf("invalid agent-type %q: expected inband or oob", agentType)
+	dataSource := nvfleetint.NodeDataSource(flags.dataSource)
+	if err := dataSource.Validate(); err != nil {
+		return cmdutil.RenderOptionError(err, nodeListFlagNames)
 	}
-	renderOptions, err := parseOOBInventorySections(flags, agentType, common.Output)
+	renderOptions, err := parseOOBInventorySections(flags, dataSource, common.Output)
 	if err != nil {
 		return err
 	}
@@ -365,34 +312,34 @@ func runNodeDescribe(
 		return err
 	}
 
-	result, err := describeNodeResult(cmd.Context(), client, nodeUUID, agentType)
+	result, err := describeNodeResult(cmd.Context(), client, nodeUUID, dataSource)
 	if err != nil {
 		return err
 	}
 
 	if common.Output == clioutput.FormatJSON {
-		return writeNodeDescribeJSON(cmd.OutOrStdout(), result, agentType)
+		return writeNodeDescribeJSON(cmd.OutOrStdout(), result, dataSource)
 	}
 	if !renderOptions.showSummary && (result.OOB == nil || result.OOB.OOBInventory == nil) {
 		return fmt.Errorf("node %q does not have an OOB view for the requested section", nodeUUID)
 	}
-	return writeNodeDescribeResultTable(cmd.OutOrStdout(), result, agentType, renderOptions)
+	return writeNodeDescribeResultTable(cmd.OutOrStdout(), result, dataSource, renderOptions)
 }
 
 func describeNodeResult(
 	ctx context.Context,
 	client *nvfleetint.Client,
 	nodeUUID string,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.NodeDataSource,
 ) (nodeDescribeResult, error) {
-	if agentType != "" {
+	if dataSource != "" {
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			AgentType: agentType,
+			DataSource: dataSource,
 		})
 		if err != nil {
 			return nodeDescribeResult{}, err
 		}
-		if agentType == nvfleetint.NodeAgentTypeOOB {
+		if dataSource == nvfleetint.NodeDataSourceOOB {
 			return nodeDescribeResult{OOB: &node}, nil
 		}
 		return nodeDescribeResult{Inband: &node}, nil
@@ -406,7 +353,7 @@ func describeNodeResult(
 	go func() {
 		defer waitGroup.Done()
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			AgentType: nvfleetint.NodeAgentTypeInband,
+			DataSource: nvfleetint.NodeDataSourceInband,
 		})
 		if err != nil {
 			inbandErr = err
@@ -417,7 +364,7 @@ func describeNodeResult(
 	go func() {
 		defer waitGroup.Done()
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			AgentType: nvfleetint.NodeAgentTypeOOB,
+			DataSource: nvfleetint.NodeDataSourceOOB,
 		})
 		if err != nil {
 			oobErr = err
@@ -449,12 +396,12 @@ func apiErrorHasStatus(err error, statusCode int) bool {
 func writeNodeDescribeJSON(
 	w io.Writer,
 	result nodeDescribeResult,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.NodeDataSource,
 ) error {
-	if agentType == nvfleetint.NodeAgentTypeInband && result.Inband != nil {
+	if dataSource == nvfleetint.NodeDataSourceInband && result.Inband != nil {
 		return clioutput.WriteRawJSON(w, result.Inband.RawJSON)
 	}
-	if agentType == nvfleetint.NodeAgentTypeOOB && result.OOB != nil {
+	if dataSource == nvfleetint.NodeDataSourceOOB && result.OOB != nil {
 		return clioutput.WriteRawJSON(w, result.OOB.RawJSON)
 	}
 
@@ -470,7 +417,7 @@ func writeNodeDescribeJSON(
 
 func parseOOBInventorySections(
 	flags nodeDescribeFlags,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.NodeDataSource,
 	output string,
 ) (nodeDescribeRenderOptions, error) {
 	values, err := cmdutil.ParseCommaList(flags.sections)
@@ -487,8 +434,8 @@ func parseOOBInventorySections(
 		return nodeDescribeRenderOptions{}, errors.New("section all cannot be combined with other sections")
 	}
 	if len(values) > 0 &&
-		agentType != "" &&
-		agentType != nvfleetint.NodeAgentTypeOOB {
+		dataSource != "" &&
+		dataSource != nvfleetint.NodeDataSourceOOB {
 		return nodeDescribeRenderOptions{}, errors.New("--section requires the OOB view")
 	}
 	if len(values) > 0 && output == clioutput.FormatJSON {
@@ -529,7 +476,7 @@ func parseOOBInventorySections(
 // errors against what the user typed.
 var nodeListFlagNames = map[string]cmdutil.OptionFlagName{
 	"view":              {Flag: "view"},
-	"agentType":         {Flag: "agent-type"},
+	"dataSource":        {Flag: "data-source"},
 	"health":            {Flag: "health"},
 	"agentStatus":       {Flag: "agent-status"},
 	"verificationCheck": {Flag: "verification-check"},
@@ -549,7 +496,7 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 
 	opts := nvfleetint.ListNodesOptions{
 		View:        nvfleetint.NodeView(flags.view),
-		AgentType:   nvfleetint.NodeAgentType(flags.agentType),
+		DataSource:  nvfleetint.NodeDataSource(flags.dataSource),
 		Hostname:    strings.TrimSpace(flags.hostname),
 		NodeName:    strings.TrimSpace(flags.nodeName),
 		BMCHostname: strings.TrimSpace(flags.bmcHostname),
@@ -616,7 +563,7 @@ func writeNodeListOutput(w io.Writer, common cmdutil.Resolved, result nodeListOu
 		return cmdutil.WritePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
-	if err := writeNodeTable(w, result.View, result.AgentType, result.Nodes); err != nil {
+	if err := writeNodeTable(w, result.View, result.DataSource, result.Nodes); err != nil {
 		return err
 	}
 	if result.Page == nil {
@@ -625,64 +572,11 @@ func writeNodeListOutput(w io.Writer, common cmdutil.Resolved, result nodeListOu
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-func writeNodeListResult(w io.Writer, common cmdutil.Resolved, result nodeListResult) error {
-	if common.Output == clioutput.FormatJSON {
-		return clioutput.WriteJSON(w, combinedNodeListJSON{
-			Inband: nodeListJSONValue(result.Inband),
-			OOB:    nodeListJSONValue(result.OOB),
-		})
-	}
-
-	if result.Inband != nil {
-		if err := writeNodeListSection(w, "In-band", *result.Inband, false); err != nil {
-			return err
-		}
-	}
-	if result.OOB != nil {
-		if err := writeNodeListSection(w, "Out-of-band", *result.OOB, result.Inband != nil); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func writeNodeListSection(w io.Writer, title string, result nodeListOutput, leadingNewline bool) error {
-	if leadingNewline {
-		if _, err := fmt.Fprintln(w); err != nil {
-			return err
-		}
-	}
-	if _, err := fmt.Fprintln(w, title); err != nil {
-		return err
-	}
-	if err := writeNodeTable(w, result.View, result.AgentType, result.Nodes); err != nil {
-		return err
-	}
-	if result.Page != nil {
-		return clioutput.WritePaginationFooter(w, *result.Page)
-	}
-	return nil
-}
-
-func nodeListJSONValue(result *nodeListOutput) any {
-	if result == nil {
-		return nil
-	}
-	if result.RawJSON != nil {
-		return json.RawMessage(cmdutil.OneIndexRawPage(result.RawJSON))
-	}
-	if merged, ok := result.JSONValue.(cmdutil.MergedJSONResult); ok {
-		merged.Pagination.Page++
-		return merged
-	}
-	return result.JSONValue
-}
-
 // Renders nodes using the selected view columns
 func writeNodeTable(
 	w io.Writer,
 	view string,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.NodeDataSource,
 	nodes []nvfleetint.Node,
 ) error {
 	if nvfleetint.NodeView(view) == nvfleetint.NodeViewBasic {
@@ -692,10 +586,10 @@ func writeNodeTable(
 			basicNodeRows(nodes),
 		)
 	}
-	if agentType == nvfleetint.NodeAgentTypeOOB || nodeListIsOOB(nodes) {
+	if dataSource == nvfleetint.NodeDataSourceOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
@@ -705,7 +599,7 @@ func writeNodeTable(
 // Reports whether a node list contains OOB-view records
 func nodeListIsOOB(nodes []nvfleetint.Node) bool {
 	for _, node := range nodes {
-		if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
+		if node.DataSource == string(nvfleetint.NodeDataSourceOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
 			return true
 		}
 	}
@@ -760,6 +654,8 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
 			clioutput.DisplayString(node.Health),
+			clioutput.DisplayString(node.GPUType),
+			clioutput.FormatOptionalInt(node.GPUCount),
 			clioutput.DisplayString(node.VerificationCheck),
 			clioutput.DisplayString(node.AgentStatus),
 		})
@@ -771,13 +667,13 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 func writeNodeDescribeResultTable(
 	w io.Writer,
 	result nodeDescribeResult,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.NodeDataSource,
 	options nodeDescribeRenderOptions,
 ) error {
-	if agentType == nvfleetint.NodeAgentTypeInband && result.Inband != nil {
+	if dataSource == nvfleetint.NodeDataSourceInband && result.Inband != nil {
 		return writeNodeDescribeTable(w, *result.Inband, options)
 	}
-	if agentType == nvfleetint.NodeAgentTypeOOB && result.OOB != nil {
+	if dataSource == nvfleetint.NodeDataSourceOOB && result.OOB != nil {
 		return writeNodeDescribeTable(w, *result.OOB, options)
 	}
 
@@ -838,7 +734,7 @@ func writeNodeDescribeTable(
 
 func nodeDescribeSummaryRows(node nvfleetint.NodeDetails) [][]string {
 	rows := nodeDescribeRows(node)
-	if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.OOBInventory != nil {
+	if node.DataSource == string(nvfleetint.NodeDataSourceOOB) || node.OOBInventory != nil {
 		rows = oobNodeDescribeRows(node)
 	}
 	if node.OOBInventory == nil {
@@ -867,7 +763,10 @@ func nodeDescribeSummaryRows(node nvfleetint.NodeDetails) [][]string {
 func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 	return [][]string{
 		{"UUID", clioutput.DisplayString(node.UUID)},
+		{"DATA SOURCE", clioutput.DisplayString(node.DataSource)},
 		{"HEALTH", clioutput.DisplayString(node.Health)},
+		{"GPU TYPE", clioutput.DisplayString(node.GPUType)},
+		{"GPU COUNT", clioutput.FormatOptionalInt(node.GPUCount)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},
 		{"NODE GROUP", clioutput.FormatNameAndID(node.NodeGroup, node.NodeGroupID)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
@@ -893,7 +792,7 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 	rows := [][]string{
 		{"UUID", clioutput.DisplayString(node.UUID)},
 		{"HOSTNAME", clioutput.DisplayString(node.Hostname)},
-		{"AGENT TYPE", clioutput.DisplayString(node.AgentType)},
+		{"DATA SOURCE", clioutput.DisplayString(node.DataSource)},
 		{"HEALTH", clioutput.DisplayString(node.Health)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},
 		{"NODE GROUP", clioutput.FormatNameAndID(node.NodeGroup, node.NodeGroupID)},
@@ -1245,7 +1144,8 @@ func systemInfoRows(system *nvfleetint.SystemInfo) [][]string {
 
 // Stores local flag values for node options.
 type nodeOptionsFlags struct {
-	agentType string
+	view       string
+	dataSource string
 }
 
 // Maps each filter field returned by the node options endpoint to the flag on
@@ -1283,7 +1183,7 @@ var nodeDeprecatedSortFields = map[string]bool{
 
 // Creates the node options command
 func newNodeOptionsCmd() *cobra.Command {
-	flags := nodeOptionsFlags{}
+	flags := nodeOptionsFlags{view: string(nvfleetint.NodeViewDetail)}
 	common := cmdutil.NewCommon()
 	cmd := &cobra.Command{
 		Use:   "options",
@@ -1294,7 +1194,8 @@ func newNodeOptionsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&flags.agentType, "agent-type", "", "Agent type view: inband or oob; oob returns a reduced set")
+	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (required for detail JSON; omitted: both in detail tables, combined in basic)")
 	cmdutil.RegisterReadFlags(cmd, common)
 
 	return cmd
@@ -1305,16 +1206,33 @@ func runNodeOptions(cmd *cobra.Command, flags nodeOptionsFlags, common cmdutil.R
 	if err := cmdutil.ValidateReadFlags(common); err != nil {
 		return err
 	}
-	agentType := nvfleetint.NodeAgentType(strings.TrimSpace(flags.agentType))
-	if agentType != "" && !agentType.Valid() {
-		return fmt.Errorf("invalid agent-type %q: expected inband or oob", flags.agentType)
+	opts := nvfleetint.NodeFilterOptionsRequest{
+		View:       nvfleetint.NodeView(flags.view),
+		DataSource: nvfleetint.NodeDataSource(strings.TrimSpace(flags.dataSource)),
+	}
+	if err := opts.Validate(); err != nil {
+		return cmdutil.RenderOptionError(err, nodeListFlagNames)
+	}
+
+	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic && common.Output == clioutput.FormatJSON {
+		return errors.New("--data-source is required for detail JSON output; choose inband or oob")
 	}
 
 	client, err := cmdutil.New(common)
 	if err != nil {
 		return err
 	}
-	options, err := client.GetNodeFilterOptions(cmd.Context(), agentType)
+	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic {
+		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "node options",
+			func(ctx context.Context, source nvfleetint.NodeDataSource) (nvfleetint.FilterOptions, error) {
+				sourceOpts := opts
+				sourceOpts.DataSource = source
+				return client.GetNodeFilterOptionsWithOptions(ctx, sourceOpts)
+			},
+			nodeOptionsRenderer.Write,
+		)
+	}
+	options, err := client.GetNodeFilterOptionsWithOptions(cmd.Context(), opts)
 	if err != nil {
 		return err
 	}

@@ -46,16 +46,16 @@ func main() {
 ```
 
 Select the out-of-band node view and retrieve its BMC inventory with explicit
-agent options:
+source options:
 
 ```go
 page, err := client.ListNodes(ctx, nvfleetint.ListNodesOptions{
-	AgentType:   nvfleetint.NodeAgentTypeOOB,
+	DataSource:   nvfleetint.NodeDataSourceOOB,
 	BMCHostname: "bmc-01",
 })
 
 node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-	AgentType: nvfleetint.NodeAgentTypeOOB,
+	DataSource: nvfleetint.NodeDataSourceOOB,
 })
 if err == nil && node.OOBInventory != nil {
 	fmt.Println(node.OOBInventory.SchemaVersion, node.NodeKind)
@@ -66,6 +66,41 @@ if err == nil && node.OOBInventory != nil {
 	}
 }
 ```
+
+Use `DataSource` on `ListNodesOptions`, `DescribeNodeOptions`,
+`NodeFilterOptionsRequest`, and `InventoryReportOptions`. This is a breaking
+rename: `AgentType`, `NodeAgentType`, and its constants have been removed from
+the public SDK. Use `NodeDataSourceInband` or `NodeDataSourceOOB`; node results
+expose `DataSource` only.
+
+With source omitted, SDK detail queries and inventory reports default to
+in-band. Basic node queries combine both sources. The CLI separately retains
+its default of fetching both detail views for node list, describe, and options
+in table output. Detail JSON for CLI node list and options requires
+`--data-source`. CLI inventory tables also fetch both sources by default,
+while inventory JSON, CSV, and signed downloads require `--data-source`.
+SDK defaults are unchanged.
+
+```go
+options, err := client.GetNodeFilterOptionsWithOptions(ctx, nvfleetint.NodeFilterOptionsRequest{
+    View: nvfleetint.NodeViewBasic,
+    DataSource: nvfleetint.NodeDataSourceOOB,
+})
+report, err := client.GetInventoryReport(ctx, nvfleetint.InventoryReportOptions{
+    DataSource: nvfleetint.NodeDataSourceOOB,
+    SortBy: nvfleetint.InventoryReportSortByBMCHostname,
+})
+```
+
+OOB report rows expose `NodeName`, `BMCHostname`, and `BMCIP`, plus shared
+verification, location, enrollment, and removal information. Source selection
+also applies to CSV and signed bundle downloads. `GetNodeFilterOptions(ctx, dataSource)`
+accepts `NodeDataSource` for detail-view callers.
+
+OOB node list/detail results now retain optional `GPUType` and `GPUCount`.
+Basic node queries support GPU filters and inventory sorting while returning
+identity-only rows. Agent-status filters accept `NodeAgentOnline` and
+`NodeAgentOffline`; the deprecated `NodeAgentUnknown` value is rejected.
 
 OOB node list and detail results expose the inventory classification as
 `Node.NodeKind`.

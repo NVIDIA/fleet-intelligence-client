@@ -40,6 +40,9 @@ const (
 	ErrorSeverityInfo     ErrorSeverity = "Info"
 	ErrorSeverityWarning  ErrorSeverity = "Warning"
 
+	InventoryReportSortByNodeName          InventoryReportSortBy = "nodeName"
+	InventoryReportSortByBMCHostname       InventoryReportSortBy = "bmcHostname"
+	InventoryReportSortByBMCIP             InventoryReportSortBy = "bmcIP"
 	InventoryReportSortByHostname          InventoryReportSortBy = "hostname"
 	InventoryReportSortByNodeUUID          InventoryReportSortBy = "nodeUUID"
 	InventoryReportSortByNodeGroup         InventoryReportSortBy = "nodeGroup"
@@ -123,6 +126,8 @@ func (order InventoryReportSortOrder) Valid() bool {
 
 // Represents request options for inventory reports
 type InventoryReportOptions struct {
+	// DataSource defaults to in-band when omitted.
+	DataSource     NodeDataSource
 	Format         ReportFormat
 	Signed         bool
 	ComputeZoneIDs []string
@@ -138,13 +143,15 @@ type InventoryReportOptions struct {
 
 // Represents an inventory report response
 type InventoryReport struct {
-	Nodes    []InventoryNode `json:"nodes"`
-	HasMore  bool            `json:"hasMore"`
-	Page     int             `json:"page"`
-	PageSize int             `json:"pageSize"`
-	Total    int             `json:"total"`
-	RawJSON  []byte          `json:"-"`
-	RawCSV   []byte          `json:"-"`
+	// DataSource records the selected source for source-specific rendering.
+	DataSource NodeDataSource  `json:"-"`
+	Nodes      []InventoryNode `json:"nodes"`
+	HasMore    bool            `json:"hasMore"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"pageSize"`
+	Total      int             `json:"total"`
+	RawJSON    []byte          `json:"-"`
+	RawCSV     []byte          `json:"-"`
 
 	// RawSigned holds the signed CSV bundle (a zip) when Signed is requested.
 	RawSigned []byte `json:"-"`
@@ -166,6 +173,9 @@ func (page InventoryReport) PageInfo() PageInfo {
 
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
+	NodeName                  string    `json:"nodeName,omitempty"`
+	BMCHostname               string    `json:"bmcHostname,omitempty"`
+	BMCIP                     string    `json:"bmcIP,omitempty"`
 	NodeUUID                  string    `json:"nodeUUID"`
 	Hostname                  string    `json:"hostname,omitempty"`
 	ComputeZone               string    `json:"computeZone,omitempty"`
@@ -319,7 +329,14 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 		return InventoryReport{RawCSV: append([]byte(nil), resp.Body...)}, nil
 	}
 
-	return decodeInventoryReport(resp.Body)
+	var report InventoryReport
+	if normalized.DataSource == NodeDataSourceOOB {
+		report, err = decodeOOBInventoryReport(resp.Body)
+	} else {
+		report, err = decodeInventoryReport(resp.Body)
+	}
+	report.DataSource = normalized.DataSource
+	return report, err
 }
 
 // Retrieves an error report using the configured API client
@@ -359,7 +376,7 @@ const (
 	errorReportTimeModeValues   = "absolute or relative"
 	errorReportSeverityValues   = "Critical, Fatal, Info, or Warning"
 	inventoryReportOrderValues  = "asc or desc"
-	inventoryReportSortByValues = "hostname, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
+	inventoryReportSortByValues = "hostname, nodeName, bmcHostname, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 )
 
 // Defaults an omitted report format and rejects unsupported values
@@ -518,6 +535,9 @@ func (opts InventoryReportOptions) Validate() error {
 // accepts, without checking how the options combine. See
 // ErrorReportOptions.ValidateValues for why the two are separate.
 func (opts InventoryReportOptions) ValidateValues() error {
+	if err := opts.DataSource.Validate(); err != nil {
+		return err
+	}
 	if _, err := normalizeReportFormat(opts.Format); err != nil {
 		return err
 	}
@@ -566,6 +586,7 @@ func normalizeInventoryReportOptions(opts InventoryReportOptions) (InventoryRepo
 // Builds generated inventory report query parameters
 func inventoryReportParams(opts InventoryReportOptions) fleetapi.GetV1ReportsInventoryParams {
 	return fleetapi.GetV1ReportsInventoryParams{
+		DataSource:     optionalEnum[fleetapi.GetV1ReportsInventoryParamsDataSource](opts.DataSource),
 		Format:         optionalEnum[fleetapi.GetV1ReportsInventoryParamsFormat](opts.Format),
 		Signed:         optionalTrueBool(opts.Signed),
 		Page:           cloneInt(opts.Page),
@@ -671,6 +692,41 @@ func decodeInventoryReport(data []byte) (InventoryReport, error) {
 		}
 	}
 
+	return report, nil
+}
+
+// Decodes the OOB inventory shape without losing its BMC identity fields.
+func decodeOOBInventoryReport(data []byte) (InventoryReport, error) {
+	var resp fleetapi.ModelsOobInventoryReportResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return InventoryReport{}, err
+	}
+	report := InventoryReport{
+		HasMore:  boolValue(resp.HasMore),
+		Page:     intValue(resp.Page),
+		PageSize: intValue(resp.PageSize),
+		Total:    intValue(resp.Total),
+		RawJSON:  append([]byte(nil), data...),
+	}
+	if resp.Nodes != nil {
+		report.Nodes = make([]InventoryNode, 0, len(*resp.Nodes))
+		for _, node := range *resp.Nodes {
+			report.Nodes = append(report.Nodes, InventoryNode{
+				NodeUUID:                  stringValue(node.NodeUUID),
+				NodeName:                  stringValue(node.NodeName),
+				BMCHostname:               stringValue(node.BmcHostname),
+				BMCIP:                     stringValue(node.BmcIP),
+				ComputeZone:               stringValue(node.ComputeZone),
+				NodeGroup:                 stringValue(node.NodeGroup),
+				VerificationCheck:         enumStringValue(node.VerificationCheck),
+				VerificationCheckReason:   stringValue(node.VerificationCheckReason),
+				LastVerificationCheckTime: stringValue(node.LastVerificationCheckTS),
+				EnrolledAt:                stringValue(node.EnrolledAt),
+				RemovedAt:                 stringValue(node.RemovedAt),
+				Location:                  locationFromGenerated(node.Location),
+			})
+		}
+	}
 	return report, nil
 }
 

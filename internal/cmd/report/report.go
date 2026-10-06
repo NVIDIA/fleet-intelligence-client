@@ -4,6 +4,7 @@
 package report
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -19,10 +20,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const reportInventorySortByList = "hostname, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
+const reportInventorySortByList = "hostname, nodeName, bmcHostname, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 
 // Stores local flag values for inventory reports
 type reportInventoryFlags struct {
+	dataSource     string
 	format         string
 	signed         bool
 	outputPath     string
@@ -111,6 +113,10 @@ func newReportInventoryCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		Long: `Generate an inventory report for the fleet.
 
+Table output shows separate in-band and OOB reports by default.
+Use --data-source inband or oob for one source; it is required for JSON output,
+CSV, and signed downloads. Pagination applies independently to each source.
+
 Use --signed with --format csv to download a signed CSV bundle (a zip
 containing the CSV plus a cosign-verifiable signature). The bundle is
 written to the current directory unless --output-path is provided.`,
@@ -118,15 +124,16 @@ written to the current directory unless --output-path is provided.`,
   nvfleetint report inventory
 
   # Download a signed CSV bundle into the current directory
-  nvfleetint report inventory --format csv --signed
+  nvfleetint report inventory --data-source inband --format csv --signed
 
   # Download a signed CSV bundle to a specific path
-  nvfleetint report inventory --format csv --signed --output-path ./reports/inventory.zip`,
+  nvfleetint report inventory --data-source inband --format csv --signed --output-path ./reports/inventory.zip`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runReportInventory(cmd, flags, cmdutil.ResolveCommon(cmd, common))
 		},
 	}
 
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Inventory data source: inband or oob (omitted: both in tables; required for JSON and downloads)")
 	cmd.Flags().StringVar(&flags.format, "format", flags.format, "Report format: json or csv")
 	cmd.Flags().BoolVar(&flags.signed, "signed", false, "Download a signed CSV bundle (zip of CSV plus signature); requires --format csv")
 	cmd.Flags().StringVar(&flags.outputPath, "output-path", "", "Destination file or directory for the signed bundle; defaults to the current directory")
@@ -206,7 +213,7 @@ func newReportVerifyCmd() *cobra.Command {
 		Short: "Verify a signed inventory report",
 		Args:  cobra.NoArgs,
 		Long: `Verify a signed inventory report downloaded with
-"report inventory --format csv --signed".
+"report inventory --data-source inband --format csv --signed".
 
 That command downloads a zip (inventory-report.zip by default). Unzip it
 first; it expands to a folder named inventory_report_<timestamp>/ containing
@@ -381,31 +388,53 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common c
 		return writeRawReportBytes(cmd.OutOrStdout(), report.RawCSV)
 	}
 
+	if opts.DataSource == "" {
+		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "inventory report",
+			func(ctx context.Context, source nvfleetint.NodeDataSource) (reportInventoryOutput, error) {
+				sourceOpts := opts
+				sourceOpts.DataSource = source
+				return fetchInventoryReport(ctx, client, sourceOpts, common)
+			},
+			func(w io.Writer, result reportInventoryOutput) error {
+				return writeReportInventoryOutput(w, common, result)
+			},
+		)
+	}
+	result, err := fetchInventoryReport(cmd.Context(), client, opts, common)
+	if err != nil {
+		return err
+	}
+	return writeReportInventoryOutput(cmd.OutOrStdout(), common, result)
+}
+
+// Fetches one source, preserving its independent pagination and raw JSON.
+func fetchInventoryReport(ctx context.Context, client *nvfleetint.Client, opts nvfleetint.InventoryReportOptions, common cmdutil.Resolved) (reportInventoryOutput, error) {
 	if common.All {
 		var nodes []nvfleetint.InventoryNode
 		result, err := cmdutil.FetchAllPages("nodes",
 			func(pageNumber int) (nvfleetint.InventoryReport, error) {
 				opts.Page = &pageNumber
-				return client.GetInventoryReport(cmd.Context(), opts)
+				return client.GetInventoryReport(ctx, opts)
 			},
 			func(page nvfleetint.InventoryReport) { nodes = append(nodes, page.Nodes...) },
 		)
 		if err != nil {
-			return err
+			return reportInventoryOutput{}, err
 		}
-		return writeReportInventoryOutput(cmd.OutOrStdout(), common, reportInventoryOutput{
+		return reportInventoryOutput{
 			Report: nvfleetint.InventoryReport{
-				Nodes: nodes,
+				DataSource: opts.DataSource,
+				Nodes:      nodes,
 			},
 			JSONValue: result,
-		})
+		}, nil
 	}
 
-	report, err := client.GetInventoryReport(cmd.Context(), opts)
+	report, err := client.GetInventoryReport(ctx, opts)
 	if err != nil {
-		return err
+		return reportInventoryOutput{}, err
 	}
-	return writeReportInventoryOutput(cmd.OutOrStdout(), common, reportInventoryOutput{
+	return reportInventoryOutput{
 		Report:  report,
 		RawJSON: report.RawJSON,
 		Page: &clioutput.Pagination{
@@ -413,7 +442,7 @@ func runReportInventory(cmd *cobra.Command, flags reportInventoryFlags, common c
 			PageSize: report.PageSize,
 			Total:    report.Total,
 		},
-	})
+	}, nil
 }
 
 // Validates flags, calls the SDK, and writes error report output
@@ -493,12 +522,13 @@ func runReportErrorAll(cmd *cobra.Command, client *nvfleetint.Client, opts nvfle
 // flags. See errorReportOptions for why parsing and validation are one pass.
 func inventoryReportOptions(flags reportInventoryFlags, common cmdutil.Resolved) (nvfleetint.InventoryReportOptions, error) {
 	opts := nvfleetint.InventoryReportOptions{
-		Format:    nvfleetint.ReportFormat(flags.format),
-		Signed:    flags.signed,
-		StartTime: strings.TrimSpace(flags.start),
-		EndTime:   strings.TrimSpace(flags.end),
-		SortBy:    nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)),
-		Order:     nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)),
+		DataSource: nvfleetint.NodeDataSource(flags.dataSource),
+		Format:     nvfleetint.ReportFormat(flags.format),
+		Signed:     flags.signed,
+		StartTime:  strings.TrimSpace(flags.start),
+		EndTime:    strings.TrimSpace(flags.end),
+		SortBy:     nvfleetint.InventoryReportSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:      nvfleetint.InventoryReportSortOrder(strings.TrimSpace(flags.order)),
 	}
 
 	// Values are the SDK's to judge; the rules below are about which flags were
@@ -547,6 +577,10 @@ func inventoryReportOptions(flags reportInventoryFlags, common cmdutil.Resolved)
 		if common.AllSet || common.PageSet || common.PageSizeSet {
 			return opts, errors.New("pagination flags cannot be used with --format csv")
 		}
+	}
+
+	if opts.DataSource == "" && (common.Output == clioutput.FormatJSON || opts.Format == nvfleetint.ReportFormatCSV || opts.Signed) {
+		return opts, errors.New("--data-source is required for inventory JSON output, CSV, and signed downloads; choose inband or oob")
 	}
 
 	return opts, nil
@@ -716,9 +750,10 @@ var (
 		"severity": {Flag: "severity"},
 	}
 	reportInventoryFlagNames = map[string]cmdutil.OptionFlagName{
-		"format": {Flag: "format"},
-		"sortBy": {Flag: "sort-by", Expected: reportInventorySortByList},
-		"order":  {Flag: "order"},
+		"dataSource": {Flag: "data-source"},
+		"format":     {Flag: "format"},
+		"sortBy":     {Flag: "sort-by", Expected: reportInventorySortByList},
+		"order":      {Flag: "order"},
 	}
 )
 
@@ -748,7 +783,7 @@ func writeReportInventoryOutput(w io.Writer, common cmdutil.Resolved, result rep
 		return cmdutil.WritePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
-	if err := writeReportInventoryTable(w, result.Report.Nodes); err != nil {
+	if err := writeReportInventoryTableForSource(w, result.Report); err != nil {
 		return err
 	}
 	if result.Page == nil {
@@ -770,6 +805,26 @@ func writeReportErrorOutput(w io.Writer, common cmdutil.Resolved, result reportE
 		return nil
 	}
 	return clioutput.WritePaginationFooter(w, *result.Page)
+}
+
+// Renders the fields supplied by the selected inventory source, including empty reports.
+func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.InventoryReport) error {
+	if report.DataSource != nvfleetint.NodeDataSourceOOB {
+		return writeReportInventoryTable(w, report.Nodes)
+	}
+	rows := make([][]string, 0, len(report.Nodes))
+	for _, node := range report.Nodes {
+		rows = append(rows, []string{
+			clioutput.DisplayString(node.NodeUUID),
+			clioutput.DisplayString(node.NodeName),
+			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCIP),
+			clioutput.DisplayString(node.ComputeZone),
+			clioutput.DisplayString(node.NodeGroup),
+			clioutput.DisplayString(node.VerificationCheck),
+		})
+	}
+	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "VERIFICATION CHECK"}, rows)
 }
 
 // Renders inventory report nodes as a table

@@ -39,7 +39,7 @@ Probe each list with the same filters, `--view basic` where supported, and `--pa
 ```bash
 nvfleetint computezone list --all --profile <profile> --output json
 nvfleetint nodegroup list --all --profile <profile> --output json
-nvfleetint node list <scope> --all --profile <profile> --output json
+nvfleetint node list <scope> --data-source inband --all --profile <profile> --output json
 ```
 
 After the first two lists, apply resolved `--compute-zone-ids` or `--nodegroup-ids` to the node query.

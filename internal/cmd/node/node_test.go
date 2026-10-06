@@ -56,7 +56,7 @@ func TestNodeListLocalJSONAndSort(t *testing.T) {
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", "healthStatus",
+		"node", "list", "--data-source", "inband", "--output", "json", "--sort-by", "healthStatus",
 	})
 
 	if err := cmd.Execute(); err != nil {
@@ -88,7 +88,7 @@ func TestNodeListDetailSortFields(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetOut(&out)
 			cmd.SetArgs([]string{
-				"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", field,
+				"node", "list", "--data-source", "inband", "--output", "json", "--sort-by", field,
 			})
 
 			if err := cmd.Execute(); err != nil {
@@ -117,7 +117,7 @@ func TestNodeListSortVerificationCheck(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", "verificationCheck"})
+	cmd.SetArgs([]string{"node", "list", "--data-source", "inband", "--output", "json", "--sort-by", "verificationCheck"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -245,7 +245,7 @@ func TestNodeListTableFiltersAndSort(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computezone", "--order", "desc", "--page-size", "10"})
+	cmd.SetArgs([]string{"node", "list", "--data-source", "inband", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computezone", "--order", "desc", "--page-size", "10"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -268,20 +268,20 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 			t.Errorf("unexpected view: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		switch r.URL.Query().Get("agentType") {
+		switch r.URL.Query().Get("dataSource") {
 		case "inband":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-inband","hostname":"gpu-001","agentType":"inband","healthStatus":"Healthy"}],
+				"nodes":[{"nodeUUID":"node-inband","hostname":"gpu-001","dataSource":"inband","healthStatus":"Healthy"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
+				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		default:
-			t.Errorf("unexpected agentType: %q", r.URL.Query().Get("agentType"))
-			http.Error(w, "missing agentType", http.StatusBadRequest)
+			t.Errorf("unexpected dataSource: %q", r.URL.Query().Get("dataSource"))
+			http.Error(w, "missing dataSource", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -306,37 +306,6 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 		}
 	}
 
-	out.Reset()
-	cmd = newRootCmd()
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json"})
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("combined JSON command failed: %v", err)
-	}
-
-	var combined struct {
-		Inband struct {
-			Nodes []map[string]any `json:"nodes"`
-			Page  int              `json:"page"`
-		} `json:"inband"`
-		OOB struct {
-			Nodes []map[string]any `json:"nodes"`
-			Page  int              `json:"page"`
-		} `json:"oob"`
-	}
-	if err := json.Unmarshal(out.Bytes(), &combined); err != nil {
-		t.Fatalf("decode combined JSON: %v", err)
-	}
-	if len(combined.Inband.Nodes) != 1 || combined.Inband.Nodes[0]["nodeUUID"] != "node-inband" {
-		t.Fatalf("unexpected in-band JSON: %#v", combined.Inband)
-	}
-	if len(combined.OOB.Nodes) != 1 || combined.OOB.Nodes[0]["nodeUUID"] != "node-oob" ||
-		combined.OOB.Nodes[0]["nodeKind"] != "nvswitch" {
-		t.Fatalf("unexpected OOB JSON: %#v", combined.OOB)
-	}
-	if combined.Inband.Page != 1 || combined.OOB.Page != 1 {
-		t.Fatalf("combined JSON pages should be 1-based: %#v", combined)
-	}
 }
 
 // Verifies all-page JSON output
@@ -425,7 +394,7 @@ func TestNodeListAllDefaultsPageSize(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--all", "--output", "json"})
+	cmd.SetArgs([]string{"node", "list", "--data-source", "inband", "--all", "--output", "json"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -464,7 +433,7 @@ func TestNodeListAllRetriesFailedPage(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs([]string{
-		"node", "list", "--agent-type", "inband", "--all", "--output", "json", "--timeout", "5s",
+		"node", "list", "--data-source", "inband", "--all", "--output", "json", "--timeout", "5s",
 	})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("execute failed: %v", err)
@@ -510,7 +479,7 @@ func TestNodeDescribeTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "describe", "node-1", "--agent-type", "inband"})
+	cmd.SetArgs([]string{"node", "describe", "node-1", "--data-source", "inband"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -530,19 +499,19 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch r.URL.Query().Get("agentType") {
+		switch r.URL.Query().Get("dataSource") {
 		case "inband":
 			_, _ = w.Write([]byte(`{
 				"nodeUUID":"node-1",
 				"hostname":"gpu-001",
-				"agentType":"inband",
+				"dataSource":"inband",
 				"healthStatus":"Healthy",
 				"agentStatus":"Online"
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
 				"nodeUUID":"node-1",
-				"agentType":"oob",
+				"dataSource":"oob",
 				"bmcHostname":"bmc-001",
 				"bmcIP":"192.0.2.10:443",
 				"healthStatus":"Degraded",
@@ -552,8 +521,8 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 				}
 			}`))
 		default:
-			t.Errorf("unexpected agentType: %q", r.URL.Query().Get("agentType"))
-			http.Error(w, "missing agentType", http.StatusBadRequest)
+			t.Errorf("unexpected dataSource: %q", r.URL.Query().Get("dataSource"))
+			http.Error(w, "missing dataSource", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -608,7 +577,7 @@ func TestNodeDescribeCombinedViewAllowsNotFound(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("agentType") == "oob" {
+		if r.URL.Query().Get("dataSource") == "oob" {
 			http.Error(w, `{"error":"node does not have an OOB agent"}`, http.StatusNotFound)
 			return
 		}
@@ -616,7 +585,7 @@ func TestNodeDescribeCombinedViewAllowsNotFound(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"nodeUUID":"node-1",
 			"hostname":"gpu-001",
-			"agentType":"inband"
+			"dataSource":"inband"
 		}`))
 	}))
 	defer server.Close()
@@ -645,15 +614,15 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("agentType"); got != "oob" {
-			t.Fatalf("unexpected agentType: %q", got)
+		if got := r.URL.Query().Get("dataSource"); got != "oob" {
+			t.Fatalf("unexpected dataSource: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"nodeUUID":"node-oob-1",
 			"nodeKind":"nvswitch",
 			"hostname":"host-001",
-			"agentType":"oob",
+			"dataSource":"oob",
 			"bmcHostname":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
@@ -675,7 +644,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--agent-type", "oob"})
+	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--data-source", "oob"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -695,7 +664,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 		}
 	}
 	for _, unwanted := range []string{
-		"\nHOSTNAME ", "\nAGENT TYPE ", "\nGPU TYPE ", "\nGPU COUNT ",
+		"\nHOSTNAME ", "\nAGENT TYPE ",
 		"\nFIRMWARE CHECK ", "\nPUBLIC IP ", "\nPRIVATE IP ",
 		"nested status condition", "ResourceEvent.1.0.ResourceErrorsDetected",
 	} {
@@ -713,7 +682,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"node", "describe", "node-oob-1", "--agent-type", "oob",
+		"node", "describe", "node-oob-1", "--data-source", "oob",
 		"--section", "systems,chassis",
 	})
 	if err := cmd.Execute(); err != nil {
@@ -751,7 +720,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"node", "describe", "node-oob-1", "--agent-type", "oob", "--section", "all",
+		"node", "describe", "node-oob-1", "--data-source", "oob", "--section", "all",
 	})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("all sections command failed: %v", err)
@@ -778,7 +747,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	out.Reset()
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--agent-type", "oob", "--output", "json"})
+	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--data-source", "oob", "--output", "json"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("JSON command failed: %v", err)
 	}
@@ -804,13 +773,13 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 	}{
 		{
 			name: "unknown section",
-			args: []string{"node", "describe", "node-1", "--agent-type", "oob", "--section", "storage"},
+			args: []string{"node", "describe", "node-1", "--data-source", "oob", "--section", "storage"},
 			want: "invalid OOB inventory section",
 		},
 		{
 			name: "all with another section",
 			args: []string{
-				"node", "describe", "node-1", "--agent-type", "oob",
+				"node", "describe", "node-1", "--data-source", "oob",
 				"--section", "all,systems",
 			},
 			want: "section all cannot be combined with other sections",
@@ -818,7 +787,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 		{
 			name: "inband section",
 			args: []string{
-				"node", "describe", "node-1", "--agent-type", "inband",
+				"node", "describe", "node-1", "--data-source", "inband",
 				"--section", "systems",
 			},
 			want: "--section requires the OOB view",
@@ -826,7 +795,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 		{
 			name: "json section",
 			args: []string{
-				"node", "describe", "node-1", "--agent-type", "oob",
+				"node", "describe", "node-1", "--data-source", "oob",
 				"--section", "systems", "--output", "json",
 			},
 			want: "--section cannot be used with --output json",
@@ -881,7 +850,7 @@ func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 		BMCIP:       "192.0.2.10:443",
 	}})
 
-	if len(rows) != 1 || len(rows[0]) != 10 {
+	if len(rows) != 1 || len(rows[0]) != 12 {
 		t.Fatalf("unexpected OOB row shape: %#v", rows)
 	}
 	if slices.Contains(rows[0], "inband-hostname") {
@@ -898,7 +867,7 @@ func TestOOBNodeDescribeRowsOmitInbandFields(t *testing.T) {
 			UUID:          "node-1",
 			Hostname:      "inband-hostname",
 			NodeName:      "machine-001",
-			AgentType:     "oob",
+			DataSource:    "oob",
 			GPUType:       "NVIDIA H100",
 			FirmwareCheck: "Passed",
 			PublicIP:      "192.0.2.20",
@@ -911,7 +880,7 @@ func TestOOBNodeDescribeRowsOmitInbandFields(t *testing.T) {
 		labels = append(labels, row[0])
 	}
 	for _, unwanted := range []string{
-		"HOSTNAME", "AGENT TYPE", "GPU TYPE", "GPU COUNT",
+		"HOSTNAME", "AGENT TYPE",
 		"FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP",
 	} {
 		if slices.Contains(labels, unwanted) {
@@ -940,9 +909,9 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
 		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view supports sorting only by"},
-		{name: "filter without agent-type", args: []string{"node", "list", "--hostname", "gpu"}, want: "--agent-type is required when using --hostname"},
-		{name: "sort-by without agent-type", args: []string{"node", "list", "--sort-by", "hostname"}, want: "--agent-type is required when using --sort-by"},
-		{name: "order without agent-type", args: []string{"node", "list", "--order", "asc"}, want: "--agent-type is required when using --order"},
+		{name: "filter without data-source", args: []string{"node", "list", "--hostname", "gpu"}, want: "--data-source is required when using --hostname"},
+		{name: "sort-by without data-source", args: []string{"node", "list", "--sort-by", "hostname"}, want: "--data-source is required when using --sort-by"},
+		{name: "order without data-source", args: []string{"node", "list", "--order", "asc"}, want: "--data-source is required when using --order"},
 	}
 
 	for _, tt := range tests {
@@ -988,12 +957,12 @@ func TestNodeOptionsOutput(t *testing.T) {
 		`{"name":"brandNewFilter","options":["surprise"]}` +
 		`]},"sorting":{"fields":["hostname","nodeGroup","computeZone","verificationCheck","integrityCheck"],"orders":["asc","desc"],"defaults":{"field":"integrityCheck","order":"asc"}}}`
 
-	var agentTypes []string
+	var dataSources []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes/options" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		agentTypes = append(agentTypes, r.URL.Query().Get("agentType"))
+		dataSources = append(dataSources, r.URL.Query().Get("dataSource"))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
 	}))
@@ -1004,7 +973,7 @@ func TestNodeOptionsOutput(t *testing.T) {
 	var tableOut bytes.Buffer
 	tableCmd := newRootCmd()
 	tableCmd.SetOut(&tableOut)
-	tableCmd.SetArgs([]string{"node", "options", "--agent-type", "oob"})
+	tableCmd.SetArgs([]string{"node", "options", "--data-source", "oob"})
 	if err := tableCmd.Execute(); err != nil {
 		t.Fatalf("node options command failed: %v", err)
 	}
@@ -1046,20 +1015,20 @@ func TestNodeOptionsOutput(t *testing.T) {
 	var jsonOut bytes.Buffer
 	jsonCmd := newRootCmd()
 	jsonCmd.SetOut(&jsonOut)
-	jsonCmd.SetArgs([]string{"node", "options", "--output", "json"})
+	jsonCmd.SetArgs([]string{"node", "options", "--data-source", "inband", "--output", "json"})
 	if err := jsonCmd.Execute(); err != nil {
 		t.Fatalf("node options JSON command failed: %v", err)
 	}
 	if strings.TrimSpace(jsonOut.String()) != body {
 		t.Fatalf("JSON output is not the raw payload:\n%s", jsonOut.String())
 	}
-	if len(agentTypes) != 2 || agentTypes[0] != "oob" || agentTypes[1] != "" {
-		t.Fatalf("unexpected agentType values: %#v", agentTypes)
+	if len(dataSources) != 2 || dataSources[0] != "oob" || dataSources[1] != "inband" {
+		t.Fatalf("unexpected dataSource values: %#v", dataSources)
 	}
 }
 
-// Verifies an unsupported agent type is rejected before any request.
-func TestNodeOptionsRejectsAgentType(t *testing.T) {
+// Verifies an unsupported data source is rejected before any request.
+func TestNodeOptionsRejectsDataSource(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	var requests int
@@ -1071,9 +1040,9 @@ func TestNodeOptionsRejectsAgentType(t *testing.T) {
 	cmdtest.SaveConfig(t, server.URL, "test-key")
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"node", "options", "--agent-type", "bmc"})
+	cmd.SetArgs([]string{"node", "options", "--data-source", "bmc"})
 	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "invalid agent-type") {
+	if err == nil || !strings.Contains(err.Error(), "invalid data-source") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if requests != 0 {
@@ -1104,7 +1073,7 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "options"})
+	cmd.SetArgs([]string{"node", "options", "--data-source", "inband"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("node options command failed: %v", err)
 	}

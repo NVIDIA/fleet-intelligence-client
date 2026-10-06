@@ -18,8 +18,8 @@ const (
 	NodeViewDetail NodeView = "detail"
 	NodeViewBasic  NodeView = "basic"
 
-	NodeAgentTypeInband NodeAgentType = "inband"
-	NodeAgentTypeOOB    NodeAgentType = "oob"
+	NodeDataSourceInband NodeDataSource = "inband"
+	NodeDataSourceOOB    NodeDataSource = "oob"
 
 	NodeHealthHealthy   NodeHealthStatus = "Healthy"
 	NodeHealthDegraded  NodeHealthStatus = "Degraded"
@@ -43,6 +43,7 @@ const (
 
 	NodeAgentOnline  NodeAgentStatus = "Online"
 	NodeAgentOffline NodeAgentStatus = "Offline"
+	// Deprecated: Unknown is no longer accepted as an agent-status filter.
 	NodeAgentUnknown NodeAgentStatus = "Unknown"
 
 	NodeSortByHostname            NodeSortBy = "hostname"
@@ -73,12 +74,20 @@ func (view NodeView) Valid() bool {
 	return fleetapi.GetV1NodesParamsView(view).Valid()
 }
 
-// Represents the agent source used to list or describe nodes
-type NodeAgentType string
+// NodeDataSource selects an in-band or OOB enrollment.
+type NodeDataSource string
 
-// Reports whether the agent type is accepted by the API
-func (agentType NodeAgentType) Valid() bool {
-	return fleetapi.GetV1NodesParamsAgentType(agentType).Valid()
+// Valid reports whether the data source is accepted by the API.
+func (source NodeDataSource) Valid() bool {
+	return fleetapi.GetV1NodesParamsDataSource(source).Valid()
+}
+
+// Validate checks an optional data source. Empty preserves the endpoint default.
+func (source NodeDataSource) Validate() error {
+	if source != "" && !source.Valid() {
+		return invalidOption("dataSource", "node data source", string(source), nodeDataSourceValues)
+	}
+	return nil
 }
 
 // Represents supported health filters for listing nodes
@@ -132,7 +141,7 @@ func (order NodeSortOrder) Valid() bool {
 // Represents request options for listing nodes
 type ListNodesOptions struct {
 	View               NodeView
-	AgentType          NodeAgentType
+	DataSource         NodeDataSource
 	NodeUUIDs          []string
 	HealthStatuses     []NodeHealthStatus
 	ComputeZoneIDs     []string
@@ -183,7 +192,7 @@ type Node struct {
 	Hostname                   string                      `json:"hostname,omitempty"`
 	NodeName                   string                      `json:"nodeName,omitempty"`
 	NodeKind                   NodeKind                    `json:"nodeKind,omitempty"`
-	AgentType                  string                      `json:"agentType,omitempty"`
+	DataSource                 string                      `json:"dataSource,omitempty"`
 	AgentVersion               string                      `json:"agentVersion,omitempty"`
 	BMCHostname                string                      `json:"bmcHostname,omitempty"`
 	BMCIP                      string                      `json:"bmcIP,omitempty"`
@@ -285,7 +294,7 @@ type NodeDetails struct {
 
 // Represents request options for describing a node
 type DescribeNodeOptions struct {
-	AgentType NodeAgentType
+	DataSource NodeDataSource
 }
 
 // Represents hardware and network resource metadata for a node
@@ -390,7 +399,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 
 	params := fleetapi.GetV1NodesParams{
 		View:             nodeViewParam(view),
-		AgentType:        optionalEnum[fleetapi.GetV1NodesParamsAgentType](opts.AgentType),
+		DataSource:       optionalEnum[fleetapi.GetV1NodesParamsDataSource](opts.DataSource),
 		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
 		Hostname:         optionalString(opts.Hostname),
 		NodeName:         optionalString(opts.NodeName),
@@ -428,7 +437,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if view == NodeViewBasic {
 		return decodeBasicNodes(resp.Body)
 	}
-	if opts.AgentType == NodeAgentTypeOOB {
+	if opts.DataSource == NodeDataSourceOOB {
 		return decodeOOBDetailNodes(resp.Body)
 	}
 
@@ -440,7 +449,7 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 	return c.DescribeNodeWithOptions(ctx, nodeUUID, DescribeNodeOptions{})
 }
 
-// Retrieves agent-specific detail for a single node using the configured API client
+// Retrieves source-specific detail for a single node using the configured API client
 func (c *Client) DescribeNodeWithOptions(
 	ctx context.Context,
 	nodeUUID string,
@@ -452,12 +461,12 @@ func (c *Client) DescribeNodeWithOptions(
 	if nodeUUID == "" {
 		return NodeDetails{}, fmt.Errorf("node UUID is required")
 	}
-	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return NodeDetails{}, invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
+	if err := opts.DataSource.Validate(); err != nil {
+		return NodeDetails{}, err
 	}
 
 	params := fleetapi.GetV1NodesNodeUuidParams{
-		AgentType: optionalEnum[fleetapi.GetV1NodesNodeUuidParamsAgentType](opts.AgentType),
+		DataSource: optionalEnum[fleetapi.GetV1NodesNodeUuidParamsDataSource](opts.DataSource),
 	}
 	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, &params)
 	if err != nil {
@@ -468,7 +477,7 @@ func (c *Client) DescribeNodeWithOptions(
 	}
 
 	var node NodeDetails
-	if opts.AgentType == NodeAgentTypeOOB {
+	if opts.DataSource == NodeDataSourceOOB {
 		var data fleetapi.ModelsOobNodeDetailsResponse
 		if err := json.Unmarshal(resp.Body, &data); err != nil {
 			return NodeDetails{}, err
@@ -489,9 +498,9 @@ func (c *Client) DescribeNodeWithOptions(
 // The accepted values named in each node option's error
 const (
 	nodeViewValues              = "basic or detail"
-	nodeAgentTypeValues         = "inband or oob"
+	nodeDataSourceValues        = "inband or oob"
 	nodeHealthValues            = "Healthy, Degraded, Unhealthy, or Unknown"
-	nodeAgentStatusValues       = "Online, Offline, or Unknown"
+	nodeAgentStatusValues       = "Online or Offline"
 	nodeVerificationCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
 	nodeFirmwareCheckValues     = "Passed, Failed, or Unknown"
 	nodeOrderValues             = "asc or desc"
@@ -514,8 +523,8 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 		return "", invalidOption("view", "node view", string(view), nodeViewValues)
 	}
 
-	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return "", invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
+	if err := opts.DataSource.Validate(); err != nil {
+		return "", err
 	}
 	for _, status := range opts.HealthStatuses {
 		if !status.Valid() {
@@ -557,19 +566,18 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 		// the value here is the backend spelling of a sort field a front end
 		// may name differently.
 		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
-			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, or bmcHostname")
+			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, bmcHostname, nodegroup, computezone, gpuType, or gpuCount")
 		}
 	}
 
 	return view, nil
 }
 
-// Reports whether a sort field works with basic view. Basic responses carry
-// only the identity columns, so those are the only fields there is anything to
-// sort on.
+// Reports whether a sort field is supported by basic-view queries.
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname:
+	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname,
+		NodeSortByNodeGroup, NodeSortByComputeZone, NodeSortByGPUType, NodeSortByGPUCount:
 		return true
 	default:
 		return false
@@ -659,7 +667,7 @@ func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
 		UUID:                       node.NodeUUID,
 		Hostname:                   stringValue(node.Hostname),
-		AgentType:                  stringValue(node.AgentType),
+		DataSource:                 node.DataSource,
 		AgentVersion:               stringValue(node.AgentVersion),
 		ComputeZone:                stringValue(node.ComputeZone),
 		NodeGroup:                  stringValue(node.NodeGroup),
@@ -687,13 +695,15 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 		UUID:                       node.NodeUUID,
 		NodeName:                   stringValue(node.NodeName),
 		NodeKind:                   nodeKindFromGenerated(node.NodeKind),
-		AgentType:                  stringValue(node.AgentType),
+		DataSource:                 node.DataSource,
 		AgentVersion:               stringValue(node.AgentVersion),
 		BMCHostname:                stringValue(node.BmcHostname),
 		BMCIP:                      stringValue(node.BmcIP),
 		ComputeZone:                stringValue(node.ComputeZone),
 		NodeGroup:                  stringValue(node.NodeGroup),
 		Health:                     enumStringValue(node.HealthStatus),
+		GPUType:                    stringValue(node.GpuType),
+		GPUCount:                   cloneInt(node.GpuCount),
 		AgentStatus:                enumStringValue(node.AgentStatus),
 		VerificationCheck:          enumStringValue(node.VerificationCheck),
 		VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
@@ -720,7 +730,7 @@ func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsRespons
 		Node: Node{
 			UUID:                       node.NodeUUID,
 			Hostname:                   stringValue(node.Hostname),
-			AgentType:                  stringValue(node.AgentType),
+			DataSource:                 node.DataSource,
 			AgentVersion:               stringValue(node.AgentVersion),
 			ComputeZone:                stringValue(node.ComputeZone),
 			NodeGroup:                  stringValue(node.NodeGroup),
@@ -760,13 +770,15 @@ func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) Nod
 			UUID:                       node.NodeUUID,
 			NodeName:                   stringValue(node.NodeName),
 			NodeKind:                   nodeKindFromGenerated(node.NodeKind),
-			AgentType:                  stringValue(node.AgentType),
+			DataSource:                 node.DataSource,
 			AgentVersion:               stringValue(node.AgentVersion),
 			BMCHostname:                stringValue(node.BmcHostname),
 			BMCIP:                      stringValue(node.BmcIP),
 			ComputeZone:                stringValue(node.ComputeZone),
 			NodeGroup:                  stringValue(node.NodeGroup),
 			Health:                     enumStringValue(node.HealthStatus),
+			GPUType:                    stringValue(node.GpuType),
+			GPUCount:                   cloneInt(node.GpuCount),
 			AgentStatus:                enumStringValue(node.AgentStatus),
 			VerificationCheck:          enumStringValue(node.VerificationCheck),
 			VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),

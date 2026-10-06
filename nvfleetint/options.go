@@ -92,23 +92,38 @@ type SortingDefaults struct {
 	Order string `json:"order"`
 }
 
-// GetNodeFilterOptions gets the filters and sorting choices available when
-// listing nodes. An empty agentType leaves the view to the backend default.
-// The OOB (BMC/Redfish) view returns a reduced set of filters and sort fields.
-func (c *Client) GetNodeFilterOptions(ctx context.Context, agentType NodeAgentType) (FilterOptions, error) {
-	if agentType != "" && !agentType.Valid() {
-		return FilterOptions{}, fmt.Errorf("invalid node agent type %q: expected inband or oob", agentType)
-	}
+// NodeFilterOptionsRequest selects the node view and source for filter discovery.
+// With no source, detail defaults to in-band and basic combines both sources.
+type NodeFilterOptionsRequest struct {
+	View       NodeView
+	DataSource NodeDataSource
+}
 
+// Validate checks the view and source before a request is made.
+func (opts NodeFilterOptionsRequest) Validate() error {
+	if opts.View != "" && !opts.View.Valid() {
+		return invalidOption("view", "node view", string(opts.View), nodeViewValues)
+	}
+	return opts.DataSource.Validate()
+}
+
+// GetNodeFilterOptions gets the filters and sorting choices for detail view.
+func (c *Client) GetNodeFilterOptions(ctx context.Context, dataSource NodeDataSource) (FilterOptions, error) {
+	return c.GetNodeFilterOptionsWithOptions(ctx, NodeFilterOptionsRequest{DataSource: dataSource})
+}
+
+// GetNodeFilterOptionsWithOptions gets the filters and sorting choices for the
+// selected view. Basic view omits health-dependent filters and sorts.
+func (c *Client) GetNodeFilterOptionsWithOptions(ctx context.Context, opts NodeFilterOptionsRequest) (FilterOptions, error) {
+	if err := opts.Validate(); err != nil {
+		return FilterOptions{}, err
+	}
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
-
-	params := fleetapi.GetV1NodesOptionsParams{}
-	if agentType != "" {
-		value := fleetapi.GetV1NodesOptionsParamsAgentType(agentType)
-		params.AgentType = &value
+	params := fleetapi.GetV1NodesOptionsParams{
+		View:       optionalEnum[fleetapi.GetV1NodesOptionsParamsView](opts.View),
+		DataSource: optionalEnum[fleetapi.GetV1NodesOptionsParamsDataSource](opts.DataSource),
 	}
-
 	resp, err := c.api.GetV1NodesOptions(ctx, &params)
 	if err != nil {
 		return FilterOptions{}, err

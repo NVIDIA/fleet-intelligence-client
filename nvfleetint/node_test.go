@@ -240,8 +240,8 @@ func TestDescribeNodeSendsAuthAndDecodesDetails(t *testing.T) {
 // Verifies OOB detail selection and nested inventory decoding
 func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("agentType"); got != "oob" {
-			t.Fatalf("unexpected agentType: %q", got)
+		if got := r.URL.Query().Get("dataSource"); got != "oob" {
+			t.Fatalf("unexpected dataSource: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -249,7 +249,7 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 			"hostname":"host-001",
 			"nodeName":"machine-001",
 			"nodeKind":"nvswitch",
-			"agentType":"oob",
+			"dataSource":"oob",
 			"bmcHostname":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
@@ -272,12 +272,12 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.DescribeNodeWithOptions(context.Background(), "node-oob-1", DescribeNodeOptions{
-		AgentType: NodeAgentTypeOOB,
+		DataSource: NodeDataSourceOOB,
 	})
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.NodeKind != NodeKindNVSwitch ||
+	if got.DataSource != "oob" || got.NodeName != "machine-001" || got.NodeKind != NodeKindNVSwitch ||
 		got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
 	}
@@ -305,11 +305,11 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 func TestListNodesOOB(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		if query.Get("agentType") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "nodeName" {
+		if query.Get("dataSource") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "nodeName" {
 			t.Fatalf("unexpected query: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -318,7 +318,7 @@ func TestListNodesOOB(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		AgentType:   NodeAgentTypeOOB,
+		DataSource:  NodeDataSourceOOB,
 		NodeName:    "machine",
 		BMCHostname: "bmc",
 		SortBy:      NodeSortByNodeName,
@@ -391,7 +391,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		want string
 	}{
 		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
-		{name: "agent type", opts: ListNodesOptions{AgentType: "sideband"}, want: "invalid node agent type"},
+		{name: "data source", opts: ListNodesOptions{DataSource: "sideband"}, want: "invalid node data source"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
 		{name: "verification", opts: ListNodesOptions{VerificationChecks: []NodeVerificationCheck{"Missing"}}, want: "invalid node verification check"},
@@ -510,13 +510,12 @@ func TestListNodesOptionsValidate(t *testing.T) {
 	}
 }
 
-// Verifies basic view accepts only the columns it actually returns. The CLI and
-// the SDK used to answer this differently, so it is pinned on both sides.
+// Verifies basic view accepts identity and inventory sorting, but not health sorting.
 func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
-	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname}
+	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname,
+		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone}
 	rejected := []NodeSortBy{
 		NodeSortByHealthStatus, NodeSortByVerificationCheck, NodeSortByAgentStatus,
-		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone,
 	}
 
 	for _, sortBy := range accepted {
