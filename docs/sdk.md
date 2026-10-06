@@ -92,8 +92,11 @@ report, err := client.GetInventoryReport(ctx, nvfleetint.InventoryReportOptions{
 })
 ```
 
-OOB report rows expose `NodeName`, `BMCHostname`, and `BMCIP`, plus shared
-verification, location, enrollment, and removal information. Source selection
+OOB report rows expose `NodeName`, `BMCHostname`, `BMCIP`, `GPUType`, and
+`GPUCount`, plus shared verification, location, enrollment, and removal
+information. GPU fields come from the selected source; a missing GPU count
+remains nil, while a reported zero remains zero. Both sources support
+`InventoryReportSortByGPUType` and `InventoryReportSortByGPUCount`. Source selection
 also applies to CSV and signed bundle downloads. `GetNodeFilterOptions(ctx, dataSource)`
 accepts `NodeDataSource` for detail-view callers.
 

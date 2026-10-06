@@ -3547,9 +3547,11 @@ paths:
     get:
       description: 'Get an agent-source-specific inventory report in JSON or CSV format.
         dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob
-        returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default
-        response is JSON. For CSV download, set format=csv. For a signed CSV bundle
-        (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv
+        returns the shared report fields plus nodeName, bmcHostname, and bmcIP. GPU
+        type and count come from the selected source.
+
+        Default response is JSON. For CSV download, set format=csv. For a signed CSV
+        bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv
         and signed=true.
 
         Each node includes enrolledAt (original enrollment time, preserved across
@@ -3557,8 +3559,7 @@ paths:
         auto-removed alike; absent for active nodes).
 
         JSON responses include the preferred location and verification-check fields
-        plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
-        CSV and signed ZIP report columns are unchanged.'
+        plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.'
       operationId: getV1ReportsInventory
       parameters:
         - description: Page number (0-indexed). Not used for CSV format
@@ -3643,11 +3644,11 @@ paths:
           name: endTime
           schema:
             type: string
-        - description: 'Field to sort by. In-band fields: hostname, gpuType, gpuCount,
-            publicIP, privateIP. OOB fields: nodeName, bmcHostname, bmcIP. Shared
-            fields: nodeUUID, nodeGroup, computeZone, verificationCheck, location.
-            integrityCheck and geoLocation remain deprecated aliases. Defaults to
-            hostname for inband and bmcHostname for oob.'
+        - description: 'Field to sort by. In-band fields: hostname, publicIP, privateIP.
+            OOB fields: nodeName, bmcHostname, bmcIP. Shared fields: nodeUUID, nodeGroup,
+            computeZone, gpuType, gpuCount, verificationCheck, location. integrityCheck
+            and geoLocation remain deprecated aliases. Defaults to hostname for inband
+            and bmcHostname for oob.'
           in: query
           name: sortBy
           schema:
@@ -6248,7 +6249,7 @@ components:
           type: array
           uniqueItems: false
         gpuType:
-          example: NVIDIA-T400-4GB
+          example: NVIDIA-H100-80GB-HBM3
           type: string
         gpuUUIDs:
           example:
@@ -7837,6 +7838,12 @@ components:
           $ref: '#/components/schemas/models.GeoLocation'
           deprecated: true
           description: 'Deprecated: use location.'
+        gpuCount:
+          example: 4
+          type: integer
+        gpuType:
+          example: NVIDIA-H100-80GB-HBM3
+          type: string
         integrityCheck:
           $ref: '#/components/schemas/models.IntegrityCheck'
           deprecated: true

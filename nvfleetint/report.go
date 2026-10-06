@@ -718,6 +718,8 @@ func decodeOOBInventoryReport(data []byte) (InventoryReport, error) {
 				BMCIP:                     stringValue(node.BmcIP),
 				ComputeZone:               stringValue(node.ComputeZone),
 				NodeGroup:                 stringValue(node.NodeGroup),
+				GPUType:                   stringValue(node.GpuType),
+				GPUCount:                  cloneInt(node.GpuCount),
 				VerificationCheck:         enumStringValue(node.VerificationCheck),
 				VerificationCheckReason:   stringValue(node.VerificationCheckReason),
 				LastVerificationCheckTime: stringValue(node.LastVerificationCheckTS),

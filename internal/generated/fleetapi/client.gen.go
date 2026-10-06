@@ -3293,6 +3293,8 @@ type ModelsOobInventoryNode struct {
 	// GeoLocation Deprecated: use location.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GeoLocation *ModelsGeoLocation `json:"geoLocation,omitempty"`
+	GpuCount    *int               `json:"gpuCount,omitempty"`
+	GpuType     *string            `json:"gpuType,omitempty"`
 
 	// IntegrityCheck Deprecated: use verificationCheck.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -4857,7 +4859,7 @@ type GetV1ReportsInventoryParams struct {
 	// EndTime End time for filtering nodes active during period (RFC3339 format, e.g., 2024-12-31T23:59:59Z)
 	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
 
-	// SortBy Field to sort by. In-band fields: hostname, gpuType, gpuCount, publicIP, privateIP. OOB fields: nodeName, bmcHostname, bmcIP. Shared fields: nodeUUID, nodeGroup, computeZone, verificationCheck, location. integrityCheck and geoLocation remain deprecated aliases. Defaults to hostname for inband and bmcHostname for oob.
+	// SortBy Field to sort by. In-band fields: hostname, publicIP, privateIP. OOB fields: nodeName, bmcHostname, bmcIP. Shared fields: nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, verificationCheck, location. integrityCheck and geoLocation remain deprecated aliases. Defaults to hostname for inband and bmcHostname for oob.
 	SortBy *GetV1ReportsInventoryParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort order (asc, desc)
@@ -6122,9 +6124,10 @@ type ClientInterface interface {
 
 	// GetV1ReportsInventory Get inventory report
 	//
-	// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+	// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. GPU type and count come from the selected source.
+	// Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 	// Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
-	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
+	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 	//
 	// Corresponds with GET /v1/reports/inventory (the `GetV1ReportsInventory` operationId).
 	GetV1ReportsInventory(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -7186,9 +7189,10 @@ func (c *Client) GetV1ReportsError(ctx context.Context, params *GetV1ReportsErro
 
 // GetV1ReportsInventory Get inventory report
 //
-// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. GPU type and count come from the selected source.
+// Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 // Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
-// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
+// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 //
 // Corresponds with GET /v1/reports/inventory (the `GetV1ReportsInventory` operationId).
 func (c *Client) GetV1ReportsInventory(ctx context.Context, params *GetV1ReportsInventoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13029,9 +13033,10 @@ type ClientWithResponsesInterface interface {
 
 	// GetV1ReportsInventoryWithResponse Get inventory report
 	//
-	// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+	// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. GPU type and count come from the selected source.
+	// Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 	// Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
-	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
+	// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -17838,9 +17843,10 @@ func (c *ClientWithResponses) GetV1ReportsErrorWithResponse(ctx context.Context,
 
 // GetV1ReportsInventoryWithResponse Get inventory report
 //
-// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
+// Get an agent-source-specific inventory report in JSON or CSV format. dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob returns the shared report fields plus nodeName, bmcHostname, and bmcIP. GPU type and count come from the selected source.
+// Default response is JSON. For CSV download, set format=csv. For a signed CSV bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv and signed=true.
 // Each node includes enrolledAt (original enrollment time, preserved across re-enrollment) and removedAt (soft-delete time for removed nodes, manual and auto-removed alike; absent for active nodes).
-// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility. CSV and signed ZIP report columns are unchanged.
+// JSON responses include the preferred location and verification-check fields plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
 //
 // Returns a wrapper object for the known response body format(s).
 //

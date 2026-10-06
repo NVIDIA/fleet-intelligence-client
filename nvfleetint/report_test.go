@@ -500,3 +500,53 @@ func TestGetErrorReportRejectsInvalidOptions(t *testing.T) {
 		})
 	}
 }
+
+// OOB GPU fields are optional: absent/null counts must not become measured zero.
+func TestGetOOBInventoryReportGPUFields(t *testing.T) {
+	const body = `{"nodes":[
+  {"nodeUUID":"gpu","gpuType":"NVIDIA-H100-80GB-HBM3","gpuCount":8},
+  {"nodeUUID":"zero","gpuCount":0},
+  {"nodeUUID":"missing"},
+  {"nodeUUID":"null","gpuType":null,"gpuCount":null}
+ ],"page":0,"pageSize":10,"total":4,"hasMore":false}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("dataSource") != "oob" {
+			t.Errorf("unexpected source: %s", r.URL)
+		}
+		sortBy := r.URL.Query().Get("sortBy")
+		if sortBy != "gpuType" && sortBy != "gpuCount" {
+			t.Errorf("missing GPU sort: %s", r.URL)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sortBy := range []InventoryReportSortBy{InventoryReportSortByGPUType, InventoryReportSortByGPUCount} {
+		report, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{DataSource: NodeDataSourceOOB, SortBy: sortBy})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(report.Nodes) != 4 {
+			t.Fatalf("unexpected nodes: %#v", report.Nodes)
+		}
+		gpu := report.Nodes[0]
+		if gpu.GPUType != "NVIDIA-H100-80GB-HBM3" || gpu.GPUCount == nil || *gpu.GPUCount != 8 {
+			t.Fatalf("lost GPU fields: %#v", gpu)
+		}
+		if count := report.Nodes[1].GPUCount; count == nil || *count != 0 {
+			t.Fatalf("lost reported zero: %v", count)
+		}
+		for _, node := range report.Nodes[2:] {
+			if node.GPUType != "" || node.GPUCount != nil {
+				t.Fatalf("invented missing GPU fields: %#v", node)
+			}
+		}
+		if string(report.RawJSON) != body {
+			t.Fatalf("raw JSON changed: %s", report.RawJSON)
+		}
+	}
+}

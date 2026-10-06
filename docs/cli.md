@@ -180,9 +180,10 @@ type and count when available.
 all pages for each. JSON output, CSV, and signed CSV bundles require
 `--data-source inband` or `--data-source oob` and contain one source.
 An explicit source also selects a single table. OOB rows use node name, BMC hostname, and BMC
-IP; shared enrollment/removal times and verification fields remain available.
-In-band-only report sorts include hostname, GPU fields, and public/private IP;
-OOB identity sorts are `nodeName`, `bmcHostname`, and `bmcIP`.
+IP, plus GPU type and count from the OOB source; shared enrollment/removal
+times and verification fields remain available. Both sources support `gpuType`
+and `gpuCount` sorting. In-band-only sorts include hostname and public/private
+IP; OOB identity sorts are `nodeName`, `bmcHostname`, and `bmcIP`.
 
 ```bash
 nvfleetint node list --view basic --gpu-type NVIDIA-H100 --sort-by gpuCount

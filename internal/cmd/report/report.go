@@ -821,10 +821,12 @@ func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.Inventory
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
+			clioutput.DisplayString(node.GPUType),
+			clioutput.FormatOptionalInt(node.GPUCount),
 			clioutput.DisplayString(node.VerificationCheck),
 		})
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "VERIFICATION CHECK"}, rows)
+	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK"}, rows)
 }
 
 // Renders inventory report nodes as a table

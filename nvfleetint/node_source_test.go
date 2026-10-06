@@ -86,7 +86,7 @@ func TestNodeSourceRequestsAndResponses(t *testing.T) {
 			}
 			if source == "oob" {
 				n := report.Nodes[0]
-				if report.DataSource != NodeDataSourceOOB || n.NodeName != "machine" || n.BMCHostname != "bmc" || n.BMCIP != "192.0.2.1" || n.EnrolledAt == "" || n.RemovedAt == "" || n.VerificationCheck != "Verified" || n.Location == nil {
+				if report.DataSource != NodeDataSourceOOB || n.NodeName != "machine" || n.BMCHostname != "bmc" || n.BMCIP != "192.0.2.1" || n.EnrolledAt == "" || n.RemovedAt == "" || n.VerificationCheck != "Verified" || n.Location == nil || n.GPUType != "H100" || n.GPUCount == nil || *n.GPUCount != 8 {
 					t.Fatalf("lost OOB report fields: %#v", report)
 				}
 			}
