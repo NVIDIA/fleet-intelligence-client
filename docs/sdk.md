@@ -68,8 +68,10 @@ if err == nil && node.OOBInventory != nil {
 ```
 
 The shared `DataSource` type and `DataSourceInband` / `DataSourceOOB` constants
-are used by nodes, inventory reports, alerts, and events. Node and inventory
-requests accept one source; alert timeline and event filters accept `[]DataSource`.
+are used by nodes, inventory reports, alerts, events, and XID bursts.
+Node and inventory requests accept one source; alert timeline and event filters accept `[]DataSource`.
+XID burst list/options also accept `DataSourceAll`; omission defaults to in-band.
+Use the same source for the list and its filter-options lookup.
 
 Use `DataSource` on `ListNodesOptions`, `DescribeNodeOptions`,
 `NodeFilterOptionsRequest`, and `InventoryReportOptions`. This is a breaking

@@ -28,6 +28,7 @@ const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone
 
 // Stores local flag values for node list
 type nodeListFlags struct {
+	search            string
 	view              string
 	dataSource        string
 	nodeUUIDs         string
@@ -146,6 +147,7 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.gpuCount, "gpu-count", "", "Comma-separated GPU counts to filter")
 	cmd.Flags().StringVar(&flags.publicIP, "public-ip", "", "Comma-separated public IP addresses to filter")
 	cmd.Flags().StringVar(&flags.privateIP, "private-ip", "", "Comma-separated private IP addresses to filter")
+	cmd.Flags().StringVar(&flags.search, "search", "", "Case-insensitive partial match across node UUID and source-appropriate names (all names in combined basic view)")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.nodeName, "node-name", "", "Node name partial match (OOB view)")
 	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
@@ -189,7 +191,7 @@ func newNodeDescribeCmd() *cobra.Command {
 var nodeListFilterAndSortFlagNames = []string{
 	"node-uuids", "health", "compute-zone-ids", "compute-zone-names",
 	"nodegroup-ids", "nodegroup-names", "gpu-type", "gpu-count",
-	"public-ip", "private-ip", "hostname", "node-name", "bmc-hostname",
+	"public-ip", "private-ip", "search", "hostname", "node-name", "bmc-hostname",
 	"agent-status", "verification-check", "firmware-check", "sort-by", "order",
 }
 
@@ -495,6 +497,7 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 	var err error
 
 	opts := nvfleetint.ListNodesOptions{
+		Search:      strings.TrimSpace(flags.search),
 		View:        nvfleetint.NodeView(flags.view),
 		DataSource:  nvfleetint.DataSource(flags.dataSource),
 		Hostname:    strings.TrimSpace(flags.hostname),

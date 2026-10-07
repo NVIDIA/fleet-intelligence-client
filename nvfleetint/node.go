@@ -121,6 +121,11 @@ func (order NodeSortOrder) Valid() bool {
 
 // Represents request options for listing nodes
 type ListNodesOptions struct {
+	// Search matches node UUID and source-appropriate names, case-insensitively.
+	// Inband searches hostname; OOB searches nodeName and bmcHostname; combined
+	// basic searches all three. Surrounding whitespace is ignored; blank is omitted.
+	Search string
+
 	View               NodeView
 	DataSource         DataSource
 	NodeUUIDs          []string
@@ -382,6 +387,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 		View:             nodeViewParam(view),
 		DataSource:       optionalEnum[fleetapi.GetV1NodesParamsDataSource](opts.DataSource),
 		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
+		Search:           optionalTrimmedString(opts.Search),
 		Hostname:         optionalString(opts.Hostname),
 		NodeName:         optionalString(opts.NodeName),
 		BmcHostname:      optionalString(opts.BMCHostname),

@@ -16,6 +16,10 @@ import (
 )
 
 const (
+	XIDBurstSortByDataSource                      XIDBurstSortBy = "dataSource"
+	XIDBurstSortByGPUType                         XIDBurstSortBy = "gpuType"
+	XIDBurstSortByNodeName                        XIDBurstSortBy = "nodeName"
+	XIDBurstSortByBMCHostname                     XIDBurstSortBy = "bmcHostname"
 	XIDBurstSortByJobDisruption                   XIDBurstSortBy = "jobDisruption"
 	XIDBurstSortByJobDisruptionDueToPlatformIssue XIDBurstSortBy = "jobDisruptionDueToPlatformIssue"
 	XIDBurstSortByCategory                        XIDBurstSortBy = "category"
@@ -60,6 +64,9 @@ func (order XIDBurstSortOrder) Valid() bool {
 // StartTime and EndTime (absolute), but not both. Values within each slice
 // filter are OR-combined; filters of different kinds are AND-combined.
 type ListXIDBurstsOptions struct {
+	// DataSource selects inband (default), oob, or all observation paths.
+	DataSource DataSource
+
 	Window    string
 	StartTime string
 	EndTime   string
@@ -77,6 +84,10 @@ type ListXIDBurstsOptions struct {
 	JobDisruptionDueToPlatformIssue *bool
 	XIDNumbers                      []int
 
+	GPUTypes []string
+	// NameSearch matches hostname, OOB node name, or BMC hostname.
+	NameSearch string
+	// Deprecated: use NameSearch, which takes precedence when both are supplied.
 	HostnameSearch             string
 	CategorySearch             string
 	SubcategorySearch          string
@@ -124,18 +135,26 @@ func (page XIDBurstsPage) PageInfo() PageInfo {
 // the caller's persona: category, subcategory, platform-attributed disruption,
 // XID descriptions, and DC-admin actions are omitted for tenant callers.
 type XIDBurst struct {
-	BurstID                         string            `json:"burstId,omitempty"`
-	NodeUUID                        string            `json:"nodeUuid,omitempty"`
-	Hostname                        string            `json:"hostname,omitempty"`
-	NodeGroup                       string            `json:"nodeGroup,omitempty"`
-	NodeGroupID                     string            `json:"nodeGroupId,omitempty"`
-	ComputeZone                     string            `json:"computeZone,omitempty"`
-	ComputeZoneID                   string            `json:"computeZoneId,omitempty"`
-	StartTime                       string            `json:"startTime,omitempty"`
-	EndTime                         string            `json:"endTime,omitempty"`
-	BurstDurationSeconds            *int              `json:"burstDurationSeconds,omitempty"`
-	XIDCount                        *int              `json:"xidCount,omitempty"`
-	XIDNumbers                      []XIDBurstXID     `json:"xidNumbers,omitempty"`
+	// DataSource is the detecting path, inband or oob; never all.
+	DataSource string `json:"dataSource,omitempty"`
+	// Identities and GPU type describe the node independently of burst source.
+	NodeName    string `json:"nodeName,omitempty"`
+	BMCHostname string `json:"bmcHostname,omitempty"`
+	GPUType     string `json:"gpuType,omitempty"`
+
+	BurstID              string        `json:"burstId,omitempty"`
+	NodeUUID             string        `json:"nodeUuid,omitempty"`
+	Hostname             string        `json:"hostname,omitempty"`
+	NodeGroup            string        `json:"nodeGroup,omitempty"`
+	NodeGroupID          string        `json:"nodeGroupId,omitempty"`
+	ComputeZone          string        `json:"computeZone,omitempty"`
+	ComputeZoneID        string        `json:"computeZoneId,omitempty"`
+	StartTime            string        `json:"startTime,omitempty"`
+	EndTime              string        `json:"endTime,omitempty"`
+	BurstDurationSeconds *int          `json:"burstDurationSeconds,omitempty"`
+	XIDCount             *int          `json:"xidCount,omitempty"`
+	XIDNumbers           []XIDBurstXID `json:"xidNumbers,omitempty"`
+	// DeviceIDs keys are opaque labels: PCI IDs, GPU UUIDs, or unresolved Redfish tokens.
 	DeviceIDs                       map[string][]int  `json:"deviceIds,omitempty"`
 	JobDisruption                   *bool             `json:"jobDisruption,omitempty"`
 	JobDisruptionDueToPlatformIssue *bool             `json:"jobDisruptionDueToPlatformIssue,omitempty"`
@@ -163,7 +182,7 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
-	if err := validateListXIDBurstsOptions(opts); err != nil {
+	if err := opts.Validate(); err != nil {
 		return XIDBurstsPage{}, err
 	}
 	timeRange, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
@@ -173,6 +192,8 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 
 	mode := fleetapi.GetV1XIDBurstsParamsTimeMode(timeRange.timeMode)
 	params := fleetapi.GetV1XIDBurstsParams{TimeMode: &mode}
+	params.DataSource = optionalEnum[fleetapi.GetV1XIDBurstsParamsDataSource](opts.DataSource)
+	params.GpuTypes = optionalSlice(opts.GPUTypes)
 	params.Window = optionalString(timeRange.window)
 	params.StartTime = optionalString(timeRange.startTime)
 	params.EndTime = optionalString(timeRange.endTime)
@@ -184,7 +205,10 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 	params.JobDisruption = cloneBool(opts.JobDisruption)
 	params.JobDisruptionDueToPlatformIssue = cloneBool(opts.JobDisruptionDueToPlatformIssue)
 	params.XidNumbers = optionalSlice(opts.XIDNumbers)
-	params.HostnameSearch = optionalTrimmedString(opts.HostnameSearch)
+	params.NameSearch = optionalTrimmedString(opts.NameSearch)
+	if params.NameSearch == nil {
+		params.NameSearch = optionalTrimmedString(opts.HostnameSearch)
+	}
 	params.CategorySearch = optionalTrimmedString(opts.CategorySearch)
 	params.SubcategorySearch = optionalTrimmedString(opts.SubcategorySearch)
 	params.TenantActionSearch = optionalTrimmedString(opts.TenantActionSearch)
@@ -259,8 +283,18 @@ func (c *Client) DescribeXIDBurst(ctx context.Context, burstID string) (XIDBurst
 	}, nil
 }
 
-// Checks XID burst list options before making the request
-func validateListXIDBurstsOptions(opts ListXIDBurstsOptions) error {
+func validateXIDBurstDataSource(source DataSource) error {
+	if source != "" && !fleetapi.GetV1XIDBurstsParamsDataSource(source).Valid() {
+		return invalidOption("dataSource", "XID burst data source", string(source), "inband, oob, or all")
+	}
+	return nil
+}
+
+// Validate checks source, sort, and filter combinations before a request.
+func (opts ListXIDBurstsOptions) Validate() error {
+	if err := validateXIDBurstDataSource(opts.DataSource); err != nil {
+		return err
+	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
 		return fmt.Errorf("invalid XID burst sort %q", opts.SortBy)
 	}
@@ -284,6 +318,10 @@ func validateListXIDBurstsOptions(opts ListXIDBurstsOptions) error {
 // Maps XID burst list items into SDK values
 func xidBurstFromGenerated(item fleetapi.ModelsXIDBurstListItem) XIDBurst {
 	return XIDBurst{
+		DataSource:                      stringValue(item.DataSource),
+		NodeName:                        stringValue(item.NodeName),
+		BMCHostname:                     stringValue(item.BmcHostname),
+		GPUType:                         stringValue(item.GpuType),
 		BurstID:                         item.BurstId,
 		NodeUUID:                        item.NodeUuid,
 		Hostname:                        stringValue(item.Hostname),
@@ -360,6 +398,8 @@ const (
 // filters/sorting envelope the node and alert endpoints use, and publishes no
 // sorting metadata.
 type XIDBurstFilterOptions struct {
+	DataSource                      string            `json:"dataSource,omitempty"`
+	GPUTypes                        []string          `json:"gpuTypes,omitempty"`
 	XIDNumbers                      []int             `json:"xidNumbers"`
 	Categories                      []string          `json:"categories"`
 	Subcategories                   []string          `json:"subcategories"`
@@ -371,13 +411,16 @@ type XIDBurstFilterOptions struct {
 
 // XIDBurstFilterOptionsScope narrows the values an options lookup returns to
 // those present in a time range and inventory scope. Every field is optional;
-// the zero value asks for every value available to the caller. The time range
+// the zero value asks for available in-band values. The time range
 // follows the same rules as the burst list: a window selects a relative range,
 // start and end select an absolute one, and the two cannot be combined.
 //
 // The backend applies no table column filters here, so narrowing by anything
 // other than these fields is not available.
 type XIDBurstFilterOptionsScope struct {
+	// DataSource selects inband (default), oob, or all observation paths.
+	DataSource DataSource
+
 	Window    string
 	StartTime string
 	EndTime   string
@@ -404,7 +447,8 @@ func (scope XIDBurstFilterOptionsScope) hasTimeRange() bool {
 // bursts. Categories, subcategories, platform-disruption values, and DC-admin
 // actions are returned only to cloud-provider/NCP callers, so a tenant key sees
 // a reduced set. The scope optionally narrows the values to a time range and
-// inventory selection; pass the zero value for everything available.
+// inventory selection. Use the same DataSource as the list, including all
+// for combined results; omission defaults to inband.
 func (c *Client) GetXIDBurstFilterOptions(ctx context.Context, scope XIDBurstFilterOptionsScope) (XIDBurstFilterOptions, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
@@ -440,6 +484,9 @@ func (c *Client) GetXIDBurstFilterOptions(ctx context.Context, scope XIDBurstFil
 // range is optional here, unlike the burst list, so it is normalized only when
 // the caller supplied one.
 func buildXIDBurstFilterOptionsParams(scope XIDBurstFilterOptionsScope) (*fleetapi.GetV1XIDBurstOptionsParams, error) {
+	if err := validateXIDBurstDataSource(scope.DataSource); err != nil {
+		return nil, err
+	}
 	if len(scope.NodeGroupIDs) > 0 && len(scope.ExcludeNodeGroupIDs) > 0 {
 		return nil, errors.New("node group include and exclude filters cannot be combined")
 	}
@@ -448,6 +495,7 @@ func buildXIDBurstFilterOptionsParams(scope XIDBurstFilterOptionsScope) (*fleeta
 	}
 
 	params := fleetapi.GetV1XIDBurstOptionsParams{
+		DataSource:            optionalEnum[fleetapi.GetV1XIDBurstOptionsParamsDataSource](scope.DataSource),
 		NodeGroupIds:          optionalSlice(scope.NodeGroupIDs),
 		ComputeZoneIds:        optionalSlice(scope.ComputeZoneIDs),
 		ExcludeNodeGroupIds:   optionalSlice(scope.ExcludeNodeGroupIDs),
@@ -467,4 +515,10 @@ func buildXIDBurstFilterOptionsParams(scope XIDBurstFilterOptionsScope) (*fleeta
 	params.StartTime = optionalString(timeRange.startTime)
 	params.EndTime = optionalString(timeRange.endTime)
 	return &params, nil
+}
+
+// Validate checks the optional source, time range, and inventory scope.
+func (scope XIDBurstFilterOptionsScope) Validate() error {
+	_, err := buildXIDBurstFilterOptionsParams(scope)
+	return err
 }

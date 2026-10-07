@@ -3,16 +3,19 @@
 
 package nvfleetint
 
-// DataSource selects a node or inventory source, or identifies an alert or event producer.
+// DataSource selects an inventory source or an alert, event, or XID observation path.
 type DataSource string
 
 const (
 	DataSourceInband DataSource = "inband"
 	DataSourceOOB    DataSource = "oob"
+	// DataSourceAll selects both observation paths on XID burst list/options only.
+	DataSourceAll    DataSource = "all"
 	dataSourceValues            = "inband or oob"
 )
 
-// Valid reports whether the source is one of the supported explicit values.
+// Valid reports whether the value is a concrete source (inband or oob).
+// The all selector is validated separately by endpoints that support it.
 func (source DataSource) Valid() bool {
 	switch source {
 	case DataSourceInband, DataSourceOOB:
@@ -22,7 +25,8 @@ func (source DataSource) Valid() bool {
 	}
 }
 
-// Validate checks an optional source. Empty preserves the endpoint's default.
+// Validate checks an optional concrete source. Empty preserves the endpoint's
+// default; XID burst options validate their additional all selector separately.
 func (source DataSource) Validate() error {
 	if source != "" && !source.Valid() {
 		return invalidOption("dataSource", "data source", string(source), dataSourceValues)

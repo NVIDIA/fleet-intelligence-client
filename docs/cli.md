@@ -112,6 +112,7 @@ nvfleetint computezone list
 nvfleetint nodegroup list
 nvfleetint node list
 nvfleetint node list --data-source oob --bmc-hostname bmc-01
+nvfleetint node list --view basic --search bmc-01
 nvfleetint node describe <node-uuid>
 nvfleetint node describe <node-uuid> --data-source oob --section all
 
@@ -233,7 +234,12 @@ descriptions, and DC-admin actions — are available only to cloud-provider/NCP
 callers. Node groups and compute zones can be filtered inclusively
 (`--nodegroup-ids`, `--compute-zone-ids`) or by exclusion
 (`--exclude-nodegroup-ids`, `--exclude-compute-zone-ids`), but not both for the
-same dimension. `xidburst describe` adds the impacted GPU device IDs, per-XID
+same dimension.
+
+`xidburst list` and `xidburst options` default to in-band; use the same
+`--data-source inband|oob|all` for both. With `all`, the same fault observed on
+both paths remains two distinct bursts. Describe needs only the burst ID.
+`xidburst describe` adds the impacted device labels, per-XID
 catalog details, and suggested actions.
 
 `computezone update` changes one compute zone's type, contact, and location.

@@ -556,7 +556,7 @@ func TestXIDBurstOptionsRendersEmptyFilters(t *testing.T) {
 	}
 	got := out.String()
 	// Every filter except jobDisruption is absent or empty in this payload.
-	if strings.Count(got, "(none)") != 8 {
+	if strings.Count(got, "(none)") != 9 {
 		t.Fatalf("expected every empty filter to render as (none):\n%s", got)
 	}
 	if !strings.Contains(got, "--dc-admin-actions") {

@@ -31,10 +31,14 @@ Read this before querying live data.
 - Node basic list/options combine both sources when omitted, including JSON. Detail list/options and inventory tables fetch both sources separately; pagination and `--all` apply per source. Their detail JSON requires one explicit source and has no source wrapper; inventory CSV/signed downloads also require one.
 - Node describe defaults to both source views; an explicit source selects one. Use `--data-source` in place of the removed node `--agent-type` flag.
 
+- XID burst list/options default to `inband` and accept `oob` or `all`; use the same source for both. Combined results retain separate observations of a fault from each path. Describe resolves the source from the burst ID.
+
 ## Interpretation
 
 - Alert-summary agent-status filters describe current enrollment/liveness even in historical view: OR within a flag, AND across flags, omitted means unrestricted. Missing status data is not `not_enrolled`.
-- Event identity, membership, and GPU type describe current inventory, not inventory at event time. `event options` is a catalog, not evidence of matching events; `Others` matches names outside that catalog.
+- Event and XID burst identity, membership, and GPU type describe current inventory, not inventory at observation time. `event options` is a catalog, not evidence of matching events; `Others` matches names outside that catalog.
+
+XID device-map keys are opaque labels; OOB keys may be GPU UUIDs or unresolved Redfish tokens.
 
 ## JSON names
 

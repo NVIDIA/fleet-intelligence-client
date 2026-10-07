@@ -29,7 +29,7 @@ func TestListXIDBurstsSendsParamsAndDecodes(t *testing.T) {
 			{"timeMode", "relative"},
 			{"window", "24h"},
 			{"nodeUUID", "node-1"},
-			{"hostnameSearch", "gpu-0"},
+			{"nameSearch", "gpu-0"},
 			{"jobDisruption", "true"},
 			{"jobDisruptionDueToPlatformIssue", "false"},
 			{"sortBy", "startTime"},
@@ -209,6 +209,10 @@ func TestListXIDBurstsSendsExclusionFilters(t *testing.T) {
 // Verifies every exported sort field is accepted by the API contract and sent verbatim
 func TestListXIDBurstsSortFields(t *testing.T) {
 	sortFields := []XIDBurstSortBy{
+		XIDBurstSortByDataSource,
+		XIDBurstSortByGPUType,
+		XIDBurstSortByNodeName,
+		XIDBurstSortByBMCHostname,
 		XIDBurstSortByJobDisruption,
 		XIDBurstSortByJobDisruptionDueToPlatformIssue,
 		XIDBurstSortByCategory,

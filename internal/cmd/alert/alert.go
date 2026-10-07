@@ -156,7 +156,9 @@ func newAlertSummaryCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Partial match across hostname, OOB node name, BMC hostname, and node UUID")
+	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Partial match across hostname, OOB node name, BMC hostname, and node UUID")
+	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Compatibility alias for --name-search")
+	cmd.MarkFlagsMutuallyExclusive("name-search", "hostname")
 	cmd.Flags().StringVar(&flags.inbandAgentStatus, "inband-agent-status", "", "Comma-separated in-band statuses: online, offline, not_enrolled (OR within this filter; AND with --oob-agent-status)")
 	cmd.Flags().StringVar(&flags.oobAgentStatus, "oob-agent-status", "", "Comma-separated OOB statuses: online, offline, not_enrolled (OR within this filter; AND with --inband-agent-status)")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
