@@ -127,11 +127,11 @@ func TestEventRowsTruncatesFreeText(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("expected 1 row, got %d", len(rows))
 	}
-	if got := len(rows[0]); got != 7 {
-		t.Fatalf("expected 7 columns, got %d: %q", got, rows[0])
+	if got := len(rows[0]); got != 8 {
+		t.Fatalf("expected 8 columns, got %d: %q", got, rows[0])
 	}
 
-	message := rows[0][5]
+	message := rows[0][6]
 	if runes := []rune(message); len(runes) != eventMessageColumnWidth {
 		t.Fatalf("message column width = %d, want %d", len(runes), eventMessageColumnWidth)
 	}

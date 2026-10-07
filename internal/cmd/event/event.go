@@ -15,22 +15,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Stores local flag values for event list
-type eventListFlags struct {
-	window    string
-	start     string
-	end       string
-	node      string
-	component string
+// Shared flags keep list and bucket queries on the same event selection.
+type eventFilterFlags struct {
+	window                string
+	start                 string
+	end                   string
+	node                  string
+	component             string
+	nameSearch            string
+	dataSource            string
+	nodeGroupIDs          string
+	computeZoneIDs        string
+	excludeNodeGroupIDs   string
+	excludeComputeZoneIDs string
+	eventNames            string
+	severities            string
+	components            string
+	gpuTypes              string
 }
 
-// Stores local flag values for event buckets
+type eventListFlags struct {
+	eventFilterFlags
+	sortBy string
+	order  string
+}
+
 type eventBucketsFlags struct {
-	window     string
-	start      string
-	end        string
-	node       string
-	component  string
+	eventFilterFlags
 	maxBuckets int
 }
 
@@ -51,6 +62,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddCommand(newEventListCmd())
 	cmd.AddCommand(newEventBucketsCmd())
+	cmd.AddCommand(newEventOptionsCmd())
 	cmdutil.RejectUnknownSubcommands(cmd)
 
 	return cmd
@@ -65,7 +77,8 @@ func newEventListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List events",
 		Args:  cobra.NoArgs,
-		Long: `List events filtered by node, component, and a time range.
+		Long: `List events filtered by source, node inventory, event fields, and a time range.
+Use event options to discover filter values and sort fields.
 
 A time range is required: use --window for a relative range, or --start and
 --end for an absolute range.`,
@@ -77,9 +90,9 @@ A time range is required: use --window for a relative range, or --start and
 		},
 	}
 
-	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
-	cmd.Flags().StringVar(&flags.node, "node", "", "Filter by node UUID")
-	cmd.Flags().StringVar(&flags.component, "component", "", "Filter by component")
+	registerEventFilterFlags(cmd, &flags.eventFilterFlags)
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field; see event options (default: timestamp)")
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort direction: asc or desc (default: desc)")
 	cmdutil.RegisterListFlags(cmd, common)
 
 	return cmd
@@ -94,8 +107,8 @@ func newEventBucketsCmd() *cobra.Command {
 		Use:   "buckets",
 		Short: "Show time-bucketed event counts",
 		Args:  cobra.NoArgs,
-		Long: `Show time-bucketed event counts for histogram display, filtered by node,
-component, and a time range.
+		Long: `Show time-bucketed event counts for histogram display, filtered by source,
+node inventory, event fields, and a time range.
 
 A time range is required: use --window for a relative range, or --start and
 --end for an absolute range.`,
@@ -106,9 +119,7 @@ A time range is required: use --window for a relative range, or --start and
 		},
 	}
 
-	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
-	cmd.Flags().StringVar(&flags.node, "node", "", "Filter by node UUID")
-	cmd.Flags().StringVar(&flags.component, "component", "", "Filter by component")
+	registerEventFilterFlags(cmd, &flags.eventFilterFlags)
 	cmd.Flags().IntVar(&flags.maxBuckets, "max-buckets", flags.maxBuckets, fmt.Sprintf("Maximum number of buckets (1-%d)", nvfleetint.MaxEventBuckets))
 	cmdutil.RegisterReadFlags(cmd, common)
 
@@ -124,17 +135,18 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resol
 		return err
 	}
 
-	client, err := cmdutil.New(common)
+	opts, err := eventFilterOptions(flags.eventFilterFlags)
 	if err != nil {
 		return err
 	}
-
-	opts := nvfleetint.EventListOptions{
-		NodeUUID:  strings.TrimSpace(flags.node),
-		Component: strings.TrimSpace(flags.component),
-		Window:    strings.TrimSpace(flags.window),
-		StartTime: strings.TrimSpace(flags.start),
-		EndTime:   strings.TrimSpace(flags.end),
+	opts.SortBy = nvfleetint.EventSortBy(strings.TrimSpace(flags.sortBy))
+	opts.SortOrder = nvfleetint.EventSortOrder(strings.TrimSpace(flags.order))
+	if err := opts.Validate(); err != nil {
+		return renderEventOptionError(err)
+	}
+	client, err := cmdutil.New(common)
+	if err != nil {
+		return err
 	}
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
@@ -183,17 +195,30 @@ func runEventBuckets(cmd *cobra.Command, flags eventBucketsFlags, common cmdutil
 		return fmt.Errorf("--max-buckets must be between 1 and %d", nvfleetint.MaxEventBuckets)
 	}
 
+	filters, err := eventFilterOptions(flags.eventFilterFlags)
+	if err != nil {
+		return err
+	}
 	client, err := cmdutil.New(common)
 	if err != nil {
 		return err
 	}
-
 	opts := nvfleetint.EventBucketsOptions{
-		NodeUUID:  strings.TrimSpace(flags.node),
-		Component: strings.TrimSpace(flags.component),
-		Window:    strings.TrimSpace(flags.window),
-		StartTime: strings.TrimSpace(flags.start),
-		EndTime:   strings.TrimSpace(flags.end),
+		NodeUUID:              filters.NodeUUID,
+		Component:             filters.Component,
+		Window:                filters.Window,
+		StartTime:             filters.StartTime,
+		EndTime:               filters.EndTime,
+		NameSearch:            filters.NameSearch,
+		DataSources:           filters.DataSources,
+		NodeGroupIDs:          filters.NodeGroupIDs,
+		ComputeZoneIDs:        filters.ComputeZoneIDs,
+		ExcludeNodeGroupIDs:   filters.ExcludeNodeGroupIDs,
+		ExcludeComputeZoneIDs: filters.ExcludeComputeZoneIDs,
+		EventNames:            filters.EventNames,
+		Severities:            filters.Severities,
+		Components:            filters.Components,
+		GPUTypes:              filters.GPUTypes,
 	}
 	// Only forward --max-buckets when the user set it; otherwise let the backend
 	// apply its own default.
@@ -219,10 +244,8 @@ func writeEventListOutput(w io.Writer, common cmdutil.Resolved, result eventList
 		return cmdutil.WritePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
-	// Columns mirror the event JSON fields one-to-one, in the SDK model's field
-	// order, so the table is a faithful human-readable view of the same data the
-	// JSON output carries.
-	headers := []string{"EVENT ID", "NODE UUID", "COMPONENT", "NAME", "TYPE", "MESSAGE", "TIMESTAMP"}
+	// Keep the table compact; complete identity and inventory fields are in JSON.
+	headers := []string{"EVENT ID", "NODE UUID", "DATA SOURCE", "COMPONENT", "NAME", "TYPE", "MESSAGE", "TIMESTAMP"}
 	if err := clioutput.WriteTable(w, headers, eventRows(result.Events)); err != nil {
 		return err
 	}
@@ -246,6 +269,7 @@ func eventRows(events []nvfleetint.Event) [][]string {
 		rows = append(rows, []string{
 			clioutput.DisplayString(event.EventID),
 			clioutput.DisplayString(event.NodeUUID),
+			clioutput.DisplayString(event.DataSource),
 			clioutput.DisplayString(event.Component),
 			clioutput.DisplayString(event.Name),
 			clioutput.DisplayString(event.Type),
@@ -277,4 +301,122 @@ func eventBucketRows(buckets []nvfleetint.EventBucket) [][]string {
 		})
 	}
 	return rows
+}
+
+func registerEventFilterFlags(cmd *cobra.Command, flags *eventFilterFlags) {
+	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
+	cmd.Flags().StringVar(&flags.node, "node", "", "Filter by node UUID")
+	cmd.Flags().StringVar(&flags.component, "component", "", "Filter by one component; cannot be combined with --components")
+	cmd.Flags().StringVar(&flags.nameSearch, "hostname", "", "Search hostname, OOB node name, BMC hostname, or node UUID")
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Comma-separated event sources: inband, oob (omitted: both)")
+	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs")
+	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs")
+	cmd.Flags().StringVar(&flags.excludeNodeGroupIDs, "exclude-nodegroup-ids", "", "Comma-separated node group IDs to exclude; cannot be combined with --nodegroup-ids")
+	cmd.Flags().StringVar(&flags.excludeComputeZoneIDs, "exclude-compute-zone-ids", "", "Comma-separated compute zone IDs to exclude; cannot be combined with --compute-zone-ids")
+	cmd.Flags().StringVar(&flags.eventNames, "event-names", "", "Comma-separated exact event names (Others matches names outside the catalog)")
+	cmd.Flags().StringVar(&flags.severities, "severity", "", "Comma-separated exact severity values; see event options")
+	cmd.Flags().StringVar(&flags.components, "components", "", "Comma-separated exact component identifiers; cannot be combined with --component")
+	cmd.Flags().StringVar(&flags.gpuTypes, "gpu-type", "", "Comma-separated resolved node GPU types")
+}
+
+// Parse shared filters once so list and buckets select the same events.
+func eventFilterOptions(flags eventFilterFlags) (nvfleetint.EventListOptions, error) {
+	opts := nvfleetint.EventListOptions{
+		NodeUUID:   strings.TrimSpace(flags.node),
+		Component:  strings.TrimSpace(flags.component),
+		Window:     strings.TrimSpace(flags.window),
+		StartTime:  strings.TrimSpace(flags.start),
+		EndTime:    strings.TrimSpace(flags.end),
+		NameSearch: strings.TrimSpace(flags.nameSearch),
+	}
+	for _, filter := range []struct {
+		name, raw string
+		target    *[]string
+	}{
+		{"nodegroup-ids", flags.nodeGroupIDs, &opts.NodeGroupIDs},
+		{"compute-zone-ids", flags.computeZoneIDs, &opts.ComputeZoneIDs},
+		{"exclude-nodegroup-ids", flags.excludeNodeGroupIDs, &opts.ExcludeNodeGroupIDs},
+		{"exclude-compute-zone-ids", flags.excludeComputeZoneIDs, &opts.ExcludeComputeZoneIDs},
+		{"event-names", flags.eventNames, &opts.EventNames},
+		{"severity", flags.severities, &opts.Severities},
+		{"components", flags.components, &opts.Components},
+		{"gpu-type", flags.gpuTypes, &opts.GPUTypes},
+	} {
+		values, err := cmdutil.ParseCommaList(filter.raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid --%s: %w", filter.name, err)
+		}
+		*filter.target = values
+	}
+	var err error
+	opts.DataSources, err = cmdutil.ParseTypedList[nvfleetint.DataSource]("--data-source", flags.dataSource)
+	if err != nil {
+		return opts, err
+	}
+	return opts, renderEventOptionError(opts.Validate())
+}
+
+func renderEventOptionError(err error) error {
+	return cmdutil.RenderOptionError(err, map[string]cmdutil.OptionFlagName{
+		"dataSources": {Flag: "--data-source"},
+		"sortBy":      {Flag: "--sort-by"},
+		"sortOrder":   {Flag: "--order"},
+	})
+}
+
+func newEventOptionsCmd() *cobra.Command {
+	common := cmdutil.NewCommon()
+	cmd := &cobra.Command{
+		Use:   "options",
+		Short: "Show event filter values and list sort fields",
+		Args:  cobra.NoArgs,
+		Long: `Show supported event filters and list sort fields. Options are catalog-based,
+not scoped to a time range or inventory filters, and may have no matching events.
+Others matches stored event names outside the catalog. GPU types reflect current
+resolved node inventory, independently of event source.`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			resolved := cmdutil.ResolveCommon(cmd, common)
+			if err := cmdutil.ValidateReadFlags(resolved); err != nil {
+				return err
+			}
+			client, err := cmdutil.New(resolved)
+			if err != nil {
+				return err
+			}
+			options, err := client.GetEventFilterOptions(cmd.Context())
+			if err != nil {
+				return err
+			}
+			if resolved.Output == clioutput.FormatJSON {
+				return clioutput.WriteRawJSON(cmd.OutOrStdout(), options.RawJSON)
+			}
+			return writeEventOptionsTable(cmd.OutOrStdout(), options)
+		},
+	}
+	cmdutil.RegisterReadFlags(cmd, common)
+	return cmd
+}
+
+func writeEventOptionsTable(w io.Writer, options nvfleetint.EventFilterOptions) error {
+	if _, err := fmt.Fprintf(w, "Filters for 'event list' and 'event buckets' (sorting applies to list only)\n%s\n", cmdutil.OptionsPreamble); err != nil {
+		return err
+	}
+	components := make([][]string, 0, len(options.Components))
+	for _, component := range options.Components {
+		components = append(components, []string{component.Component, component.ComponentDisplayName})
+	}
+	for _, section := range []cmdutil.OptionSection{
+		{Heading: "--event-names", Rows: cmdutil.ValueRows(options.EventNames)},
+		{Heading: "--severity", Rows: cmdutil.ValueRows(options.Severities)},
+		{Heading: "--components (or --component for one value)", Rows: components},
+		{Heading: "--data-source", Rows: cmdutil.ValueRows(options.DataSources)},
+		{Heading: "--gpu-type", Rows: cmdutil.ValueRows(options.GPUTypes)},
+		{Heading: "--sort-by (event list only)", Rows: cmdutil.ValueRows(options.SortFields)},
+		{Heading: "--order (event list only)", Rows: cmdutil.ValueRows([]string{"asc", "desc"})},
+	} {
+		if err := cmdutil.WriteOptionSection(w, section.Heading, section.Rows); err != nil {
+			return err
+		}
+	}
+	return nil
 }

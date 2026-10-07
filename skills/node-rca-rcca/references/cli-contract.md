@@ -19,15 +19,22 @@ Read this before querying live data.
 
 ## Pagination
 
-- Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `node options`, `nodegroup options`, `xidburst options`, `event buckets`, `tag list`, and `report error --view overview|graph`.
-- Single pages use backend arrays (`nodes`, `nodeGroups`, `computezones`, `alerts`, `events`) plus top-level `total`, `page`, and `pageSize`. Most use `hasMore`; `alert list` uses nonempty `pageCursorNext` instead. `alert summary` uses `nodes`, `alert node` uses `alerts`, and report-error list uses `nodes`. Detail `node list --output json` requires `--data-source inband|oob` and returns one source without a wrapper.
-- `--all` normalizes every paginated list to `{items, pagination:{total,hasMore,pagesFetched}}`, including detail `node list` with its required `--data-source`. Non-paginated commands keep their native shape, except default `node describe` wraps its available source views as `{inband: ..., oob: ...}`.
+- Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `node options`, `nodegroup options`, `xidburst options`, `event options`, `event buckets`, `tag list`, and `report error --view overview|graph`.
+- Single pages use backend arrays (`nodes`, `nodeGroups`, `computezones`, `alerts`, `events`) plus top-level `total`, `page`, and `pageSize`. Most use `hasMore`; `alert list` uses nonempty `pageCursorNext` instead. `alert summary` uses `nodes`, `alert node` uses `alerts`, and report-error list uses `nodes`.
+- `--all` normalizes every paginated list to `{items, pagination:{total,hasMore,pagesFetched}}`. Non-paginated commands keep their native shape, except default `node describe` wraps its available source views as `{inband: ..., oob: ...}`.
 - Count cheaply with the same filters plus `--page-size 1`, reading `.total`. For `alert summary`, `.total` is nodes with matching alerts; use `totalCritical` and `totalWarning` for alert aggregates. `tag list` is the exception: count its non-paginated `tags`.
-- `--view basic` returns identities only: node returns UUID with available hostname and BMC identity; compute zone and node group return `id`/`name`. Node basic rejects `--health`, `--agent-status`, `--verification-check`, and `--firmware-check`, and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting, plus GPU type/count filters. With no source, node basic queries and `node options --view basic` use both sources; detail node list and options tables fetch both sources into separate sections. Detail JSON for these commands requires `--data-source` and returns one source without a wrapper; basic JSON allows omission. `report inventory` tables default to both sources with independent pagination (`--all` fetches all pages of each); JSON, CSV, and signed downloads require `--data-source inband|oob`. An explicit source returns one inventory report. `--agent-type` is no longer accepted on node commands; use `--data-source`. Compute-zone basic rejects `--include-metrics`. Node-group basic rejects `--include-metrics`, compute-zone name filters, health, gpu-type, and sorting.
+- `--view basic` returns identities only: node returns UUID with available hostname and BMC identity; compute zone and node group return `id`/`name`. Node basic rejects `--health`, `--agent-status`, `--verification-check`, and `--firmware-check`, and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting, plus GPU type/count filters. Compute-zone basic rejects `--include-metrics`. Node-group basic rejects `--include-metrics`, compute-zone name filters, health, gpu-type, and sorting.
 
-- Alert summary and node queries accept comma-separated `--data-source` (`inband`, `oob`); omission includes both sources in one response, with matching counts and pagination. This filters the alert-producing source independently of current agent status. Flat and node-alert rows expose `dataSource`.
-- Summary alone accepts `--inband-agent-status` and `--oob-agent-status` (`online`, `offline`, `not_enrolled`): OR within each flag, AND across flags, omitted means unrestricted. These are current statuses even in historical view.
-- Summary rows retain `nodeName`, `bmcHostname`, and optional `agentStatus.inband`/`agentStatus.oob` objects (`status`, `lastSeenAt`); missing is not `not_enrolled`.
+## Data sources
+
+- `--data-source` uses `inband`/`oob`: for nodes and inventory it selects the source view; for `alert summary`, `alert node`, `event list`, and `event buckets` it filters the record's producer, independently of current agent status. The latter accept comma-separated sources and default to both in one response. `alert list` has no source filter.
+- Node basic list/options combine both sources when omitted, including JSON. Detail list/options and inventory tables fetch both sources separately; pagination and `--all` apply per source. Their detail JSON requires one explicit source and has no source wrapper; inventory CSV/signed downloads also require one.
+- Node describe defaults to both source views; an explicit source selects one. Use `--data-source` in place of the removed node `--agent-type` flag.
+
+## Interpretation
+
+- Alert-summary agent-status filters describe current enrollment/liveness even in historical view: OR within a flag, AND across flags, omitted means unrestricted. Missing status data is not `not_enrolled`.
+- Event identity, membership, and GPU type describe current inventory, not inventory at event time. `event options` is a catalog, not evidence of matching events; `Others` matches names outside that catalog.
 
 ## JSON names
 

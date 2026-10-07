@@ -3,7 +3,7 @@
 
 package nvfleetint
 
-// DataSource selects a node or inventory source, or identifies an alert's producer.
+// DataSource selects a node or inventory source, or identifies an alert or event producer.
 type DataSource string
 
 const (

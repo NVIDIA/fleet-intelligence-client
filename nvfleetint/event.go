@@ -23,10 +23,59 @@ const (
 	eventTimeModeRelative = "relative"
 )
 
+// EventSortBy selects the sort field for event listings.
+type EventSortBy string
+
+// Valid reports whether the API supports the sort field.
+func (value EventSortBy) Valid() bool {
+	return fleetapi.GetV1EventsParamsSortBy(value).Valid()
+}
+
+// EventSortOrder selects ascending or descending event order.
+type EventSortOrder string
+
+// Valid reports whether the API supports the sort direction.
+func (value EventSortOrder) Valid() bool {
+	return fleetapi.GetV1EventsParamsSortOrder(value).Valid()
+}
+
+const (
+	EventSortByTimestamp   EventSortBy    = "timestamp"
+	EventSortByEventName   EventSortBy    = "eventName"
+	EventSortBySeverity    EventSortBy    = "severity"
+	EventSortByComponent   EventSortBy    = "component"
+	EventSortByGPUType     EventSortBy    = "gpuType"
+	EventSortByHostname    EventSortBy    = "hostname"
+	EventSortByNodeName    EventSortBy    = "nodeName"
+	EventSortByBMCHostname EventSortBy    = "bmcHostname"
+	EventSortByNodeUUID    EventSortBy    = "nodeUUID"
+	EventSortByNodeGroup   EventSortBy    = "nodeGroup"
+	EventSortByComputeZone EventSortBy    = "computeZone"
+	EventOrderAsc          EventSortOrder = "asc"
+	EventOrderDesc         EventSortOrder = "desc"
+)
+
 // EventListOptions represents request options for listing events. A time range
 // is required: supply either Window (relative) or StartTime and EndTime
 // (absolute), but not both.
 type EventListOptions struct {
+	// Values within a slice are ORed; different filters are ANDed.
+	// Omitted DataSources includes both event-producing sources.
+	// Component and Components cannot be combined, nor can inclusion and
+	// exclusion filters for the same node-group or compute-zone dimension.
+	NodeGroupIDs          []string
+	ComputeZoneIDs        []string
+	ExcludeNodeGroupIDs   []string
+	ExcludeComputeZoneIDs []string
+	NameSearch            string
+	EventNames            []string
+	Severities            []string
+	Components            []string
+	DataSources           []DataSource
+	GPUTypes              []string
+	SortBy                EventSortBy
+	SortOrder             EventSortOrder
+
 	NodeUUID  string
 	Component string
 	Window    string
@@ -39,6 +88,21 @@ type EventListOptions struct {
 // EventBucketsOptions represents request options for time-bucketed event counts.
 // A time range is required, following the same rules as EventListOptions.
 type EventBucketsOptions struct {
+	// Values within a slice are ORed; different filters are ANDed.
+	// Omitted DataSources includes both event-producing sources.
+	// Component and Components cannot be combined, nor can inclusion and
+	// exclusion filters for the same node-group or compute-zone dimension.
+	NodeGroupIDs          []string
+	ComputeZoneIDs        []string
+	ExcludeNodeGroupIDs   []string
+	ExcludeComputeZoneIDs []string
+	NameSearch            string
+	EventNames            []string
+	Severities            []string
+	Components            []string
+	DataSources           []DataSource
+	GPUTypes              []string
+
 	NodeUUID   string
 	Component  string
 	Window     string
@@ -69,8 +133,19 @@ func (page EventsPage) PageInfo() PageInfo {
 	}
 }
 
-// Event represents a single fleet event
+// Event represents a single fleet event. Identity, membership, and GPU type
+// reflect current node inventory, independently of the event-producing source.
 type Event struct {
+	Hostname      string `json:"hostname,omitempty"`
+	NodeName      string `json:"nodeName,omitempty"`
+	BMCHostname   string `json:"bmcHostname,omitempty"`
+	DataSource    string `json:"dataSource,omitempty"`
+	GPUType       string `json:"gpuType,omitempty"`
+	NodeGroup     string `json:"nodeGroup,omitempty"`
+	NodeGroupID   string `json:"nodeGroupId,omitempty"`
+	ComputeZone   string `json:"computeZone,omitempty"`
+	ComputeZoneID string `json:"computeZoneId,omitempty"`
+
 	EventID          string            `json:"eventId,omitempty"`
 	NodeUUID         string            `json:"nodeUUID,omitempty"`
 	Component        string            `json:"component,omitempty"`
@@ -97,10 +172,14 @@ type EventBucket struct {
 	Count          *int   `json:"count,omitempty"`
 }
 
-// ListEvents retrieves events filtered by node, component, and time range
+// ListEvents retrieves events filtered by source, inventory, event fields, and time range.
 func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsPage, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
+
+	if err := opts.Validate(); err != nil {
+		return EventsPage{}, err
+	}
 
 	timeRange, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
 	if err != nil {
@@ -109,14 +188,26 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 
 	mode := fleetapi.GetV1EventsParamsTimeMode(timeRange.timeMode)
 	params := fleetapi.GetV1EventsParams{
-		TimeMode:  &mode,
-		Window:    optionalString(timeRange.window),
-		StartTime: optionalString(timeRange.startTime),
-		EndTime:   optionalString(timeRange.endTime),
-		NodeUUID:  optionalTrimmedString(opts.NodeUUID),
-		Component: optionalTrimmedString(opts.Component),
-		Page:      cloneInt(opts.Page),
-		PageSize:  cloneInt(opts.PageSize),
+		NodeGroupIds:          optionalSlice(opts.NodeGroupIDs),
+		ComputeZoneIds:        optionalSlice(opts.ComputeZoneIDs),
+		ExcludeNodeGroupIds:   optionalSlice(opts.ExcludeNodeGroupIDs),
+		ExcludeComputeZoneIds: optionalSlice(opts.ExcludeComputeZoneIDs),
+		NameSearch:            optionalTrimmedString(opts.NameSearch),
+		EventNames:            optionalSlice(opts.EventNames),
+		Severities:            optionalSlice(opts.Severities),
+		Components:            optionalSlice(opts.Components),
+		DataSources:           optionalEnumSlice[fleetapi.GetV1EventsParamsDataSources](opts.DataSources),
+		GpuTypes:              optionalSlice(opts.GPUTypes),
+		SortBy:                optionalEnum[fleetapi.GetV1EventsParamsSortBy](opts.SortBy),
+		SortOrder:             optionalEnum[fleetapi.GetV1EventsParamsSortOrder](opts.SortOrder),
+		TimeMode:              &mode,
+		Window:                optionalString(timeRange.window),
+		StartTime:             optionalString(timeRange.startTime),
+		EndTime:               optionalString(timeRange.endTime),
+		NodeUUID:              optionalTrimmedString(opts.NodeUUID),
+		Component:             optionalTrimmedString(opts.Component),
+		Page:                  cloneInt(opts.Page),
+		PageSize:              cloneInt(opts.PageSize),
 	}
 
 	resp, err := c.api.GetV1EventsWithResponse(ctx, &params)
@@ -153,6 +244,10 @@ func (c *Client) GetEventBuckets(ctx context.Context, opts EventBucketsOptions) 
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
 
+	if err := opts.Validate(); err != nil {
+		return EventBuckets{}, err
+	}
+
 	timeRange, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
 	if err != nil {
 		return EventBuckets{}, err
@@ -162,7 +257,19 @@ func (c *Client) GetEventBuckets(ctx context.Context, opts EventBucketsOptions) 
 	}
 
 	mode := fleetapi.GetV1EventsBucketsParamsTimeMode(timeRange.timeMode)
-	params := fleetapi.GetV1EventsBucketsParams{TimeMode: &mode}
+	params := fleetapi.GetV1EventsBucketsParams{
+		TimeMode:              &mode,
+		NodeGroupIds:          optionalSlice(opts.NodeGroupIDs),
+		ComputeZoneIds:        optionalSlice(opts.ComputeZoneIDs),
+		ExcludeNodeGroupIds:   optionalSlice(opts.ExcludeNodeGroupIDs),
+		ExcludeComputeZoneIds: optionalSlice(opts.ExcludeComputeZoneIDs),
+		NameSearch:            optionalTrimmedString(opts.NameSearch),
+		EventNames:            optionalSlice(opts.EventNames),
+		Severities:            optionalSlice(opts.Severities),
+		Components:            optionalSlice(opts.Components),
+		DataSources:           optionalEnumSlice[fleetapi.GetV1EventsBucketsParamsDataSources](opts.DataSources),
+		GpuTypes:              optionalSlice(opts.GPUTypes),
+	}
 	if timeRange.window != "" {
 		value := timeRange.window
 		params.Window = &value
@@ -265,6 +372,16 @@ func validateEventRFC3339(name, value string) error {
 // Maps an event API model into SDK values
 func eventFromGenerated(event fleetapi.ModelsEvent) Event {
 	out := Event{
+		Hostname:      stringValue(event.Hostname),
+		NodeName:      stringValue(event.NodeName),
+		BMCHostname:   stringValue(event.BmcHostname),
+		DataSource:    stringValue(event.DataSource),
+		GPUType:       stringValue(event.GpuType),
+		NodeGroup:     stringValue(event.NodeGroup),
+		NodeGroupID:   stringValue(event.NodeGroupId),
+		ComputeZone:   stringValue(event.ComputeZone),
+		ComputeZoneID: stringValue(event.ComputeZoneId),
+
 		EventID:   event.EventId,
 		NodeUUID:  event.NodeUUID,
 		Component: stringValue(event.Component),
@@ -293,4 +410,74 @@ func eventBucketFromGenerated(bucket fleetapi.ModelsEventBucket) EventBucket {
 		FirstEventTime: stringValue(bucket.FirstEventTime),
 		Count:          cloneInt(bucket.Count),
 	}
+}
+
+// Validate checks filters before a request. Time ranges are checked by ListEvents.
+func (opts EventListOptions) Validate() error {
+	if err := validateDataSources(opts.DataSources); err != nil {
+		return err
+	}
+	if strings.TrimSpace(opts.Component) != "" && len(opts.Components) > 0 {
+		return fmt.Errorf("component and components filters cannot be combined")
+	}
+	if len(opts.NodeGroupIDs) > 0 && len(opts.ExcludeNodeGroupIDs) > 0 {
+		return fmt.Errorf("node group include and exclude filters cannot be combined")
+	}
+	if len(opts.ComputeZoneIDs) > 0 && len(opts.ExcludeComputeZoneIDs) > 0 {
+		return fmt.Errorf("compute zone include and exclude filters cannot be combined")
+	}
+	if opts.SortBy != "" && !opts.SortBy.Valid() {
+		return invalidOption("sortBy", "event sort field", string(opts.SortBy), "")
+	}
+	if opts.SortOrder != "" && !opts.SortOrder.Valid() {
+		return invalidOption("sortOrder", "event sort order", string(opts.SortOrder), "asc or desc")
+	}
+	return nil
+}
+
+// Validate checks shared filters before a bucket request.
+func (opts EventBucketsOptions) Validate() error {
+	return (EventListOptions{
+		Component: opts.Component, Components: opts.Components, DataSources: opts.DataSources,
+		NodeGroupIDs: opts.NodeGroupIDs, ExcludeNodeGroupIDs: opts.ExcludeNodeGroupIDs,
+		ComputeZoneIDs: opts.ComputeZoneIDs, ExcludeComputeZoneIDs: opts.ExcludeComputeZoneIDs,
+	}).Validate()
+}
+
+// EventComponentOption pairs a raw filter value with its display name.
+type EventComponentOption struct {
+	Component            string `json:"component"`
+	ComponentDisplayName string `json:"componentDisplayName"`
+}
+
+// EventFilterOptions contains catalog values, not counts or time-scoped results.
+type EventFilterOptions struct {
+	Components  []EventComponentOption `json:"components,omitempty"`
+	DataSources []string               `json:"dataSources,omitempty"`
+	EventNames  []string               `json:"eventNames,omitempty"`
+	GPUTypes    []string               `json:"gpuTypes,omitempty"`
+	Severities  []string               `json:"severities,omitempty"`
+	SortFields  []string               `json:"sortFields,omitempty"`
+	RawJSON     []byte                 `json:"-"`
+}
+
+// GetEventFilterOptions discovers supported event filters and list sort fields.
+// Options are independent of time/inventory filters. Others matches uncatalogued
+// event names; GPU types reflect current resolved node inventory.
+func (c *Client) GetEventFilterOptions(ctx context.Context) (EventFilterOptions, error) {
+	ctx, cancel := c.requestContext(ctx)
+	defer cancel()
+	resp, err := c.api.GetV1EventsOptionsWithResponse(ctx)
+	if err != nil {
+		return EventFilterOptions{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return EventFilterOptions{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
+	}
+	var options EventFilterOptions
+	if err := json.Unmarshal(resp.Body, &options); err != nil {
+		return EventFilterOptions{}, err
+	}
+	options.RawJSON = append([]byte(nil), resp.Body...)
+	return options, nil
 }

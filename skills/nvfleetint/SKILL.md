@@ -102,6 +102,7 @@ nvfleetint alert node <node-uuid> --output json
 nvfleetint alert node <node-uuid> --view historical --output json
 nvfleetint alert describe <alert-uuid> --node <node-uuid> --output json
 nvfleetint alert options --output json
+nvfleetint event options --output json
 nvfleetint event list --window 24h --output json
 nvfleetint event buckets --window 168h --max-buckets 50 --output json
 ```
