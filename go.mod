@@ -3,7 +3,7 @@
 
 module github.com/NVIDIA/fleet-intelligence-client
 
-go 1.25.13
+go 1.26.10
 
 require (
 	github.com/oapi-codegen/runtime v1.6.0
