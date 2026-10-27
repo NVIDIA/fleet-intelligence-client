@@ -166,6 +166,8 @@ func (page InventoryReport) PageInfo() PageInfo {
 
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
+	AgentUUID                 string    `json:"agentUUID,omitempty"`
+	SystemUUID                string    `json:"systemUUID,omitempty"`
 	NodeUUID                  string    `json:"nodeUUID"`
 	Hostname                  string    `json:"hostname,omitempty"`
 	ComputeZone               string    `json:"computeZone,omitempty"`
@@ -779,6 +781,8 @@ func decodeErrorReportOverview(data []byte, view ErrorReportView) (ErrorReport, 
 // Maps inventory node API models into SDK values
 func inventoryNodeFromGenerated(node fleetapi.ModelsInbandInventoryNode) InventoryNode {
 	return InventoryNode{
+		AgentUUID:                 stringValue(node.AgentUUID),
+		SystemUUID:                stringValue(node.SystemUUID),
 		NodeUUID:                  stringValue(node.NodeUUID),
 		Hostname:                  stringValue(node.Hostname),
 		ComputeZone:               stringValue(node.ComputeZone),

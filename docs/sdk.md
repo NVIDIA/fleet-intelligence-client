@@ -3,6 +3,14 @@
 The `nvfleetint` package provides a handwritten Go client for the Fleet
 Intelligence customer API.
 
+Node responses distinguish the backend canonical UUID (`Node.UUID`, JSON
+`nodeUUID`) from the in-band source UUID (`Node.AgentUUID`, JSON `agentUUID`).
+The agent initializes its source UUID from a valid SMBIOS/DMI UUID or a generated
+fallback, persists it, and reuses it. `SystemInfo.SystemUUID` is hardware evidence
+with no fallback. `Node.BMCMAC` (JSON `bmcMac`) is the OOB source key from collector
+configuration; the BMC hostname and IP are separate attributes. Missing source
+fields remain empty when reading older backend responses.
+
 ## Install
 
 ```bash

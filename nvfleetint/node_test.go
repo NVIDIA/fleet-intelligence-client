@@ -5,12 +5,15 @@ package nvfleetint
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
 
 // Verifies detail list request construction and decoding
@@ -551,5 +554,43 @@ func TestInvalidOptionErrorCarriesOption(t *testing.T) {
 	}
 	if !strings.Contains(optionErr.Expected, "Verified") {
 		t.Fatalf("expected accepted values, got %q", optionErr.Expected)
+	}
+}
+
+func TestNodeIdentityNamesRemainDistinct(t *testing.T) {
+	const canonical = "550e8400-e29b-41d4-a716-446655440000"
+	const agent = "550E8400-E29B-41D4-A716-446655440001"
+	const system = "550e8400-e29b-41d4-a716-446655440002"
+	raw := []byte(`{"nodes":[{"nodeUUID":"` + canonical + `","agentUUID":"` + agent + `","hostname":"node-1"}]}`)
+	for _, decode := range []func([]byte) (NodesPage, error){decodeInbandDetailNodes, decodeBasicNodes} {
+		page, err := decode(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Nodes) != 1 || page.Nodes[0].UUID != canonical || page.Nodes[0].AgentUUID != agent {
+			t.Fatalf("wrong identities: %+v", page.Nodes)
+		}
+	}
+	var detail fleetapi.ModelsInbandNodeDetailsResponse
+	if err := json.Unmarshal([]byte(`{"nodeUUID":"`+canonical+`","agentUUID":"`+agent+`","systemInfo":{"systemUUID":"`+system+`"}}`), &detail); err != nil {
+		t.Fatal(err)
+	}
+	got := inbandNodeDetailsFromGenerated(detail)
+	if got.UUID != canonical || got.AgentUUID != agent || got.SystemInfo == nil || got.SystemInfo.SystemUUID != system {
+		t.Fatalf("wrong detail identities: %+v", got)
+	}
+	report, err := decodeInventoryReport([]byte(`{"nodes":[{"nodeUUID":"` + canonical + `","agentUUID":"` + agent + `","systemUUID":"` + system + `"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Nodes) != 1 || report.Nodes[0].NodeUUID != canonical || report.Nodes[0].AgentUUID != agent || report.Nodes[0].SystemUUID != system {
+		t.Fatalf("wrong report identities: %+v", report.Nodes)
+	}
+	page, err := decodeOOBDetailNodes([]byte(`{"nodes":[{"nodeUUID":"` + canonical + `","bmcMac":"02:AA:BB:CC:DD:EE"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Nodes) != 1 || page.Nodes[0].BMCMAC != "02:AA:BB:CC:DD:EE" {
+		t.Fatalf("missing BMC source key: %+v", page.Nodes)
 	}
 }

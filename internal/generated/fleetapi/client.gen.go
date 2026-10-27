@@ -1979,6 +1979,8 @@ type ModelsHealthSummary struct {
 
 // ModelsInbandInventoryNode defines model for models.InbandInventoryNode.
 type ModelsInbandInventoryNode struct {
+	// AgentUUID In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+	AgentUUID     *string              `json:"agentUUID,omitempty"`
 	AgentVersion  *string              `json:"agentVersion,omitempty"`
 	ComputeZone   *string              `json:"computeZone,omitempty"`
 	EnrolledAt    *string              `json:"enrolledAt,omitempty"`
@@ -2035,8 +2037,11 @@ type ModelsInbandInventoryReportResponse struct {
 
 // ModelsInbandNode defines model for models.InbandNode.
 type ModelsInbandNode struct {
-	AgentStatus         *ModelsAgentStatus          `json:"agentStatus,omitempty"`
-	AgentType           *string                     `json:"agentType,omitempty"`
+	AgentStatus *ModelsAgentStatus `json:"agentStatus,omitempty"`
+	AgentType   *string            `json:"agentType,omitempty"`
+
+	// AgentUUID In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+	AgentUUID           *string                     `json:"agentUUID,omitempty"`
 	AgentVersion        *string                     `json:"agentVersion,omitempty"`
 	ComputeZone         *string                     `json:"computeZone,omitempty"`
 	FirmwareCheck       *ModelsFirmwareCheck        `json:"firmwareCheck,omitempty"`
@@ -2076,8 +2081,11 @@ type ModelsInbandNode struct {
 
 // ModelsInbandNodeDetailsResponse defines model for models.InbandNodeDetailsResponse.
 type ModelsInbandNodeDetailsResponse struct {
-	AgentStatus            *ModelsAgentStatus   `json:"agentStatus,omitempty"`
-	AgentType              *string              `json:"agentType,omitempty"`
+	AgentStatus *ModelsAgentStatus `json:"agentStatus,omitempty"`
+	AgentType   *string            `json:"agentType,omitempty"`
+
+	// AgentUUID In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+	AgentUUID              *string              `json:"agentUUID,omitempty"`
 	AgentVersion           *string              `json:"agentVersion,omitempty"`
 	ComputeZone            *string              `json:"computeZone,omitempty"`
 	ComputeZoneId          *string              `json:"computeZoneId,omitempty"`
@@ -2780,6 +2788,9 @@ type ModelsOobNode struct {
 	AgentVersion *string            `json:"agentVersion,omitempty"`
 	BmcHostname  *string            `json:"bmcHostname,omitempty"`
 	BmcIP        *string            `json:"bmcIP,omitempty"`
+
+	// BmcMac OOB source key from collector configuration.
+	BmcMac       *string            `json:"bmcMac,omitempty"`
 	ComputeZone  *string            `json:"computeZone,omitempty"`
 	HealthStatus *ModelsHealthState `json:"healthStatus,omitempty"`
 
@@ -2813,15 +2824,18 @@ type ModelsOobNode struct {
 
 // ModelsOobNodeDetailsResponse defines model for models.OobNodeDetailsResponse.
 type ModelsOobNodeDetailsResponse struct {
-	AgentStatus            *ModelsAgentStatus `json:"agentStatus,omitempty"`
-	AgentType              *string            `json:"agentType,omitempty"`
-	AgentVersion           *string            `json:"agentVersion,omitempty"`
-	BmcHostname            *string            `json:"bmcHostname,omitempty"`
-	BmcIP                  *string            `json:"bmcIP,omitempty"`
-	ComputeZone            *string            `json:"computeZone,omitempty"`
-	ComputeZoneId          *string            `json:"computeZoneId,omitempty"`
-	DegradedComponentCount *int               `json:"degradedComponentCount,omitempty"`
-	EnrolledAt             *string            `json:"enrolledAt,omitempty"`
+	AgentStatus  *ModelsAgentStatus `json:"agentStatus,omitempty"`
+	AgentType    *string            `json:"agentType,omitempty"`
+	AgentVersion *string            `json:"agentVersion,omitempty"`
+	BmcHostname  *string            `json:"bmcHostname,omitempty"`
+	BmcIP        *string            `json:"bmcIP,omitempty"`
+
+	// BmcMac OOB source key from collector configuration.
+	BmcMac                 *string `json:"bmcMac,omitempty"`
+	ComputeZone            *string `json:"computeZone,omitempty"`
+	ComputeZoneId          *string `json:"computeZoneId,omitempty"`
+	DegradedComponentCount *int    `json:"degradedComponentCount,omitempty"`
+	EnrolledAt             *string `json:"enrolledAt,omitempty"`
 
 	// GeoLocation Deprecated: use location.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -3044,9 +3058,14 @@ type ModelsSimpleComputeZone struct {
 
 // ModelsSimpleNode defines model for models.SimpleNode.
 type ModelsSimpleNode struct {
+	// AgentUUID In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+	AgentUUID   *string `json:"agentUUID,omitempty"`
 	BmcHostname *string `json:"bmcHostname,omitempty"`
 	BmcIP       *string `json:"bmcIP,omitempty"`
-	Hostname    *string `json:"hostname,omitempty"`
+
+	// BmcMac OOB source key from collector configuration.
+	BmcMac   *string `json:"bmcMac,omitempty"`
+	Hostname *string `json:"hostname,omitempty"`
 
 	// NodeName NodeName is OOB collector metadata. It is populated for OOB and combined
 	// basic views and omitted from an explicitly in-band basic response.

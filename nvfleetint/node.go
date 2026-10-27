@@ -179,6 +179,10 @@ func (page NodesPage) PageInfo() PageInfo {
 
 // Represents a node
 type Node struct {
+	// AgentUUID is the in-band source key; UUID is the backend canonical node UUID.
+	AgentUUID string `json:"agentUUID,omitempty"`
+	// BMCMAC is the OOB source key from collector configuration.
+	BMCMAC                     string                      `json:"bmcMac,omitempty"`
 	UUID                       string                      `json:"nodeUUID"`
 	Hostname                   string                      `json:"hostname,omitempty"`
 	NodeName                   string                      `json:"nodeName,omitempty"`
@@ -657,6 +661,7 @@ func decodeBasicNodes(data []byte) (NodesPage, error) {
 // Maps detail API models into SDK values
 func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
+		AgentUUID:                  stringValue(node.AgentUUID),
 		UUID:                       node.NodeUUID,
 		Hostname:                   stringValue(node.Hostname),
 		AgentType:                  stringValue(node.AgentType),
@@ -689,6 +694,7 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 		NodeKind:                   nodeKindFromGenerated(node.NodeKind),
 		AgentType:                  stringValue(node.AgentType),
 		AgentVersion:               stringValue(node.AgentVersion),
+		BMCMAC:                     stringValue(node.BmcMac),
 		BMCHostname:                stringValue(node.BmcHostname),
 		BMCIP:                      stringValue(node.BmcIP),
 		ComputeZone:                stringValue(node.ComputeZone),
@@ -706,9 +712,11 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 // Maps basic API models into SDK values
 func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
+		AgentUUID:   stringValue(node.AgentUUID),
 		UUID:        node.NodeUUID,
 		Hostname:    stringValue(node.Hostname),
 		NodeName:    stringValue(node.NodeName),
+		BMCMAC:      stringValue(node.BmcMac),
 		BMCHostname: stringValue(node.BmcHostname),
 		BMCIP:       stringValue(node.BmcIP),
 	}
@@ -718,6 +726,7 @@ func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
+			AgentUUID:                  stringValue(node.AgentUUID),
 			UUID:                       node.NodeUUID,
 			Hostname:                   stringValue(node.Hostname),
 			AgentType:                  stringValue(node.AgentType),
@@ -762,6 +771,7 @@ func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) Nod
 			NodeKind:                   nodeKindFromGenerated(node.NodeKind),
 			AgentType:                  stringValue(node.AgentType),
 			AgentVersion:               stringValue(node.AgentVersion),
+			BMCMAC:                     stringValue(node.BmcMac),
 			BMCHostname:                stringValue(node.BmcHostname),
 			BMCIP:                      stringValue(node.BmcIP),
 			ComputeZone:                stringValue(node.ComputeZone),

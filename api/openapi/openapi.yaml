@@ -5546,6 +5546,10 @@ components:
       type: object
     models.InbandInventoryNode:
       properties:
+        agentUUID:
+          description: In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
         agentVersion:
           example: 1.2.3
           type: string
@@ -5668,6 +5672,10 @@ components:
       type: object
     models.InbandNode:
       properties:
+        agentUUID:
+          description: In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
@@ -5751,6 +5759,10 @@ components:
       type: object
     models.InbandNodeDetailsResponse:
       properties:
+        agentUUID:
+          description: In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
@@ -7143,6 +7155,10 @@ components:
       type: object
     models.OobNode:
       properties:
+        bmcMac:
+          description: OOB source key from collector configuration.
+          example: '02:AA:BB:CC:DD:EE'
+          type: string
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
@@ -7211,6 +7227,10 @@ components:
       type: object
     models.OobNodeDetailsResponse:
       properties:
+        bmcMac:
+          description: OOB source key from collector configuration.
+          example: '02:AA:BB:CC:DD:EE'
+          type: string
         agentStatus:
           $ref: '#/components/schemas/models.AgentStatus'
         agentType:
@@ -7688,6 +7708,14 @@ components:
       type: object
     models.SimpleNode:
       properties:
+        bmcMac:
+          description: OOB source key from collector configuration.
+          example: '02:AA:BB:CC:DD:EE'
+          type: string
+        agentUUID:
+          description: In-band source UUID, independent of the canonical nodeUUID and hardware systemUUID.
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
         bmcHostname:
           example: bmc-a.example.com
           type: string

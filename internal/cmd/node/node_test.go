@@ -881,13 +881,13 @@ func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 		BMCIP:       "192.0.2.10:443",
 	}})
 
-	if len(rows) != 1 || len(rows[0]) != 10 {
+	if len(rows) != 1 || len(rows[0]) != 11 {
 		t.Fatalf("unexpected OOB row shape: %#v", rows)
 	}
 	if slices.Contains(rows[0], "inband-hostname") {
 		t.Fatalf("OOB row contains in-band hostname: %#v", rows[0])
 	}
-	if rows[0][1] != "machine-001" || rows[0][2] != "nvswitch" || rows[0][3] != "bmc-001" || rows[0][4] != "192.0.2.10:443" {
+	if rows[0][1] != "machine-001" || rows[0][2] != "nvswitch" || rows[0][3] != "bmc-001" || rows[0][5] != "192.0.2.10:443" {
 		t.Fatalf("unexpected OOB identity columns: %#v", rows[0])
 	}
 }
@@ -1131,5 +1131,14 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	}
 	if !strings.Contains(computeZones, "Values nested under these are listed under --nodegroup-ids.") {
 		t.Fatalf("--compute-zone-ids section does not point at --nodegroup-ids:\n%s", computeZones)
+	}
+}
+
+func TestNodeDescribeIdentityNames(t *testing.T) {
+	rows := nodeDescribeRows(nvfleetint.NodeDetails{Node: nvfleetint.Node{UUID: "canonical-1", AgentUUID: "agent-1", BMCMAC: "02:AA:BB:CC:DD:EE"}})
+	for _, want := range [][]string{{"UUID", "canonical-1"}, {"AGENT UUID", "agent-1"}, {"BMC MAC", "02:AA:BB:CC:DD:EE"}} {
+		if !slices.ContainsFunc(rows, func(row []string) bool { return slices.Equal(row, want) }) {
+			t.Fatalf("missing identity %v in %v", want, rows)
+		}
 	}
 }

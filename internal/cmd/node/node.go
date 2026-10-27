@@ -688,14 +688,14 @@ func writeNodeTable(
 	if nvfleetint.NodeView(view) == nvfleetint.NodeViewBasic {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP"},
+			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC MAC", "BMC IP"},
 			basicNodeRows(nodes),
 		)
 	}
 	if agentType == nvfleetint.NodeAgentTypeOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
@@ -705,7 +705,7 @@ func writeNodeTable(
 // Reports whether a node list contains OOB-view records
 func nodeListIsOOB(nodes []nvfleetint.Node) bool {
 	for _, node := range nodes {
-		if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
+		if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.NodeName != "" || node.BMCMAC != "" || node.BMCHostname != "" || node.BMCIP != "" {
 			return true
 		}
 	}
@@ -721,6 +721,7 @@ func basicNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.Hostname),
 			clioutput.DisplayString(node.NodeName),
 			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 		})
 	}
@@ -756,6 +757,7 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.NodeName),
 			clioutput.DisplayString(string(node.NodeKind)),
 			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
@@ -884,6 +886,7 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"NODE NAME", clioutput.DisplayString(node.NodeName)},
 		{"NODE KIND", clioutput.DisplayString(string(node.NodeKind))},
 		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
+		{"BMC MAC", clioutput.DisplayString(node.BMCMAC)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
 }
@@ -892,6 +895,7 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 	rows := [][]string{
 		{"UUID", clioutput.DisplayString(node.UUID)},
+		{"AGENT UUID", clioutput.DisplayString(node.AgentUUID)},
 		{"HOSTNAME", clioutput.DisplayString(node.Hostname)},
 		{"AGENT TYPE", clioutput.DisplayString(node.AgentType)},
 		{"HEALTH", clioutput.DisplayString(node.Health)},
@@ -915,9 +919,10 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 	}
 
-	if node.BMCHostname != "" || node.BMCIP != "" {
+	if node.BMCMAC != "" || node.BMCHostname != "" || node.BMCIP != "" {
 		rows = append(rows,
 			[]string{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
+			[]string{"BMC MAC", clioutput.DisplayString(node.BMCMAC)},
 			[]string{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 		)
 	}
