@@ -37,9 +37,9 @@ func TestEventFiltersAcrossEndpoints(t *testing.T) {
 							expected["computeZoneIds"] = []string{"cz1", "cz2"}
 						}
 						path := "/v1/events"
-						body := `{"events":[{"eventId":"e1","nodeUUID":"n1","hostname":"os-1","nodeName":"machine-1","bmcHostname":"bmc-1","dataSource":"oob","gpuType":"H100","nodeGroup":"group","nodeGroupId":"ng1","computeZone":"zone","computeZoneId":"cz1"}],"total":1}`
+						body := `{"events":[{"eventId":"e1","nodeUUID":"n1","hostname":"os-1","nodeName":"machine-1","bmcMac":"bmc-1","dataSource":"oob","gpuType":"H100","nodeGroup":"group","nodeGroupId":"ng1","computeZone":"zone","computeZoneId":"cz1"}],"total":1}`
 						if endpoint == "list" {
-							expected["sortBy"] = []string{"bmcHostname"}
+							expected["sortBy"] = []string{"bmcMac"}
 							expected["sortOrder"] = []string{"asc"}
 						} else {
 							path += "/buckets"
@@ -56,7 +56,7 @@ func TestEventFiltersAcrossEndpoints(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					opts := EventListOptions{Window: "24h", NameSearch: " bmc ", EventNames: []string{"RedfishEvent", "Others"}, Severities: []string{"Critical", "Info"}, Components: []string{"gpu", "oob-redfish-events"}, GPUTypes: []string{"H100", "B200"}, DataSources: sources, SortBy: EventSortByBMCHostname, SortOrder: EventOrderAsc}
+					opts := EventListOptions{Window: "24h", NameSearch: " bmc ", EventNames: []string{"RedfishEvent", "Others"}, Severities: []string{"Critical", "Info"}, Components: []string{"gpu", "oob-redfish-events"}, GPUTypes: []string{"H100", "B200"}, DataSources: sources, SortBy: EventSortByBMCMAC, SortOrder: EventOrderAsc}
 					if exclude {
 						opts.ExcludeNodeGroupIDs = []string{"ng1", "ng2"}
 						opts.ExcludeComputeZoneIDs = []string{"cz1", "cz2"}
@@ -69,7 +69,7 @@ func TestEventFiltersAcrossEndpoints(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						want := Event{EventID: "e1", NodeUUID: "n1", Hostname: "os-1", NodeName: "machine-1", BMCHostname: "bmc-1", DataSource: "oob", GPUType: "H100", NodeGroup: "group", NodeGroupID: "ng1", ComputeZone: "zone", ComputeZoneID: "cz1"}
+						want := Event{EventID: "e1", NodeUUID: "n1", Hostname: "os-1", NodeName: "machine-1", BMCMAC: "bmc-1", DataSource: "oob", GPUType: "H100", NodeGroup: "group", NodeGroupID: "ng1", ComputeZone: "zone", ComputeZoneID: "cz1"}
 						if len(page.Events) != 1 || !reflect.DeepEqual(page.Events[0], want) {
 							t.Fatalf("events = %#v", page.Events)
 						}
@@ -119,7 +119,7 @@ func TestEventInvalidFiltersMakeNoRequest(t *testing.T) {
 }
 
 func TestEventFilterOptions(t *testing.T) {
-	body := `{"components":[{"component":"gpu","componentDisplayName":"GPU"}],"dataSources":["inband","oob"],"eventNames":["XID","Others"],"gpuTypes":["H100"],"severities":["Critical"],"sortFields":["timestamp","bmcHostname"]}`
+	body := `{"components":[{"component":"gpu","componentDisplayName":"GPU"}],"dataSources":["inband","oob"],"eventNames":["XID","Others"],"gpuTypes":["H100"],"severities":["Critical"],"sortFields":["timestamp","bmcMac"]}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/events/options" || r.URL.RawQuery != "" {
 			t.Errorf("unexpected URL %s", r.URL)
@@ -136,7 +136,7 @@ func TestEventFilterOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := EventFilterOptions{Components: []EventComponentOption{{Component: "gpu", ComponentDisplayName: "GPU"}}, DataSources: []string{"inband", "oob"}, EventNames: []string{"XID", "Others"}, GPUTypes: []string{"H100"}, Severities: []string{"Critical"}, SortFields: []string{"timestamp", "bmcHostname"}, RawJSON: []byte(body)}
+	want := EventFilterOptions{Components: []EventComponentOption{{Component: "gpu", ComponentDisplayName: "GPU"}}, DataSources: []string{"inband", "oob"}, EventNames: []string{"XID", "Others"}, GPUTypes: []string{"H100"}, Severities: []string{"Critical"}, SortFields: []string{"timestamp", "bmcMac"}, RawJSON: []byte(body)}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("options=%#v; want %#v", got, want)
 	}

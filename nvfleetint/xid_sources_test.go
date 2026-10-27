@@ -15,7 +15,7 @@ import (
 func TestXIDBurstSources(t *testing.T) {
 	for _, source := range []DataSource{"", DataSourceInband, DataSourceOOB, DataSourceAll} {
 		t.Run(string(source), func(t *testing.T) {
-			row := `{"burstId":"b1","nodeUuid":"n1","dataSource":"oob","hostname":"os-1","nodeName":"machine-1","bmcHostname":"bmc-1","gpuType":"H100","deviceIds":{"GPU-or-Redfish-label":[48]}}`
+			row := `{"burstId":"b1","nodeUuid":"n1","dataSource":"oob","hostname":"os-1","nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100","deviceIds":{"GPU-or-Redfish-label":[48]}}`
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				q := r.URL.Query()
 				w.Header().Set("Content-Type", "application/json")
@@ -61,7 +61,7 @@ func TestXIDBurstSources(t *testing.T) {
 				t.Fatalf("bursts=%v", page.Bursts)
 			}
 			got := page.Bursts[0]
-			if got.DataSource != "oob" || got.Hostname != "os-1" || got.NodeName != "machine-1" || got.BMCHostname != "bmc-1" || got.GPUType != "H100" {
+			if got.DataSource != "oob" || got.Hostname != "os-1" || got.NodeName != "machine-1" || got.BMCMAC != "bmc-1" || got.GPUType != "H100" {
 				t.Fatalf("fields lost: %+v", got)
 			}
 			detail, err := client.DescribeXIDBurst(context.Background(), "b1")

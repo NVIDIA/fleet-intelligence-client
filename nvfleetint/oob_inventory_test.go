@@ -58,7 +58,6 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 		PrimarySystemId: testPointer("system-1"),
 		Source: fleetapi.ModelsOobSource{
 			Address:        "192.0.2.10",
-			HostName:       testPointer("bmc-1"),
 			Mac:            "00:11:22:33:44:55",
 			RedfishVersion: testPointer("1.17.0"),
 			ServiceUuid:    testPointer("service-1"),
@@ -116,7 +115,7 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 		got.TargetError != "one target was unavailable" {
 		t.Fatalf("unexpected inventory metadata: %#v", got)
 	}
-	if got.Source == nil || got.Source.Address != "192.0.2.10" || got.Source.Hostname != "bmc-1" ||
+	if got.Source == nil || got.Source.Address != "192.0.2.10" ||
 		got.Source.ServiceUUID != "service-1" {
 		t.Fatalf("unexpected source: %#v", got.Source)
 	}

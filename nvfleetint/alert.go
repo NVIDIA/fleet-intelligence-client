@@ -33,7 +33,7 @@ const (
 	AlertAgentNotEnrolled AlertAgentStatus = "not_enrolled"
 
 	AlertTimelineNodeSortByNodeName    AlertTimelineNodeSortBy = "nodeName"
-	AlertTimelineNodeSortByBMCHostname AlertTimelineNodeSortBy = "bmcHostname"
+	AlertTimelineNodeSortByBMCMAC      AlertTimelineNodeSortBy = "bmcMac"
 	AlertTimelineNodeSortByNodeUUID    AlertTimelineNodeSortBy = "nodeUUID"
 	AlertTimelineNodeSortByHostname    AlertTimelineNodeSortBy = "hostname"
 	AlertTimelineNodeSortByAlert       AlertTimelineNodeSortBy = "alert"
@@ -246,7 +246,7 @@ func (page AlertTimelineNodesPage) PageInfo() PageInfo {
 // Represents a node that has alert timeline history
 type AlertTimelineNode struct {
 	NodeName      string              `json:"nodeName,omitempty"`
-	BMCHostname   string              `json:"bmcHostname,omitempty"`
+	BMCMAC        string              `json:"bmcMac,omitempty"`
 	AgentStatus   *AlertAgentStatuses `json:"agentStatus,omitempty"`
 	NodeUUID      string              `json:"nodeUuid"`
 	Hostname      string              `json:"hostname,omitempty"`
@@ -732,7 +732,7 @@ func alertFromGenerated(alert fleetapi.ModelsAlert) Alert {
 func alertTimelineNodeFromGenerated(node fleetapi.ModelsAlertTimelineNode) AlertTimelineNode {
 	return AlertTimelineNode{
 		NodeName:      stringValue(node.NodeName),
-		BMCHostname:   stringValue(node.BmcHostname),
+		BMCMAC:        stringValue(node.BmcMac),
 		AgentStatus:   alertAgentStatusesFromGenerated(node.AgentStatus),
 		NodeUUID:      node.NodeUuid,
 		Hostname:      stringValue(node.Hostname),

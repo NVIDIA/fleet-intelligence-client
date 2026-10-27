@@ -34,7 +34,7 @@ func TestInventoryOOBSourceOutput(t *testing.T) {
 		if q.Get("page") == "1" {
 			page = 1
 		}
-		fmt.Fprintf(w, `{"nodes":[{"nodeUUID":"n%d","nodeName":"machine%d","bmcHostname":"bmc%d","bmcIP":"192.0.2.%d","gpuType":"NVIDIA-H100-80GB-HBM3","gpuCount":8,"verificationCheck":"Verified","enrolledAt":"2026-01-01T00:00:00Z","removedAt":"2026-09-01T00:00:00Z"}],"page":%d,"pageSize":1,"total":2,"hasMore":%v}`, page, page, page, page+1, page, page == 0)
+		fmt.Fprintf(w, `{"nodes":[{"nodeUUID":"n%d","nodeName":"machine%d","bmcMac":"bmc%d","bmcIP":"192.0.2.%d","gpuType":"NVIDIA-H100-80GB-HBM3","gpuCount":8,"verificationCheck":"Verified","enrolledAt":"2026-01-01T00:00:00Z","removedAt":"2026-09-01T00:00:00Z"}],"page":%d,"pageSize":1,"total":2,"hasMore":%v}`, page, page, page, page+1, page, page == 0)
 	}))
 	defer server.Close()
 	cmdtest.SaveConfig(t, server.URL, "test-key")
@@ -71,7 +71,7 @@ func TestInventoryOOBSourceOutput(t *testing.T) {
 			if output == "json" && (!json.Valid(out.Bytes()) || !strings.Contains(out.String(), "removedAt")) {
 				t.Fatalf("invalid/lossy JSON: %s", &out)
 			}
-			if output == "table" && (!strings.Contains(out.String(), "BMC HOSTNAME") || !strings.Contains(out.String(), "GPU TYPE") || !strings.Contains(out.String(), "GPU COUNT")) {
+			if output == "table" && (!strings.Contains(out.String(), "BMC MAC") || !strings.Contains(out.String(), "GPU TYPE") || !strings.Contains(out.String(), "GPU COUNT")) {
 				t.Fatalf("wrong source columns: %s", &out)
 			}
 		}
@@ -93,7 +93,7 @@ func TestInventoryOOBDownloads(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	for _, signed := range []bool{false, true} {
 		t.Run(fmt.Sprintf("signed=%v", signed), func(t *testing.T) {
-			payload := "nodeUUID,nodeName,bmcHostname,gpuType,gpuCount\nn1,machine,bmc,NVIDIA-H100-80GB-HBM3,8\n"
+			payload := "nodeUUID,nodeName,bmcMac,gpuType,gpuCount\nn1,machine,bmc,NVIDIA-H100-80GB-HBM3,8\n"
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Query().Get("dataSource") != "oob" {
 					t.Error("download lost OOB source")

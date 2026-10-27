@@ -158,7 +158,7 @@ func TestListNodesBasic(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","nodeName":"machine-001","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","nodeName":"machine-001","bmcMac":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -179,7 +179,7 @@ func TestListNodesBasic(t *testing.T) {
 	if len(got.Nodes) != 1 || got.Nodes[0].UUID != "node-1" || got.Nodes[0].Hostname != "gpu-001" {
 		t.Fatalf("unexpected nodes: %#v", got.Nodes)
 	}
-	if got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10:443" {
+	if got.Nodes[0].BMCMAC != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10:443" {
 		t.Fatalf("unexpected basic BMC fields: %#v", got.Nodes[0])
 	}
 	if got.Nodes[0].NodeName != "machine-001" {
@@ -250,13 +250,13 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 			"nodeName":"machine-001",
 			"nodeKind":"nvswitch",
 			"dataSource":"oob",
-			"bmcHostname":"bmc-001",
+			"bmcMac":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
 				"schemaVersion":"inventory.v1alpha1",
 				"primarySystemId":"System.Embedded.1",
-				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","hostName":"bmc-001"},
+				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","mac":"02:00:0a:00:00:0a"},
 				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
 				"managers":[{"id":"iDRAC.Embedded.1","firmwareVersion":"7.10.00.00"}],
 				"chassis":[{"id":"System.Embedded.1","pcieDevices":[{"id":"GPU.Slot.1","model":"NVIDIA H100"}]}],
@@ -278,13 +278,13 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 		t.Fatalf("describe failed: %v", err)
 	}
 	if got.DataSource != "oob" || got.NodeName != "machine-001" || got.NodeKind != NodeKindNVSwitch ||
-		got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
+		got.BMCMAC != "bmc-001" || got.BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
 	}
 	if got.OOBInventory == nil || got.OOBInventory.SchemaVersion != "inventory.v1alpha1" {
 		t.Fatalf("unexpected inventory: %#v", got.OOBInventory)
 	}
-	if got.OOBInventory.Source == nil || got.OOBInventory.Source.Hostname != "bmc-001" {
+	if got.OOBInventory.Source == nil || got.OOBInventory.Source.MAC != "02:00:0a:00:00:0a" {
 		t.Fatalf("unexpected inventory source: %#v", got.OOBInventory.Source)
 	}
 	if len(got.OOBInventory.Systems) != 1 || got.OOBInventory.Systems[0].CPUCount == nil ||
@@ -305,11 +305,11 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 func TestListNodesOOB(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		if query.Get("dataSource") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "nodeName" {
+		if query.Get("dataSource") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcMac") != "bmc" || query.Get("sortBy") != "nodeName" {
 			t.Fatalf("unexpected query: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcMac":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -318,16 +318,16 @@ func TestListNodesOOB(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		DataSource:  DataSourceOOB,
-		NodeName:    "machine",
-		BMCHostname: "bmc",
-		SortBy:      NodeSortByNodeName,
+		DataSource: DataSourceOOB,
+		NodeName:   "machine",
+		BMCMAC:     "bmc",
+		SortBy:     NodeSortByNodeName,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}
 	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].NodeKind != NodeKindNVSwitch ||
-		got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
+		got.Nodes[0].BMCMAC != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB nodes: %#v", got.Nodes)
 	}
 }
@@ -453,7 +453,7 @@ func TestNodeSortByValid(t *testing.T) {
 		NodeSortByGPUDriverVersion,
 		NodeSortByGPUFirmwareVersions,
 		NodeSortByNodeName,
-		NodeSortByBMCHostname,
+		NodeSortByBMCMAC,
 	}
 
 	for _, sortBy := range tests {
@@ -512,7 +512,7 @@ func TestListNodesOptionsValidate(t *testing.T) {
 
 // Verifies basic view accepts identity and inventory sorting, but not health sorting.
 func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
-	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname,
+	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCMAC,
 		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone}
 	rejected := []NodeSortBy{
 		NodeSortByHealthStatus, NodeSortByVerificationCheck, NodeSortByAgentStatus,

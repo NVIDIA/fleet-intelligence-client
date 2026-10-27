@@ -49,7 +49,7 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 						if echo == "all" {
 							echo = []string{"inband", "oob"}[calls]
 						}
-						fmt.Fprintf(w, `{"items":[{"burstId":"b%d","nodeUuid":"same-node","dataSource":%q,"nodeName":"machine-1","bmcHostname":"bmc-1","gpuType":"H100"}],"page":%d,"pageSize":1,"total":2}`, calls, echo, calls)
+						fmt.Fprintf(w, `{"items":[{"burstId":"b%d","nodeUuid":"same-node","dataSource":%q,"nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100"}],"page":%d,"pageSize":1,"total":2}`, calls, echo, calls)
 						calls++
 					}))
 					defer server.Close()
@@ -95,14 +95,14 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 							if wantSource == "all" {
 								wantSource = []string{"inband", "oob"}[i]
 							}
-							for key, want := range map[string]string{"dataSource": wantSource, "nodeName": "machine-1", "bmcHostname": "bmc-1", "gpuType": "H100", "nodeUuid": "same-node"} {
+							for key, want := range map[string]string{"dataSource": wantSource, "nodeName": "machine-1", "bmcMac": "bmc-1", "gpuType": "H100", "nodeUuid": "same-node"} {
 								if item[key] != want {
 									t.Errorf("%s=%v; want %s", key, item[key], want)
 								}
 							}
 						}
 					} else {
-						for _, want := range []string{"DATA SOURCE", "NODE NAME", "BMC HOSTNAME", "GPU TYPE", "machine-1", "bmc-1", "H100"} {
+						for _, want := range []string{"DATA SOURCE", "NODE NAME", "BMC MAC", "GPU TYPE", "machine-1", "bmc-1", "H100"} {
 							if !strings.Contains(out.String(), want) {
 								t.Errorf("missing %s in %s", want, &out)
 							}
@@ -147,7 +147,7 @@ func TestXIDBurstOOBDescribe(t *testing.T) {
 			t.Errorf("describe request=%s", r.URL)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"burstId":"oob-burst","nodeUuid":"n1","dataSource":"oob","nodeName":"machine-1","bmcHostname":"bmc-1","gpuType":"H100","deviceIds":{"Redfish-token":[48]}}`))
+		_, _ = w.Write([]byte(`{"burstId":"oob-burst","nodeUuid":"n1","dataSource":"oob","nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100","deviceIds":{"Redfish-token":[48]}}`))
 	}))
 	defer server.Close()
 	cmdtest.SaveConfig(t, server.URL, "test-key")
@@ -158,7 +158,7 @@ func TestXIDBurstOOBDescribe(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"DATA SOURCE", "oob", "NODE NAME", "machine-1", "BMC HOSTNAME", "bmc-1", "GPU TYPE", "H100", "Redfish-token"} {
+	for _, want := range []string{"DATA SOURCE", "oob", "NODE NAME", "machine-1", "BMC MAC", "bmc-1", "GPU TYPE", "H100", "Redfish-token"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("missing %s in %s", want, &out)
 		}

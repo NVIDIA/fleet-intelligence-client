@@ -19,7 +19,7 @@ const (
 	XIDBurstSortByDataSource                      XIDBurstSortBy = "dataSource"
 	XIDBurstSortByGPUType                         XIDBurstSortBy = "gpuType"
 	XIDBurstSortByNodeName                        XIDBurstSortBy = "nodeName"
-	XIDBurstSortByBMCHostname                     XIDBurstSortBy = "bmcHostname"
+	XIDBurstSortByBMCMAC                          XIDBurstSortBy = "bmcMac"
 	XIDBurstSortByJobDisruption                   XIDBurstSortBy = "jobDisruption"
 	XIDBurstSortByJobDisruptionDueToPlatformIssue XIDBurstSortBy = "jobDisruptionDueToPlatformIssue"
 	XIDBurstSortByCategory                        XIDBurstSortBy = "category"
@@ -85,7 +85,7 @@ type ListXIDBurstsOptions struct {
 	XIDNumbers                      []int
 
 	GPUTypes []string
-	// NameSearch matches hostname, OOB node name, or BMC hostname.
+	// NameSearch matches hostname, OOB node name, or BMC MAC identifier.
 	NameSearch string
 	// Deprecated: use NameSearch, which takes precedence when both are supplied.
 	HostnameSearch             string
@@ -138,9 +138,9 @@ type XIDBurst struct {
 	// DataSource is the detecting path, inband or oob; never all.
 	DataSource string `json:"dataSource,omitempty"`
 	// Identities and GPU type describe the node independently of burst source.
-	NodeName    string `json:"nodeName,omitempty"`
-	BMCHostname string `json:"bmcHostname,omitempty"`
-	GPUType     string `json:"gpuType,omitempty"`
+	NodeName string `json:"nodeName,omitempty"`
+	BMCMAC   string `json:"bmcMac,omitempty"`
+	GPUType  string `json:"gpuType,omitempty"`
 
 	BurstID              string        `json:"burstId,omitempty"`
 	NodeUUID             string        `json:"nodeUuid,omitempty"`
@@ -320,7 +320,7 @@ func xidBurstFromGenerated(item fleetapi.ModelsXIDBurstListItem) XIDBurst {
 	return XIDBurst{
 		DataSource:                      stringValue(item.DataSource),
 		NodeName:                        stringValue(item.NodeName),
-		BMCHostname:                     stringValue(item.BmcHostname),
+		BMCMAC:                          stringValue(item.BmcMac),
 		GPUType:                         stringValue(item.GpuType),
 		BurstID:                         item.BurstId,
 		NodeUUID:                        item.NodeUuid,

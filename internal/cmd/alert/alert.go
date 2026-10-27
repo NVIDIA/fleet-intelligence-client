@@ -156,7 +156,7 @@ func newAlertSummaryCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Partial match across hostname, OOB node name, BMC hostname, and node UUID")
+	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Partial match across hostname, OOB node name, BMC MAC identifier, and node UUID")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Compatibility alias for --name-search")
 	cmd.MarkFlagsMutuallyExclusive("name-search", "hostname")
 	cmd.Flags().StringVar(&flags.inbandAgentStatus, "inband-agent-status", "", "Comma-separated in-band statuses: online, offline, not_enrolled (OR within this filter; AND with --oob-agent-status)")
@@ -569,7 +569,7 @@ var (
 		"alertState":          {Flag: "alert-state"},
 		"sortBy": {
 			Flag:     "sort-by",
-			Expected: "hostname, nodeName, bmcHostname, nodeUUID, alert, gpuType, nodeGroup, computeZone, or lastUpdate",
+			Expected: "hostname, nodeName, bmcMac, nodeUUID, alert, gpuType, nodeGroup, computeZone, or lastUpdate",
 		},
 	}
 	nodeAlertTimelineFlagNames = map[string]cmdutil.OptionFlagName{
@@ -729,7 +729,7 @@ func writeAlertTimelineOutput(w io.Writer, common cmdutil.Resolved, result alert
 		err = clioutput.WriteTable(w, []string{"ALERT UUID", "COMPONENT", "DATA SOURCE", "STATUS", "START TIME", "LAST EVENT TIME"}, alertTimelineAlertRows(result.Alerts))
 	} else {
 		err = clioutput.WriteTable(w, []string{
-			"NODE UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "INBAND STATUS", "OOB STATUS", "CRITICAL", "WARNING", "RESOLVED", "GPU TYPE", "NODE GROUP", "COMPUTE ZONE", "LAST ALERT TIME",
+			"NODE UUID", "HOSTNAME", "NODE NAME", "BMC MAC", "INBAND STATUS", "OOB STATUS", "CRITICAL", "WARNING", "RESOLVED", "GPU TYPE", "NODE GROUP", "COMPUTE ZONE", "LAST ALERT TIME",
 		}, alertTimelineNodeRows(result.Nodes))
 	}
 	if err != nil {
@@ -819,7 +819,7 @@ func alertTimelineNodeRows(nodes []nvfleetint.AlertTimelineNode) [][]string {
 			clioutput.DisplayString(node.NodeUUID),
 			clioutput.DisplayString(node.Hostname),
 			clioutput.DisplayString(node.NodeName),
-			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			alertAgentStatusCell(node.AgentStatus, nvfleetint.DataSourceInband),
 			alertAgentStatusCell(node.AgentStatus, nvfleetint.DataSourceOOB),
 			fmt.Sprintf("%d", node.CriticalCount),

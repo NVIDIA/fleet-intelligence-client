@@ -57,7 +57,6 @@ type OOBInventoryReference struct {
 // Identifies the source used to collect OOB inventory
 type OOBSource struct {
 	Address        string `json:"address,omitempty"`
-	Hostname       string `json:"hostName,omitempty"`
 	MAC            string `json:"mac,omitempty"`
 	RedfishVersion string `json:"redfishVersion,omitempty"`
 	ServiceUUID    string `json:"serviceUuid,omitempty"`
@@ -239,7 +238,6 @@ func oobInventoryFromGenerated(inventory *fleetapi.ModelsOobInventory) *OOBInven
 func oobSourceFromGenerated(source fleetapi.ModelsOobSource) *OOBSource {
 	return &OOBSource{
 		Address:        source.Address,
-		Hostname:       stringValue(source.HostName),
 		MAC:            source.Mac,
 		RedfishVersion: stringValue(source.RedfishVersion),
 		ServiceUUID:    stringValue(source.ServiceUuid),

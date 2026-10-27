@@ -29,7 +29,11 @@ func TestNodeSourceRequestsAndResponses(t *testing.T) {
 			if source == "" {
 				source = "inband"
 			}
-			node := fmt.Sprintf(`{"nodeUUID":"n1","dataSource":%q,"agentType":"obsolete","gpuType":"H100","gpuCount":8,"nodeName":"machine","bmcHostname":"bmc","bmcIP":"192.0.2.1","enrolledAt":"2026-01-01T00:00:00Z","removedAt":"2026-09-01T00:00:00Z","verificationCheck":"Verified","location":{"country":"US"}}`, source)
+			versionField := "agentVersion"
+			if source == "oob" {
+				versionField = "collectorVersion"
+			}
+			node := fmt.Sprintf(`{"nodeUUID":"n1","dataSource":%q,%q:"1.2.3","agentType":"obsolete","gpuType":"H100","gpuCount":8,"nodeName":"machine","bmcMac":"bmc","bmcIP":"192.0.2.1","enrolledAt":"2026-01-01T00:00:00Z","removedAt":"2026-09-01T00:00:00Z","verificationCheck":"Verified","location":{"country":"US"}}`, source, versionField)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requests++
 				if got := r.URL.Query().Get("dataSource"); got != tc.want {
@@ -69,6 +73,13 @@ func TestNodeSourceRequestsAndResponses(t *testing.T) {
 				if n.DataSource != source || n.GPUType != "H100" || n.GPUCount == nil || *n.GPUCount != 8 {
 					t.Fatalf("lost node source/GPU fields: %#v", n)
 				}
+				if source == "oob" {
+					if n.CollectorVersion != "1.2.3" || n.AgentVersion != "" {
+						t.Fatalf("unexpected OOB version fields: %#v", n)
+					}
+				} else if n.AgentVersion != "1.2.3" || n.CollectorVersion != "" {
+					t.Fatalf("unexpected in-band version fields: %#v", n)
+				}
 				encoded, err := json.Marshal(n)
 				if err != nil {
 					t.Fatal(err)
@@ -86,7 +97,7 @@ func TestNodeSourceRequestsAndResponses(t *testing.T) {
 			}
 			if source == "oob" {
 				n := report.Nodes[0]
-				if report.DataSource != DataSourceOOB || n.NodeName != "machine" || n.BMCHostname != "bmc" || n.BMCIP != "192.0.2.1" || n.EnrolledAt == "" || n.RemovedAt == "" || n.VerificationCheck != "Verified" || n.Location == nil || n.GPUType != "H100" || n.GPUCount == nil || *n.GPUCount != 8 {
+				if report.DataSource != DataSourceOOB || n.NodeName != "machine" || n.BMCMAC != "bmc" || n.BMCIP != "192.0.2.1" || n.EnrolledAt == "" || n.RemovedAt == "" || n.VerificationCheck != "Verified" || n.Location == nil || n.GPUType != "H100" || n.GPUCount == nil || *n.GPUCount != 8 {
 					t.Fatalf("lost OOB report fields: %#v", report)
 				}
 			}
@@ -138,7 +149,7 @@ func TestNodeSourcesRejectInvalidValuesBeforeHTTP(t *testing.T) {
 func TestOOBInventoryReportDownloadSource(t *testing.T) {
 	for _, signed := range []bool{false, true} {
 		t.Run(fmt.Sprintf("signed=%v", signed), func(t *testing.T) {
-			body := "nodeUUID,nodeName,bmcHostname\nn1,machine,bmc\n"
+			body := "nodeUUID,nodeName,bmcMac\nn1,machine,bmc\n"
 			contentType := "text/csv"
 			if signed {
 				body = "signed bundle bytes"

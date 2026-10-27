@@ -37,11 +37,10 @@ const (
 
 	ErrorSeverityCritical ErrorSeverity = "Critical"
 	ErrorSeverityFatal    ErrorSeverity = "Fatal"
-	ErrorSeverityInfo     ErrorSeverity = "Info"
 	ErrorSeverityWarning  ErrorSeverity = "Warning"
 
 	InventoryReportSortByNodeName          InventoryReportSortBy = "nodeName"
-	InventoryReportSortByBMCHostname       InventoryReportSortBy = "bmcHostname"
+	InventoryReportSortByBMCMAC            InventoryReportSortBy = "bmcMac"
 	InventoryReportSortByBMCIP             InventoryReportSortBy = "bmcIP"
 	InventoryReportSortByHostname          InventoryReportSortBy = "hostname"
 	InventoryReportSortByNodeUUID          InventoryReportSortBy = "nodeUUID"
@@ -105,7 +104,7 @@ type ErrorSeverity string
 
 // Reports whether the error severity is accepted by the API
 func (severity ErrorSeverity) Valid() bool {
-	return fleetapi.ModelsEventSeverity(severity).Valid()
+	return fleetapi.ModelsErrorSeverity(severity).Valid()
 }
 
 // Represents supported inventory report sort fields
@@ -174,7 +173,7 @@ func (page InventoryReport) PageInfo() PageInfo {
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
 	NodeName                  string    `json:"nodeName,omitempty"`
-	BMCHostname               string    `json:"bmcHostname,omitempty"`
+	BMCMAC                    string    `json:"bmcMac,omitempty"`
 	BMCIP                     string    `json:"bmcIP,omitempty"`
 	NodeUUID                  string    `json:"nodeUUID"`
 	Hostname                  string    `json:"hostname,omitempty"`
@@ -374,9 +373,9 @@ const (
 	errorReportViewValues       = "list, graph, or overview"
 	errorReportGroupByValues    = "error or node"
 	errorReportTimeModeValues   = "absolute or relative"
-	errorReportSeverityValues   = "Critical, Fatal, Info, or Warning"
+	errorReportSeverityValues   = "Critical, Fatal, or Warning"
 	inventoryReportOrderValues  = "asc or desc"
-	inventoryReportSortByValues = "hostname, nodeName, bmcHostname, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
+	inventoryReportSortByValues = "hostname, nodeName, bmcMac, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 )
 
 // Defaults an omitted report format and rejects unsupported values
@@ -614,7 +613,7 @@ func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams
 		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
 		Tags:           optionalSlice(opts.Tags),
 		Errors:         optionalSlice(opts.Errors),
-		Severities:     optionalEnumSlice[fleetapi.ModelsEventSeverity](opts.Severities),
+		Severities:     optionalEnumSlice[fleetapi.ModelsErrorSeverity](opts.Severities),
 		TimeMode:       optionalEnum[string](opts.TimeMode),
 		Window:         optionalString(opts.Window),
 		StartTime:      optionalString(opts.StartTime),
@@ -714,7 +713,7 @@ func decodeOOBInventoryReport(data []byte) (InventoryReport, error) {
 			report.Nodes = append(report.Nodes, InventoryNode{
 				NodeUUID:                  stringValue(node.NodeUUID),
 				NodeName:                  stringValue(node.NodeName),
-				BMCHostname:               stringValue(node.BmcHostname),
+				BMCMAC:                    stringValue(node.BmcMac),
 				BMCIP:                     stringValue(node.BmcIP),
 				ComputeZone:               stringValue(node.ComputeZone),
 				NodeGroup:                 stringValue(node.NodeGroup),

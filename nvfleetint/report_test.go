@@ -482,6 +482,7 @@ func TestGetErrorReportRejectsInvalidOptions(t *testing.T) {
 		{name: "zero window", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeRelative, Window: "0s"}, want: "invalid window"},
 		{name: "malformed start", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "not-a-date", EndTime: "2026-05-02T00:00:00Z"}, want: "start time must be RFC3339"},
 		{name: "malformed end", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "2026-05-01T00:00:00Z", EndTime: "not-a-date"}, want: "end time must be RFC3339"},
+		{name: "info excluded", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Severities: []ErrorSeverity{"Info"}}, want: "invalid error report severity"},
 		{name: "bad severity", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Severities: []ErrorSeverity{"Broken"}}, want: "invalid error report severity"},
 		{name: "step with list", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Step: "5m"}, want: "step is only supported for graph view"},
 		{name: "short step", opts: ErrorReportOptions{View: ErrorReportViewGraph, Step: "30s"}, want: "expected at least 1m"},

@@ -20,7 +20,7 @@ func TestNodeSearchAcrossViewsAndPages(t *testing.T) {
 		{"basic", "inband", "--hostname", "hostname"},
 		{"basic", "oob", "--node-name", "nodeName"},
 		{"detail", "inband", "--hostname", "hostname"},
-		{"detail", "oob", "--bmc-hostname", "bmcHostname"},
+		{"detail", "oob", "--bmc-mac", "bmcMac"},
 	} {
 		for _, all := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/%s/all=%v", tc.view, tc.source, all), func(t *testing.T) {

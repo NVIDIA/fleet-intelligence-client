@@ -19,7 +19,7 @@ import (
 )
 
 // Lists the sort fields accepted by xidburst list
-const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeName, bmcHostname, nodeUuid, dataSource, gpuType, nodeGroup, computeZone, " +
+const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeName, bmcMac, nodeUuid, dataSource, gpuType, nodeGroup, computeZone, " +
 	"xidNumbers, xidCount, jobDisruption, jobDisruptionDueToPlatformIssue, category, subcategory, " +
 	"tenantAction, tenantInvestigation, dcAdminAction, or dcAdminInvestigation"
 
@@ -127,7 +127,7 @@ callers; for tenant callers the backend rejects them.
 	cmd.Flags().BoolVar(&flags.jobDisruption, "job-disruption", false, "Filter by the public fatal-XID job-disruption value")
 	cmd.Flags().BoolVar(&flags.platformDisruption, "platform-disruption", false, "Filter by analyzer platform-attributed disruption (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.xidNumbers, "xid-numbers", "", "Comma-separated XID numbers; a burst matches if it contains any of them")
-	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Search hostname, OOB node name, or BMC hostname")
+	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Search hostname, OOB node name, or BMC MAC identifier")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Compatibility alias for --name-search")
 	cmd.MarkFlagsMutuallyExclusive("name-search", "hostname")
 	cmd.Flags().StringVar(&flags.gpuTypes, "gpu-type", "", "Comma-separated resolved node GPU types; independent of observation source")
@@ -343,7 +343,7 @@ func writeXIDBurstListOutput(w io.Writer, common cmdutil.Resolved, result xidBur
 	}
 
 	headers := []string{
-		"BURST ID", "DATA SOURCE", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "GPU TYPE", "XIDS", "XID COUNT", "START TIME", "DURATION (S)",
+		"BURST ID", "DATA SOURCE", "HOSTNAME", "NODE NAME", "BMC MAC", "GPU TYPE", "XIDS", "XID COUNT", "START TIME", "DURATION (S)",
 		"JOB DISRUPTION", "NODE GROUP", "COMPUTE ZONE",
 	}
 	if err := clioutput.WriteTable(w, headers, xidBurstRows(result.Bursts)); err != nil {
@@ -366,7 +366,7 @@ func xidBurstRows(bursts []nvfleetint.XIDBurst) [][]string {
 			clioutput.DisplayString(burst.DataSource),
 			clioutput.DisplayString(burst.Hostname),
 			clioutput.DisplayString(burst.NodeName),
-			clioutput.DisplayString(burst.BMCHostname),
+			clioutput.DisplayString(burst.BMCMAC),
 			clioutput.DisplayString(burst.GPUType),
 			formatXIDNumbers(burst.XIDNumbers),
 			clioutput.FormatOptionalInt(burst.XIDCount),
@@ -392,7 +392,7 @@ func xidBurstDescribeRows(burst nvfleetint.XIDBurstDetails) [][]string {
 		{"NODE UUID", clioutput.DisplayString(burst.NodeUUID)},
 		{"DATA SOURCE", clioutput.DisplayString(burst.DataSource)},
 		{"NODE NAME", clioutput.DisplayString(burst.NodeName)},
-		{"BMC HOSTNAME", clioutput.DisplayString(burst.BMCHostname)},
+		{"BMC MAC", clioutput.DisplayString(burst.BMCMAC)},
 		{"GPU TYPE", clioutput.DisplayString(burst.GPUType)},
 		{"HOSTNAME", clioutput.DisplayString(burst.Hostname)},
 		{"NODE GROUP", clioutput.FormatNameAndID(burst.NodeGroup, burst.NodeGroupID)},

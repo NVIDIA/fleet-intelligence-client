@@ -36,10 +36,10 @@ func TestAlertSourceFiltersAndStatusDecoding(t *testing.T) {
 						if !slices.Equal(q["inbandAgentStatuses"], []string{"offline", "not_enrolled"}) || !slices.Equal(q["oobAgentStatuses"], []string{"online"}) {
 							t.Errorf("lost status filters: %s", r.URL)
 						}
-						if q.Get("sortBy") != "bmcHostname" || q.Get("nameSearch") != "machine" {
+						if q.Get("sortBy") != "bmcMac" || q.Get("nameSearch") != "machine" {
 							t.Errorf("lost sort/search: %s", r.URL)
 						}
-						fmt.Fprint(w, `{"nodes":[{"nodeUuid":"n1","nodeName":"machine","bmcHostname":"bmc","gpuType":"H100","agentStatus":{"inband":{"status":"not_enrolled"},"oob":{"status":"online","lastSeenAt":"2026-10-01T12:00:00Z"}}},{"nodeUuid":"n2"},{"nodeUuid":"n3","agentStatus":{"inband":{"status":"offline"}}}],"total":3}`)
+						fmt.Fprint(w, `{"nodes":[{"nodeUuid":"n1","nodeName":"machine","bmcMac":"bmc","gpuType":"H100","agentStatus":{"inband":{"status":"not_enrolled"},"oob":{"status":"online","lastSeenAt":"2026-10-01T12:00:00Z"}}},{"nodeUuid":"n2"},{"nodeUuid":"n3","agentStatus":{"inband":{"status":"offline"}}}],"total":3}`)
 					} else {
 						if q.Get("sortBy") != "dataSource" || q.Has("inbandAgentStatuses") || q.Has("oobAgentStatuses") {
 							t.Errorf("unexpected node-alert query: %s", r.URL)
@@ -53,7 +53,7 @@ func TestAlertSourceFiltersAndStatusDecoding(t *testing.T) {
 					t.Fatal(err)
 				}
 				page, err := client.ListAlertTimelineNodes(context.Background(), ListAlertTimelineNodesOptions{
-					Active: active, Hostname: "machine", SortBy: AlertTimelineNodeSortByBMCHostname, DataSources: sources,
+					Active: active, Hostname: "machine", SortBy: AlertTimelineNodeSortByBMCMAC, DataSources: sources,
 					InbandAgentStatuses: []AlertAgentStatus{AlertAgentOffline, AlertAgentNotEnrolled}, OOBAgentStatuses: []AlertAgentStatus{AlertAgentOnline},
 				})
 				if err != nil {
@@ -63,7 +63,7 @@ func TestAlertSourceFiltersAndStatusDecoding(t *testing.T) {
 					t.Fatalf("wrong nodes: %#v", page.Nodes)
 				}
 				n := page.Nodes[0]
-				if n.NodeName != "machine" || n.BMCHostname != "bmc" || n.GPUType != "H100" || n.AgentStatus == nil || n.AgentStatus.Inband == nil || n.AgentStatus.OOB == nil {
+				if n.NodeName != "machine" || n.BMCMAC != "bmc" || n.GPUType != "H100" || n.AgentStatus == nil || n.AgentStatus.Inband == nil || n.AgentStatus.OOB == nil {
 					t.Fatalf("lost fields: %#v", n)
 				}
 				if n.AgentStatus.Inband.Status != AlertAgentNotEnrolled || n.AgentStatus.Inband.LastSeenAt != "" || n.AgentStatus.OOB.Status != AlertAgentOnline || n.AgentStatus.OOB.LastSeenAt != "2026-10-01T12:00:00Z" {
@@ -104,7 +104,7 @@ func TestAlertSourceDefaultsAndInvalidValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, sortBy := range []AlertTimelineNodeSortBy{AlertTimelineNodeSortByNodeName, AlertTimelineNodeSortByBMCHostname, AlertTimelineNodeSortByNodeUUID} {
+	for _, sortBy := range []AlertTimelineNodeSortBy{AlertTimelineNodeSortByNodeName, AlertTimelineNodeSortByBMCMAC, AlertTimelineNodeSortByNodeUUID} {
 		if _, err := client.ListAlertTimelineNodes(context.Background(), ListAlertTimelineNodesOptions{SortBy: sortBy}); err != nil {
 			t.Fatal(err)
 		}

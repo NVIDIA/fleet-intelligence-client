@@ -24,7 +24,7 @@ import (
 // Lists the sort fields accepted by node list
 const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, " +
 	"verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, gpuFirmwareVersions, " +
-	"nodeName, or bmcHostname"
+	"nodeName, or bmcMac"
 
 // Stores local flag values for node list
 type nodeListFlags struct {
@@ -43,7 +43,7 @@ type nodeListFlags struct {
 	privateIP         string
 	hostname          string
 	nodeName          string
-	bmcHostname       string
+	bmcMac            string
 	agentStatus       string
 	verificationCheck string
 	firmwareCheck     string
@@ -150,7 +150,7 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.search, "search", "", "Case-insensitive partial match across node UUID and source-appropriate names (all names in combined basic view)")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.nodeName, "node-name", "", "Node name partial match (OOB view)")
-	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
+	cmd.Flags().StringVar(&flags.bmcMac, "bmc-mac", "", "BMC MAC identifier partial match (OOB view)")
 	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online or Offline")
 	cmd.Flags().StringVar(&flags.verificationCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
@@ -191,7 +191,7 @@ func newNodeDescribeCmd() *cobra.Command {
 var nodeListFilterAndSortFlagNames = []string{
 	"node-uuids", "health", "compute-zone-ids", "compute-zone-names",
 	"nodegroup-ids", "nodegroup-names", "gpu-type", "gpu-count",
-	"public-ip", "private-ip", "search", "hostname", "node-name", "bmc-hostname",
+	"public-ip", "private-ip", "search", "hostname", "node-name", "bmc-mac",
 	"agent-status", "verification-check", "firmware-check", "sort-by", "order",
 }
 
@@ -497,14 +497,14 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 	var err error
 
 	opts := nvfleetint.ListNodesOptions{
-		Search:      strings.TrimSpace(flags.search),
-		View:        nvfleetint.NodeView(flags.view),
-		DataSource:  nvfleetint.DataSource(flags.dataSource),
-		Hostname:    strings.TrimSpace(flags.hostname),
-		NodeName:    strings.TrimSpace(flags.nodeName),
-		BMCHostname: strings.TrimSpace(flags.bmcHostname),
-		SortBy:      nvfleetint.NodeSortBy(strings.TrimSpace(flags.sortBy)),
-		Order:       nvfleetint.NodeSortOrder(flags.order),
+		Search:     strings.TrimSpace(flags.search),
+		View:       nvfleetint.NodeView(flags.view),
+		DataSource: nvfleetint.DataSource(flags.dataSource),
+		Hostname:   strings.TrimSpace(flags.hostname),
+		NodeName:   strings.TrimSpace(flags.nodeName),
+		BMCMAC:     strings.TrimSpace(flags.bmcMac),
+		SortBy:     nvfleetint.NodeSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:      nvfleetint.NodeSortOrder(flags.order),
 	}
 
 	if opts.HealthStatuses, err = cmdutil.ParseTypedList[nvfleetint.NodeHealthStatus](
@@ -585,14 +585,14 @@ func writeNodeTable(
 	if nvfleetint.NodeView(view) == nvfleetint.NodeViewBasic {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP"},
+			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC MAC", "BMC IP"},
 			basicNodeRows(nodes),
 		)
 	}
 	if dataSource == nvfleetint.DataSourceOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
@@ -602,7 +602,7 @@ func writeNodeTable(
 // Reports whether a node list contains OOB-view records
 func nodeListIsOOB(nodes []nvfleetint.Node) bool {
 	for _, node := range nodes {
-		if node.DataSource == string(nvfleetint.DataSourceOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
+		if node.DataSource == string(nvfleetint.DataSourceOOB) || node.NodeName != "" || node.BMCMAC != "" || node.BMCIP != "" {
 			return true
 		}
 	}
@@ -617,7 +617,7 @@ func basicNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.Hostname),
 			clioutput.DisplayString(node.NodeName),
-			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 		})
 	}
@@ -652,7 +652,7 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.NodeName),
 			clioutput.DisplayString(string(node.NodeKind)),
-			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
@@ -785,7 +785,7 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 		{"NODE NAME", clioutput.DisplayString(node.NodeName)},
 		{"NODE KIND", clioutput.DisplayString(string(node.NodeKind))},
-		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
+		{"BMC MAC", clioutput.DisplayString(node.BMCMAC)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
 }
@@ -817,9 +817,9 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 	}
 
-	if node.BMCHostname != "" || node.BMCIP != "" {
+	if node.BMCMAC != "" || node.BMCIP != "" {
 		rows = append(rows,
-			[]string{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
+			[]string{"BMC MAC", clioutput.DisplayString(node.BMCMAC)},
 			[]string{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 		)
 	}
@@ -933,7 +933,6 @@ func oobSourceRows(source *nvfleetint.OOBSource) [][]string {
 		{"SOURCE TYPE", clioutput.DisplayString(source.SourceType)},
 		{"SOURCE MAC", clioutput.DisplayString(source.MAC)},
 		{"SOURCE ADDRESS", clioutput.DisplayString(source.Address)},
-		{"SOURCE HOSTNAME", clioutput.DisplayString(source.Hostname)},
 		{"SOURCE REDFISH VERSION", clioutput.DisplayString(source.RedfishVersion)},
 		{"SOURCE SERVICE UUID", clioutput.DisplayString(source.ServiceUUID)},
 		{"SOURCE VENDOR", clioutput.DisplayString(source.Vendor)},

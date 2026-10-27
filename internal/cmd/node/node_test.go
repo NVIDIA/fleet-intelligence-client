@@ -276,7 +276,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
+				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcMac":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		default:
@@ -299,7 +299,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"In-band", "node-inband", "gpu-001", "GPU TYPE",
-		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "nvswitch", "NODE KIND", "bmc-001", "BMC HOSTNAME",
+		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "nvswitch", "NODE KIND", "bmc-001", "BMC MAC",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("combined table missing %q: %q", want, got)
@@ -512,7 +512,7 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 			_, _ = w.Write([]byte(`{
 				"nodeUUID":"node-1",
 				"dataSource":"oob",
-				"bmcHostname":"bmc-001",
+				"bmcMac":"bmc-001",
 				"bmcIP":"192.0.2.10:443",
 				"healthStatus":"Degraded",
 				"oobInventory":{
@@ -567,7 +567,7 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 	if combined.Inband["hostname"] != "gpu-001" {
 		t.Fatalf("unexpected in-band JSON: %#v", combined.Inband)
 	}
-	if combined.OOB["bmcHostname"] != "bmc-001" {
+	if combined.OOB["bmcMac"] != "bmc-001" {
 		t.Fatalf("unexpected OOB JSON: %#v", combined.OOB)
 	}
 }
@@ -623,7 +623,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 			"nodeKind":"nvswitch",
 			"hostname":"host-001",
 			"dataSource":"oob",
-			"bmcHostname":"bmc-001",
+			"bmcMac":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
@@ -653,7 +653,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"FIELD", "VALUE",
-		"BMC HOSTNAME", "bmc-001",
+		"BMC MAC", "bmc-001",
 		"INVENTORY SCHEMA VERSION", "inventory.v1alpha1",
 		"NODE KIND", "nvswitch",
 		"SOURCE ADDRESS", "192.0.2.10:443", "SOURCE MAC", "00:11:22:33:44:55", "SOURCE VENDOR", "Dell",
@@ -709,7 +709,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 		}
 	}
 	for _, unwanted := range []string{
-		"FIELD", "INVENTORY SCHEMA VERSION", "SOURCE ADDRESS", "BMC HOSTNAME",
+		"FIELD", "INVENTORY SCHEMA VERSION", "SOURCE ADDRESS", "BMC MAC",
 	} {
 		if strings.Contains(got, unwanted) {
 			t.Fatalf("section output unexpectedly contains summary value %q: %q", unwanted, got)
@@ -823,7 +823,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 func TestWriteNodeBasicTable(t *testing.T) {
 	var out bytes.Buffer
 	err := writeNodeTable(&out, string(nvfleetint.NodeViewBasic), "", []nvfleetint.Node{
-		{UUID: "node-1", Hostname: "gpu-001", NodeName: "machine-001", BMCHostname: "bmc-001", BMCIP: "192.0.2.10:443"},
+		{UUID: "node-1", Hostname: "gpu-001", NodeName: "machine-001", BMCMAC: "bmc-001", BMCIP: "192.0.2.10:443"},
 	})
 	if err != nil {
 		t.Fatalf("write table failed: %v", err)
@@ -831,7 +831,7 @@ func TestWriteNodeBasicTable(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP",
+		"UUID", "HOSTNAME", "NODE NAME", "BMC MAC", "BMC IP",
 		"node-1", "gpu-001", "machine-001", "bmc-001", "192.0.2.10:443",
 	} {
 		if !strings.Contains(got, want) {
@@ -842,12 +842,12 @@ func TestWriteNodeBasicTable(t *testing.T) {
 
 func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 	rows := oobDetailNodeRows([]nvfleetint.Node{{
-		UUID:        "node-1",
-		Hostname:    "inband-hostname",
-		NodeName:    "machine-001",
-		NodeKind:    nvfleetint.NodeKindNVSwitch,
-		BMCHostname: "bmc-001",
-		BMCIP:       "192.0.2.10:443",
+		UUID:     "node-1",
+		Hostname: "inband-hostname",
+		NodeName: "machine-001",
+		NodeKind: nvfleetint.NodeKindNVSwitch,
+		BMCMAC:   "bmc-001",
+		BMCIP:    "192.0.2.10:443",
 	}})
 
 	if len(rows) != 1 || len(rows[0]) != 12 {

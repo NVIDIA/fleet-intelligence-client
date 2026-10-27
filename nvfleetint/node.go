@@ -57,7 +57,7 @@ const (
 	NodeSortByGPUDriverVersion    NodeSortBy = "gpuDriverVersion"
 	NodeSortByGPUFirmwareVersions NodeSortBy = "gpuFirmwareVersions"
 	NodeSortByNodeName            NodeSortBy = "nodeName"
-	NodeSortByBMCHostname         NodeSortBy = "bmcHostname"
+	NodeSortByBMCMAC              NodeSortBy = "bmcMac"
 
 	NodeOrderAsc  NodeSortOrder = "asc"
 	NodeOrderDesc NodeSortOrder = "desc"
@@ -122,7 +122,7 @@ func (order NodeSortOrder) Valid() bool {
 // Represents request options for listing nodes
 type ListNodesOptions struct {
 	// Search matches node UUID and source-appropriate names, case-insensitively.
-	// Inband searches hostname; OOB searches nodeName and bmcHostname; combined
+	// Inband searches hostname; OOB searches nodeName and bmcMac; combined
 	// basic searches all three. Surrounding whitespace is ignored; blank is omitted.
 	Search string
 
@@ -140,7 +140,7 @@ type ListNodesOptions struct {
 	PrivateIPs         []string
 	Hostname           string
 	NodeName           string
-	BMCHostname        string
+	BMCMAC             string
 	AgentStatuses      []NodeAgentStatus
 	VerificationChecks []NodeVerificationCheck
 	FirmwareChecks     []NodeFirmwareCheck
@@ -180,7 +180,8 @@ type Node struct {
 	NodeKind                   NodeKind                    `json:"nodeKind,omitempty"`
 	DataSource                 string                      `json:"dataSource,omitempty"`
 	AgentVersion               string                      `json:"agentVersion,omitempty"`
-	BMCHostname                string                      `json:"bmcHostname,omitempty"`
+	CollectorVersion           string                      `json:"collectorVersion,omitempty"`
+	BMCMAC                     string                      `json:"bmcMac,omitempty"`
 	BMCIP                      string                      `json:"bmcIP,omitempty"`
 	ComputeZone                string                      `json:"computeZone,omitempty"`
 	NodeGroup                  string                      `json:"nodeGroup,omitempty"`
@@ -390,7 +391,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 		Search:           optionalTrimmedString(opts.Search),
 		Hostname:         optionalString(opts.Hostname),
 		NodeName:         optionalString(opts.NodeName),
-		BmcHostname:      optionalString(opts.BMCHostname),
+		BmcMac:           optionalString(opts.BMCMAC),
 		ComputeZoneIds:   optionalSlice(opts.ComputeZoneIDs),
 		ComputeZoneNames: optionalSlice(opts.ComputeZoneNames),
 		NodeGroupIds:     optionalSlice(opts.NodeGroupIDs),
@@ -552,7 +553,7 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 		// the value here is the backend spelling of a sort field a front end
 		// may name differently.
 		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
-			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, bmcHostname, nodegroup, computezone, gpuType, or gpuCount")
+			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, bmcMac, nodegroup, computezone, gpuType, or gpuCount")
 		}
 	}
 
@@ -562,7 +563,7 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 // Reports whether a sort field is supported by basic-view queries.
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname,
+	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCMAC,
 		NodeSortByNodeGroup, NodeSortByComputeZone, NodeSortByGPUType, NodeSortByGPUCount:
 		return true
 	default:
@@ -682,8 +683,8 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 		NodeName:                   stringValue(node.NodeName),
 		NodeKind:                   nodeKindFromGenerated(node.NodeKind),
 		DataSource:                 node.DataSource,
-		AgentVersion:               stringValue(node.AgentVersion),
-		BMCHostname:                stringValue(node.BmcHostname),
+		CollectorVersion:           stringValue(node.CollectorVersion),
+		BMCMAC:                     stringValue(node.BmcMac),
 		BMCIP:                      stringValue(node.BmcIP),
 		ComputeZone:                stringValue(node.ComputeZone),
 		NodeGroup:                  stringValue(node.NodeGroup),
@@ -702,11 +703,11 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 // Maps basic API models into SDK values
 func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
-		UUID:        node.NodeUUID,
-		Hostname:    stringValue(node.Hostname),
-		NodeName:    stringValue(node.NodeName),
-		BMCHostname: stringValue(node.BmcHostname),
-		BMCIP:       stringValue(node.BmcIP),
+		UUID:     node.NodeUUID,
+		Hostname: stringValue(node.Hostname),
+		NodeName: stringValue(node.NodeName),
+		BMCMAC:   stringValue(node.BmcMac),
+		BMCIP:    stringValue(node.BmcIP),
 	}
 }
 
@@ -757,8 +758,8 @@ func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) Nod
 			NodeName:                   stringValue(node.NodeName),
 			NodeKind:                   nodeKindFromGenerated(node.NodeKind),
 			DataSource:                 node.DataSource,
-			AgentVersion:               stringValue(node.AgentVersion),
-			BMCHostname:                stringValue(node.BmcHostname),
+			CollectorVersion:           stringValue(node.CollectorVersion),
+			BMCMAC:                     stringValue(node.BmcMac),
 			BMCIP:                      stringValue(node.BmcIP),
 			ComputeZone:                stringValue(node.ComputeZone),
 			NodeGroup:                  stringValue(node.NodeGroup),

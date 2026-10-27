@@ -47,7 +47,7 @@ const (
 	EventSortByGPUType     EventSortBy    = "gpuType"
 	EventSortByHostname    EventSortBy    = "hostname"
 	EventSortByNodeName    EventSortBy    = "nodeName"
-	EventSortByBMCHostname EventSortBy    = "bmcHostname"
+	EventSortByBMCMAC      EventSortBy    = "bmcMac"
 	EventSortByNodeUUID    EventSortBy    = "nodeUUID"
 	EventSortByNodeGroup   EventSortBy    = "nodeGroup"
 	EventSortByComputeZone EventSortBy    = "computeZone"
@@ -138,7 +138,7 @@ func (page EventsPage) PageInfo() PageInfo {
 type Event struct {
 	Hostname      string `json:"hostname,omitempty"`
 	NodeName      string `json:"nodeName,omitempty"`
-	BMCHostname   string `json:"bmcHostname,omitempty"`
+	BMCMAC        string `json:"bmcMac,omitempty"`
 	DataSource    string `json:"dataSource,omitempty"`
 	GPUType       string `json:"gpuType,omitempty"`
 	NodeGroup     string `json:"nodeGroup,omitempty"`
@@ -374,7 +374,7 @@ func eventFromGenerated(event fleetapi.ModelsEvent) Event {
 	out := Event{
 		Hostname:      stringValue(event.Hostname),
 		NodeName:      stringValue(event.NodeName),
-		BMCHostname:   stringValue(event.BmcHostname),
+		BMCMAC:        stringValue(event.BmcMac),
 		DataSource:    stringValue(event.DataSource),
 		GPUType:       stringValue(event.GpuType),
 		NodeGroup:     stringValue(event.NodeGroup),

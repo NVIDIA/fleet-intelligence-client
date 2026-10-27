@@ -307,7 +307,7 @@ func registerEventFilterFlags(cmd *cobra.Command, flags *eventFilterFlags) {
 	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
 	cmd.Flags().StringVar(&flags.node, "node", "", "Filter by node UUID")
 	cmd.Flags().StringVar(&flags.component, "component", "", "Filter by one component; cannot be combined with --components")
-	cmd.Flags().StringVar(&flags.nameSearch, "name-search", "", "Search hostname, OOB node name, BMC hostname, or node UUID")
+	cmd.Flags().StringVar(&flags.nameSearch, "name-search", "", "Search hostname, OOB node name, BMC MAC identifier, or node UUID")
 	cmd.Flags().StringVar(&flags.nameSearch, "hostname", "", "Compatibility alias for --name-search")
 	cmd.MarkFlagsMutuallyExclusive("name-search", "hostname")
 	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Comma-separated event sources: inband, oob (omitted: both)")

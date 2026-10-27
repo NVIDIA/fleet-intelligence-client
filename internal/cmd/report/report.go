@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const reportInventorySortByList = "hostname, nodeName, bmcHostname, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
+const reportInventorySortByList = "hostname, nodeName, bmcMac, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 
 // Stores local flag values for inventory reports
 type reportInventoryFlags struct {
@@ -193,7 +193,7 @@ A time range is always required: use --window for a relative range, or
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.tags, "tags", "", "Comma-separated tags to filter")
 	cmd.Flags().StringVar(&flags.errors, "errors", "", "Comma-separated error types to filter")
-	cmd.Flags().StringVar(&flags.severities, "severities", "", "Comma-separated severities to filter: Critical, Fatal, Info, or Warning")
+	cmd.Flags().StringVar(&flags.severities, "severities", "", "Comma-separated severities to filter: Critical, Fatal, or Warning")
 	cmd.Flags().StringVar(&flags.step, "step", "", "Graph query step width; minimum 1m")
 	cmd.Flags().StringVar(&flags.window, "window", "", "Relative time window; valid units: ns, us, µs, ms, s, m, h")
 	cmd.Flags().StringVar(&flags.start, "start", "", "Absolute start time in RFC3339 format")
@@ -817,7 +817,7 @@ func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.Inventory
 		rows = append(rows, []string{
 			clioutput.DisplayString(node.NodeUUID),
 			clioutput.DisplayString(node.NodeName),
-			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
@@ -826,7 +826,7 @@ func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.Inventory
 			clioutput.DisplayString(node.VerificationCheck),
 		})
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK"}, rows)
+	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK"}, rows)
 }
 
 // Renders inventory report nodes as a table

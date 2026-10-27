@@ -52,7 +52,7 @@ nvfleetint node list --data-source inband --agent-status Offline --output json
 nvfleetint node list --data-source inband --hostname gpu-node-7 --view basic --output json
 nvfleetint node list --data-source inband --compute-zone-names ord --output json
 nvfleetint node list --data-source inband --nodegroup-names training --output json
-nvfleetint node list --data-source oob --bmc-hostname bmc-01 --output json
+nvfleetint node list --data-source oob --bmc-mac 02:00:0a:00:00:0a --output json
 nvfleetint node describe <node-uuid> --output json
 nvfleetint node describe <node-uuid> --data-source oob --output json
 nvfleetint node health <node-uuid> --start <rfc3339> --end <rfc3339> --output json
@@ -66,7 +66,7 @@ Detailed node list and describe tables query both sources by default. Detail
 returns `{inband: ..., oob: ...}`; select a source for one view.
 Detail `node list` also requires `--data-source` whenever any filter or
 `--sort-by`/`--order` flag is set, since in-band and OOB nodes carry different
-fields. OOB list supports `--bmc-hostname`; OOB describe includes full
+fields. OOB list supports `--bmc-mac`; OOB describe includes full
 inventory JSON and supports table sections `managers`, `systems`, `chassis`,
 and `firmware`. Node basic rejects health, agent, verification, and firmware
 filters and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting.
@@ -88,7 +88,7 @@ Filter values:
 | `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
-Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcHostname`. Node-group sort keys are `health` and `nodes`.
+Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcMac`. Node-group sort keys are `health` and `nodes`.
 
 ### Alerts and events
 

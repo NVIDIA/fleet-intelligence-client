@@ -46,13 +46,13 @@ func TestEventFilterCommands(t *testing.T) {
 							}
 							_, _ = w.Write([]byte(`{"bucketInterval":"1h","buckets":[{"count":2}]}`))
 						} else {
-							if r.URL.Path != "/v1/events" || q.Get("sortBy") != "bmcHostname" || q.Get("sortOrder") != "asc" {
+							if r.URL.Path != "/v1/events" || q.Get("sortBy") != "bmcMac" || q.Get("sortOrder") != "asc" {
 								t.Errorf("unexpected URL %s", r.URL)
 							}
 							if all && q.Get("page") != fmt.Sprint(calls) {
 								t.Errorf("page=%s, want %d", q.Get("page"), calls)
 							}
-							fmt.Fprintf(w, `{"events":[{"eventId":"e%d","nodeUUID":"n1","dataSource":"oob","hostname":"os-1","nodeName":"machine-1","bmcHostname":"bmc-1","gpuType":"H100","nodeGroup":"group","nodeGroupId":"ng1","computeZone":"zone","computeZoneId":"cz1"}],"page":%d,"pageSize":1,"total":2,"hasMore":%t}`, calls, calls, calls == 0)
+							fmt.Fprintf(w, `{"events":[{"eventId":"e%d","nodeUUID":"n1","dataSource":"oob","hostname":"os-1","nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100","nodeGroup":"group","nodeGroupId":"ng1","computeZone":"zone","computeZoneId":"cz1"}],"page":%d,"pageSize":1,"total":2,"hasMore":%t}`, calls, calls, calls == 0)
 						}
 						calls++
 					}))
@@ -60,7 +60,7 @@ func TestEventFilterCommands(t *testing.T) {
 					cmdtest.SaveConfig(t, server.URL, "test-key")
 					args := []string{"event", endpoint, "--window", "24h", "--output", format, "--data-source", "inband, oob", "--hostname", " bmc ", "--event-names", "XID,Others", "--severity", "Critical,Info", "--components", "gpu,oob-redfish-events", "--gpu-type", "H100,B200", "--nodegroup-ids", "ng1,ng2", "--exclude-compute-zone-ids", "cz1,cz2"}
 					if endpoint == "list" {
-						args = append(args, "--sort-by", "bmcHostname", "--order", "asc", "--page-size", "1")
+						args = append(args, "--sort-by", "bmcMac", "--order", "asc", "--page-size", "1")
 					}
 					if all {
 						args = append(args, "--all")
@@ -101,7 +101,7 @@ func TestEventFilterCommands(t *testing.T) {
 								t.Fatalf("events=%v", result.Events)
 							}
 							for _, event := range result.Events {
-								for key, want := range map[string]string{"dataSource": "oob", "hostname": "os-1", "nodeName": "machine-1", "bmcHostname": "bmc-1", "gpuType": "H100", "nodeGroup": "group", "nodeGroupId": "ng1", "computeZone": "zone", "computeZoneId": "cz1"} {
+								for key, want := range map[string]string{"dataSource": "oob", "hostname": "os-1", "nodeName": "machine-1", "bmcMac": "bmc-1", "gpuType": "H100", "nodeGroup": "group", "nodeGroupId": "ng1", "computeZone": "zone", "computeZoneId": "cz1"} {
 									if event[key] != want {
 										t.Errorf("%s=%v; want %s", key, event[key], want)
 									}
@@ -144,7 +144,7 @@ func TestEventOptionsCommand(t *testing.T) {
 	for _, format := range []string{"table", "json"} {
 		t.Run(format, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
-			body := `{"components":[{"component":"oob-redfish-events","componentDisplayName":"Redfish Events"}],"dataSources":["oob"],"eventNames":["Others"],"gpuTypes":["H100"],"severities":["Info"],"sortFields":["timestamp","bmcHostname"]}`
+			body := `{"components":[{"component":"oob-redfish-events","componentDisplayName":"Redfish Events"}],"dataSources":["oob"],"eventNames":["Others"],"gpuTypes":["H100"],"severities":["Info"],"sortFields":["timestamp","bmcMac"]}`
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/v1/events/options" || r.URL.RawQuery != "" {
 					t.Errorf("unexpected URL %s", r.URL)
@@ -166,7 +166,7 @@ func TestEventOptionsCommand(t *testing.T) {
 					t.Fatalf("JSON changed: %s", &out)
 				}
 			} else {
-				for _, want := range []string{"--event-names", "--severity", "--components", "--data-source", "--gpu-type", "--sort-by", "event list only", "Others", "oob-redfish-events", "Redfish Events", "bmcHostname"} {
+				for _, want := range []string{"--event-names", "--severity", "--components", "--data-source", "--gpu-type", "--sort-by", "event list only", "Others", "oob-redfish-events", "Redfish Events", "bmcMac"} {
 					if !strings.Contains(out.String(), want) {
 						t.Errorf("missing %q in %s", want, &out)
 					}

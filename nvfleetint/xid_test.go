@@ -212,7 +212,7 @@ func TestListXIDBurstsSortFields(t *testing.T) {
 		XIDBurstSortByDataSource,
 		XIDBurstSortByGPUType,
 		XIDBurstSortByNodeName,
-		XIDBurstSortByBMCHostname,
+		XIDBurstSortByBMCMAC,
 		XIDBurstSortByJobDisruption,
 		XIDBurstSortByJobDisruptionDueToPlatformIssue,
 		XIDBurstSortByCategory,

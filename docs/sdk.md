@@ -50,8 +50,8 @@ source options:
 
 ```go
 page, err := client.ListNodes(ctx, nvfleetint.ListNodesOptions{
-	DataSource:   nvfleetint.DataSourceOOB,
-	BMCHostname: "bmc-01",
+	DataSource: nvfleetint.DataSourceOOB,
+	BMCMAC:     "02:00:0a:00:00:0a",
 })
 
 node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
@@ -94,11 +94,11 @@ options, err := client.GetNodeFilterOptionsWithOptions(ctx, nvfleetint.NodeFilte
 })
 report, err := client.GetInventoryReport(ctx, nvfleetint.InventoryReportOptions{
     DataSource: nvfleetint.DataSourceOOB,
-    SortBy: nvfleetint.InventoryReportSortByBMCHostname,
+    SortBy: nvfleetint.InventoryReportSortByBMCMAC,
 })
 ```
 
-OOB report rows expose `NodeName`, `BMCHostname`, `BMCIP`, `GPUType`, and
+OOB report rows expose `NodeName`, `BMCMAC`, `BMCIP`, `GPUType`, and
 `GPUCount`, plus shared verification, location, enrollment, and removal
 information. GPU fields come from the selected source; a missing GPU count
 remains nil, while a reported zero remains zero. Both sources support

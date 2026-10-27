@@ -34,7 +34,7 @@ func TestNodeOptionsBothSources(t *testing.T) {
 				switch source {
 				case "inband":
 				case "oob":
-					sortField = "bmcHostname"
+					sortField = "bmcMac"
 				default:
 					t.Errorf("unexpected source: %q", source)
 				}

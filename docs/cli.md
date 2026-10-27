@@ -111,8 +111,8 @@ nvfleetint overview
 nvfleetint computezone list
 nvfleetint nodegroup list
 nvfleetint node list
-nvfleetint node list --data-source oob --bmc-hostname bmc-01
-nvfleetint node list --view basic --search bmc-01
+nvfleetint node list --data-source oob --bmc-mac 02:00:0a:00:00:0a
+nvfleetint node list --view basic --search 02:00:0a:00:00:0a
 nvfleetint node describe <node-uuid>
 nvfleetint node describe <node-uuid> --data-source oob --section all
 
@@ -155,8 +155,8 @@ Detailed node list and describe commands query both in-band and out-of-band
 `node list --output json` requires `--data-source inband` or `--data-source oob`,
 including with `--all`, and returns one source without an `inband`/`oob` wrapper.
 Default `node describe` JSON still uses top-level `inband` and `oob` objects;
-select a source to request one view. OOB lists accept `--bmc-hostname` and
-the `bmcHostname` sort key. OOB describe tables can be narrowed with
+select a source to request one view. OOB lists accept `--bmc-mac` and
+the `bmcMac` sort key. OOB describe tables can be narrowed with
 `--section managers,systems,chassis,firmware`; `--section all` includes every
 inventory section. Both the out-of-band node list and summary table include
 `NODE KIND`. JSON describe output always includes
@@ -181,16 +181,16 @@ type and count when available.
 `--page` and `--page-size` apply independently to each source; `--all` fetches
 all pages for each. JSON output, CSV, and signed CSV bundles require
 `--data-source inband` or `--data-source oob` and contain one source.
-An explicit source also selects a single table. OOB rows use node name, BMC hostname, and BMC
+An explicit source also selects a single table. OOB rows use node name, BMC MAC identifier, and BMC
 IP, plus GPU type and count from the OOB source; shared enrollment/removal
 times and verification fields remain available. Both sources support `gpuType`
 and `gpuCount` sorting. In-band-only sorts include hostname and public/private
-IP; OOB identity sorts are `nodeName`, `bmcHostname`, and `bmcIP`.
+IP; OOB identity sorts are `nodeName`, `bmcMac`, and `bmcIP`.
 
 ```bash
 nvfleetint node list --view basic --gpu-type NVIDIA-H100 --sort-by gpuCount
 nvfleetint node options --view basic --data-source oob
-nvfleetint report inventory --data-source oob --sort-by bmcHostname --all
+nvfleetint report inventory --data-source oob --sort-by bmcMac --all
 nvfleetint report inventory --data-source oob --format csv
 ```
 

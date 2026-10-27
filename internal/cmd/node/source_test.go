@@ -25,7 +25,7 @@ func TestNodeSourceFlags(t *testing.T) {
 			t.Errorf("unexpected source query: %s", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		const node = `{"nodeUUID":"n1","dataSource":"oob","nodeName":"machine","bmcHostname":"bmc","gpuType":"H100","gpuCount":8}`
+		const node = `{"nodeUUID":"n1","dataSource":"oob","nodeName":"machine","bmcMac":"bmc","gpuType":"H100","gpuCount":8}`
 		switch r.URL.Path {
 		case "/v1/nodes/n1":
 			fmt.Fprint(w, node)

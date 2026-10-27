@@ -38,7 +38,7 @@ func TestInventoryBothSourcesPagination(t *testing.T) {
 				field := "hostname"
 				if source == "oob" {
 					total = 3
-					field = "bmcHostname"
+					field = "bmcMac"
 				} else if source != "inband" {
 					t.Errorf("unexpected source: %s", source)
 				}
@@ -70,7 +70,7 @@ func TestInventoryBothSourcesPagination(t *testing.T) {
 			if len(sections) != 2 || !strings.HasPrefix(sections[0], "In-band\n") {
 				t.Fatalf("missing headings: %s", &out)
 			}
-			if !strings.Contains(sections[0], "GPU TYPE") || !strings.Contains(sections[1], "BMC HOSTNAME") || strings.Contains(sections[0], "oob-host-") || strings.Contains(sections[1], "inband-host-") {
+			if !strings.Contains(sections[0], "GPU TYPE") || !strings.Contains(sections[1], "BMC MAC") || strings.Contains(sections[0], "oob-host-") || strings.Contains(sections[1], "inband-host-") {
 				t.Fatalf("mixed source tables: %s", &out)
 			}
 			mu.Lock()

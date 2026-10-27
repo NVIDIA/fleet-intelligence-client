@@ -194,21 +194,28 @@ paths:
         - alert_mute_rules
   /v1/alert_timeline/filter_options:
     get:
-      description: Get the set of filter values (GPU types, node groups, compute zones,
-        component types, alert states, data sources, in-band agent statuses, OOB agent
-        statuses) available for the alert panel, returned in the shared options envelope
-        (filters.fields[] + sorting) used by the node and node-group options endpoints.
-        GPU types use the resolved node value independently of alert source. Every
-        value is scoped to the customer's alerts in the chosen view, so each option
-        is guaranteed to return results when applied as a filter. Agent-status options
-        are dynamically derived from the matching nodes and use online, offline, or
-        not_enrolled. Use the 'active' parameter to switch between the Active and
-        Historical views; the historical view may additionally surface the Resolved
-        alert state. Object-valued options ({id, value}) carry the filter id and its
-        display value (node group / compute zone ids and names; component identifier
-        and display name); gpuTypes, alertStates, dataSources, and agent statuses
-        are plain strings. The sorting block advertises the Level 1 nodes-list sort
-        columns. componentVisibility is resolved server-side from the caller's persona.
+      description: 'Get the set of filter values (GPU types, node groups, compute
+        zones, component types, alert states, data sources, in-band agent statuses,
+        OOB agent statuses) available for the alert panel, returned in the shared
+        options envelope (filters.fields[] + sorting) used by the node and node-group
+        options endpoints. GPU types use the resolved node value independently of
+        alert source. Every value is scoped to the customer''s alerts in the chosen
+        view, so each option is guaranteed to return results when applied as a filter.
+        Agent-status options are dynamically derived from the matching nodes and use
+        online, offline, or not_enrolled. Use the ''active'' parameter to switch between
+        the Active and Historical views; the historical view may additionally surface
+        the Resolved alert state. Object-valued options ({id, value}) carry the filter
+        id and its display value (node group / compute zone ids and names; component
+        identifier and display name). componentTypes remains a flat list of selectable
+        {id: component, value: displayName, group: groupLabel} options, with group
+        omitted when unconfigured. Component IDs and display values keep their v1
+        meanings. Options are ordered alphabetically by group and display name, with
+        ungrouped components last; group labels match /v1/metrics components[].group;
+        gpuTypes, alertStates, dataSources, and agent statuses are plain strings.
+        The sorting block advertises the Level 1 nodes-list sort columns. componentVisibility
+        is set server-side.
+
+        The Level 1 OOB identity sort fields are nodeName and bmcMac.'
       operationId: getV1AlertTimelineFilterOptions
       parameters:
         - description: 'Active Alerts view when true; Historical Alerts when false
@@ -249,20 +256,32 @@ paths:
         - alerts
   /v1/alert_timeline/nodes:
     get:
-      description: Returns a paginated list of nodes with per-node alert counts and
-        inventory metadata for the Alerts panel. GPU type uses the node's resolved
-        value independently of alert source. Use active=true for the Active Alerts
-        view (only nodes with currently active alerts) or active=false for Historical
-        Alerts. Cross-page aggregates (totalCritical, totalWarning, distinctGpuTypeCount,
-        etc.) reflect the full filtered result set and drive table header counts.
-        componentVisibility is resolved server-side from the user's auth persona and
-        is not an HTTP parameter.
+      description: 'With active=true, each node includes criticalComponents and warningComponents
+        tooltip lists with component IDs and display names, ordered by latest timeline
+        event first, matching the default node-alert list order. Empty lists are returned
+        as []; historical responses omit these fields.
+
+        Returns a paginated list of nodes with per-node alert counts and inventory
+        metadata for the Alerts panel. GPU type uses the node''s resolved value independently
+        of alert source. Use active=true for the Active Alerts view (only nodes with
+        currently active alerts) or active=false for Historical Alerts. Cross-page
+        aggregates (totalCritical, totalWarning, distinctGpuTypeCount, etc.) reflect
+        the full filtered result set and drive table header counts. componentVisibility
+        is set server-side and is not an HTTP parameter.'
       operationId: getV1AlertTimelineNodes
       parameters:
         - description: 'Active Alerts view when true; Historical Alerts when false
             (default: false)'
           in: query
           name: active
+          schema:
+            default: false
+            type: boolean
+        - description: Return only total matching nodes; skip node details and global
+            alert summaries. All filters apply; pagination and sorting do not affect
+            the count.
+          in: query
+          name: countOnly
           schema:
             default: false
             type: boolean
@@ -279,7 +298,7 @@ paths:
             default: 50
             type: integer
         - description: Case-insensitive substring matched against the in-band hostname,
-            OOB machine name, BMC hostname, and node UUID
+            OOB machine name, BMC MAC identifier, and node UUID
           in: query
           name: nameSearch
           schema:
@@ -300,8 +319,8 @@ paths:
             items:
               $ref: '#/components/schemas/models.AlertAgentStatus'
             type: array
-        - description: Sortable table-header column. nodeName and bmcHostname sort
-            OOB identities; nodeUUID sorts the Machine ID column; alert ranks by critical
+        - description: Sortable table-header column. nodeName and bmcMac sort OOB
+            identities; nodeUUID sorts the Machine ID column; alert ranks by critical
             then warning count. Missing names sort last.
           in: query
           name: sortBy
@@ -310,7 +329,7 @@ paths:
             enum:
               - hostname
               - nodeName
-              - bmcHostname
+              - bmcMac
               - nodeUUID
               - alert
               - gpuType
@@ -375,9 +394,7 @@ paths:
                 - oob
               type: string
             type: array
-        - description: Filter to nodes with alerts on matching component types. Use
-            the value 'psirt' to match all security-vulnerability CVEs (the collapsed
-            'Security Vulnerability' option).
+        - description: Filter to nodes with alerts on matching component types.
           in: query
           name: componentTypes
           schema:
@@ -390,7 +407,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.AlertTimelineNodesResponse'
-          description: List of nodes with alert summary
+          description: List of nodes with alert summary; countOnly=true returns only
+            the total property
         '400':
           content:
             application/json:
@@ -440,12 +458,14 @@ paths:
           schema:
             default: false
             type: boolean
-        - description: 'Exclude PSIRT alerts from results (default: false)'
+        - description: Deprecated compatibility parameter; ignored. Security findings
+            are not alerts.
           in: query
           name: withoutPsirt
           schema:
             default: false
             type: boolean
+          deprecated: true
         - description: Sortable table-header column. dataSource sorts the source shown
             for each alert.
           in: query
@@ -490,9 +510,7 @@ paths:
                 - oob
               type: string
             type: array
-        - description: Filter to alerts on matching component types. Use the value
-            'psirt' to match all security-vulnerability CVEs (the collapsed 'Security
-            Vulnerability' option).
+        - description: Filter to alerts on matching component types.
           in: query
           name: componentTypes
           schema:
@@ -984,8 +1002,12 @@ paths:
   /v1/events:
     get:
       description: Get events with optional inventory, table, and time-range filters.
-        Each row includes the node's resolved GPU type, independent of the event data
-        source. Events associated with soft-deleted nodes are excluded.
+        Node filters and nodeUUID identify the associated canonical node. Events without
+        an association remain visible without node or placement filters and have an
+        empty nodeUUID. Each row includes the node's resolved GPU type, independent
+        of the event data source. Events associated with soft-deleted nodes are excluded.
+        Omitted dataSources includes all sources, including unknown historical attribution;
+        explicit source filters exclude unknown attribution.
       operationId: getV1Events
       parameters:
         - description: Start time in RFC3339 format (required for absolute mode, e.g.,
@@ -1054,7 +1076,7 @@ paths:
               type: string
             type: array
         - description: Case-insensitive substring matched against the in-band hostname,
-            OOB machine name, BMC hostname, and node UUID
+            OOB machine name, BMC MAC identifier, and node UUID
           in: query
           name: nameSearch
           schema:
@@ -1110,7 +1132,7 @@ paths:
               - gpuType
               - hostname
               - nodeName
-              - bmcHostname
+              - bmcMac
               - nodeUUID
               - nodeGroup
               - computeZone
@@ -1184,7 +1206,10 @@ paths:
         - events
   /v1/events/buckets:
     get:
-      description: Returns time-bucketed event counts for histogram display. The server
+      description: Returns time-bucketed event counts using the same source associations
+        and filters as the events list. Node filters identify canonical nodes; events
+        without an association contribute only when no node or placement filter excludes
+        them. Omitted dataSources includes unknown historical attribution. The server
         picks a clean bucket interval based on the maxBuckets hint. GPU type filtering
         uses the node's resolved GPU type independently of event data source.
       operationId: getV1EventsBuckets
@@ -1255,7 +1280,7 @@ paths:
               type: string
             type: array
         - description: Case-insensitive substring matched against the in-band hostname,
-            OOB machine name, BMC hostname, and node UUID
+            OOB machine name, BMC MAC identifier, and node UUID
           in: query
           name: nameSearch
           schema:
@@ -1352,14 +1377,16 @@ paths:
         - events
   /v1/events/options:
     get:
-      description: Returns the Event Name, Severity, Component, Data Source, and resolved
-        GPU Type filters supported by the events list, plus the sortable columns.
-        This endpoint does not query event storage and ignores time and inventory
+      description: 'Returns the Event Name, Severity, Component, Data Source, and
+        resolved GPU Type filters supported by the events list, plus the sortable
+        columns. This endpoint does not query event storage and ignores time and inventory
         filters. Event Name, Component, Data Source, and source-specific identity
         Sort Fields are limited to the agent types the customer has enrolled. Resolved
         GPU types come from active nodes and are independent of the event data source.
         eventNames always ends with the Others option, which matches every stored
         name the catalog does not list.
+
+        The OOB identity sort fields are nodeName and bmcMac.'
       operationId: getV1EventsOptions
       responses:
         '200':
@@ -1434,8 +1461,8 @@ paths:
         optional filtering by isCritical, aggregatable, and type. Unknown or false
         values for boolean params are treated as no filter.
 
-        Use psirtComponent=true to include active PSIRT CVE sub-components under the
-        "psirt" component.'
+        Security vulnerabilities are available through the Security Vulnerability
+        Report, not the component catalog.'
       operationId: getV1Metrics
       parameters:
         - description: If 'true', only critical metrics are returned. If absent or
@@ -1466,11 +1493,13 @@ paths:
               - oob
               - all
             type: string
-        - description: 'Include active PSIRT CVE sub-components (default: false)'
+        - description: Deprecated compatibility parameter; ignored. Security findings
+            are not health components.
           in: query
           name: psirtComponent
           schema:
             type: boolean
+          deprecated: true
         - description: Optional entity scope. Components an entity cannot produce
             are omitted, so an empty result is the signal that a scope has no nodes
             of the requested data source. 'node' additionally filters by GPU/CPU architecture
@@ -2119,9 +2148,9 @@ paths:
       operationId: getV1Nodes
       parameters:
         - description: 'View mode: ''detail'' for full response (default) or ''basic''
-            for nodeUUID + hostname + optional OOB nodeName + bmcHostname/bmcIP only
-            (lightweight query, does not support filtering or sorting by healthStatuses,
-            verificationChecks, firmwareChecks, or agentStatuses).'
+            for nodeUUID + hostname + optional OOB nodeName + bmcMac/bmcIP only (lightweight
+            query, does not support filtering or sorting by healthStatuses, verificationChecks,
+            firmwareChecks, or agentStatuses).'
           in: query
           name: view
           schema:
@@ -2132,8 +2161,8 @@ paths:
             type: string
         - description: Select the in-band or OOB (BMC/Redfish) data source. Returns
             only nodes enrolled through that source. nodeName is OOB-specific metadata
-            and is absent from in-band responses. In the OOB view, nodes expose nodeName,
-            bmcHostname/bmcIP, optional gpuType/gpuCount and BMC-based verification,
+            and is absent from in-band responses. In the OOB view, nodes expose collectorVersion,
+            nodeName, bmcMac/bmcIP, optional gpuType/gpuCount and BMC-based verification,
             while publicIP/privateIP/kernelVersion/gpuDriverVersion/gpuFirmwareVersions
             are empty. Empty defaults to the in-band view for view=detail; for view=basic,
             omitting both dataSource and agentType returns a combined view that merges
@@ -2249,8 +2278,10 @@ paths:
             items:
               type: string
             type: array
-        - description: Filter by verification-check status. Takes precedence when
-            both verificationChecks and deprecated integrityChecks are supplied.
+        - description: Filter by verification-check status. Verified matches every
+            passed result (Full Attestation, Partial Attestation, Verified) and Unverified
+            every failed result (Verification Failed, Unverified). Takes precedence
+            when both verificationChecks and deprecated integrityChecks are supplied.
           in: query
           name: verificationChecks
           schema:
@@ -2283,8 +2314,8 @@ paths:
             type: array
         - description: Case-insensitive substring search across nodeUUID and source-appropriate
             node identity fields. Searches nodeUUID or hostname for dataSource=inband;
-            nodeUUID, nodeName, or bmcHostname for dataSource=oob; and nodeUUID plus
-            all three names for the combined basic view (view=basic with both source
+            nodeUUID, nodeName, or bmcMac for dataSource=oob; and nodeUUID plus all
+            three identities for the combined basic view (view=basic with both source
             parameters omitted). Leading and trailing whitespace is ignored; blank
             means no search.
           in: query
@@ -2305,23 +2336,23 @@ paths:
           name: nodeName
           schema:
             type: string
-        - description: Filter by BMC hostname (case-insensitive partial match). Applies
-            to the OOB view (dataSource=oob) and the combined basic view; rejected
-            for the in-band view.
+        - description: Filter by BMC MAC identifier (case-insensitive partial match).
+            Applies to the OOB view (dataSource=oob) and the combined basic view;
+            rejected for the in-band view.
           in: query
-          name: bmcHostname
+          name: bmcMac
           schema:
             type: string
         - description: Field to sort by. Use verificationCheck; integrityCheck remains
-            a deprecated alias. Defaults to hostname (in-band view) or bmcHostname
-            (OOB view). nodeName and bmcHostname apply only to OOB-capable views;
-            the in-band-only GPU firmware/kernel/driver/agentVersion keys apply only
-            to the in-band view. Combined basic view supports only hostname, nodeName,
-            bmcHostname, nodeUUID, nodeGroup, computeZone, gpuType, and gpuCount,
-            matching its filterable fields. A key not valid for the selected dataSource
-            is rejected. gpuFirmwareVersions pins nodes whose GPUs have mismatched
-            vbios versions to the top, then sorts the remaining (uniform) nodes by
-            that common vbios in the requested order.
+            a deprecated alias. Defaults to hostname (in-band view) or bmcMac (OOB
+            view). nodeName and bmcMac apply only to OOB-capable views; the in-band-only
+            GPU firmware/kernel/driver/agentVersion keys apply only to the in-band
+            view. Combined basic view supports only hostname, nodeName, bmcMac, nodeUUID,
+            nodeGroup, computeZone, gpuType, and gpuCount, matching its filterable
+            fields. A key not valid for the selected dataSource is rejected. gpuFirmwareVersions
+            pins nodes whose GPUs have mismatched vbios versions to the top, then
+            sorts the remaining (uniform) nodes by that common vbios in the requested
+            order.
           in: query
           name: sortBy
           schema:
@@ -2342,7 +2373,7 @@ paths:
               - kernelVersion
               - gpuDriverVersion
               - gpuFirmwareVersions
-              - bmcHostname
+              - bmcMac
             type: string
         - description: Sort order (asc, desc)
           in: query
@@ -2500,7 +2531,10 @@ paths:
         sort fields, which apply only to in-band-enrolled nodes.
 
         In detail view, the agentStatuses filter is source-scoped and offers exactly
-        Online and Offline. Basic view omits health-dependent filters and sorts.'
+        Online and Offline. Basic view omits health-dependent filters and sorts.
+
+        OOB sorting uses bmcMac as its default identity field; the combined basic
+        view also offers bmcMac.'
       operationId: getV1NodesOptions
       parameters:
         - description: Select detail or basic options. Basic omits health-dependent
@@ -2659,10 +2693,13 @@ paths:
       tags:
         - nodes
     get:
-      description: Get detailed information about a specific node including resources,
-        system info, and health status. Responses include the preferred location and
-        verification-check fields plus the deprecated geoLocation/integrityCheck aliases
-        for backward compatibility.
+      description: 'OOB responses use collectorVersion for the collector release;
+        in-band responses use agentVersion.
+
+        Get detailed information about a specific node including resources, system
+        info, and health status. Responses include the preferred location and verification-check
+        fields plus the deprecated geoLocation/integrityCheck aliases for backward
+        compatibility.'
       operationId: getV1NodesNodeUuid
       parameters:
         - description: Node UUID
@@ -3362,6 +3399,284 @@ paths:
       summary: Get overview
       tags:
         - overview
+  /v1/predicted_health_rankings:
+    get:
+      description: Rank non-deleted customer nodes with active in-band enrollment
+        using usable predictions within the configured freshness limit (24 hours by
+        default). OOB-only nodes and nodes with deleted or missing in-band enrollment
+        are excluded before aggregation, ranks, deciles and counts. Dual-source and
+        offline in-band nodes remain eligible. For node ranking, agentStatuses optionally
+        filters returned nodes by in-band agent status without changing scope ranks,
+        deciles or coverage counts; omitting it includes Online and Offline nodes.
+        Lower internal risk ranks first, with deterministic unique ranks. Scope parameters
+        select nodes before ranking or aggregation. Each domain or rack aggregates
+        only its selected members. Physical membership does not require a compute-zone
+        hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope
+        ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked
+        measures selected-node score coverage. For domain and rack ranking, complete
+        also requires resolved membership and a rank for every group. Rack identifiers
+        are case-sensitive chassis serial numbers. Each page reads current data, so
+        changes between pages can cause repeats or omissions. Scores, aggregate values
+        and numeric confidence are never returned. Lists use repeated query keys.
+        Unknown parameters, empty values, repeated scalars and incompatible parameters
+        are rejected.
+      operationId: getV1PredictedHealthRankings
+      parameters:
+        - description: Ranking unit; rack uses the reported chassis serial number
+          in: query
+          name: rankUnit
+          schema:
+            default: node
+            enum:
+              - node
+              - nvlinkDomain
+              - rack
+            type: string
+        - description: Required for domain or rack ranking. max uses the highest usable
+            member risk score; nthMax uses the Nth highest; mean averages usable scores;
+            countAbove counts scores strictly above threshold. Lower aggregate values
+            rank first
+          in: query
+          name: aggregation
+          schema:
+            enum:
+              - max
+              - nthMax
+              - mean
+              - countAbove
+            type: string
+        - description: Positive member position; required only for nthMax
+          in: query
+          name: aggregationN
+          schema:
+            minimum: 1
+            type: integer
+        - description: Finite score threshold; required only for countAbove; counts
+            values strictly above it
+          in: query
+          name: threshold
+          schema:
+            type: number
+        - description: 'Domain or rack ranking only: ignore unusable scores or require
+            every selected member'
+          in: query
+          name: missingScorePolicy
+          schema:
+            default: ignore
+            enum:
+              - ignore
+              - requireAll
+            type: string
+        - description: Node UUIDs defining the scope
+          in: query
+          name: nodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Node group IDs defining the scope
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Compute zone IDs defining the scope
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: NVLink domain UUIDs defining the node scope
+          in: query
+          name: nvlinkDomainIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Case-sensitive chassis serial numbers defining the node scope
+          in: query
+          name: chassisSNs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Tags defining the scope
+          in: query
+          name: tags
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Tag matching rule; requires tags
+          in: query
+          name: tagMatch
+          schema:
+            default: any
+            enum:
+              - any
+              - all
+            type: string
+        - description: Remove these nodes before ranking
+          in: query
+          name: excludeNodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Return these domains or their nodes; preserve full scope ranks,
+            deciles and counts
+          in: query
+          name: returnNvlinkDomainIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Return these racks or their nodes; preserve full scope ranks,
+            deciles and counts. Requires rankUnit=node or rack
+          in: query
+          name: returnChassisSNs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: 'Node ranking only: return these nodes with their ranks in
+            the full scope'
+          in: query
+          name: returnNodeUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: 'Node ranking only: return nodes with any matching inventory
+            tag; preserve full scope ranks, deciles and counts'
+          in: query
+          name: returnTags
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: 'Node ranking only: return nodes matching current inventory
+            health; case-insensitive'
+          in: query
+          name: healthStatuses
+          schema:
+            items:
+              enum:
+                - Healthy
+                - Degraded
+                - Unhealthy
+                - Unknown
+              type: string
+            type: array
+          style: form
+        - description: 'Node ranking only: filter by in-band agent status; case-insensitive.
+            Missing status is Offline. Omitted or both statuses include all nodes.
+            Preserves full-scope ranks, deciles and coverage counts'
+          in: query
+          name: agentStatuses
+          schema:
+            items:
+              $ref: '#/components/schemas/models.AgentStatus'
+            type: array
+          style: form
+        - description: Return rank <= maxRank; excludes unranked nodes
+          in: query
+          name: maxRank
+          schema:
+            minimum: 1
+            type: integer
+        - description: Return rank deciles 1-10; null deciles do not match. Deciles
+            are null when the full comparison scope has fewer than 10 ranked items
+          in: query
+          name: deciles
+          schema:
+            items:
+              type: integer
+            type: array
+          style: form
+        - description: Display order; ranks stay the same and unranked nodes stay
+            last
+          in: query
+          name: order
+          schema:
+            default: bestFirst
+            enum:
+              - bestFirst
+              - worstFirst
+            type: string
+        - description: Page number, starting at zero
+          in: query
+          name: page
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - description: Page size
+          in: query
+          name: pageSize
+          schema:
+            default: 100
+            maximum: 100
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.PredictedHealthRankingsResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Inventory-read permission denied by UAM
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Rank nodes, NVLink domains or racks within a scope
+      tags:
+        - predicted_health_rankings
   /v1/reports/error:
     get:
       description: 'Get error report grouped by error type or node in JSON or CSV
@@ -3373,6 +3688,16 @@ paths:
 
         - When view=list and groupBy=node: The ''nodes'' field is populated with paginated
         list
+
+        - dataSource defaults to inband. In node lists, inband returns hostname; oob
+        returns bmcMac and nodeName without hostname. Node CSV columns follow the
+        selected source.
+
+        - Node lists sort by error count descending. Ties sort by hostname and nodeUUID
+        for inband, or bmcMac, nodeName, and nodeUUID for oob.
+
+        - Info-level events are excluded from all views and CSV downloads. The severity
+        filter offers Fatal, Critical, and Warning.
 
         - When view=graph and groupBy=error: Returns time-series data with optional
         step parameter (page and pageSize not used)
@@ -3460,13 +3785,23 @@ paths:
             items:
               type: string
             type: array
-        - description: Filter errors by severity. Empty means all severities
+        - description: Filter errors by severity. Empty means Fatal, Critical, and
+            Warning
           in: query
           name: severities
           schema:
             items:
-              $ref: '#/components/schemas/models.EventSeverity'
+              $ref: '#/components/schemas/models.ErrorSeverity'
             type: array
+        - description: Event source. Omitted defaults to inband
+          in: query
+          name: dataSource
+          schema:
+            default: inband
+            enum:
+              - inband
+              - oob
+            type: string
         - description: 'Time mode: ''absolute'' (default) or ''relative''. Absolute
             requires start/end; relative requires window'
           in: query
@@ -3547,8 +3882,8 @@ paths:
     get:
       description: 'Get an agent-source-specific inventory report in JSON or CSV format.
         dataSource=inband preserves the existing GPU/OS inventory shape; dataSource=oob
-        returns the shared report fields plus nodeName, bmcHostname, and bmcIP. GPU
-        type and count come from the selected source.
+        returns the shared report fields plus nodeName, bmcMac, and bmcIP. GPU type
+        and count come from the selected source.
 
         Default response is JSON. For CSV download, set format=csv. For a signed CSV
         bundle (CSV plus a cosign-verifiable signature, packaged as a zip), set format=csv
@@ -3559,7 +3894,10 @@ paths:
         auto-removed alike; absent for active nodes).
 
         JSON responses include the preferred location and verification-check fields
-        plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.'
+        plus the deprecated geoLocation/integrityCheck aliases for backward compatibility.
+
+        OOB inventory rows use collectorVersion in JSON and Collector Version in CSV.
+        In-band rows use agentVersion and Agent Version.'
       operationId: getV1ReportsInventory
       parameters:
         - description: Page number (0-indexed). Not used for CSV format
@@ -3645,10 +3983,10 @@ paths:
           schema:
             type: string
         - description: 'Field to sort by. In-band fields: hostname, publicIP, privateIP.
-            OOB fields: nodeName, bmcHostname, bmcIP. Shared fields: nodeUUID, nodeGroup,
+            OOB fields: nodeName, bmcMac, bmcIP. Shared fields: nodeUUID, nodeGroup,
             computeZone, gpuType, gpuCount, verificationCheck, location. integrityCheck
             and geoLocation remain deprecated aliases. Defaults to hostname for inband
-            and bmcHostname for oob.'
+            and bmcMac for oob.'
           in: query
           name: sortBy
           schema:
@@ -3662,7 +4000,7 @@ paths:
               - publicIP
               - privateIP
               - nodeName
-              - bmcHostname
+              - bmcMac
               - bmcIP
               - verificationCheck
               - location
@@ -3732,6 +4070,474 @@ paths:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Service Unavailable
       summary: Get inventory report
+      tags:
+        - reports
+  /v1/reports/security/vulnerabilities:
+    get:
+      description: 'Return one row per distinct CVE from current security findings,
+        unifying active in-band and OOB nodes. Supported components are Linux/Tesla
+        GPU Driver and vBIOS; CUDA is excluded. A CVE has one component and its catalog
+        severity is one of CRITICAL, HIGH, MEDIUM, or LOW, using the shared security
+        vulnerability severity enum.
+
+        summary covers the full filtered result before pagination. Severity counts
+        sum to total; summary.affectedNodes is a distinct-node union. summary.totalNodes
+        applies only authorization and zone/group/GPU filters, including nodes lacking
+        assessment inputs. Missing evidence is not proof of an unaffected node. Description
+        is null when missing; fixVersions is an empty array when no applicable catalog
+        fix is known. Fix strings are display labels, not upgrade packages.
+
+        Repeated filter values are ORed within a field and fields are ANDed. Deduplicate
+        values; reject empty values or lists longer than 100. Unknown or inaccessible
+        zone/group IDs yield no results. Comma-separated scalar values are not split.
+        No source selector is supported; dataSource, dataSources, and agentType are
+        rejected. Customer and audience are derived from authentication, not query
+        parameters. Available to tenants and operators. Authorized default and external-cloud-provider
+        audiences share the same customer fleet findings.
+
+        JSON defaults to page 0 and pageSize 10 (maximum 100). Severity sorts CRITICAL
+        > HIGH > MEDIUM > LOW, including a separate critical summary count. Clients
+        must support four severity buckets even when a mockup shows only three. Vulnerability
+        IDs sort lexicographically; component sorts by component ID and affectedNodes
+        sorts numerically. All four support asc/desc, with vulnerability ascending
+        as the stable tie-breaker. Fix versions within each row sort by numeric version
+        within branch/platform, independently of row sorting. Description and fixVersions
+        are not sortable. Counts and rows are consistent within each request. Findings
+        update as machines are reassessed, so pagination and exports may change between
+        requests.
+
+        countOnly=true returns only {"total": N}, the number of distinct CVEs in the
+        same authorized filtered scope, for dashboard widgets. A CVE affecting multiple
+        machines counts once. No rows, summary, evidence, fixes, or sorting are computed.
+        This mode requires JSON and rejects page, pageSize, sortBy, and order. Omitted
+        or countOnly=false preserves the normal response.
+
+        format=csv exports all filtered vulnerabilities using the requested sort,
+        rejects pagination parameters, and includes all matching rows without truncation.
+        CSV has exactly six columns, in order: Vulnerability, Severity, Affected Component,
+        Affected Machines, Fix Version, Description. Severity uses canonical CRITICAL/HIGH/MEDIUM/LOW
+        values; components use GPU Driver/VBIOS. Multiple fixes are newline-separated
+        within a quoted cell, ordered by numeric version within branch/platform; missing
+        values are blank. No percentage, assessment ID, timestamp, or coverage fields
+        are returned. Responses use private/no-store caching.'
+      operationId: getV1ReportsSecurityVulnerabilities
+      parameters:
+        - description: Zone UUIDs (repeat the key); omitted includes all authorized
+            zones and Unassigned. Maximum 100 values.
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Node-group UUIDs (repeat the key); omitted includes all authorized
+            groups and Unassigned. Maximum 100 values.
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Resolved GPU types (repeat the key); omitted includes all types,
+            including unknown. Maximum 100 values.
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Catalog ratings (case-sensitive; repeat the key); omitted includes
+            CRITICAL, HIGH, MEDIUM, and LOW. Maximum 100 values.
+          in: query
+          name: severities
+          schema:
+            items:
+              $ref: '#/components/schemas/models.SecurityVulnerabilitySeverity'
+            type: array
+          style: form
+        - description: Components (repeat the key); omitted includes both supported
+            components. Maximum 100 values.
+          in: query
+          name: componentTypes
+          schema:
+            items:
+              $ref: '#/components/schemas/models.VulnerabilityComponent'
+            type: array
+          style: form
+        - description: Case-insensitive vulnerability ID substring; trimmed. Omitted
+            means no search restriction.
+          in: query
+          name: vulnerabilitySearch
+          schema:
+            maxLength: 128
+            type: string
+        - description: Zero-based page; rejected for CSV.
+          in: query
+          name: page
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - description: Rows per JSON page; rejected for CSV.
+          in: query
+          name: pageSize
+          schema:
+            default: 10
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: Sort field. Description and fixVersions are not sortable.
+          in: query
+          name: sortBy
+          schema:
+            default: severity
+            enum:
+              - vulnerability
+              - severity
+              - affectedNodes
+              - component
+            type: string
+        - description: Sort direction; ties use vulnerability ascending.
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: JSON page or CSV of all matching vulnerabilities.
+          in: query
+          name: format
+          schema:
+            default: json
+            enum:
+              - json
+              - csv
+            type: string
+        - description: Return only the distinct filtered CVE total; JSON only, without
+            pagination or sorting parameters.
+          in: query
+          name: countOnly
+          schema:
+            default: false
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/models.SecurityVulnerabilitiesResponse'
+                  - additionalProperties: false
+                    properties:
+                      total:
+                        description: Distinct filtered CVE count when countOnly=true.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                    required:
+                      - total
+                    type: object
+            text/csv:
+              schema:
+                type: string
+          description: Distinct vulnerabilities and full filtered summary, or CSV
+            when format=csv.
+          headers:
+            Content-Disposition:
+              description: 'CSV only: attachment; filename=security_vulnerabilities.csv'
+              schema:
+                type: string
+            X-Total-Count:
+              description: 'CSV only: number of exported vulnerability rows.'
+              schema:
+                type: integer
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid filters, sort, format, or pagination.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Report not ready or service temporarily unavailable.
+      summary: List security vulnerabilities
+      tags:
+        - reports
+  /v1/reports/security/vulnerabilities/options:
+    get:
+      description: 'Sorting uses the shared SortingOptions shape. fields is [vulnerability,
+        severity, affectedNodes, component], orders is [asc, desc], and defaults is
+        {field: severity, order: desc}. Description and fixVersions are not sortable.
+
+        Return filters keyed by query parameter name plus sorting metadata for the
+        vulnerability table. Always include computeZoneIds, nodeGroupIds, gpuTypes,
+        severities, and componentTypes, using empty arrays when no options are available.
+        No dimension or view selector is required. Zone/group/component options contain
+        selectable id and display name. Component IDs are gpuDriver or vbios; zone/group
+        IDs are UUIDs. GPU types and severity options are strings. Severity values
+        are CRITICAL, HIGH, MEDIUM, and LOW; unknown is a GPU-type option only.
+
+        Options use current security findings and the full authorized customer scope,
+        unifying active in-band and OOB sources. Available to tenants and operators.
+        Authorized default and external-cloud-provider audiences share the same customer
+        fleet findings. This endpoint accepts no query parameters; table filter selections
+        do not affect the available options.
+
+        Membership options include authorized nodes lacking assessments. GPU-type,
+        severity and component options come only from visible findings across the
+        full customer fleet, regardless of table filter selections. Sort membership/component
+        options by display name then ID, GPU types alphabetically, and severities
+        CRITICAL > HIGH > MEDIUM > LOW. JSON key order does not define UI order.
+
+        JSON only. A dimension exceeding 10000 distinct options returns 422; never
+        silently truncate. Responses use private/no-store caching.'
+      operationId: getV1ReportsSecurityVulnerabilityOptions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.SecurityVulnerabilityOptionsResponse'
+          description: Keyed filter arrays and sorting metadata.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unsupported query parameters.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Too many filter options.
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Report not ready or service temporarily unavailable.
+      summary: Get security vulnerability filter and sort options
+      tags:
+        - reports
+  /v1/reports/security/vulnerabilities/{vulnerability}/nodes:
+    get:
+      description: 'Export one row per distinct canonical node affected by the selected
+        vulnerability, unifying active in-band and OOB sources. Apply the same filters
+        and finding predicate as the vulnerability table, using current findings for
+        this request; a refresh can make this download differ from an earlier displayed
+        count.
+
+        Repeated values are ORed within a filter; filter dimensions and the path vulnerability
+        are ANDed. Deduplicate values and reject empty values or lists longer than
+        100. Unknown or inaccessible zone/group IDs yield no results. Comma-separated
+        scalar values are not split. Customer and audience are server-derived; available
+        to tenants and operators. Reject dataSource, dataSources, agentType, base,
+        page, pageSize, sortBy, and order. Only format=csv is supported. Rows sort
+        by nodeUUID ascending.
+
+        Malformed CVE IDs return 400. A CVE absent from the authorized current findings
+        returns 404; a known authorized CVE excluded by filters returns a header-only
+        CSV. Exports include all matching nodes without a fixed row cap; request timeouts
+        and cancellation still apply. Missing identity values are blank. Multi-value
+        cells use quoted newline-separated text; strings are escaped for spreadsheet
+        safety. Responses use private/no-store caching.
+
+        CSV has exactly nine columns, in order: Vulnerability, Affected Component,
+        Current Version, Fix Version, GPU Type, Host Name, Machine ID, Machine Name,
+        BMC MAC Address. Machine ID is the canonical node UUID; Machine Name is nodeName
+        and Host Name is the in-band hostname, with no identity fallbacks. Current
+        Version is the assessed driver version or raw VBIOS version, not a mapped
+        milestone. Multiple current versions and applicable fixes are newline-separated
+        within quoted cells. Fixes are ordered by numeric version within branch/platform;
+        VBIOS fixes retain platform labels. Missing values are blank. No URL, inventory
+        provenance or additional identity columns are exported.'
+      operationId: getV1ReportsSecurityVulnerabilityNodes
+      parameters:
+        - description: CVE ID matching ^CVE-[0-9]{4}-[0-9]{4,}$, maximum 64 characters.
+          in: path
+          name: vulnerability
+          required: true
+          schema:
+            maxLength: 64
+            type: string
+        - description: Zone UUIDs (repeat the key); omitted includes all authorized
+            zones and Unassigned. Maximum 100 values.
+          in: query
+          name: computeZoneIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Node-group UUIDs (repeat the key); omitted includes all authorized
+            groups and Unassigned. Maximum 100 values.
+          in: query
+          name: nodeGroupIds
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Resolved GPU types (repeat the key); omitted includes all types,
+            including unknown. Maximum 100 values.
+          in: query
+          name: gpuTypes
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: Catalog ratings (case-sensitive; repeat the key); omitted includes
+            all supported ratings. Maximum 100 values.
+          in: query
+          name: severities
+          schema:
+            items:
+              $ref: '#/components/schemas/models.SecurityVulnerabilitySeverity'
+            type: array
+          style: form
+        - description: Components (repeat the key); omitted includes both supported
+            components. Maximum 100 values.
+          in: query
+          name: componentTypes
+          schema:
+            items:
+              $ref: '#/components/schemas/models.VulnerabilityComponent'
+            type: array
+          style: form
+        - description: Case-insensitive vulnerability ID substring, also applied to
+            the selected vulnerability. Omitted means no search restriction.
+          in: query
+          name: vulnerabilitySearch
+          schema:
+            maxLength: 128
+            type: string
+        - description: CSV only; JSON is not supported.
+          in: query
+          name: format
+          schema:
+            default: csv
+            enum:
+              - csv
+            type: string
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: CSV of affected nodes; multiple values use newline-separated
+            text within quoted cells.
+          headers:
+            Content-Disposition:
+              description: attachment; filename=security_CVE-2025-23301_nodes.csv
+                (uses the selected vulnerability ID).
+              schema:
+                type: string
+            X-Total-Count:
+              description: Number of exported distinct nodes.
+              schema:
+                type: integer
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid vulnerability ID, filters, or unsupported parameters.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Vulnerability not found
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Report not ready or service temporarily unavailable.
+      summary: Download affected nodes for a security vulnerability
       tags:
         - reports
   /v1/retention_policy:
@@ -4177,7 +4983,7 @@ paths:
         combined page a node that reported the same fault through both paths appears
         as two rows with different dataSource values — that is the observation, not
         a duplicate to be merged. Sorting and paging are identical for every dataSource.
-        Every item also carries all three node identities (hostname, nodeName, bmcHostname);
+        Every item also carries all three node identities (hostname, nodeName, bmcMac);
         each is empty unless the source owning it is currently enrolled, so an out-of-band-only
         node usually has no hostname and sorts as empty under sortBy=hostname. nameSearch
         matches any of the three. For out-of-band bursts the deviceIds keys are resolved
@@ -4285,8 +5091,8 @@ paths:
               type: string
             type: array
         - description: 'Case-insensitive substring matched against any of the node''s
-            identities: hostname, nodeName, or bmcHostname. Takes precedence when
-            both nameSearch and deprecated hostnameSearch are supplied.'
+            identities: hostname, nodeName, or bmcMac. Takes precedence when both
+            nameSearch and deprecated hostnameSearch are supplied.'
           in: query
           name: nameSearch
           schema:
@@ -4397,7 +5203,7 @@ paths:
               - dataSource
               - hostname
               - nodeName
-              - bmcHostname
+              - bmcMac
               - gpuType
               - nodeGroup
               - computeZone
@@ -4673,7 +5479,8 @@ paths:
         - xid
   /v2/commands:
     get:
-      description: Get list of commands (v2)
+      description: Get agent and collector commands, including enrollment, downloads,
+        and links to installation and machine disconnection documentation.
       operationId: getV2Commands
       responses:
         '200':
@@ -5043,6 +5850,15 @@ components:
         - AlertStateDetected
         - AlertStateTriggered
         - AlertStateResolved
+    models.AlertTimelineComponent:
+      properties:
+        component:
+          example: cpu
+          type: string
+        componentDisplayName:
+          example: CPU
+          type: string
+      type: object
     models.AlertTimelineDetailResponse:
       properties:
         alertStatus:
@@ -5144,14 +5960,23 @@ components:
       properties:
         agentStatus:
           $ref: '#/components/schemas/models.AlertAgentStatuses'
-        bmcHostname:
-          description: OOB BMC hostname.
-          example: bmc-a.example.com
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
           type: string
         computeZone:
           description: Compute zone display name
           example: Compute Zone Name
           type: string
+        criticalComponents:
+          description: 'CriticalComponents lists matching active Critical alerts,
+            newest timeline event first.
+
+            Present only for active=true; empty when no matching Critical alerts exist.'
+          items:
+            $ref: '#/components/schemas/models.AlertTimelineComponent'
+          type: array
+          uniqueItems: false
         criticalCount:
           description: Count of Critical alerts on this node (respects filters and
             component visibility)
@@ -5191,6 +6016,15 @@ components:
           description: Count of Resolved alerts; historical view only (0 when active=true)
           example: 0
           type: integer
+        warningComponents:
+          description: 'WarningComponents lists matching active Warning alerts, newest
+            timeline event first.
+
+            Present only for active=true; empty when no matching Warning alerts exist.'
+          items:
+            $ref: '#/components/schemas/models.AlertTimelineComponent'
+          type: array
+          uniqueItems: false
         warningCount:
           description: Count of Warning alerts on this node
           example: 2
@@ -5431,7 +6265,7 @@ components:
             - Fatal
             - Critical
           items:
-            $ref: '#/components/schemas/models.EventSeverity'
+            $ref: '#/components/schemas/models.ErrorSeverity'
           type: array
           uniqueItems: true
         suggestedAction:
@@ -5455,6 +6289,10 @@ components:
       type: object
     models.ByNode:
       properties:
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
+          type: string
         errors:
           items:
             type: string
@@ -5462,6 +6300,9 @@ components:
           uniqueItems: false
         hostname:
           example: node-001
+          type: string
+        nodeName:
+          example: machine-001
           type: string
         nodeUUID:
           example: 00000000-0000-0000-0000-000000000000
@@ -5572,6 +6413,11 @@ components:
           type: string
         displayName:
           type: string
+        group:
+          description: Group lets clients group the flat component list without changing
+            its structure.
+          example: GPU hardware and runtime
+          type: string
         isBackendComponent:
           type: boolean
         metrics:
@@ -5595,6 +6441,8 @@ components:
           type: string
         componentDisplayName:
           example: GPU
+          type: string
+        group:
           type: string
       type: object
     models.ComponentsInfo:
@@ -5861,6 +6709,16 @@ components:
         requestStatus:
           $ref: '#/components/schemas/models.KASRequestStatus'
       type: object
+    models.ErrorSeverity:
+      enum:
+        - Fatal
+        - Critical
+        - Warning
+      type: string
+      x-enum-varnames:
+        - ErrorSeverityFatal
+        - ErrorSeverityCritical
+        - ErrorSeverityWarning
     models.ErrorTimeSeriesByError:
       properties:
         label:
@@ -5871,9 +6729,9 @@ components:
       type: object
     models.Event:
       properties:
-        bmcHostname:
-          description: BMC hostname of the node's OOB enrollment
-          example: bmc-a.example.com
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
           type: string
         component:
           description: Component name
@@ -5928,7 +6786,8 @@ components:
           example: node-001
           type: string
         nodeUUID:
-          description: Node UUID
+          description: Canonical node UUID; empty when the event has no associated
+            node
           example: node-123
           type: string
         suggestedActions:
@@ -6011,18 +6870,6 @@ components:
           type: array
           uniqueItems: false
       type: object
-    models.EventSeverity:
-      enum:
-        - Fatal
-        - Critical
-        - Warning
-        - Info
-      type: string
-      x-enum-varnames:
-        - EventSeverityFatal
-        - EventSeverityCritical
-        - EventSeverityWarning
-        - EventSeverityInfo
     models.EventsResponse:
       properties:
         events:
@@ -6219,6 +7066,18 @@ components:
           type: number
         unhealthyPercentage:
           type: number
+      type: object
+    models.IDNameOption:
+      properties:
+        id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        name:
+          example: Option Name
+          type: string
+      required:
+        - id
+        - name
       type: object
     models.InbandInventoryNode:
       properties:
@@ -6586,6 +7445,9 @@ components:
     models.IntegrityCheck:
       description: 'Deprecated: use VerificationCheck.'
       enum:
+        - Full Attestation
+        - Partial Attestation
+        - Verification Failed
         - Verified
         - Unverified
         - Degraded
@@ -6594,6 +7456,9 @@ components:
         - Unknown
       type: string
       x-enum-varnames:
+        - IntegrityCheckFullAttestation
+        - IntegrityCheckPartialAttestation
+        - IntegrityCheckVerificationFailed
         - IntegrityCheckPassed
         - IntegrityCheckFailed
         - IntegrityCheckDegraded
@@ -6604,6 +7469,10 @@ components:
     models.IntegrityCheckExtraInfo:
       description: 'Deprecated: use VerificationCheckExtraInfo.'
       properties:
+        ear:
+          description: EAR is the attestation result issued by the attestation service;
+            only node details returns it.
+          type: object
         errorDetails:
           example: 'SDK error: code=13, message=nonce refresh failed'
           type: string
@@ -6613,13 +7482,17 @@ components:
         gpuResults:
           additionalProperties:
             $ref: '#/components/schemas/models.JWTClaims'
+          description: Per-GPU NRAS v4 claims. Set only by the NRAS v4 service; the
+            full-attest service sets policy and ear.
           type: object
         nrasCallResult:
-          example: 'NRAS attestation failed: GPU-0: NONCE_NOT_MATCHING'
+          example: 'tier 3: failure: gpu_0: eat_nonce does not match the issued nonce'
           type: string
         overallAttestationResult:
           example: false
           type: boolean
+        policy:
+          $ref: '#/components/schemas/models.VerificationPolicy'
       type: object
       deprecated: true
     models.JWTClaims:
@@ -7578,6 +8451,11 @@ components:
         powerState:
           example: 'On'
           type: string
+        powerSupplies:
+          items:
+            $ref: '#/components/schemas/models.OobPowerSupply'
+          type: array
+          uniqueItems: false
         serialNumber:
           example: '1655023015625'
           type: string
@@ -7637,6 +8515,35 @@ components:
       required:
         - domain
         - message
+      type: object
+    models.OobDrive:
+      properties:
+        capacityBytes:
+          type: integer
+        id:
+          type: string
+        mediaType:
+          type: string
+        model:
+          type: string
+        odataId:
+          type: string
+        protocol:
+          type: string
+        revision:
+          type: string
+        serialNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+        storageId:
+          type: string
+        systemId:
+          type: string
+      required:
+        - id
+        - storageId
+        - systemId
       type: object
     models.OobFabric:
       properties:
@@ -7819,14 +8726,15 @@ components:
       type: object
     models.OobInventoryNode:
       properties:
-        agentVersion:
-          example: 1.2.3
-          type: string
-        bmcHostname:
-          example: bmc-a.example.com
-          type: string
         bmcIP:
           example: 10.77.91.72:443
+          type: string
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
+          type: string
+        collectorVersion:
+          example: 1.2.3
           type: string
         computeZone:
           example: compute-zone-1
@@ -7978,6 +8886,34 @@ components:
       required:
         - id
       type: object
+    models.OobMemory:
+      properties:
+        capacityMib:
+          type: integer
+        deviceLocator:
+          type: string
+        id:
+          type: string
+        location:
+          $ref: '#/components/schemas/models.OobChassisLocation'
+        manufacturer:
+          type: string
+        memoryDeviceType:
+          type: string
+        odataId:
+          type: string
+        partNumber:
+          type: string
+        serialNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+        systemId:
+          type: string
+      required:
+        - id
+        - systemId
+      type: object
     models.OobMemorySummary:
       properties:
         memoryMirroring:
@@ -8027,14 +8963,15 @@ components:
           example: inband
           type: string
           deprecated: true
-        agentVersion:
-          example: 1.2.3
-          type: string
-        bmcHostname:
-          example: bmc-a.example.com
-          type: string
         bmcIP:
           example: 10.57.17.140
+          type: string
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
+          type: string
+        collectorVersion:
+          example: 1.2.3
           type: string
         computeZone:
           example: compute-zone-1
@@ -8107,14 +9044,15 @@ components:
           example: inband
           type: string
           deprecated: true
-        agentVersion:
-          example: 1.2.3
-          type: string
-        bmcHostname:
-          example: bmc-a.example.com
-          type: string
         bmcIP:
           example: 10.57.17.140
+          type: string
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
+          type: string
+        collectorVersion:
+          example: 1.2.3
           type: string
         computeZone:
           example: compute-zone-1
@@ -8359,6 +9297,30 @@ components:
         row:
           type: string
       type: object
+    models.OobPowerSupply:
+      properties:
+        chassisId:
+          type: string
+        firmwareVersion:
+          type: string
+        id:
+          type: string
+        model:
+          type: string
+        odataId:
+          type: string
+        partNumber:
+          type: string
+        powerCapacityWatts:
+          type: number
+        serialNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/models.OobInventoryStatus'
+      required:
+        - chassisId
+        - id
+      type: object
     models.OobProcessor:
       properties:
         description:
@@ -8453,9 +9415,6 @@ components:
         address:
           example: 10.77.91.72:443
           type: string
-        hostName:
-          example: bmc-a.example.com
-          type: string
         mac:
           example: 5c:ff:35:fb:e9:f2
           type: string
@@ -8475,6 +9434,23 @@ components:
         - address
         - mac
         - sourceType
+      type: object
+    models.OobStorage:
+      properties:
+        drives:
+          items:
+            $ref: '#/components/schemas/models.OobDrive'
+          type: array
+          uniqueItems: false
+        id:
+          type: string
+        odataId:
+          type: string
+        systemId:
+          type: string
+      required:
+        - id
+        - systemId
       type: object
     models.OobSwitch:
       properties:
@@ -8569,6 +9545,11 @@ components:
         manufacturer:
           example: NVIDIA
           type: string
+        memory:
+          items:
+            $ref: '#/components/schemas/models.OobMemory'
+          type: array
+          uniqueItems: false
         memoryGib:
           example: 2048
           type: number
@@ -8609,6 +9590,11 @@ components:
           example: Enabled
           type: string
           deprecated: true
+        storage:
+          items:
+            $ref: '#/components/schemas/models.OobStorage'
+          type: array
+          uniqueItems: false
         uuid:
           example: 936672d4-bfde-1000-02bc-5cff35fbe9f2
           type: string
@@ -8660,6 +9646,101 @@ components:
           example: 5
           type: integer
       type: object
+    models.PredictedHealthRankingItem:
+      properties:
+        computeZoneId:
+          oneOf:
+            - format: uuid
+              type: string
+            - type: 'null'
+        decile:
+          oneOf:
+            - description: 'Decile is the rank group from 1 to 10 in the full comparison
+                scope.
+
+                It is null for unranked items or fewer than 10 ranked items in that
+                scope.'
+              type: integer
+            - type: 'null'
+        entityId:
+          description: EntityID is the node UUID, domain UUID or chassis serial selected
+            by rankUnit.
+          type: string
+        explanation:
+          oneOf:
+            - type: string
+            - type: 'null'
+        hostname:
+          oneOf:
+            - type: string
+            - type: 'null'
+        memberCount:
+          type: integer
+        nodeGroupId:
+          oneOf:
+            - format: uuid
+              type: string
+            - type: 'null'
+        predictionAt:
+          oneOf:
+            - format: date-time
+              type: string
+            - type: 'null'
+        predictionStatus:
+          enum:
+            - ranked
+            - unranked
+          type: string
+        rank:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        scoredCount:
+          type: integer
+        unrankedReason:
+          oneOf:
+            - type: string
+            - type: 'null'
+        unscoredCount:
+          type: integer
+      type: object
+    models.PredictedHealthRankingsResponse:
+      properties:
+        allNodesRanked:
+          type: boolean
+        complete:
+          description: 'Complete requires usable scores, resolved membership and rankable
+            groups.
+
+            It is omitted for node ranking, which retains allNodesRanked semantics.'
+          type: boolean
+        hasMore:
+          type: boolean
+        items:
+          items:
+            $ref: '#/components/schemas/models.PredictedHealthRankingItem'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        rankUnit:
+          description: RankUnit identifies the type of entity returned in items.
+          enum:
+            - node
+            - nvlinkDomain
+            - rack
+          type: string
+        rankedCount:
+          type: integer
+        total:
+          type: integer
+        unmappedNodeCount:
+          type: integer
+        unrankedCount:
+          type: integer
+      type: object
     models.QueryMetricRangeResponse:
       properties:
         result:
@@ -8684,6 +9765,189 @@ components:
       required:
         - unavailable
         - warning
+      type: object
+    models.SecurityVulnerabilitiesResponse:
+      properties:
+        hasMore:
+          example: false
+          type: boolean
+        page:
+          example: 0
+          minimum: 0
+          type: integer
+        pageSize:
+          example: 10
+          maximum: 100
+          minimum: 1
+          type: integer
+        summary:
+          $ref: '#/components/schemas/models.SecurityVulnerabilitySummary'
+        total:
+          description: Total is the number of distinct matching vulnerabilities before
+            pagination.
+          example: 1
+          minimum: 0
+          type: integer
+        vulnerabilities:
+          items:
+            $ref: '#/components/schemas/models.SecurityVulnerability'
+          type: array
+          uniqueItems: false
+      required:
+        - hasMore
+        - page
+        - pageSize
+        - summary
+        - total
+        - vulnerabilities
+      type: object
+    models.SecurityVulnerability:
+      properties:
+        affectedNodes:
+          description: AffectedNodes counts canonical node UUIDs once across sources
+            and GPUs.
+          example: 200
+          minimum: 0
+          type: integer
+        component:
+          $ref: '#/components/schemas/models.VulnerabilityComponent'
+        description:
+          oneOf:
+            - description: Description is plain text from the catalog, or null when
+                unavailable.
+              example: A vBIOS misconfiguration can enable unsafe debug access and
+                denial of service.
+              type: string
+            - type: 'null'
+        fixVersions:
+          description: 'FixVersions contains display strings for direct catalog fixes
+            applicable to
+
+            the filtered findings. Empty means no known applicable fix. These strings
+
+            are not upgrade packages or resource identifiers.'
+          example:
+            - Hopper 1.8.0
+            - Blackwell 1.2.1
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        severity:
+          $ref: '#/components/schemas/models.SecurityVulnerabilitySeverity'
+        vulnerability:
+          example: CVE-2025-23301
+          type: string
+        vulnerabilityUrl:
+          example: https://www.cve.org/CVERecord?id=CVE-2025-23301
+          format: uri
+          type: string
+      required:
+        - affectedNodes
+        - component
+        - description
+        - fixVersions
+        - severity
+        - vulnerability
+        - vulnerabilityUrl
+      type: object
+    models.SecurityVulnerabilityFilterOptions:
+      properties:
+        componentTypes:
+          description: ComponentTypes uses VulnerabilityComponent values (gpuDriver
+            or vbios) as option IDs.
+          items:
+            $ref: '#/components/schemas/models.IDNameOption'
+          type: array
+          uniqueItems: false
+        computeZoneIds:
+          description: ComputeZoneIDs and NodeGroupIDs use membership UUIDs as option
+            IDs.
+          items:
+            $ref: '#/components/schemas/models.IDNameOption'
+          type: array
+          uniqueItems: false
+        gpuTypes:
+          example:
+            - H100
+            - H200
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        nodeGroupIds:
+          items:
+            $ref: '#/components/schemas/models.IDNameOption'
+          type: array
+          uniqueItems: false
+        severities:
+          example:
+            - CRITICAL
+            - HIGH
+            - MEDIUM
+            - LOW
+          items:
+            $ref: '#/components/schemas/models.SecurityVulnerabilitySeverity'
+          type: array
+          uniqueItems: false
+      required:
+        - componentTypes
+        - computeZoneIds
+        - gpuTypes
+        - nodeGroupIds
+        - severities
+      type: object
+    models.SecurityVulnerabilityOptionsResponse:
+      properties:
+        filters:
+          $ref: '#/components/schemas/models.SecurityVulnerabilityFilterOptions'
+        sorting:
+          $ref: '#/components/schemas/models.SortingOptions'
+      required:
+        - filters
+        - sorting
+      type: object
+    models.SecurityVulnerabilitySeverity:
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+      example: MEDIUM
+      type: string
+      x-enum-varnames:
+        - SecurityVulnerabilitySeverityLow
+        - SecurityVulnerabilitySeverityMedium
+        - SecurityVulnerabilitySeverityHigh
+        - SecurityVulnerabilitySeverityCritical
+    models.SecurityVulnerabilitySummary:
+      properties:
+        affectedNodes:
+          description: AffectedNodes is the union across matching vulnerabilities,
+            never the sum of row counts.
+          example: 200
+          minimum: 0
+          type: integer
+        distinctComponentCount:
+          example: 1
+          maximum: 2
+          minimum: 0
+          type: integer
+        severityCounts:
+          $ref: '#/components/schemas/models.VulnerabilitySeverityCounts'
+        totalNodes:
+          description: 'TotalNodes applies only authorization and zone/group/GPU filters.
+            Severity,
+
+            component, and CVE search do not change this fleet denominator.'
+          example: 1200
+          minimum: 0
+          type: integer
+      required:
+        - affectedNodes
+        - distinctComponentCount
+        - severityCounts
+        - totalNodes
       type: object
     models.SetNodeTagsRequest:
       properties:
@@ -8750,11 +10014,12 @@ components:
       type: object
     models.SimpleNode:
       properties:
-        bmcHostname:
-          example: bmc-a.example.com
-          type: string
         bmcIP:
           example: 10.57.17.140
+          type: string
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
           type: string
         hostname:
           example: node-001
@@ -9008,6 +10273,9 @@ components:
       type: object
     models.VerificationCheck:
       enum:
+        - Full Attestation
+        - Partial Attestation
+        - Verification Failed
         - Verified
         - Unverified
         - Degraded
@@ -9017,7 +10285,15 @@ components:
       type: string
       x-enum-comments:
         VerificationCheckDegraded: Catch-all for attestation errors/unavailable verification
+        VerificationCheckFailed: Failed without a verification policy verdict
+        VerificationCheckFullAttestation: Verification policy tier 1
+        VerificationCheckPartialAttestation: Verification policy tier 2
+        VerificationCheckPassed: Passed without a verification policy verdict
+        VerificationCheckVerificationFailed: Verification policy tier 3
       x-enum-varnames:
+        - VerificationCheckFullAttestation
+        - VerificationCheckPartialAttestation
+        - VerificationCheckVerificationFailed
         - VerificationCheckPassed
         - VerificationCheckFailed
         - VerificationCheckDegraded
@@ -9026,6 +10302,10 @@ components:
         - VerificationCheckUnknown
     models.VerificationCheckExtraInfo:
       properties:
+        ear:
+          description: EAR is the attestation result issued by the attestation service;
+            only node details returns it.
+          type: object
         errorDetails:
           example: 'SDK error: code=13, message=nonce refresh failed'
           type: string
@@ -9035,18 +10315,129 @@ components:
         gpuResults:
           additionalProperties:
             $ref: '#/components/schemas/models.JWTClaims'
+          description: Per-GPU NRAS v4 claims. Set only by the NRAS v4 service; the
+            full-attest service sets policy and ear.
           type: object
         nrasCallResult:
-          example: 'NRAS attestation failed: GPU-0: NONCE_NOT_MATCHING'
+          example: 'tier 3: failure: gpu_0: eat_nonce does not match the issued nonce'
           type: string
         overallAttestationResult:
           example: false
           type: boolean
+        policy:
+          $ref: '#/components/schemas/models.VerificationPolicy'
+      type: object
+    models.VerificationPolicy:
+      description: Policy is the verification policy's decision on the attestation
+        result.
+      properties:
+        approved:
+          example: true
+          type: boolean
+        denials:
+          description: Denials lists why the policy rejected the attestation result.
+          example:
+            - 'gpu_0: eat_nonce does not match the issued nonce'
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        gpus:
+          additionalProperties:
+            $ref: '#/components/schemas/models.VerificationPolicyVerdict'
+          type: object
+        policyVersion:
+          description: PolicyVersion identifies the policy revision that produced
+            the verdict.
+          example: sha256:30e2195f32ba54652ed7b5a09da49edbb97274aa4aebb9dddc6d9f2662ba3b23
+          type: string
+        reason:
+          description: Reason explains the verdict; for tier 3 it is the policy's
+            failure detail.
+          example: This GPU passed the verification check. Evidence signature, nonce,
+            certificate chain, and revocation status (OCSP) were verified. The reference
+            integrity manifest (RIM) for this GPU's firmware is not yet available,
+            so firmware measurements were not compared against it.
+          type: string
+        tier:
+          description: Tier 1 passed every check, 2 passed without a reference integrity
+            manifest (RIM), 3 was rejected.
+          enum:
+            - 1
+            - 2
+            - 3
+          example: 2
+          type: integer
+      type: object
+    models.VerificationPolicyVerdict:
+      properties:
+        approved:
+          example: true
+          type: boolean
+        denials:
+          description: Denials lists why the policy rejected the attestation result.
+          example:
+            - 'gpu_0: eat_nonce does not match the issued nonce'
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        reason:
+          description: Reason explains the verdict; for tier 3 it is the policy's
+            failure detail.
+          example: This GPU passed the verification check. Evidence signature, nonce,
+            certificate chain, and revocation status (OCSP) were verified. The reference
+            integrity manifest (RIM) for this GPU's firmware is not yet available,
+            so firmware measurements were not compared against it.
+          type: string
+        tier:
+          description: Tier 1 passed every check, 2 passed without a reference integrity
+            manifest (RIM), 3 was rejected.
+          enum:
+            - 1
+            - 2
+            - 3
+          example: 2
+          type: integer
+      type: object
+    models.VulnerabilityComponent:
+      enum:
+        - gpuDriver
+        - vbios
+      example: vbios
+      type: string
+      x-enum-varnames:
+        - VulnerabilityComponentGPUDriver
+        - VulnerabilityComponentVBIOS
+    models.VulnerabilitySeverityCounts:
+      properties:
+        critical:
+          example: 0
+          minimum: 0
+          type: integer
+        high:
+          example: 0
+          minimum: 0
+          type: integer
+        low:
+          example: 0
+          minimum: 0
+          type: integer
+        medium:
+          example: 1
+          minimum: 0
+          type: integer
+      required:
+        - critical
+        - high
+        - low
+        - medium
       type: object
     models.XIDBurstDetail:
       properties:
-        bmcHostname:
-          example: bmc-hostname-1
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
           type: string
         burstDurationSeconds:
           example: 506
@@ -9091,7 +10482,7 @@ components:
           example: NVIDIA-H100-80GB-HBM3
           type: string
         hostname:
-          description: 'Hostname, NodeName, and BMCHostname carry the same node-scoped
+          description: 'Hostname, NodeName, and BMCMAC carry the same node-scoped
             meaning as
 
             on XIDBurstListItem.'
@@ -9226,8 +10617,9 @@ components:
       type: object
     models.XIDBurstListItem:
       properties:
-        bmcHostname:
-          example: bmc-hostname-1
+        bmcMac:
+          description: BMC MAC identifier from collector source.mac; may be empty.
+          example: 02:00:0a:00:00:0a
           type: string
         burstDurationSeconds:
           example: 506
@@ -9276,10 +10668,11 @@ components:
           example: NVIDIA-H100-80GB-HBM3
           type: string
         hostname:
-          description: 'Hostname is the in-band OS hostname; NodeName and BMCHostname
-            are the
+          description: 'Hostname is the in-band OS hostname; NodeName and BMCMAC are
+            the
 
-            OOB machine name and BMC hostname. All three describe the node, not the
+            OOB machine name and BMC MAC identifier. All three describe the node,
+            not the
 
             burst, so a dual-enrolled node returns every identity it has regardless
 

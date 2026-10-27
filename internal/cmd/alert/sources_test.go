@@ -38,7 +38,7 @@ func TestAlertSourceStatusCommands(t *testing.T) {
 							if !slices.Equal(q["inbandAgentStatuses"], []string{"offline", "not_enrolled"}) || q.Get("oobAgentStatuses") != "online" || q.Get("sortBy") != "nodeName" || q.Get("nameSearch") != "machine" {
 								t.Errorf("lost summary filters: %s", r.URL)
 							}
-							fmt.Fprintf(w, `{"nodes":[{"nodeUuid":"n%d","nodeName":"machine%d","bmcHostname":"bmc%d","agentStatus":{"inband":{"status":"not_enrolled"},"oob":{"status":"online","lastSeenAt":"2026-10-01T12:00:00Z"}}}],"page":%d,"pageSize":1,"total":2,"hasMore":%v,"totalCritical":9}`, page, page, page, page, page == 0)
+							fmt.Fprintf(w, `{"nodes":[{"nodeUuid":"n%d","nodeName":"machine%d","bmcMac":"bmc%d","agentStatus":{"inband":{"status":"not_enrolled"},"oob":{"status":"online","lastSeenAt":"2026-10-01T12:00:00Z"}}}],"page":%d,"pageSize":1,"total":2,"hasMore":%v,"totalCritical":9}`, page, page, page, page, page == 0)
 						} else {
 							if q.Has("inbandAgentStatuses") || q.Has("oobAgentStatuses") || q.Get("sortBy") != "dataSource" {
 								t.Errorf("wrong node filters: %s", r.URL)
@@ -88,7 +88,7 @@ func TestAlertSourceStatusCommands(t *testing.T) {
 						} else {
 							wants := []string{"DATA SOURCE", "oob", "a0"}
 							if command == "summary" {
-								wants = []string{"NODE NAME", "BMC HOSTNAME", "INBAND STATUS", "OOB STATUS", "machine0", "bmc0", "not_enrolled", "online"}
+								wants = []string{"NODE NAME", "BMC MAC", "INBAND STATUS", "OOB STATUS", "machine0", "bmc0", "not_enrolled", "online"}
 							}
 							for _, want := range wants {
 								if !strings.Contains(out.String(), want) {
@@ -121,7 +121,7 @@ func TestAlertSourceStatusOptionsAndValidation(t *testing.T) {
 			t.Errorf("unexpected request: %s", r.URL)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"filters":{"fields":[{"name":"dataSources","options":["inband","oob"]},{"name":"inbandAgentStatuses","options":["offline","not_enrolled"]},{"name":"oobAgentStatuses","options":["online"]}]},"sorting":{"fields":["nodeName","bmcHostname","nodeUUID"]}}`)
+		fmt.Fprint(w, `{"filters":{"fields":[{"name":"dataSources","options":["inband","oob"]},{"name":"inbandAgentStatuses","options":["offline","not_enrolled"]},{"name":"oobAgentStatuses","options":["online"]}]},"sorting":{"fields":["nodeName","bmcMac","nodeUUID"]}}`)
 	}))
 	defer server.Close()
 	cmdtest.SaveConfig(t, server.URL, "test-key")
@@ -132,7 +132,7 @@ func TestAlertSourceStatusOptionsAndValidation(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"--data-source", "--inband-agent-status", "--oob-agent-status", "'alert summary' only", "nodeName", "bmcHostname", "nodeUUID", "not_enrolled"} {
+	for _, want := range []string{"--data-source", "--inband-agent-status", "--oob-agent-status", "'alert summary' only", "nodeName", "bmcMac", "nodeUUID", "not_enrolled"} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("options missing %q: %s", want, &out)
 		}
