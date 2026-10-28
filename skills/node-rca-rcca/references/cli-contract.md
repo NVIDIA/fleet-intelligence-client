@@ -32,6 +32,7 @@ Read this before querying live data.
 - Node describe defaults to both source views; an explicit source selects one. Use `--data-source` in place of the removed node `--agent-type` flag.
 
 - XID burst list/options default to `inband` and accept `oob` or `all`; use the same source for both. Combined results retain separate observations of a fault from each path. Describe resolves the source from the burst ID.
+- `report error` selects one source (`inband` by default, or `oob`) for every view and format; OOB node rows use `nodeName` and `bmcMac`.
 
 ## Interpretation
 

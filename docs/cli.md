@@ -242,6 +242,14 @@ both paths remains two distinct bursts. Describe needs only the burst ID.
 `xidburst describe` adds the impacted device labels, per-XID
 catalog details, and suggested actions.
 
+`report error` selects one source with `--data-source inband|oob` and defaults
+to in-band for tables, JSON, and CSV in every view. OOB node rows use node name
+and BMC MAC identity. For example:
+
+```bash
+nvfleetint report error --data-source oob --view list --group-by node --window 24h
+```
+
 `computezone update` changes one compute zone's type, contact, and location.
 Contact and location are structured values on the API, so each of their fields
 has its own flag: `--contact-email`, `--contact-pic`, `--location-city`,

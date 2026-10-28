@@ -195,6 +195,8 @@ type InventoryNode struct {
 
 // Represents request options for error reports
 type ErrorReportOptions struct {
+	// DataSource defaults to in-band when omitted, for every view and format.
+	DataSource     DataSource
 	View           ErrorReportView
 	GroupBy        ErrorReportGroupBy
 	Format         ReportFormat
@@ -214,18 +216,21 @@ type ErrorReportOptions struct {
 
 // Represents an error report response
 type ErrorReport struct {
-	View     ErrorReportView      `json:"view"`
-	GroupBy  ErrorReportGroupBy   `json:"groupBy,omitempty"`
-	Errors   []ErrorReportError   `json:"errors,omitempty"`
-	Nodes    []ErrorReportNode    `json:"nodes,omitempty"`
-	Overview *ErrorReportOverview `json:"overview,omitempty"`
-	Graph    *ErrorReportGraph    `json:"graph,omitempty"`
-	HasMore  bool                 `json:"hasMore"`
-	Page     int                  `json:"page"`
-	PageSize int                  `json:"pageSize"`
-	Total    int                  `json:"total"`
-	RawJSON  []byte               `json:"-"`
-	RawCSV   []byte               `json:"-"`
+	// DataSource records the requested source for source-specific rendering.
+	// Empty means the API's in-band default.
+	DataSource DataSource           `json:"-"`
+	View       ErrorReportView      `json:"view"`
+	GroupBy    ErrorReportGroupBy   `json:"groupBy,omitempty"`
+	Errors     []ErrorReportError   `json:"errors,omitempty"`
+	Nodes      []ErrorReportNode    `json:"nodes,omitempty"`
+	Overview   *ErrorReportOverview `json:"overview,omitempty"`
+	Graph      *ErrorReportGraph    `json:"graph,omitempty"`
+	HasMore    bool                 `json:"hasMore"`
+	Page       int                  `json:"page"`
+	PageSize   int                  `json:"pageSize"`
+	Total      int                  `json:"total"`
+	RawJSON    []byte               `json:"-"`
+	RawCSV     []byte               `json:"-"`
 }
 
 // PageInfo reports the pagination envelope of the response.
@@ -252,6 +257,8 @@ type ErrorReportError struct {
 type ErrorReportNode struct {
 	NodeUUID string   `json:"nodeUUID,omitempty"`
 	Hostname string   `json:"hostname,omitempty"`
+	NodeName string   `json:"nodeName,omitempty"`
+	BMCMAC   string   `json:"bmcMac,omitempty"`
 	Errors   []string `json:"errors,omitempty"`
 }
 
@@ -358,13 +365,16 @@ func (c *Client) GetErrorReport(ctx context.Context, opts ErrorReportOptions) (E
 	}
 	if normalized.Format == ReportFormatCSV {
 		return ErrorReport{
-			View:    normalized.View,
-			GroupBy: normalized.GroupBy,
-			RawCSV:  append([]byte(nil), resp.Body...),
+			DataSource: normalized.DataSource,
+			View:       normalized.View,
+			GroupBy:    normalized.GroupBy,
+			RawCSV:     append([]byte(nil), resp.Body...),
 		}, nil
 	}
 
-	return decodeErrorReport(resp.Body, normalized.View, normalized.GroupBy)
+	report, err := decodeErrorReport(resp.Body, normalized.View, normalized.GroupBy)
+	report.DataSource = normalized.DataSource
+	return report, err
 }
 
 // The accepted values named in each report option's error
@@ -404,6 +414,9 @@ func (opts ErrorReportOptions) Validate() error {
 // combination rules, which it phrases in its own vocabulary: the CLI names the
 // flag the user typed. Validate covers both and is what the request path uses.
 func (opts ErrorReportOptions) ValidateValues() error {
+	if err := opts.DataSource.Validate(); err != nil {
+		return err
+	}
 	if opts.View == "" {
 		return errors.New("error report view is required")
 	}
@@ -603,6 +616,7 @@ func inventoryReportParams(opts InventoryReportOptions) fleetapi.GetV1ReportsInv
 // Builds generated error report query parameters
 func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams {
 	return fleetapi.GetV1ReportsErrorParams{
+		DataSource:     optionalEnum[fleetapi.GetV1ReportsErrorParamsDataSource](opts.DataSource),
 		View:           fleetapi.GetV1ReportsErrorParamsView(opts.View),
 		GroupBy:        optionalEnum[fleetapi.GetV1ReportsErrorParamsGroupBy](opts.GroupBy),
 		Format:         optionalEnum[fleetapi.GetV1ReportsErrorParamsFormat](opts.Format),
@@ -870,6 +884,8 @@ func errorReportNodeFromGenerated(item fleetapi.ModelsByNode) ErrorReportNode {
 	return ErrorReportNode{
 		NodeUUID: stringValue(item.NodeUUID),
 		Hostname: stringValue(item.Hostname),
+		NodeName: stringValue(item.NodeName),
+		BMCMAC:   stringValue(item.BmcMac),
 		Errors:   cloneStringSlice(item.Errors),
 	}
 }

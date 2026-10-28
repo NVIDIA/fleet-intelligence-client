@@ -3,7 +3,7 @@
 
 package nvfleetint
 
-// DataSource selects an inventory source or an alert, event, or XID observation path.
+// DataSource selects an inventory source or an alert, event, error report, or XID observation path.
 type DataSource string
 
 const (

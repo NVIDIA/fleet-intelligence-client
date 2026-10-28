@@ -68,8 +68,10 @@ if err == nil && node.OOBInventory != nil {
 ```
 
 The shared `DataSource` type and `DataSourceInband` / `DataSourceOOB` constants
-are used by nodes, inventory reports, alerts, events, and XID bursts.
-Node and inventory requests accept one source; alert timeline and event filters accept `[]DataSource`.
+are used by nodes, inventory and error reports, alerts, events, and XID bursts.
+Node, inventory, and error-report requests accept one source; alert timeline and event filters accept `[]DataSource`.
+`ErrorReportOptions.DataSource` defaults to in-band for every view and format;
+OOB `ErrorReportNode` values expose `NodeName` and `BMCMAC`.
 XID burst list/options also accept `DataSourceAll`; omission defaults to in-band.
 Use the same source for the list and its filter-options lookup.
 

@@ -39,6 +39,7 @@ type reportInventoryFlags struct {
 
 // Stores local flag values for error reports
 type reportErrorFlags struct {
+	dataSource     string
 	view           string
 	groupBy        string
 	format         string
@@ -168,6 +169,9 @@ Views:
   list      Per-error or per-node breakdown; requires --group-by.
   graph     Time series of error counts.
 
+A single data source is selected for all views and formats: inband (default) or oob.
+OOB node rows use node name and BMC MAC identity.
+
 A time range is always required: use --window for a relative range, or
 --start and --end for an absolute range.`,
 		Example: `  # Summary totals over the last 24 hours (default view)
@@ -187,6 +191,7 @@ A time range is always required: use --window for a relative range, or
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "Report view: list, graph, or overview")
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (default: inband)")
 	cmd.Flags().StringVar(&flags.groupBy, "group-by", "", "Group list view by: error or node")
 	cmd.Flags().StringVar(&flags.format, "format", flags.format, "Report format: json or csv")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
@@ -508,10 +513,11 @@ func runReportErrorAll(cmd *cobra.Command, client *nvfleetint.Client, opts nvfle
 
 	return writeReportErrorOutput(cmd.OutOrStdout(), common, reportErrorOutput{
 		Report: nvfleetint.ErrorReport{
-			View:    nvfleetint.ErrorReportView(flags.view),
-			GroupBy: nvfleetint.ErrorReportGroupBy(flags.groupBy),
-			Errors:  errorsByType,
-			Nodes:   nodes,
+			DataSource: opts.DataSource,
+			View:       nvfleetint.ErrorReportView(flags.view),
+			GroupBy:    nvfleetint.ErrorReportGroupBy(flags.groupBy),
+			Errors:     errorsByType,
+			Nodes:      nodes,
 		},
 		JSONValue: result,
 	})
@@ -673,9 +679,10 @@ func applyErrorReportTime(opts *nvfleetint.ErrorReportOptions, flags reportError
 // filter the moment they did not.
 func errorReportOptions(flags reportErrorFlags, common cmdutil.Resolved) (nvfleetint.ErrorReportOptions, error) {
 	opts := nvfleetint.ErrorReportOptions{
-		View:    nvfleetint.ErrorReportView(flags.view),
-		GroupBy: nvfleetint.ErrorReportGroupBy(flags.groupBy),
-		Format:  nvfleetint.ReportFormat(flags.format),
+		DataSource: nvfleetint.DataSource(strings.TrimSpace(flags.dataSource)),
+		View:       nvfleetint.ErrorReportView(flags.view),
+		GroupBy:    nvfleetint.ErrorReportGroupBy(flags.groupBy),
+		Format:     nvfleetint.ReportFormat(flags.format),
 	}
 
 	if strings.TrimSpace(flags.view) == "" {
@@ -744,10 +751,11 @@ func errorReportOptions(flags reportErrorFlags, common cmdutil.Resolved) (nvflee
 // errors against what the user typed.
 var (
 	reportErrorFlagNames = map[string]cmdutil.OptionFlagName{
-		"view":     {Flag: "view"},
-		"format":   {Flag: "format"},
-		"groupBy":  {Flag: "group-by"},
-		"severity": {Flag: "severity"},
+		"dataSource": {Flag: "data-source"},
+		"view":       {Flag: "view"},
+		"format":     {Flag: "format"},
+		"groupBy":    {Flag: "group-by"},
+		"severity":   {Flag: "severity"},
 	}
 	reportInventoryFlagNames = map[string]cmdutil.OptionFlagName{
 		"dataSource": {Flag: "data-source"},
@@ -839,7 +847,11 @@ func writeReportErrorTable(w io.Writer, report nvfleetint.ErrorReport) error {
 	switch report.View {
 	case nvfleetint.ErrorReportViewList:
 		if report.GroupBy == nvfleetint.ErrorReportGroupByNode {
-			return clioutput.WriteTable(w, []string{"NODE UUID", "HOSTNAME", "ERRORS"}, reportErrorNodeRows(report.Nodes))
+			headers := []string{"NODE UUID", "HOSTNAME", "ERRORS"}
+			if report.DataSource == nvfleetint.DataSourceOOB {
+				headers = []string{"NODE UUID", "NODE NAME", "BMC MAC", "ERRORS"}
+			}
+			return clioutput.WriteTable(w, headers, reportErrorNodeRows(report.Nodes, report.DataSource))
 		}
 		return clioutput.WriteTable(w, []string{"ERROR", "COUNT", "NODE COUNT", "SUGGESTED ACTION"}, reportErrorRows(report.Errors))
 	case nvfleetint.ErrorReportViewGraph:
@@ -886,14 +898,16 @@ func reportErrorRows(errorsByType []nvfleetint.ErrorReportError) [][]string {
 }
 
 // Converts node groupings into table rows
-func reportErrorNodeRows(nodes []nvfleetint.ErrorReportNode) [][]string {
+func reportErrorNodeRows(nodes []nvfleetint.ErrorReportNode, source nvfleetint.DataSource) [][]string {
 	rows := make([][]string, 0, len(nodes))
 	for _, node := range nodes {
-		rows = append(rows, []string{
-			clioutput.DisplayString(node.NodeUUID),
-			clioutput.DisplayString(node.Hostname),
-			clioutput.FormatStringList(node.Errors),
-		})
+		row := []string{clioutput.DisplayString(node.NodeUUID)}
+		if source == nvfleetint.DataSourceOOB {
+			row = append(row, clioutput.DisplayString(node.NodeName), clioutput.DisplayString(node.BMCMAC))
+		} else {
+			row = append(row, clioutput.DisplayString(node.Hostname))
+		}
+		rows = append(rows, append(row, clioutput.FormatStringList(node.Errors)))
 	}
 	return rows
 }
