@@ -106,7 +106,7 @@ func TestReportInventoryTable(t *testing.T) {
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "node-1", "gpu-001", "NVIDIA-H100", "Page: 1"} {
+	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "ATTESTATION", "FIRMWARE CHECK", "node-1", "gpu-001", "NVIDIA-H100", "Page: 1"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}

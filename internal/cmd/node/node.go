@@ -602,11 +602,11 @@ func writeNodeTable(
 	if dataSource == nvfleetint.DataSourceOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "ATTESTATION", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
+	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "ATTESTATION", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
 }
 
 // Reports whether a node list contains OOB-view records
@@ -783,12 +783,12 @@ func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},
 		{"NODE GROUP", clioutput.FormatNameAndID(node.NodeGroup, node.NodeGroupID)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		{"VERIFICATION CHECK", clioutput.DisplayString(node.VerificationCheck)},
-		{"VERIFICATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
+		{"ATTESTATION", clioutput.DisplayString(node.VerificationCheck)},
+		{"ATTESTATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastVerificationCheckTime)},
+		{"LAST ATTESTATION", clioutput.DisplayString(node.LastVerificationCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
@@ -813,15 +813,15 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 		{"GPU TYPE", clioutput.DisplayString(node.GPUType)},
 		{"GPU COUNT", clioutput.FormatOptionalInt(node.GPUCount)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		{"VERIFICATION CHECK", clioutput.DisplayString(node.VerificationCheck)},
-		{"VERIFICATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
+		{"ATTESTATION", clioutput.DisplayString(node.VerificationCheck)},
+		{"ATTESTATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
 		{"FIRMWARE CHECK", clioutput.DisplayString(node.FirmwareCheck)},
 		{"PUBLIC IP", clioutput.DisplayString(node.PublicIP)},
 		{"PRIVATE IP", clioutput.DisplayString(node.PrivateIP)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastVerificationCheckTime)},
+		{"LAST ATTESTATION", clioutput.DisplayString(node.LastVerificationCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},

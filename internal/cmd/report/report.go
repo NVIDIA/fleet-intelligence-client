@@ -835,12 +835,12 @@ func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.Inventory
 			clioutput.DisplayString(node.CollectorVersion),
 		})
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "COLLECTOR VERSION"}, rows)
+	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "ATTESTATION", "COLLECTOR VERSION"}, rows)
 }
 
 // Renders inventory report nodes as a table
 func writeReportInventoryTable(w io.Writer, nodes []nvfleetint.InventoryNode) error {
-	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP", "AGENT VERSION"}, reportInventoryRows(nodes))
+	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "ATTESTATION", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP", "AGENT VERSION"}, reportInventoryRows(nodes))
 }
 
 // Renders an error report using its selected view
