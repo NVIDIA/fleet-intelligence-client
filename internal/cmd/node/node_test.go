@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -18,6 +19,37 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
+
+const completeOOBNodeJSON = `{
+ "nodeUUID":"node-1", "dataSource":"oob", "nodeKind":"nvswitch",
+ "oobInventory":{
+  "schemaVersion":"inventory.v1alpha1", "collectedAt":"2026-10-28T12:00:00Z",
+  "source":{"sourceType":"redfish","address":"192.0.2.10","mac":"02:00:0a:00:00:0a"},
+  "systems":[{
+   "id":"system-1","health":"legacy-health","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning"},
+   "memoryGib":999,"memorySummary":{"totalSystemMemoryGiB":0},
+   "cpuCount":999,"cpuCoreCount":999,"cpuModel":"legacy-model",
+   "processorSummary":{"count":0,"coreCount":0,"model":"Grace"},
+   "processors":[{"id":"gpu-1","processorType":"GPU","health":"legacy-health","status":{"health":"Warning"},"nvidiaGpu":{"totalNvLinks":18,"migModeEnabled":false,"nvlinkTopology":{"hostId":0,"ibGuid":"0x1234","traySerialNumber":"NA"}},"location":{"partLocation":{"serviceLabel":"GPU slot 1"}}},
+    {"id":"cpu-1","processorType":"CPU","health":"legacy-health","status":{"health":"Warning"}}],
+   "memory":[{"id":"dimm-1","systemId":"system-1","deviceLocator":"DIMM A1","capacityMib":65536,"status":{"health":"OK"},"location":{"partLocation":{"serviceLabel":"memory slot 1"}}}],
+   "storage":[{"id":"storage-1","systemId":"system-1","drives":[{"id":"drive-1","storageId":"storage-1","systemId":"system-1","capacityBytes":4000000000000,"protocol":"NVMe","status":{"health":"OK"}}]}],
+   "links":{"Chassis":[{"odataId":"/redfish/v1/Chassis/chassis-1"}]}
+  }],
+  "managers":[{"id":"manager-1","health":"legacy-health","status":{"health":"OK"}}],
+  "chassis":[{
+   "id":"chassis-1","health":"legacy-health","status":{"health":"Warning"},
+   "location":{"rack":"legacy-rack","rackOffset":99,"serviceLabel":"legacy-label","placement":{"rack":"R01","rackOffset":0,"rackOffsetUnits":"EIA_310"},"partLocation":{"serviceLabel":"compute tray"}},
+   "pcieDevices":[{"id":"pcie-1","health":"legacy-health","status":{"health":"OK"}}],
+   "powerSupplies":[{"id":"psu-1","chassisId":"chassis-1","powerCapacityWatts":2400,"status":{"health":"OK"}}]
+  }],
+  "fabrics":[{"id":"fabric-1","name":"NVLink Fabric","fabricType":"NVLink","status":{"health":"OK"},"switches":[
+   {"id":"switch-1","name":"NVSwitch","status":{"health":"Warning"},"location":{"placement":{"rack":"R02","rackOffset":10}},"nvidiaSwitch":{"pcieReferenceClockEnabled":false,"deviceId":"0x1234"}}
+  ]}],
+  "firmware":[{"id":"firmware-1","name":"Firmware","serviceId":"service-1","health":"legacy-health","status":{"health":"OK"},"relatedItem":[{"odataId":"/redfish/v1/Systems/system-1"}]}],
+  "futureField":{"preserved":true}
+ }
+}`
 
 // newRootCmd builds a root command carrying only this package's commands, so
 // the tests drive them through the same argument path a user types.
@@ -629,10 +661,10 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 				"collectedAt":"2026-07-30T20:00:00Z",
 				"schemaVersion":"inventory.v1alpha1",
 				"source":{"sourceType":"redfish","vendor":"Dell","address":"192.0.2.10:443","mac":"00:11:22:33:44:55","redfishVersion":"1.17.0"},
-				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning","conditions":[{"messageId":"ResourceEvent.1.0.ResourceErrorsDetected","severity":"Critical","message":"nested status condition"}]},"statusState":"Enabled","health":"OK","healthRollup":"Warning","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"statusState":"Enabled","health":"OK","healthRollup":"OK"},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
-				"managers":[{"id":"iDRAC.Embedded.1","uuid":"manager-uuid","model":"iDRAC","managerType":"bmc","firmwareVersion":"7.10.00.00","statusState":"Enabled","health":"OK","healthRollup":"OK"}],
-				"chassis":[{"id":"System.Embedded.1","chassisType":"rack_mount","manufacturer":"Dell","model":"XE9680","sku":"sku-1","serialNumber":"serial-1","partNumber":"part-1","assetTag":"asset-1","powerState":"on","statusState":"Enabled","health":"OK","healthRollup":"Warning","pcieDevices":[{"id":"GPU.Slot.1","uuid":"gpu-uuid","deviceType":"single_function","manufacturer":"NVIDIA","model":"NVIDIA H100","sku":"gpu-sku","serialNumber":"gpu-serial","partNumber":"gpu-part","firmwareVersion":"96.00.00","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
-				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","releaseDate":"2026-01-01","statusState":"Enabled","health":"OK","healthRollup":"Warning"}],
+				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning","conditions":[{"messageId":"ResourceEvent.1.0.ResourceErrorsDetected","severity":"Critical","message":"nested status condition"}]},"processorSummary":{"count":2},"memorySummary":{"totalSystemMemoryGiB":2048},"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"status":{"state":"Enabled","health":"OK","healthRollup":"OK"}},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","status":{"state":"Enabled","health":"OK","healthRollup":"OK"}}]}],
+				"managers":[{"id":"iDRAC.Embedded.1","uuid":"manager-uuid","model":"iDRAC","managerType":"bmc","firmwareVersion":"7.10.00.00","status":{"state":"Enabled","health":"OK","healthRollup":"OK"}}],
+				"chassis":[{"id":"System.Embedded.1","chassisType":"rack_mount","manufacturer":"Dell","model":"XE9680","sku":"sku-1","serialNumber":"serial-1","partNumber":"part-1","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"OK","healthRollup":"Warning"},"pcieDevices":[{"id":"GPU.Slot.1","uuid":"gpu-uuid","deviceType":"single_function","manufacturer":"NVIDIA","model":"NVIDIA H100","sku":"gpu-sku","serialNumber":"gpu-serial","partNumber":"gpu-part","firmwareVersion":"96.00.00","status":{"state":"Enabled","health":"OK","healthRollup":"OK"}}]}],
+				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","releaseDate":"2026-01-01","status":{"state":"Enabled","health":"OK","healthRollup":"Warning"}}],
 				"domainErrors":[{"domain":"storage","resource":"Disk.1","message":"collection failed"}]
 			}
 		}`))
@@ -1100,5 +1132,133 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	}
 	if !strings.Contains(computeZones, "Values nested under these are listed under --nodegroup-ids.") {
 		t.Fatalf("--compute-zone-ids section does not point at --nodegroup-ids:\n%s", computeZones)
+	}
+}
+
+func TestNodeDescribeCompleteOOBInventory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("dataSource") != "oob" {
+			t.Errorf("unexpected source: %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(completeOOBNodeJSON))
+	}))
+	defer server.Close()
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+	for _, tc := range []struct {
+		name, section string
+		want, absent  []string
+	}{
+		{"summary", "", []string{"INVENTORY MEMORY MODULES", "INVENTORY STORAGE", "INVENTORY DRIVES", "INVENTORY POWER SUPPLIES", "INVENTORY FABRICS", "INVENTORY SWITCHES"}, []string{"\nSystems\n", "\nFabrics\n"}},
+		{"systems", "systems", []string{"\nMemory Modules\n", "DIMM A1", "65536", "\nStorage\n", "\nDrives\n", "drive-1", "4000000000000", "CPU COUNT", "Grace", "Critical"}, []string{"legacy-", "999", "\nPower Supplies\n", "\nFabrics\n"}},
+		{"chassis", "chassis", []string{"\nPower Supplies\n", "psu-1", "2400"}, []string{"legacy-", "\nSystems\n", "\nFabrics\n"}},
+		{"fabrics", "fabrics", []string{"\nFabrics\n", "\nSwitches\n", "fabric-1", "switch-1", "NVSwitch", "Warning"}, []string{"\nSystems\n", "\nChassis\n"}},
+		{"all", "all", []string{"\nSystems\n", "\nMemory Modules\n", "\nDrives\n", "\nPower Supplies\n", "\nFabrics\n", "\nSwitches\n", "\nFirmware\n", "INVENTORY SWITCHES"}, []string{"legacy-", "999"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			args := []string{"node", "describe", "node-1", "--data-source", "oob"}
+			if tc.section != "" {
+				args = append(args, "--section", tc.section)
+			}
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(out.String(), want) {
+					t.Errorf("missing %q in %s", want, &out)
+				}
+			}
+			for _, absent := range append(tc.absent, "  LOCATION", "GPU slot 1", "memory slot 1", "compute tray", "rack R01 U0", "rack R02 U10") {
+				if strings.Contains(out.String(), absent) {
+					t.Errorf("unexpected %q in %s", absent, &out)
+				}
+			}
+		})
+	}
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "describe", "node-1", "--data-source", "oob", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var got, want any
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(completeOOBNodeJSON), &want); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatal("raw JSON changed, including unknown fields or references")
+	}
+}
+
+// Legacy-only input must not supply table values; explicit canonical zeros remain visible.
+func TestOOBTablesUseOnlyNestedFields(t *testing.T) {
+	var inventory nvfleetint.OOBInventory
+	if err := json.Unmarshal([]byte(`{"systems":[{"id":"system-1","health":"Critical","statusState":"Enabled","healthRollup":"Warning","memoryGib":2048,"cpuCount":2,"cpuCoreCount":144,"cpuModel":"legacy","location":{"rack":"legacy"}}]}`), &inventory); err != nil {
+		t.Fatal(err)
+	}
+	row := oobSystemRows(&inventory)[0]
+	for _, column := range []int{11, 12, 13, 14, 16, 17, 18} {
+		if row[column] != "" {
+			t.Fatalf("legacy-only column %d = %q", column, row[column])
+		}
+	}
+	zeroMemory, zeroCount := float32(0), 0
+	inventory.Systems[0].Status = &nvfleetint.OOBInventoryStatus{Health: "OK"}
+	inventory.Systems[0].MemorySummary = &nvfleetint.OOBMemorySummary{TotalSystemMemoryGiB: &zeroMemory}
+	inventory.Systems[0].ProcessorSummary = &nvfleetint.OOBProcessorSummary{Count: &zeroCount}
+	row = oobSystemRows(&inventory)[0]
+	if row[12] != "OK" || row[14] != "0" || row[16] != "0" || row[11] != "" || row[13] != "" || row[17] != "" || row[18] != "" {
+		t.Fatalf("partial canonical values rendered incorrectly: %v", row)
+	}
+}
+
+func TestOOBInventorySummaryCounts(t *testing.T) {
+	inventory := nvfleetint.OOBInventory{
+		Systems: []nvfleetint.OOBSystem{
+			{Memory: make([]nvfleetint.OOBMemory, 2), Storage: []nvfleetint.OOBStorage{{Drives: make([]nvfleetint.OOBDrive, 2)}, {}}},
+			{Memory: make([]nvfleetint.OOBMemory, 3), Storage: []nvfleetint.OOBStorage{{Drives: make([]nvfleetint.OOBDrive, 4)}}},
+		},
+		Chassis: []nvfleetint.OOBChassis{{PowerSupplies: make([]nvfleetint.OOBPowerSupply, 2)}, {PowerSupplies: make([]nvfleetint.OOBPowerSupply, 1)}},
+		Fabrics: []nvfleetint.OOBFabric{{Switches: make([]nvfleetint.OOBSwitch, 2)}, {Switches: make([]nvfleetint.OOBSwitch, 4)}},
+	}
+	got := map[string]string{}
+	for _, row := range oobInventorySummaryRows(&inventory) {
+		got[row[0]] = row[1]
+	}
+	for name, want := range map[string]string{"MEMORY MODULES": "5", "STORAGE": "3", "DRIVES": "6", "POWER SUPPLIES": "3", "FABRICS": "2", "SWITCHES": "6"} {
+		if got["INVENTORY "+name] != want {
+			t.Errorf("%s count = %s, want %s", name, got["INVENTORY "+name], want)
+		}
+	}
+}
+
+func TestOOBEmptyFabricSection(t *testing.T) {
+	options, err := parseOOBInventorySections(nodeDescribeFlags{sections: "fabrics"}, nvfleetint.DataSourceOOB, "table")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := writeOOBInventoryTables(&out, &nvfleetint.OOBInventory{}, options); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "Fabrics") || strings.Contains(out.String(), "\nSwitches\n") {
+		t.Fatalf("unexpected empty section: %s", &out)
+	}
+	for _, tc := range []struct {
+		source nvfleetint.DataSource
+		output string
+	}{{nvfleetint.DataSourceInband, "table"}, {nvfleetint.DataSourceOOB, "json"}} {
+		if _, err := parseOOBInventorySections(nodeDescribeFlags{sections: "fabrics"}, tc.source, tc.output); err == nil {
+			t.Fatal("fabric section accepted invalid source/output combination")
+		}
 	}
 }

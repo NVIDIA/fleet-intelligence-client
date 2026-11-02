@@ -157,8 +157,11 @@ including with `--all`, and returns one source without an `inband`/`oob` wrapper
 Default `node describe` JSON still uses top-level `inband` and `oob` objects;
 select a source to request one view. OOB lists accept `--bmc-mac` and
 the `bmcMac` sort key. OOB describe tables can be narrowed with
-`--section managers,systems,chassis,firmware`; `--section all` includes every
-inventory section. Both the out-of-band node list and summary table include
+`--section managers,systems,chassis,firmware,fabrics`; `systems` includes memory
+and storage, `chassis` includes power supplies, and
+`fabrics` includes switches. Tables use nested status and resource summaries.
+Structured inventory locations are available in JSON output. `--section all`
+includes every inventory section. Both the out-of-band node list and summary table include
 `NODE KIND`. JSON describe output always includes
 the full inventory, including nested Redfish status and condition details.
 

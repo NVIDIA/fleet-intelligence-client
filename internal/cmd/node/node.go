@@ -88,6 +88,7 @@ const (
 	oobInventorySectionSystems  oobInventorySection = "systems"
 	oobInventorySectionChassis  oobInventorySection = "chassis"
 	oobInventorySectionFirmware oobInventorySection = "firmware"
+	oobInventorySectionFabrics  oobInventorySection = "fabrics"
 )
 
 var oobInventorySectionOrder = []oobInventorySection{
@@ -95,6 +96,7 @@ var oobInventorySectionOrder = []oobInventorySection{
 	oobInventorySectionSystems,
 	oobInventorySectionChassis,
 	oobInventorySectionFirmware,
+	oobInventorySectionFabrics,
 }
 
 // Creates the top-level node command group
@@ -179,7 +181,7 @@ func newNodeDescribeCmd() *cobra.Command {
 		&flags.sections,
 		"section",
 		"",
-		"Comma-separated OOB inventory sections: managers, systems, chassis, firmware, or all",
+		"Comma-separated OOB inventory sections: managers, systems, chassis, firmware, fabrics, or all",
 	)
 	cmdutil.RegisterReadFlags(cmd, common)
 
@@ -462,11 +464,12 @@ func parseOOBInventorySections(
 		case oobInventorySectionManagers,
 			oobInventorySectionSystems,
 			oobInventorySectionChassis,
-			oobInventorySectionFirmware:
+			oobInventorySectionFirmware,
+			oobInventorySectionFabrics:
 			options.sections[section] = true
 		default:
 			return nodeDescribeRenderOptions{}, fmt.Errorf(
-				"invalid OOB inventory section %q: expected managers, systems, chassis, or firmware",
+				"invalid OOB inventory section %q: expected managers, systems, chassis, firmware, or fabrics",
 				value,
 			)
 		}
@@ -850,6 +853,7 @@ func writeOOBInventoryTables(
 			[]string{
 				"PRIMARY", "ID", "UUID", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "BIOS",
 				"HOSTNAME", "ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP", "MEMORY GIB", "SECURE BOOT",
+				"CPU COUNT", "CPU CORES", "CPU MODEL",
 			},
 			oobSystemRows(inventory)); err != nil {
 			return err
@@ -872,12 +876,15 @@ func writeOOBInventoryTables(
 				return err
 			}
 		}
+		if err := writeOOBSystemComponents(w, inventory.Systems); err != nil {
+			return err
+		}
 	}
 	if options.sections[oobInventorySectionChassis] {
 		if err := writeOOBSection(w, "Chassis",
 			[]string{
 				"ID", "TYPE", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "PART",
-				"ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP", "LOCATION",
+				"ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP",
 			},
 			oobChassisRows(inventory.Chassis)); err != nil {
 			return err
@@ -892,6 +899,16 @@ func writeOOBInventoryTables(
 				pcieRows); err != nil {
 				return err
 			}
+		}
+		if rows := oobPowerSupplyRows(inventory.Chassis); len(rows) > 0 {
+			if err := writeOOBSection(w, "Power Supplies", []string{"CHASSIS", "ID", "MODEL", "SERIAL", "PART", "FIRMWARE", "CAPACITY WATTS", "STATUS", "HEALTH", "ROLLUP"}, rows); err != nil {
+				return err
+			}
+		}
+	}
+	if options.sections[oobInventorySectionFabrics] {
+		if err := writeOOBFabricTables(w, inventory.Fabrics); err != nil {
+			return err
 		}
 	}
 	if options.sections[oobInventorySectionFirmware] {
@@ -915,6 +932,20 @@ func writeOOBSection(w io.Writer, title string, headers []string, rows [][]strin
 }
 
 func oobInventorySummaryRows(inventory *nvfleetint.OOBInventory) [][]string {
+	memory, storage, drives, powerSupplies, switches := 0, 0, 0, 0, 0
+	for _, system := range inventory.Systems {
+		memory += len(system.Memory)
+		storage += len(system.Storage)
+		for _, item := range system.Storage {
+			drives += len(item.Drives)
+		}
+	}
+	for _, chassis := range inventory.Chassis {
+		powerSupplies += len(chassis.PowerSupplies)
+	}
+	for _, fabric := range inventory.Fabrics {
+		switches += len(fabric.Switches)
+	}
 	return [][]string{
 		{"INVENTORY SCHEMA VERSION", clioutput.DisplayString(inventory.SchemaVersion)},
 		{"INVENTORY COLLECTED AT", clioutput.DisplayString(inventory.CollectedAt)},
@@ -923,6 +954,12 @@ func oobInventorySummaryRows(inventory *nvfleetint.OOBInventory) [][]string {
 		{"INVENTORY SYSTEMS", strconv.Itoa(len(inventory.Systems))},
 		{"INVENTORY CHASSIS", strconv.Itoa(len(inventory.Chassis))},
 		{"INVENTORY FIRMWARE", strconv.Itoa(len(inventory.Firmware))},
+		{"INVENTORY MEMORY MODULES", strconv.Itoa(memory)},
+		{"INVENTORY STORAGE", strconv.Itoa(storage)},
+		{"INVENTORY DRIVES", strconv.Itoa(drives)},
+		{"INVENTORY POWER SUPPLIES", strconv.Itoa(powerSupplies)},
+		{"INVENTORY FABRICS", strconv.Itoa(len(inventory.Fabrics))},
+		{"INVENTORY SWITCHES", strconv.Itoa(switches)},
 		{"INVENTORY DOMAIN ERRORS", strconv.Itoa(len(inventory.DomainErrors))},
 		{"INVENTORY TARGET ERROR", clioutput.DisplayString(inventory.TargetError)},
 	}
@@ -942,9 +979,10 @@ func oobSourceRows(source *nvfleetint.OOBSource) [][]string {
 func oobManagerRows(managers []nvfleetint.OOBManager) [][]string {
 	rows := make([][]string, 0, len(managers))
 	for _, manager := range managers {
+		status := oobStatusValue(manager.Status)
 		rows = append(rows, []string{
 			manager.ID, manager.UUID, manager.Model, manager.ManagerType, manager.FirmwareVersion,
-			manager.StatusState, manager.Health, manager.HealthRollup,
+			status.State, status.Health, status.HealthRollup,
 		})
 	}
 	return rows
@@ -953,6 +991,15 @@ func oobManagerRows(managers []nvfleetint.OOBManager) [][]string {
 func oobSystemRows(inventory *nvfleetint.OOBInventory) [][]string {
 	rows := make([][]string, 0, len(inventory.Systems))
 	for _, system := range inventory.Systems {
+		memory := nvfleetint.OOBMemorySummary{}
+		if system.MemorySummary != nil {
+			memory = *system.MemorySummary
+		}
+		processors := nvfleetint.OOBProcessorSummary{}
+		if system.ProcessorSummary != nil {
+			processors = *system.ProcessorSummary
+		}
+		status := oobStatusValue(system.Status)
 		rows = append(rows, []string{
 			strconv.FormatBool(system.ID == inventory.PrimarySystemID),
 			system.ID,
@@ -965,11 +1012,12 @@ func oobSystemRows(inventory *nvfleetint.OOBInventory) [][]string {
 			system.Hostname,
 			system.AssetTag,
 			system.PowerState,
-			system.StatusState,
-			system.Health,
-			system.HealthRollup,
-			formatOOBFloat32(system.MemoryGiB),
+			status.State,
+			status.Health,
+			status.HealthRollup,
+			formatOOBFloat32(memory.TotalSystemMemoryGiB),
 			formatOOBBool(system.SecureBootEnabled),
+			formatOOBInt(processors.Count), formatOOBInt(processors.CoreCount), processors.Model,
 		})
 	}
 	return rows
@@ -980,11 +1028,12 @@ func oobProcessorRows(systems []nvfleetint.OOBSystem) ([][]string, [][]string) {
 	gpuRows := [][]string{}
 	for _, system := range systems {
 		for _, processor := range system.Processors {
+			status := oobStatusValue(processor.Status)
 			if strings.EqualFold(strings.TrimSpace(processor.ProcessorType), "gpu") {
 				gpuRows = append(gpuRows, []string{
 					system.ID, processor.ID, processor.Manufacturer, processor.Model,
-					formatOOBInt(processor.MaxSpeedMHz), processor.StatusState,
-					processor.Health, processor.HealthRollup,
+					formatOOBInt(processor.MaxSpeedMHz), status.State,
+					status.Health, status.HealthRollup,
 				})
 				continue
 			}
@@ -992,8 +1041,8 @@ func oobProcessorRows(systems []nvfleetint.OOBSystem) ([][]string, [][]string) {
 				system.ID, processor.ID, processor.Socket, processor.ProcessorArchitecture,
 				processor.Manufacturer, processor.Model,
 				formatOOBInt(processor.MaxSpeedMHz), formatOOBInt(processor.TotalCores),
-				formatOOBInt(processor.TotalThreads), processor.StatusState,
-				processor.Health, processor.HealthRollup,
+				formatOOBInt(processor.TotalThreads), status.State,
+				status.Health, status.HealthRollup,
 			})
 		}
 	}
@@ -1003,10 +1052,11 @@ func oobProcessorRows(systems []nvfleetint.OOBSystem) ([][]string, [][]string) {
 func oobChassisRows(chassis []nvfleetint.OOBChassis) [][]string {
 	rows := make([][]string, 0, len(chassis))
 	for _, item := range chassis {
+		status := oobStatusValue(item.Status)
 		rows = append(rows, []string{
 			item.ID, item.ChassisType, item.Manufacturer, item.Model, item.SKU,
 			item.SerialNumber, item.PartNumber, item.AssetTag, item.PowerState,
-			item.StatusState, item.Health, item.HealthRollup, formatOOBLocation(item.Location),
+			status.State, status.Health, status.HealthRollup,
 		})
 	}
 	return rows
@@ -1016,10 +1066,11 @@ func oobPCIeDeviceRows(chassis []nvfleetint.OOBChassis) [][]string {
 	rows := [][]string{}
 	for _, item := range chassis {
 		for _, device := range item.PCIeDevices {
+			status := oobStatusValue(device.Status)
 			rows = append(rows, []string{
 				item.ID, device.ID, device.UUID, device.DeviceType, device.Manufacturer,
 				device.Model, device.SKU, device.SerialNumber, device.PartNumber,
-				device.FirmwareVersion, device.StatusState, device.Health, device.HealthRollup,
+				device.FirmwareVersion, status.State, status.Health, status.HealthRollup,
 			})
 		}
 	}
@@ -1029,9 +1080,10 @@ func oobPCIeDeviceRows(chassis []nvfleetint.OOBChassis) [][]string {
 func oobFirmwareRows(firmware []nvfleetint.OOBFirmware) [][]string {
 	rows := make([][]string, 0, len(firmware))
 	for _, item := range firmware {
+		status := oobStatusValue(item.Status)
 		rows = append(rows, []string{
 			item.ID, item.Name, item.Version, item.ReleaseDate,
-			item.StatusState, item.Health, item.HealthRollup,
+			status.State, status.Health, status.HealthRollup,
 		})
 	}
 	return rows
@@ -1045,30 +1097,84 @@ func oobDomainErrorRows(domainErrors []nvfleetint.OOBDomainError) [][]string {
 	return rows
 }
 
-func formatOOBLocation(location *nvfleetint.OOBChassisLocation) string {
-	if location == nil {
-		return ""
+// oobStatusValue makes an absent status safe to render as empty table cells.
+func oobStatusValue(status *nvfleetint.OOBInventoryStatus) nvfleetint.OOBInventoryStatus {
+	if status == nil {
+		return nvfleetint.OOBInventoryStatus{}
 	}
-	parts := []string{}
-	if location.ServiceLabel != "" {
-		parts = append(parts, location.ServiceLabel)
-	}
-	if location.Rack != "" {
-		rack := "rack " + location.Rack
-		if location.RackOffset != nil {
-			rack += fmt.Sprintf(" U%d", *location.RackOffset)
+	return *status
+}
+
+func writeOOBSystemComponents(w io.Writer, systems []nvfleetint.OOBSystem) error {
+	memoryRows, storageRows, driveRows := [][]string{}, [][]string{}, [][]string{}
+	for _, system := range systems {
+		for _, memory := range system.Memory {
+			status := oobStatusValue(memory.Status)
+			memoryRows = append(memoryRows, []string{system.ID, memory.ID, memory.DeviceLocator,
+				memory.MemoryDeviceType, memory.Manufacturer, memory.PartNumber, memory.SerialNumber,
+				formatOOBInt(memory.CapacityMiB), status.State, status.Health, status.HealthRollup})
 		}
-		parts = append(parts, rack)
-	} else if location.RackOffset != nil {
-		parts = append(parts, fmt.Sprintf("U%d", *location.RackOffset))
+		for _, storage := range system.Storage {
+			storageRows = append(storageRows, []string{system.ID, storage.ID, strconv.Itoa(len(storage.Drives))})
+			for _, drive := range storage.Drives {
+				status := oobStatusValue(drive.Status)
+				driveRows = append(driveRows, []string{system.ID, storage.ID, drive.ID, drive.Model,
+					drive.SerialNumber, drive.MediaType, drive.Protocol, drive.Revision,
+					formatOOBInt(drive.CapacityBytes), status.State, status.Health, status.HealthRollup})
+			}
+		}
 	}
-	if location.Row != "" {
-		parts = append(parts, "row "+location.Row)
+	for _, section := range []struct {
+		title   string
+		headers []string
+		rows    [][]string
+	}{
+		{"Memory Modules", []string{"SYSTEM", "ID", "LOCATOR", "TYPE", "MANUFACTURER", "PART", "SERIAL", "CAPACITY MIB", "STATUS", "HEALTH", "ROLLUP"}, memoryRows},
+		{"Storage", []string{"SYSTEM", "ID", "DRIVES"}, storageRows},
+		{"Drives", []string{"SYSTEM", "STORAGE", "ID", "MODEL", "SERIAL", "MEDIA", "PROTOCOL", "REVISION", "CAPACITY BYTES", "STATUS", "HEALTH", "ROLLUP"}, driveRows},
+	} {
+		if len(section.rows) > 0 {
+			if err := writeOOBSection(w, section.title, section.headers, section.rows); err != nil {
+				return err
+			}
+		}
 	}
-	if location.Room != "" {
-		parts = append(parts, "room "+location.Room)
+	return nil
+}
+
+func oobPowerSupplyRows(chassis []nvfleetint.OOBChassis) [][]string {
+	rows := [][]string{}
+	for _, item := range chassis {
+		for _, supply := range item.PowerSupplies {
+			status := oobStatusValue(supply.Status)
+			rows = append(rows, []string{item.ID, supply.ID, supply.Model, supply.SerialNumber,
+				supply.PartNumber, supply.FirmwareVersion, formatOOBFloat32(supply.PowerCapacityWatts),
+				status.State, status.Health, status.HealthRollup})
+		}
 	}
-	return strings.Join(parts, ", ")
+	return rows
+}
+
+func writeOOBFabricTables(w io.Writer, fabrics []nvfleetint.OOBFabric) error {
+	fabricRows, switchRows := [][]string{}, [][]string{}
+	for _, fabric := range fabrics {
+		status := oobStatusValue(fabric.Status)
+		fabricRows = append(fabricRows, []string{fabric.ID, fabric.Name, fabric.UUID,
+			fabric.FabricType, strconv.Itoa(len(fabric.Switches)), status.State, status.Health, status.HealthRollup})
+		for _, item := range fabric.Switches {
+			status := oobStatusValue(item.Status)
+			switchRows = append(switchRows, []string{fabric.ID, item.ID, item.Name, item.UUID,
+				item.SwitchType, item.Manufacturer, item.Model, item.SKU, item.SerialNumber,
+				item.PartNumber, item.FirmwareVersion, status.State, status.Health, status.HealthRollup})
+		}
+	}
+	if err := writeOOBSection(w, "Fabrics", []string{"ID", "NAME", "UUID", "TYPE", "SWITCHES", "STATUS", "HEALTH", "ROLLUP"}, fabricRows); err != nil {
+		return err
+	}
+	if len(switchRows) > 0 {
+		return writeOOBSection(w, "Switches", []string{"FABRIC", "ID", "NAME", "UUID", "TYPE", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "PART", "FIRMWARE", "STATUS", "HEALTH", "ROLLUP"}, switchRows)
+	}
+	return nil
 }
 
 func formatOOBInt(value *int) string {

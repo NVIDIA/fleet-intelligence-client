@@ -257,10 +257,10 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 				"schemaVersion":"inventory.v1alpha1",
 				"primarySystemId":"System.Embedded.1",
 				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","mac":"02:00:0a:00:00:0a"},
-				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
+				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","processorSummary":{"count":2},"memorySummary":{"totalSystemMemoryGiB":2048},"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
 				"managers":[{"id":"iDRAC.Embedded.1","firmwareVersion":"7.10.00.00"}],
 				"chassis":[{"id":"System.Embedded.1","pcieDevices":[{"id":"GPU.Slot.1","model":"NVIDIA H100"}]}],
-				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","statusState":"Enabled","health":"OK","healthRollup":"Warning"}],
+				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","status":{"state":"Enabled","health":"OK","healthRollup":"Warning"}}],
 				"domainErrors":[{"domain":"firmware","message":"partial collection"}]
 			}
 		}`))
@@ -287,16 +287,16 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 	if got.OOBInventory.Source == nil || got.OOBInventory.Source.MAC != "02:00:0a:00:00:0a" {
 		t.Fatalf("unexpected inventory source: %#v", got.OOBInventory.Source)
 	}
-	if len(got.OOBInventory.Systems) != 1 || got.OOBInventory.Systems[0].CPUCount == nil ||
-		*got.OOBInventory.Systems[0].CPUCount != 2 {
+	if len(got.OOBInventory.Systems) != 1 || got.OOBInventory.Systems[0].ProcessorSummary == nil || got.OOBInventory.Systems[0].ProcessorSummary.Count == nil ||
+		*got.OOBInventory.Systems[0].ProcessorSummary.Count != 2 {
 		t.Fatalf("unexpected systems: %#v", got.OOBInventory.Systems)
 	}
 	if len(got.OOBInventory.Chassis) != 1 || len(got.OOBInventory.Chassis[0].PCIeDevices) != 1 {
 		t.Fatalf("unexpected chassis: %#v", got.OOBInventory.Chassis)
 	}
 	if len(got.OOBInventory.Firmware) != 1 || got.OOBInventory.Firmware[0].ServiceID != "fw-service" ||
-		got.OOBInventory.Firmware[0].StatusState != "Enabled" || got.OOBInventory.Firmware[0].Health != "OK" ||
-		got.OOBInventory.Firmware[0].HealthRollup != "Warning" {
+		got.OOBInventory.Firmware[0].Status == nil || got.OOBInventory.Firmware[0].Status.State != "Enabled" || got.OOBInventory.Firmware[0].Status.Health != "OK" ||
+		got.OOBInventory.Firmware[0].Status.HealthRollup != "Warning" {
 		t.Fatalf("unexpected firmware: %#v", got.OOBInventory.Firmware)
 	}
 }

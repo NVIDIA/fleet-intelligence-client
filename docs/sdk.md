@@ -117,8 +117,11 @@ OOB node list and detail results expose the inventory classification as
 `Node.NodeKind`.
 
 OOB inventory exposes node kinds (`unknown`, `compute`, `nvswitch`, and
-`power_shelf`) and nested Redfish status conditions on systems, processors,
-managers, chassis, PCIe devices, and firmware.
+`power_shelf`), nested Redfish status conditions, memory modules, storage/drives,
+power supplies, fabrics/switches, NVIDIA topology, summaries, links, and physical
+locations. Inventory references serialize as `odataId`. Deprecated flat status,
+CPU, memory, and location aliases are excluded from the public SDK; use `Status`,
+`ProcessorSummary`, `MemorySummary`, and the nested location structures.
 
 `NewClient` requires an HTTPS API URL and an API key. Plain HTTP is accepted
 only for loopback addresses used during local development.
