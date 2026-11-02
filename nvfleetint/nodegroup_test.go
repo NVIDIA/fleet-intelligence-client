@@ -181,7 +181,7 @@ func TestListNodeGroupsRejectsInvalidOptions(t *testing.T) {
 	}{
 		{name: "view", opts: ListNodeGroupsOptions{View: "wide"}, want: "invalid node group view"},
 		{name: "health", opts: ListNodeGroupsOptions{HealthStatuses: []NodeGroupHealthStatus{"Broken"}}, want: "invalid node group health"},
-		{name: "sort", opts: ListNodeGroupsOptions{SortBy: "name"}, want: "invalid node group sort"},
+		{name: "sort", opts: ListNodeGroupsOptions{SortBy: "invalid"}, want: "invalid node group sort"},
 		{name: "order", opts: ListNodeGroupsOptions{Order: "up"}, want: "invalid node group order"},
 		{name: "basic include metrics", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, IncludeMetrics: &includeMetrics}, want: "basic node group view is incompatible with include metrics"},
 		{name: "basic compute zone names", opts: ListNodeGroupsOptions{View: NodeGroupViewBasic, ComputeZoneNames: []string{"East"}}, want: "basic node group view is incompatible with compute zone name filters"},
@@ -207,13 +207,13 @@ func TestListNodeGroupsRejectsInvalidOptions(t *testing.T) {
 
 // Verifies sort field validation tracks the generated API enum
 func TestNodeGroupSortByValid(t *testing.T) {
-	valid := []NodeGroupSortBy{NodeGroupSortByHealth, NodeGroupSortByNodes}
+	valid := []NodeGroupSortBy{NodeGroupSortByHealth, NodeGroupSortByNodes, "name"}
 	for _, sortBy := range valid {
 		if !sortBy.Valid() {
 			t.Errorf("expected %q to be a valid node group sort field", sortBy)
 		}
 	}
-	for _, sortBy := range []NodeGroupSortBy{"", "name", "gpuUtil", "gpuutil"} {
+	for _, sortBy := range []NodeGroupSortBy{"", "invalid", "gpuUtil", "gpuutil"} {
 		if sortBy.Valid() {
 			t.Errorf("expected %q to be an invalid node group sort field", sortBy)
 		}

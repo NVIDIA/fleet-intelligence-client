@@ -884,6 +884,24 @@ paths:
             items:
               type: string
             type: array
+        - description: Field to sort by, in either view
+          in: query
+          name: sortBy
+          schema:
+            default: createdAt
+            enum:
+              - createdAt
+              - name
+            type: string
+        - description: Sort order, in either view
+          in: query
+          name: order
+          schema:
+            default: desc
+            enum:
+              - asc
+              - desc
+            type: string
         - description: Page number (0-indexed)
           in: query
           name: page
@@ -1921,7 +1939,8 @@ paths:
             items:
               type: string
             type: array
-        - description: Field to sort by (health, nodes)
+        - description: 'Field to sort by: health/nodes in detail view; name in either
+            view'
           in: query
           name: sortBy
           schema:
@@ -1929,6 +1948,7 @@ paths:
             enum:
               - health
               - nodes
+              - name
             type: string
         - description: Sort order (asc, desc)
           in: query
@@ -2204,6 +2224,28 @@ paths:
             items:
               type: string
             type: array
+        - description: Exact, case-sensitive match against agent-reported UUIDs. Repeat
+            the parameter to match any supplied value. Applies to in-band and active
+            in-band identities in the combined basic view; rejected for dataSource=oob.
+            Omitted or empty array means no filter.
+          in: query
+          name: agentUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
+        - description: 'Match any supplied system UUID in the selected source inventory:
+            in-band system UUID or any OOB system UUID. Combined basic view matches
+            either active source. Repeat the parameter for multiple values. Omitted
+            or empty array means no filter.'
+          in: query
+          name: systemUUIDs
+          schema:
+            items:
+              type: string
+            type: array
+          style: form
         - description: Filter by health status values
           in: query
           name: healthStatuses
@@ -3401,25 +3443,26 @@ paths:
         - overview
   /v1/predicted_health_rankings:
     get:
-      description: Rank non-deleted customer nodes with active in-band enrollment
-        using usable predictions within the configured freshness limit (24 hours by
-        default). OOB-only nodes and nodes with deleted or missing in-band enrollment
-        are excluded before aggregation, ranks, deciles and counts. Dual-source and
-        offline in-band nodes remain eligible. For node ranking, agentStatuses optionally
-        filters returned nodes by in-band agent status without changing scope ranks,
-        deciles or coverage counts; omitting it includes Online and Offline nodes.
-        Lower internal risk ranks first, with deterministic unique ranks. Scope parameters
-        select nodes before ranking or aggregation. Each domain or rack aggregates
-        only its selected members. Physical membership does not require a compute-zone
-        hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope
-        ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked
-        measures selected-node score coverage. For domain and rack ranking, complete
-        also requires resolved membership and a rank for every group. Rack identifiers
-        are case-sensitive chassis serial numbers. Each page reads current data, so
-        changes between pages can cause repeats or omissions. Scores, aggregate values
-        and numeric confidence are never returned. Lists use repeated query keys.
-        Unknown parameters, empty values, repeated scalars and incompatible parameters
-        are rejected.
+      description: Beta feature. Returns 501 with error feature_not_available when
+        the feature is disabled. Rank non-deleted customer nodes with active in-band
+        enrollment using usable predictions within the configured freshness limit
+        (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band
+        enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source
+        and offline in-band nodes remain eligible. For node ranking, agentStatuses
+        optionally filters returned nodes by in-band agent status without changing
+        scope ranks, deciles or coverage counts; omitting it includes Online and Offline
+        nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope
+        parameters select nodes before ranking or aggregation. Each domain or rack
+        aggregates only its selected members. Physical membership does not require
+        a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve
+        full-scope ranks, deciles and counts. Groups with no usable scores remain
+        unranked. allNodesRanked measures selected-node score coverage. For domain
+        and rack ranking, complete also requires resolved membership and a rank for
+        every group. Rack identifiers are case-sensitive chassis serial numbers. Each
+        page reads current data, so changes between pages can cause repeats or omissions.
+        Scores, aggregate values and numeric confidence are never returned. Lists
+        use repeated query keys. Unknown parameters, empty values, repeated scalars
+        and incompatible parameters are rejected.
       operationId: getV1PredictedHealthRankings
       parameters:
         - description: Ranking unit; rack uses the reported chassis serial number
@@ -3668,13 +3711,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
           description: Internal Server Error
+        '501':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Beta feature disabled (feature_not_available)
         '503':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/models.ErrorResponse'
-          description: Service Unavailable
-      summary: Rank nodes, NVLink domains or racks within a scope
+          description: Ranking data unavailable
+      summary: '[Beta] Rank nodes, NVLink domains or racks within a scope'
       tags:
         - predicted_health_rankings
   /v1/reports/error:
@@ -7081,6 +7130,9 @@ components:
       type: object
     models.InbandInventoryNode:
       properties:
+        agentUUID:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
         agentVersion:
           example: 1.2.3
           type: string
@@ -7210,6 +7262,9 @@ components:
           example: inband
           type: string
           deprecated: true
+        agentUUID:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
         agentVersion:
           example: 1.2.3
           type: string
@@ -7299,6 +7354,9 @@ components:
           example: inband
           type: string
           deprecated: true
+        agentUUID:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
         agentVersion:
           example: 1.2.3
           type: string
@@ -10014,6 +10072,9 @@ components:
       type: object
     models.SimpleNode:
       properties:
+        agentUUID:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
         bmcIP:
           example: 10.57.17.140
           type: string

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
@@ -126,9 +127,13 @@ type ListNodesOptions struct {
 	// basic searches all three. Surrounding whitespace is ignored; blank is omitted.
 	Search string
 
-	View               NodeView
-	DataSource         DataSource
-	NodeUUIDs          []string
+	View       NodeView
+	DataSource DataSource
+	NodeUUIDs  []string
+	// AgentUUIDs matches exact in-band agent identities; unavailable for OOB.
+	AgentUUIDs []string
+	// SystemUUIDs matches system identities in the selected source, or either active source in combined basic view.
+	SystemUUIDs        []string
 	HealthStatuses     []NodeHealthStatus
 	ComputeZoneIDs     []string
 	ComputeZoneNames   []string
@@ -174,6 +179,7 @@ func (page NodesPage) PageInfo() PageInfo {
 
 // Represents a node
 type Node struct {
+	AgentUUID                  string                      `json:"agentUUID,omitempty"`
 	UUID                       string                      `json:"nodeUUID"`
 	Hostname                   string                      `json:"hostname,omitempty"`
 	NodeName                   string                      `json:"nodeName,omitempty"`
@@ -331,6 +337,8 @@ type GPUInfo struct {
 
 // Represents a GPU device on a node
 type GPUDevice struct {
+	CliqueID     *int   `json:"cliqueID,omitempty"`
+	ClusterUUID  string `json:"clusterUUID,omitempty"`
 	BoardID      *int   `json:"boardID,omitempty"`
 	BusID        string `json:"busID,omitempty"`
 	ChassisSN    string `json:"chassisSN,omitempty"`
@@ -388,6 +396,8 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 		View:             nodeViewParam(view),
 		DataSource:       optionalEnum[fleetapi.GetV1NodesParamsDataSource](opts.DataSource),
 		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
+		AgentUUIDs:       optionalSlice(opts.AgentUUIDs),
+		SystemUUIDs:      optionalSlice(opts.SystemUUIDs),
 		Search:           optionalTrimmedString(opts.Search),
 		Hostname:         optionalString(opts.Hostname),
 		NodeName:         optionalString(opts.NodeName),
@@ -512,6 +522,9 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 
 	if err := opts.DataSource.Validate(); err != nil {
 		return "", err
+	}
+	if opts.DataSource == DataSourceOOB && len(opts.AgentUUIDs) > 0 {
+		return "", invalidOption("agentUUIDs", "agent UUID filter", strings.Join(opts.AgentUUIDs, ","), "in-band or combined basic view")
 	}
 	for _, status := range opts.HealthStatuses {
 		if !status.Valid() {
@@ -652,6 +665,7 @@ func decodeBasicNodes(data []byte) (NodesPage, error) {
 // Maps detail API models into SDK values
 func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
+		AgentUUID:                  stringValue(node.AgentUUID),
 		UUID:                       node.NodeUUID,
 		Hostname:                   stringValue(node.Hostname),
 		DataSource:                 node.DataSource,
@@ -703,11 +717,12 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 // Maps basic API models into SDK values
 func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
-		UUID:     node.NodeUUID,
-		Hostname: stringValue(node.Hostname),
-		NodeName: stringValue(node.NodeName),
-		BMCMAC:   stringValue(node.BmcMac),
-		BMCIP:    stringValue(node.BmcIP),
+		AgentUUID: stringValue(node.AgentUUID),
+		UUID:      node.NodeUUID,
+		Hostname:  stringValue(node.Hostname),
+		NodeName:  stringValue(node.NodeName),
+		BMCMAC:    stringValue(node.BmcMac),
+		BMCIP:     stringValue(node.BmcIP),
 	}
 }
 
@@ -715,6 +730,7 @@ func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
+			AgentUUID:                  stringValue(node.AgentUUID),
 			UUID:                       node.NodeUUID,
 			Hostname:                   stringValue(node.Hostname),
 			DataSource:                 node.DataSource,
@@ -967,6 +983,8 @@ func gpuInfoFromGenerated(info *fleetapi.ModelsGPUInfo) *GPUInfo {
 // Maps GPU device API models into SDK values
 func gpuDeviceFromGenerated(device fleetapi.ModelsGPUDevice) GPUDevice {
 	return GPUDevice{
+		CliqueID:     cloneInt(device.CliqueID),
+		ClusterUUID:  stringValue(device.ClusterUUID),
 		BoardID:      cloneInt(device.BoardID),
 		BusID:        stringValue(device.BusID),
 		ChassisSN:    stringValue(device.ChassisSN),

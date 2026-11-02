@@ -552,3 +552,78 @@ func TestInvalidOptionErrorCarriesOption(t *testing.T) {
 		t.Fatalf("expected accepted values, got %q", optionErr.Expected)
 	}
 }
+
+func TestNodeUUIDFilters(t *testing.T) {
+	for _, view := range []NodeView{NodeViewBasic, NodeViewDetail} {
+		for _, source := range []DataSource{"", DataSourceInband, DataSourceOOB} {
+			for _, populated := range []bool{false, true} {
+				t.Run(string(view)+"/"+string(source)+"/"+map[bool]string{false: "omitted", true: "filtered"}[populated], func(t *testing.T) {
+					opts := ListNodesOptions{View: view, DataSource: source}
+					if populated {
+						opts.SystemUUIDs = []string{"system-A", "system-B"}
+						if source != DataSourceOOB {
+							opts.AgentUUIDs = []string{"agent-A", "agent-B"}
+						}
+					}
+					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						q := r.URL.Query()
+						if !slices.Equal(q["agentUUIDs"], opts.AgentUUIDs) || !slices.Equal(q["systemUUIDs"], opts.SystemUUIDs) {
+							t.Errorf("incorrect repeated UUID filters: %s", r.URL)
+						}
+						if q.Get("dataSource") != string(source) || q.Get("view") != string(view) {
+							t.Errorf("incorrect scope: %s", r.URL)
+						}
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","agentUUID":"agent-A"}],"total":1}`))
+					}))
+					defer server.Close()
+					client, err := NewClient(server.URL, "test-key")
+					if err != nil {
+						t.Fatal(err)
+					}
+					page, err := client.ListNodes(context.Background(), opts)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if source != DataSourceOOB && (len(page.Nodes) != 1 || page.Nodes[0].AgentUUID != "agent-A") {
+						t.Fatalf("missing agent identity: %#v", page.Nodes)
+					}
+					if !strings.Contains(string(page.RawJSON), `"agentUUID":"agent-A"`) {
+						t.Fatal("raw JSON changed")
+					}
+				})
+			}
+		}
+	}
+	for _, view := range []NodeView{NodeViewBasic, NodeViewDetail} {
+		if err := (ListNodesOptions{View: view, DataSource: DataSourceOOB, AgentUUIDs: []string{"agent-A"}}).Validate(); err == nil {
+			t.Fatal("OOB agent UUID filter accepted")
+		}
+	}
+}
+
+func TestDescribeNodeUUIDIdentities(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodeUUID":"node-1","agentUUID":"agent-1","systemInfo":{"systemUUID":"system-1"},"resources":{"gpuInfo":{"gpus":[{"uuid":"gpu-1","cliqueID":0,"clusterUUID":"cluster-1"}]}}}`))
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := client.DescribeNode(context.Background(), "node-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if node.AgentUUID != "agent-1" || node.SystemInfo == nil || node.SystemInfo.SystemUUID != "system-1" {
+		t.Fatalf("missing node identities: %#v", node)
+	}
+	if node.Resources == nil || node.Resources.GPUInfo == nil || len(node.Resources.GPUInfo.GPUs) != 1 {
+		t.Fatalf("missing GPUs: %#v", node.Resources)
+	}
+	gpu := node.Resources.GPUInfo.GPUs[0]
+	if gpu.UUID != "gpu-1" || gpu.ClusterUUID != "cluster-1" || gpu.CliqueID == nil || *gpu.CliqueID != 0 {
+		t.Fatalf("missing GPU identity: %#v", gpu)
+	}
+}

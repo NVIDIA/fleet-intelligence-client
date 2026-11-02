@@ -551,3 +551,32 @@ func TestGetOOBInventoryReportGPUFields(t *testing.T) {
 		}
 	}
 }
+
+func TestInventoryIdentityAndVersionFields(t *testing.T) {
+	body := []byte(`{"nodes":[{"nodeUUID":"node-1","agentUUID":"agent-1","systemUUID":"system-1","gpuUUIDs":["gpu-1","gpu-2"],"agentVersion":"1.2.3","kernelVersion":"6.8","gpuDriverVersion":"570.1","gpuFirmwareVersions":[{"gpuIndex":"0","firmwareVersion":"96.1"}]}]}`)
+	report, err := decodeInventoryReport(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node := report.Nodes[0]
+	if node.AgentUUID != "agent-1" || node.SystemUUID != "system-1" || !slices.Equal(node.GPUUUIDs, []string{"gpu-1", "gpu-2"}) || node.AgentVersion != "1.2.3" || node.KernelVersion != "6.8" || node.GPUDriverVersion != "570.1" || len(node.GPUFirmwareVersions) != 1 || node.GPUFirmwareVersions[0].FirmwareVersion != "96.1" {
+		t.Fatalf("missing inventory fields: %#v", node)
+	}
+	if !bytes.Equal(report.RawJSON, body) {
+		t.Fatal("raw inventory JSON changed")
+	}
+	oob, err := decodeOOBInventoryReport([]byte(`{"nodes":[{"nodeUUID":"node-oob","collectorVersion":"2.3.4"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if oob.Nodes[0].CollectorVersion != "2.3.4" || oob.Nodes[0].AgentUUID != "" || oob.Nodes[0].SystemUUID != "" {
+		t.Fatalf("incorrect OOB identities: %#v", oob.Nodes)
+	}
+	absent, err := decodeInventoryReport([]byte(`{"nodes":[{"nodeUUID":"node-1"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if absent.Nodes[0].AgentUUID != "" || absent.Nodes[0].SystemUUID != "" || absent.Nodes[0].GPUUUIDs != nil {
+		t.Fatal("absent identities acquired values")
+	}
+}

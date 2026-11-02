@@ -172,6 +172,15 @@ func (page InventoryReport) PageInfo() PageInfo {
 
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
+	AgentUUID           string               `json:"agentUUID,omitempty"`
+	SystemUUID          string               `json:"systemUUID,omitempty"`
+	GPUUUIDs            []string             `json:"gpuUUIDs,omitempty"`
+	AgentVersion        string               `json:"agentVersion,omitempty"`
+	CollectorVersion    string               `json:"collectorVersion,omitempty"`
+	KernelVersion       string               `json:"kernelVersion,omitempty"`
+	GPUDriverVersion    string               `json:"gpuDriverVersion,omitempty"`
+	GPUFirmwareVersions []GPUFirmwareVersion `json:"gpuFirmwareVersions,omitempty"`
+
 	NodeName                  string    `json:"nodeName,omitempty"`
 	BMCMAC                    string    `json:"bmcMac,omitempty"`
 	BMCIP                     string    `json:"bmcIP,omitempty"`
@@ -725,6 +734,7 @@ func decodeOOBInventoryReport(data []byte) (InventoryReport, error) {
 		report.Nodes = make([]InventoryNode, 0, len(*resp.Nodes))
 		for _, node := range *resp.Nodes {
 			report.Nodes = append(report.Nodes, InventoryNode{
+				CollectorVersion:          stringValue(node.CollectorVersion),
 				NodeUUID:                  stringValue(node.NodeUUID),
 				NodeName:                  stringValue(node.NodeName),
 				BMCMAC:                    stringValue(node.BmcMac),
@@ -850,6 +860,13 @@ func decodeErrorReportOverview(data []byte, view ErrorReportView) (ErrorReport, 
 // Maps inventory node API models into SDK values
 func inventoryNodeFromGenerated(node fleetapi.ModelsInbandInventoryNode) InventoryNode {
 	return InventoryNode{
+		AgentUUID:                 stringValue(node.AgentUUID),
+		SystemUUID:                stringValue(node.SystemUUID),
+		GPUUUIDs:                  cloneStringSlice(node.GpuUUIDs),
+		AgentVersion:              stringValue(node.AgentVersion),
+		KernelVersion:             stringValue(node.KernelVersion),
+		GPUDriverVersion:          stringValue(node.GpuDriverVersion),
+		GPUFirmwareVersions:       gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
 		NodeUUID:                  stringValue(node.NodeUUID),
 		Hostname:                  stringValue(node.Hostname),
 		ComputeZone:               stringValue(node.ComputeZone),

@@ -32,6 +32,8 @@ type nodeListFlags struct {
 	view              string
 	dataSource        string
 	nodeUUIDs         string
+	agentUUIDs        string
+	systemUUIDs       string
 	health            string
 	computeZoneIDs    string
 	computeZoneNames  string
@@ -139,6 +141,8 @@ func newNodeListCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
 	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (required for detail JSON; omitted: both in detail tables, combined in basic)")
+	cmd.Flags().StringVar(&flags.agentUUIDs, "agent-uuids", "", "Comma-separated exact agent UUIDs (in-band or combined basic view only)")
+	cmd.Flags().StringVar(&flags.systemUUIDs, "system-uuids", "", "Comma-separated system UUIDs in the selected source inventory")
 	cmd.Flags().StringVar(&flags.nodeUUIDs, "node-uuids", "", "Comma-separated node UUIDs to filter")
 	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
@@ -191,7 +195,7 @@ func newNodeDescribeCmd() *cobra.Command {
 // Detail queries require an explicit source for filters and sorting because
 // the default fetches separate in-band and OOB pages. Basic queries are combined.
 var nodeListFilterAndSortFlagNames = []string{
-	"node-uuids", "health", "compute-zone-ids", "compute-zone-names",
+	"node-uuids", "agent-uuids", "system-uuids", "health", "compute-zone-ids", "compute-zone-names",
 	"nodegroup-ids", "nodegroup-names", "gpu-type", "gpu-count",
 	"public-ip", "private-ip", "search", "hostname", "node-name", "bmc-mac",
 	"agent-status", "verification-check", "firmware-check", "sort-by", "order",
@@ -480,6 +484,7 @@ func parseOOBInventorySections(
 // Names the flag carrying each node list option, for rendering SDK validation
 // errors against what the user typed.
 var nodeListFlagNames = map[string]cmdutil.OptionFlagName{
+	"agentUUIDs":        {Flag: "agent-uuids"},
 	"view":              {Flag: "view"},
 	"dataSource":        {Flag: "data-source"},
 	"health":            {Flag: "health"},
@@ -533,6 +538,8 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 		dest *[]string
 	}{
 		{name: "node-uuids", raw: flags.nodeUUIDs, dest: &opts.NodeUUIDs},
+		{name: "agent-uuids", raw: flags.agentUUIDs, dest: &opts.AgentUUIDs},
+		{name: "system-uuids", raw: flags.systemUUIDs, dest: &opts.SystemUUIDs},
 		{name: "compute-zone-ids", raw: flags.computeZoneIDs, dest: &opts.ComputeZoneIDs},
 		{name: "compute-zone-names", raw: flags.computeZoneNames, dest: &opts.ComputeZoneNames},
 		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, dest: &opts.NodeGroupIDs},
@@ -798,6 +805,7 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 	rows := [][]string{
 		{"UUID", clioutput.DisplayString(node.UUID)},
 		{"HOSTNAME", clioutput.DisplayString(node.Hostname)},
+		{"AGENT UUID", clioutput.DisplayString(node.AgentUUID)},
 		{"DATA SOURCE", clioutput.DisplayString(node.DataSource)},
 		{"HEALTH", clioutput.DisplayString(node.Health)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},

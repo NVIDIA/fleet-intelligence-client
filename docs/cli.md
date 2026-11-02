@@ -165,6 +165,14 @@ includes every inventory section. Both the out-of-band node list and summary tab
 `NODE KIND`. JSON describe output always includes
 the full inventory, including nested Redfish status and condition details.
 
+`node list --agent-uuids` filters exact, case-sensitive in-band agent identities;
+`--system-uuids` filters system identities in the selected source inventory.
+Both take comma-separated values and support basic view. Without a source, basic
+view matches active in-band agent identities or system identities from either
+active source. Agent UUID filtering is rejected for OOB. Omitted UUID filters
+leave the query unrestricted by those identities. Inventory reports do not
+accept these filters.
+
 `--agent-type` has been removed from node commands; use `--data-source`.
 Detail-list filters and sorting require an explicit source. Basic lists can filter by GPU type/count and sort by identity,
 node group, compute zone, GPU type, or GPU count without selecting a source.

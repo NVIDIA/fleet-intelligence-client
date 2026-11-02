@@ -208,7 +208,7 @@ func TestNodeGroupListRejectsInvalidFlags(t *testing.T) {
 	}{
 		{name: "view", args: []string{"nodegroup", "list", "--view", "wide"}, want: "invalid view"},
 		{name: "health", args: []string{"nodegroup", "list", "--health", "Broken"}, want: "invalid health"},
-		{name: "sort", args: []string{"nodegroup", "list", "--sort-by", "name"}, want: "invalid sort-by"},
+		{name: "sort", args: []string{"nodegroup", "list", "--sort-by", "invalid"}, want: "invalid sort-by"},
 		{name: "order", args: []string{"nodegroup", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"nodegroup", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node group view is incompatible"},
 		{name: "basic compute zone name", args: []string{"nodegroup", "list", "--view", "basic", "--compute-zone-names", "East"}, want: "basic node group view is incompatible with compute zone name"},

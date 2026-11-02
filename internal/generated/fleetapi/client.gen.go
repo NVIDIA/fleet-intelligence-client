@@ -897,6 +897,42 @@ func (e GetV1ComputezonesParamsView) Valid() bool {
 	}
 }
 
+// Defines values for GetV1ComputezonesParamsSortBy.
+const (
+	GetV1ComputezonesParamsSortByCreatedAt GetV1ComputezonesParamsSortBy = "createdAt"
+	GetV1ComputezonesParamsSortByName      GetV1ComputezonesParamsSortBy = "name"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ComputezonesParamsSortBy enum.
+func (e GetV1ComputezonesParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1ComputezonesParamsSortByCreatedAt:
+		return true
+	case GetV1ComputezonesParamsSortByName:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1ComputezonesParamsOrder.
+const (
+	GetV1ComputezonesParamsOrderAsc  GetV1ComputezonesParamsOrder = "asc"
+	GetV1ComputezonesParamsOrderDesc GetV1ComputezonesParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1ComputezonesParamsOrder enum.
+func (e GetV1ComputezonesParamsOrder) Valid() bool {
+	switch e {
+	case GetV1ComputezonesParamsOrderAsc:
+		return true
+	case GetV1ComputezonesParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1EventsParamsTimeMode.
 const (
 	GetV1EventsParamsTimeModeAbsolute GetV1EventsParamsTimeMode = "absolute"
@@ -1151,16 +1187,19 @@ func (e GetV1NodegroupsParamsHealthStatuses) Valid() bool {
 
 // Defines values for GetV1NodegroupsParamsSortBy.
 const (
-	Health GetV1NodegroupsParamsSortBy = "health"
-	Nodes  GetV1NodegroupsParamsSortBy = "nodes"
+	GetV1NodegroupsParamsSortByHealth GetV1NodegroupsParamsSortBy = "health"
+	GetV1NodegroupsParamsSortByName   GetV1NodegroupsParamsSortBy = "name"
+	GetV1NodegroupsParamsSortByNodes  GetV1NodegroupsParamsSortBy = "nodes"
 )
 
 // Valid indicates whether the value is a known member of the GetV1NodegroupsParamsSortBy enum.
 func (e GetV1NodegroupsParamsSortBy) Valid() bool {
 	switch e {
-	case Health:
+	case GetV1NodegroupsParamsSortByHealth:
 		return true
-	case Nodes:
+	case GetV1NodegroupsParamsSortByName:
+		return true
+	case GetV1NodegroupsParamsSortByNodes:
 		return true
 	default:
 		return false
@@ -2910,6 +2949,7 @@ type ModelsIDNameOption struct {
 
 // ModelsInbandInventoryNode defines model for models.InbandInventoryNode.
 type ModelsInbandInventoryNode struct {
+	AgentUUID     *string              `json:"agentUUID,omitempty"`
 	AgentVersion  *string              `json:"agentVersion,omitempty"`
 	ComputeZone   *string              `json:"computeZone,omitempty"`
 	EnrolledAt    *string              `json:"enrolledAt,omitempty"`
@@ -2971,6 +3011,7 @@ type ModelsInbandNode struct {
 	// AgentType Deprecated: use dataSource.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType           *string                     `json:"agentType,omitempty"`
+	AgentUUID           *string                     `json:"agentUUID,omitempty"`
 	AgentVersion        *string                     `json:"agentVersion,omitempty"`
 	ComputeZone         *string                     `json:"computeZone,omitempty"`
 	DataSource          string                      `json:"dataSource"`
@@ -3016,6 +3057,7 @@ type ModelsInbandNodeDetailsResponse struct {
 	// AgentType Deprecated: use dataSource.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AgentType              *string              `json:"agentType,omitempty"`
+	AgentUUID              *string              `json:"agentUUID,omitempty"`
 	AgentVersion           *string              `json:"agentVersion,omitempty"`
 	ComputeZone            *string              `json:"computeZone,omitempty"`
 	ComputeZoneId          *string              `json:"computeZoneId,omitempty"`
@@ -4328,7 +4370,8 @@ type ModelsSimpleComputeZone struct {
 
 // ModelsSimpleNode defines model for models.SimpleNode.
 type ModelsSimpleNode struct {
-	BmcIP *string `json:"bmcIP,omitempty"`
+	AgentUUID *string `json:"agentUUID,omitempty"`
+	BmcIP     *string `json:"bmcIP,omitempty"`
 
 	// BmcMac BMC MAC identifier from collector source.mac; may be empty.
 	BmcMac   *string `json:"bmcMac,omitempty"`
@@ -4854,6 +4897,12 @@ type GetV1ComputezonesParams struct {
 	// ComputeZoneIds List of compute zone IDs to filter (comma-separated)
 	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
 
+	// SortBy Field to sort by, in either view
+	SortBy *GetV1ComputezonesParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// Order Sort order, in either view
+	Order *GetV1ComputezonesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
+
 	// Page Page number (0-indexed)
 	Page *int `form:"page,omitempty" json:"page,omitempty"`
 
@@ -4863,6 +4912,12 @@ type GetV1ComputezonesParams struct {
 
 // GetV1ComputezonesParamsView defines parameters for GetV1Computezones.
 type GetV1ComputezonesParamsView string
+
+// GetV1ComputezonesParamsSortBy defines parameters for GetV1Computezones.
+type GetV1ComputezonesParamsSortBy string
+
+// GetV1ComputezonesParamsOrder defines parameters for GetV1Computezones.
+type GetV1ComputezonesParamsOrder string
 
 // GetV1Computezones200JSONResponseBody defines parameters for GetV1Computezones.
 type GetV1Computezones200JSONResponseBody struct {
@@ -5112,7 +5167,7 @@ type GetV1NodegroupsParams struct {
 	// GpuTypes [DETAIL VIEW ONLY] Filter node groups containing nodes with any of the specified GPU types (e.g., ?gpuTypes=NVIDIA-H100-80GB-HBM3).
 	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
 
-	// SortBy Field to sort by (health, nodes)
+	// SortBy Field to sort by: health/nodes in detail view; name in either view
 	SortBy *GetV1NodegroupsParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 
 	// Order Sort order (asc, desc)
@@ -5178,6 +5233,12 @@ type GetV1NodesParams struct {
 
 	// NodeUUIDs Filter by specific node UUIDs. Empty means all nodes
 	NodeUUIDs *[]string `form:"nodeUUIDs,omitempty" json:"nodeUUIDs,omitempty"`
+
+	// AgentUUIDs Exact, case-sensitive match against agent-reported UUIDs. Repeat the parameter to match any supplied value. Applies to in-band and active in-band identities in the combined basic view; rejected for dataSource=oob. Omitted or empty array means no filter.
+	AgentUUIDs *[]string `form:"agentUUIDs,omitempty" json:"agentUUIDs,omitempty"`
+
+	// SystemUUIDs Match any supplied system UUID in the selected source inventory: in-band system UUID or any OOB system UUID. Combined basic view matches either active source. Repeat the parameter for multiple values. Omitted or empty array means no filter.
+	SystemUUIDs *[]string `form:"systemUUIDs,omitempty" json:"systemUUIDs,omitempty"`
 
 	// HealthStatuses Filter by health status values
 	HealthStatuses *[]GetV1NodesParamsHealthStatuses `form:"healthStatuses,omitempty" json:"healthStatuses,omitempty"`
@@ -6982,9 +7043,9 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/overview (the `GetV1Overview` operationId).
 	GetV1Overview(ctx context.Context, params *GetV1OverviewParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetV1PredictedHealthRankings Rank nodes, NVLink domains or racks within a scope
+	// GetV1PredictedHealthRankings [Beta] Rank nodes, NVLink domains or racks within a scope
 	//
-	// Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
+	// Beta feature. Returns 501 with error feature_not_available when the feature is disabled. Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
 	//
 	// Corresponds with GET /v1/predicted_health_rankings (the `GetV1PredictedHealthRankings` operationId).
 	GetV1PredictedHealthRankings(ctx context.Context, params *GetV1PredictedHealthRankingsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8086,9 +8147,9 @@ func (c *Client) GetV1Overview(ctx context.Context, params *GetV1OverviewParams,
 	return c.Client.Do(req)
 }
 
-// GetV1PredictedHealthRankings Rank nodes, NVLink domains or racks within a scope
+// GetV1PredictedHealthRankings [Beta] Rank nodes, NVLink domains or racks within a scope
 //
-// Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
+// Beta feature. Returns 501 with error feature_not_available when the feature is disabled. Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
 //
 // Corresponds with GET /v1/predicted_health_rankings (the `GetV1PredictedHealthRankings` operationId).
 func (c *Client) GetV1PredictedHealthRankings(ctx context.Context, params *GetV1PredictedHealthRankingsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9458,6 +9519,30 @@ func NewGetV1ComputezonesRequest(server string, params *GetV1ComputezonesParams)
 		if params.ComputeZoneIds != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Order != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "order", *params.Order, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -10923,6 +11008,30 @@ func NewGetV1NodesRequest(server string, params *GetV1NodesParams) (*http.Reques
 		if params.NodeUUIDs != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUIDs", *params.NodeUUIDs, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AgentUUIDs != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "agentUUIDs", *params.AgentUUIDs, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SystemUUIDs != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "systemUUIDs", *params.SystemUUIDs, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -14727,9 +14836,9 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/overview (the `GetV1Overview` operationId).
 	GetV1OverviewWithResponse(ctx context.Context, params *GetV1OverviewParams, reqEditors ...RequestEditorFn) (*GetV1OverviewResponse, error)
 
-	// GetV1PredictedHealthRankingsWithResponse Rank nodes, NVLink domains or racks within a scope
+	// GetV1PredictedHealthRankingsWithResponse [Beta] Rank nodes, NVLink domains or racks within a scope
 	//
-	// Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
+	// Beta feature. Returns 501 with error feature_not_available when the feature is disabled. Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -17913,6 +18022,8 @@ type GetV1PredictedHealthRankingsResponse struct {
 	JSON499 *ModelsErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ModelsErrorResponse
+	// JSON501 the response for an HTTP 501 `application/json` response
+	JSON501 *ModelsErrorResponse
 	// JSON503 the response for an HTTP 503 `application/json` response
 	JSON503 *ModelsErrorResponse
 }
@@ -17945,6 +18056,11 @@ func (r GetV1PredictedHealthRankingsResponse) GetJSON499() *ModelsErrorResponse 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r GetV1PredictedHealthRankingsResponse) GetJSON500() *ModelsErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON501 returns the response for an HTTP 501 `application/json` response
+func (r GetV1PredictedHealthRankingsResponse) GetJSON501() *ModelsErrorResponse {
+	return r.JSON501
 }
 
 // GetJSON503 returns the response for an HTTP 503 `application/json` response
@@ -19943,9 +20059,9 @@ func (c *ClientWithResponses) GetV1OverviewWithResponse(ctx context.Context, par
 	return ParseGetV1OverviewResponse(rsp)
 }
 
-// GetV1PredictedHealthRankingsWithResponse Rank nodes, NVLink domains or racks within a scope
+// GetV1PredictedHealthRankingsWithResponse [Beta] Rank nodes, NVLink domains or racks within a scope
 //
-// Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
+// Beta feature. Returns 501 with error feature_not_available when the feature is disabled. Rank non-deleted customer nodes with active in-band enrollment using usable predictions within the configured freshness limit (24 hours by default). OOB-only nodes and nodes with deleted or missing in-band enrollment are excluded before aggregation, ranks, deciles and counts. Dual-source and offline in-band nodes remain eligible. For node ranking, agentStatuses optionally filters returned nodes by in-band agent status without changing scope ranks, deciles or coverage counts; omitting it includes Online and Offline nodes. Lower internal risk ranks first, with deterministic unique ranks. Scope parameters select nodes before ranking or aggregation. Each domain or rack aggregates only its selected members. Physical membership does not require a compute-zone hierarchy. Deleted nodes are excluded. Return parameters preserve full-scope ranks, deciles and counts. Groups with no usable scores remain unranked. allNodesRanked measures selected-node score coverage. For domain and rack ranking, complete also requires resolved membership and a rank for every group. Rack identifiers are case-sensitive chassis serial numbers. Each page reads current data, so changes between pages can cause repeats or omissions. Scores, aggregate values and numeric confidence are never returned. Lists use repeated query keys. Unknown parameters, empty values, repeated scalars and incompatible parameters are rejected.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -22706,6 +22822,13 @@ func ParseGetV1PredictedHealthRankingsResponse(rsp *http.Response) (*GetV1Predic
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 501:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON501 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
 		var dest ModelsErrorResponse

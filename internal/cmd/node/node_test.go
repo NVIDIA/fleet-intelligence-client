@@ -1262,3 +1262,55 @@ func TestOOBEmptyFabricSection(t *testing.T) {
 		}
 	}
 }
+
+func TestNodeUUIDFilterFlagsAndPagination(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		q := r.URL.Query()
+		if !slices.Equal(q["agentUUIDs"], []string{"agent-A", "agent-B"}) || !slices.Equal(q["systemUUIDs"], []string{"system-A", "system-B"}) {
+			t.Errorf("UUID filters lost: %s", r.URL)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if q.Get("page") == "0" {
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","agentUUID":"agent-A"}],"page":0,"pageSize":1,"hasMore":true,"total":2}`))
+		} else {
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-2","agentUUID":"agent-B"}],"page":1,"pageSize":1,"hasMore":false,"total":2}`))
+		}
+	}))
+	defer server.Close()
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+	for _, scope := range [][]string{{"--view", "basic"}, {"--data-source", "inband"}} {
+		var out bytes.Buffer
+		cmd := newRootCmd()
+		cmd.SetOut(&out)
+		args := []string{"node", "list", "--agent-uuids", "agent-A,agent-B", "--system-uuids", "system-A,system-B", "--all", "--page-size", "1", "--output", "json"}
+		cmd.SetArgs(append(args, scope...))
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(out.String(), `"agentUUID":"agent-A"`) || !strings.Contains(out.String(), `"agentUUID":"agent-B"`) {
+			t.Fatalf("missing agent identities: %s", &out)
+		}
+	}
+	if requests != 4 {
+		t.Fatalf("wanted two pages per query, got %d requests", requests)
+	}
+}
+
+func TestNodeUUIDFilterValidationBeforeAuth(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	for _, args := range [][]string{
+		{"--data-source", "oob", "--agent-uuids", "agent-A"},
+		{"--view", "basic", "--data-source", "oob", "--agent-uuids", "agent-A"},
+		{"--agent-uuids", "agent-A"}, {"--system-uuids", "system-A"},
+	} {
+		cmd := newRootCmd()
+		cmd.SetArgs(append([]string{"node", "list"}, args...))
+		err := cmd.Execute()
+		if err == nil || (!strings.Contains(err.Error(), "agent-uuids") && !strings.Contains(err.Error(), "system-uuids")) {
+			t.Fatalf("unexpected validation: %v", err)
+		}
+	}
+}

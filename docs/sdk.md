@@ -67,6 +67,13 @@ if err == nil && node.OOBInventory != nil {
 }
 ```
 
+`ListNodesOptions.AgentUUIDs` and `SystemUUIDs` send repeated query parameters.
+Agent UUID filters require in-band or combined basic view. `Node.AgentUUID`
+identifies the in-band agent; node system UUIDs remain under `SystemInfo` or
+`OOBInventory.Systems`. GPU details retain `CliqueID` and `ClusterUUID`.
+Inventory report rows expose `AgentUUID`, `SystemUUID`, `GPUUUIDs`, agent/kernel/
+GPU version fields, and OOB `CollectorVersion` where provided by the API.
+
 The shared `DataSource` type and `DataSourceInband` / `DataSourceOOB` constants
 are used by nodes, inventory and error reports, alerts, events, and XID bursts.
 Node, inventory, and error-report requests accept one source; alert timeline and event filters accept `[]DataSource`.
