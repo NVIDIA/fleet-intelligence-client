@@ -79,6 +79,7 @@ are used by nodes, inventory and error reports, alerts, events, and XID bursts.
 Node, inventory, and error-report requests accept one source; alert timeline and event filters accept `[]DataSource`.
 `ErrorReportOptions.DataSource` defaults to in-band for every view and format;
 OOB `ErrorReportNode` values expose `NodeName` and `BMCMAC`.
+`ErrorReportError.Severities` retains all severities remaining after API filtering.
 XID burst list/options also accept `DataSourceAll`; omission defaults to in-band.
 Use the same source for the list and its filter-options lookup.
 
@@ -122,6 +123,12 @@ identity-only rows. Agent-status filters accept `NodeAgentOnline` and
 
 OOB node list and detail results expose the inventory classification as
 `Node.NodeKind`.
+
+Verification statuses include `Full Attestation`, `Partial Attestation`, and
+`Verification Failed`. `VerificationCheckExtraInfo.Policy` retains the aggregate
+and per-GPU verdicts, including tier, approval, reasons, and denials, for nodes
+and inventory reports. `EAR` retains the structured attestation result returned
+by node details; omitted values remain absent.
 
 OOB inventory exposes node kinds (`unknown`, `compute`, `nvswitch`, and
 `power_shelf`), nested Redfish status conditions, memory modules, storage/drives,

@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -930,5 +931,40 @@ func TestReportVerifyRequiresFlags(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestInventoryVersionColumns(t *testing.T) {
+	for _, source := range []nvfleetint.DataSource{nvfleetint.DataSourceInband, nvfleetint.DataSourceOOB} {
+		for _, empty := range []bool{false, true} {
+			var out bytes.Buffer
+			report := nvfleetint.InventoryReport{DataSource: source}
+			if !empty {
+				report.Nodes = []nvfleetint.InventoryNode{{NodeUUID: "node-1", AgentVersion: "agent-1.2.3", CollectorVersion: "collector-2.3.4"}}
+			}
+			if err := writeReportInventoryTableForSource(&out, report); err != nil {
+				t.Fatal(err)
+			}
+			header, value, absent := "AGENT VERSION", "agent-1.2.3", "COLLECTOR VERSION"
+			if source == nvfleetint.DataSourceOOB {
+				header, value, absent = "COLLECTOR VERSION", "collector-2.3.4", "AGENT VERSION"
+			}
+			if !strings.Contains(out.String(), header) || strings.Contains(out.String(), absent) || (!empty && !strings.Contains(out.String(), value)) {
+				t.Fatalf("incorrect source version table: %s", &out)
+			}
+		}
+	}
+}
+
+func TestErrorReportSeverityColumn(t *testing.T) {
+	var out bytes.Buffer
+	report := nvfleetint.ErrorReport{View: nvfleetint.ErrorReportViewList, GroupBy: nvfleetint.ErrorReportGroupByError, Errors: []nvfleetint.ErrorReportError{{Name: "XID 79", Severities: []nvfleetint.ErrorSeverity{nvfleetint.ErrorSeverityFatal, nvfleetint.ErrorSeverityWarning}}, {Name: "No severity"}}}
+	if err := writeReportErrorTable(&out, report); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"SEVERITIES", "XID 79", "Fatal", "Warning", "No severity"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("missing %s: %s", want, &out)
+		}
 	}
 }

@@ -5,9 +5,12 @@ package nvfleetint
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -625,5 +628,65 @@ func TestDescribeNodeUUIDIdentities(t *testing.T) {
 	gpu := node.Resources.GPUInfo.GPUs[0]
 	if gpu.UUID != "gpu-1" || gpu.ClusterUUID != "cluster-1" || gpu.CliqueID == nil || *gpu.CliqueID != 0 {
 		t.Fatalf("missing GPU identity: %#v", gpu)
+	}
+}
+
+func TestVerificationPolicyAndEAR(t *testing.T) {
+	var source fleetapi.ModelsVerificationCheckExtraInfo
+	payload := []byte(`{"overallAttestationResult":false,"policy":{"approved":false,"tier":3,"reason":"verification rejected","policyVersion":"v1","denials":["measurement mismatch"],"gpus":{"gpu-1":{"approved":false,"tier":3,"reason":"mismatch","denials":["digest mismatch"]},"gpu-2":{}}},"ear":{"submods":{"gpu-1":{"status":"failed","scores":[0,false,null]}}}}`)
+	if err := json.Unmarshal(payload, &source); err != nil {
+		t.Fatal(err)
+	}
+	got := verificationCheckExtraInfoFromGenerated(&source)
+	data, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wantJSON, gotJSON any
+	if err := json.Unmarshal(payload, &wantJSON); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &gotJSON); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotJSON, wantJSON) {
+		t.Fatalf("verification fields changed: %s", data)
+	}
+	if got.Policy.Tier == nil || *got.Policy.Tier != VerificationPolicyTierRejected || got.Policy.Approved == nil || *got.Policy.Approved {
+		t.Fatalf("lost false or tier: %#v", got.Policy)
+	}
+	(*source.Policy.Denials)[0] = "changed"
+	verdict := (*source.Policy.Gpus)["gpu-1"]
+	(*verdict.Denials)[0] = "changed"
+	*verdict.Approved = true
+	(*source.Ear)["submods"].(map[string]any)["gpu-1"].(map[string]any)["scores"].([]any)[0] = 99
+	cloned, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(cloned) != string(data) {
+		t.Fatal("SDK verification data aliases the generated response")
+	}
+	if got := verificationCheckExtraInfoFromGenerated(&fleetapi.ModelsVerificationCheckExtraInfo{}); got.Policy != nil || got.EAR != nil {
+		t.Fatal("absent policy/EAR acquired values")
+	}
+	if verificationCheckExtraInfoFromGenerated(nil) != nil {
+		t.Fatal("absent extra info acquired values")
+	}
+}
+
+func TestVerificationStatusConstants(t *testing.T) {
+	for _, status := range []NodeVerificationCheck{NodeVerificationFullAttestation, NodeVerificationPartialAttestation, NodeVerificationVerificationFailed} {
+		if !status.Valid() {
+			t.Fatalf("invalid new status: %s", status)
+		}
+		for _, source := range []DataSource{DataSourceInband, DataSourceOOB} {
+			if err := (ListNodesOptions{DataSource: source, VerificationChecks: []NodeVerificationCheck{status}}).Validate(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if NodeVerificationFailed != NodeVerificationUnverified {
+		t.Fatal("legacy alias changed meaning")
 	}
 }

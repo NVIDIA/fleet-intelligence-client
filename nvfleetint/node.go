@@ -24,12 +24,15 @@ const (
 	NodeHealthUnhealthy NodeHealthStatus = "Unhealthy"
 	NodeHealthUnknown   NodeHealthStatus = "Unknown"
 
-	NodeVerificationVerified    NodeVerificationCheck = "Verified"
-	NodeVerificationUnverified  NodeVerificationCheck = "Unverified"
-	NodeVerificationDegraded    NodeVerificationCheck = "Degraded"
-	NodeVerificationPending     NodeVerificationCheck = "Pending"
-	NodeVerificationUnsupported NodeVerificationCheck = "Unsupported"
-	NodeVerificationUnknown     NodeVerificationCheck = "Unknown"
+	NodeVerificationFullAttestation    NodeVerificationCheck = "Full Attestation"
+	NodeVerificationPartialAttestation NodeVerificationCheck = "Partial Attestation"
+	NodeVerificationVerificationFailed NodeVerificationCheck = "Verification Failed"
+	NodeVerificationVerified           NodeVerificationCheck = "Verified"
+	NodeVerificationUnverified         NodeVerificationCheck = "Unverified"
+	NodeVerificationDegraded           NodeVerificationCheck = "Degraded"
+	NodeVerificationPending            NodeVerificationCheck = "Pending"
+	NodeVerificationUnsupported        NodeVerificationCheck = "Unsupported"
+	NodeVerificationUnknown            NodeVerificationCheck = "Unknown"
 	// Deprecated: use NodeVerificationVerified
 	NodeVerificationPassed NodeVerificationCheck = NodeVerificationVerified
 	// Deprecated: use NodeVerificationUnverified
@@ -216,11 +219,41 @@ type GPUFirmwareVersion struct {
 
 // Represents structured details returned with a verification check
 type VerificationCheckExtraInfo struct {
+	// EAR retains the attestation result object; only node details returns it.
+	EAR                      map[string]any       `json:"ear,omitempty"`
+	Policy                   *VerificationPolicy  `json:"policy,omitempty"`
 	ErrorDetails             string               `json:"errorDetails,omitempty"`
 	GPUEvidencePresent       *bool                `json:"gpuEvidencePresent,omitempty"`
 	GPUResults               map[string]JWTClaims `json:"gpuResults,omitempty"`
 	NRASCallResult           string               `json:"nrasCallResult,omitempty"`
 	OverallAttestationResult *bool                `json:"overallAttestationResult,omitempty"`
+}
+
+// VerificationPolicyTier classifies the verification policy decision.
+type VerificationPolicyTier int
+
+const (
+	VerificationPolicyTierFullAttestation    VerificationPolicyTier = 1
+	VerificationPolicyTierPartialAttestation VerificationPolicyTier = 2
+	VerificationPolicyTierRejected           VerificationPolicyTier = 3
+)
+
+// VerificationPolicy contains the aggregate decision and per-GPU verdicts.
+type VerificationPolicy struct {
+	Approved      *bool                                `json:"approved,omitempty"`
+	Denials       []string                             `json:"denials,omitempty"`
+	GPUs          map[string]VerificationPolicyVerdict `json:"gpus,omitempty"`
+	PolicyVersion string                               `json:"policyVersion,omitempty"`
+	Reason        string                               `json:"reason,omitempty"`
+	Tier          *VerificationPolicyTier              `json:"tier,omitempty"`
+}
+
+// VerificationPolicyVerdict is the verification decision for one GPU.
+type VerificationPolicyVerdict struct {
+	Approved *bool                   `json:"approved,omitempty"`
+	Denials  []string                `json:"denials,omitempty"`
+	Reason   string                  `json:"reason,omitempty"`
+	Tier     *VerificationPolicyTier `json:"tier,omitempty"`
 }
 
 // Represents claims returned for a GPU attestation result
@@ -498,7 +531,7 @@ const (
 	nodeViewValues              = "basic or detail"
 	nodeHealthValues            = "Healthy, Degraded, Unhealthy, or Unknown"
 	nodeAgentStatusValues       = "Online or Offline"
-	nodeVerificationCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
+	nodeVerificationCheckValues = "Full Attestation, Partial Attestation, Verification Failed, Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
 	nodeFirmwareCheckValues     = "Passed, Failed, or Unknown"
 	nodeOrderValues             = "asc or desc"
 )
@@ -822,11 +855,16 @@ func verificationCheckExtraInfoFromGenerated(
 		return nil
 	}
 	out := &VerificationCheckExtraInfo{
+		Policy:                   verificationPolicyFromGenerated(info.Policy),
 		ErrorDetails:             stringValue(info.ErrorDetails),
 		GPUEvidencePresent:       cloneBool(info.GpuEvidencePresent),
 		NRASCallResult:           stringValue(info.NrasCallResult),
 		OverallAttestationResult: cloneBool(info.OverallAttestationResult),
 	}
+	if info.Ear != nil {
+		out.EAR = cloneAttestationJSON(*info.Ear).(map[string]any)
+	}
+
 	if info.GpuResults != nil {
 		out.GPUResults = make(map[string]JWTClaims, len(*info.GpuResults))
 		for gpuID, claims := range *info.GpuResults {
@@ -1048,5 +1086,57 @@ func systemInfoFromGenerated(info *fleetapi.ModelsSystemInfo) *SystemInfo {
 		OSImage:                 stringValue(info.OsImage),
 		StartedAt:               stringValue(info.StartedAt),
 		SystemUUID:              stringValue(info.SystemUUID),
+	}
+}
+
+func verificationPolicyFromGenerated(policy *fleetapi.ModelsVerificationPolicy) *VerificationPolicy {
+	if policy == nil {
+		return nil
+	}
+	out := &VerificationPolicy{
+		Approved: cloneBool(policy.Approved), Denials: cloneStringSlice(policy.Denials),
+		PolicyVersion: stringValue(policy.PolicyVersion), Reason: stringValue(policy.Reason),
+	}
+	if policy.Tier != nil {
+		tier := VerificationPolicyTier(*policy.Tier)
+		out.Tier = &tier
+	}
+	if policy.Gpus != nil {
+		out.GPUs = make(map[string]VerificationPolicyVerdict, len(*policy.Gpus))
+		for id, verdict := range *policy.Gpus {
+			mapped := VerificationPolicyVerdict{Approved: cloneBool(verdict.Approved), Denials: cloneStringSlice(verdict.Denials), Reason: stringValue(verdict.Reason)}
+			if verdict.Tier != nil {
+				tier := VerificationPolicyTier(*verdict.Tier)
+				mapped.Tier = &tier
+			}
+			out.GPUs[id] = mapped
+		}
+	}
+	return out
+}
+
+// EAR is decoded JSON: clone objects and arrays so SDK values own their data.
+func cloneAttestationJSON(value any) any {
+	switch value := value.(type) {
+	case map[string]any:
+		if value == nil {
+			return map[string]any(nil)
+		}
+		out := make(map[string]any, len(value))
+		for key, item := range value {
+			out[key] = cloneAttestationJSON(item)
+		}
+		return out
+	case []any:
+		if value == nil {
+			return []any(nil)
+		}
+		out := make([]any, len(value))
+		for i, item := range value {
+			out[i] = cloneAttestationJSON(item)
+		}
+		return out
+	default:
+		return value
 	}
 }

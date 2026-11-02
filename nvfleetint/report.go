@@ -172,14 +172,15 @@ func (page InventoryReport) PageInfo() PageInfo {
 
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
-	AgentUUID           string               `json:"agentUUID,omitempty"`
-	SystemUUID          string               `json:"systemUUID,omitempty"`
-	GPUUUIDs            []string             `json:"gpuUUIDs,omitempty"`
-	AgentVersion        string               `json:"agentVersion,omitempty"`
-	CollectorVersion    string               `json:"collectorVersion,omitempty"`
-	KernelVersion       string               `json:"kernelVersion,omitempty"`
-	GPUDriverVersion    string               `json:"gpuDriverVersion,omitempty"`
-	GPUFirmwareVersions []GPUFirmwareVersion `json:"gpuFirmwareVersions,omitempty"`
+	VerificationCheckExtraInfo *VerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	AgentUUID                  string                      `json:"agentUUID,omitempty"`
+	SystemUUID                 string                      `json:"systemUUID,omitempty"`
+	GPUUUIDs                   []string                    `json:"gpuUUIDs,omitempty"`
+	AgentVersion               string                      `json:"agentVersion,omitempty"`
+	CollectorVersion           string                      `json:"collectorVersion,omitempty"`
+	KernelVersion              string                      `json:"kernelVersion,omitempty"`
+	GPUDriverVersion           string                      `json:"gpuDriverVersion,omitempty"`
+	GPUFirmwareVersions        []GPUFirmwareVersion        `json:"gpuFirmwareVersions,omitempty"`
 
 	NodeName                  string    `json:"nodeName,omitempty"`
 	BMCMAC                    string    `json:"bmcMac,omitempty"`
@@ -256,6 +257,8 @@ func (page ErrorReport) PageInfo() PageInfo {
 
 // Represents one error grouping row in an error list report
 type ErrorReportError struct {
+	// Severities contains every observed severity remaining after server-side filtering.
+	Severities      []ErrorSeverity  `json:"severities,omitempty"`
 	Name            string           `json:"name,omitempty"`
 	Count           *int             `json:"count,omitempty"`
 	NodeCount       *int             `json:"nodeCount,omitempty"`
@@ -734,21 +737,22 @@ func decodeOOBInventoryReport(data []byte) (InventoryReport, error) {
 		report.Nodes = make([]InventoryNode, 0, len(*resp.Nodes))
 		for _, node := range *resp.Nodes {
 			report.Nodes = append(report.Nodes, InventoryNode{
-				CollectorVersion:          stringValue(node.CollectorVersion),
-				NodeUUID:                  stringValue(node.NodeUUID),
-				NodeName:                  stringValue(node.NodeName),
-				BMCMAC:                    stringValue(node.BmcMac),
-				BMCIP:                     stringValue(node.BmcIP),
-				ComputeZone:               stringValue(node.ComputeZone),
-				NodeGroup:                 stringValue(node.NodeGroup),
-				GPUType:                   stringValue(node.GpuType),
-				GPUCount:                  cloneInt(node.GpuCount),
-				VerificationCheck:         enumStringValue(node.VerificationCheck),
-				VerificationCheckReason:   stringValue(node.VerificationCheckReason),
-				LastVerificationCheckTime: stringValue(node.LastVerificationCheckTS),
-				EnrolledAt:                stringValue(node.EnrolledAt),
-				RemovedAt:                 stringValue(node.RemovedAt),
-				Location:                  locationFromGenerated(node.Location),
+				CollectorVersion:           stringValue(node.CollectorVersion),
+				VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+				NodeUUID:                   stringValue(node.NodeUUID),
+				NodeName:                   stringValue(node.NodeName),
+				BMCMAC:                     stringValue(node.BmcMac),
+				BMCIP:                      stringValue(node.BmcIP),
+				ComputeZone:                stringValue(node.ComputeZone),
+				NodeGroup:                  stringValue(node.NodeGroup),
+				GPUType:                    stringValue(node.GpuType),
+				GPUCount:                   cloneInt(node.GpuCount),
+				VerificationCheck:          enumStringValue(node.VerificationCheck),
+				VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+				LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+				EnrolledAt:                 stringValue(node.EnrolledAt),
+				RemovedAt:                  stringValue(node.RemovedAt),
+				Location:                   locationFromGenerated(node.Location),
 			})
 		}
 	}
@@ -860,35 +864,44 @@ func decodeErrorReportOverview(data []byte, view ErrorReportView) (ErrorReport, 
 // Maps inventory node API models into SDK values
 func inventoryNodeFromGenerated(node fleetapi.ModelsInbandInventoryNode) InventoryNode {
 	return InventoryNode{
-		AgentUUID:                 stringValue(node.AgentUUID),
-		SystemUUID:                stringValue(node.SystemUUID),
-		GPUUUIDs:                  cloneStringSlice(node.GpuUUIDs),
-		AgentVersion:              stringValue(node.AgentVersion),
-		KernelVersion:             stringValue(node.KernelVersion),
-		GPUDriverVersion:          stringValue(node.GpuDriverVersion),
-		GPUFirmwareVersions:       gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
-		NodeUUID:                  stringValue(node.NodeUUID),
-		Hostname:                  stringValue(node.Hostname),
-		ComputeZone:               stringValue(node.ComputeZone),
-		NodeGroup:                 stringValue(node.NodeGroup),
-		GPUType:                   stringValue(node.GpuType),
-		GPUCount:                  cloneInt(node.GpuCount),
-		PublicIP:                  stringValue(node.PublicIP),
-		PrivateIP:                 stringValue(node.PrivateIP),
-		VerificationCheck:         enumStringValue(node.VerificationCheck),
-		VerificationCheckReason:   stringValue(node.VerificationCheckReason),
-		LastVerificationCheckTime: stringValue(node.LastVerificationCheckTS),
-		FirmwareCheck:             enumStringValue(node.FirmwareCheck),
-		EnrolledAt:                stringValue(node.EnrolledAt),
-		RemovedAt:                 stringValue(node.RemovedAt),
-		Location:                  locationFromGenerated(node.Location),
-		SerialNumbers:             cloneStringSlice(node.SerialNumbers),
+		AgentUUID:                  stringValue(node.AgentUUID),
+		VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+		SystemUUID:                 stringValue(node.SystemUUID),
+		GPUUUIDs:                   cloneStringSlice(node.GpuUUIDs),
+		AgentVersion:               stringValue(node.AgentVersion),
+		KernelVersion:              stringValue(node.KernelVersion),
+		GPUDriverVersion:           stringValue(node.GpuDriverVersion),
+		GPUFirmwareVersions:        gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
+		NodeUUID:                   stringValue(node.NodeUUID),
+		Hostname:                   stringValue(node.Hostname),
+		ComputeZone:                stringValue(node.ComputeZone),
+		NodeGroup:                  stringValue(node.NodeGroup),
+		GPUType:                    stringValue(node.GpuType),
+		GPUCount:                   cloneInt(node.GpuCount),
+		PublicIP:                   stringValue(node.PublicIP),
+		PrivateIP:                  stringValue(node.PrivateIP),
+		VerificationCheck:          enumStringValue(node.VerificationCheck),
+		VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+		LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+		FirmwareCheck:              enumStringValue(node.FirmwareCheck),
+		EnrolledAt:                 stringValue(node.EnrolledAt),
+		RemovedAt:                  stringValue(node.RemovedAt),
+		Location:                   locationFromGenerated(node.Location),
+		SerialNumbers:              cloneStringSlice(node.SerialNumbers),
 	}
 }
 
 // Maps error report error API models into SDK values
 func errorReportErrorFromGenerated(item fleetapi.ModelsByError) ErrorReportError {
+	var severities []ErrorSeverity
+	if item.Severities != nil {
+		severities = make([]ErrorSeverity, len(*item.Severities))
+		for i, severity := range *item.Severities {
+			severities[i] = ErrorSeverity(severity)
+		}
+	}
 	return ErrorReportError{
+		Severities:      severities,
 		Name:            stringValue(item.Name),
 		Count:           cloneInt(item.Count),
 		NodeCount:       cloneInt(item.NodeCount),

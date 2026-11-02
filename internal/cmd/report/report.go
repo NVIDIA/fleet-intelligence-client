@@ -832,14 +832,15 @@ func writeReportInventoryTableForSource(w io.Writer, report nvfleetint.Inventory
 			clioutput.DisplayString(node.GPUType),
 			clioutput.FormatOptionalInt(node.GPUCount),
 			clioutput.DisplayString(node.VerificationCheck),
+			clioutput.DisplayString(node.CollectorVersion),
 		})
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK"}, rows)
+	return clioutput.WriteTable(w, []string{"UUID", "NODE NAME", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "COLLECTOR VERSION"}, rows)
 }
 
 // Renders inventory report nodes as a table
 func writeReportInventoryTable(w io.Writer, nodes []nvfleetint.InventoryNode) error {
-	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP"}, reportInventoryRows(nodes))
+	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP", "AGENT VERSION"}, reportInventoryRows(nodes))
 }
 
 // Renders an error report using its selected view
@@ -853,7 +854,7 @@ func writeReportErrorTable(w io.Writer, report nvfleetint.ErrorReport) error {
 			}
 			return clioutput.WriteTable(w, headers, reportErrorNodeRows(report.Nodes, report.DataSource))
 		}
-		return clioutput.WriteTable(w, []string{"ERROR", "COUNT", "NODE COUNT", "SUGGESTED ACTION"}, reportErrorRows(report.Errors))
+		return clioutput.WriteTable(w, []string{"ERROR", "SEVERITIES", "COUNT", "NODE COUNT", "SUGGESTED ACTION"}, reportErrorRows(report.Errors))
 	case nvfleetint.ErrorReportViewGraph:
 		return clioutput.WriteTable(w, []string{"ERROR", "VALUES", "START", "END"}, reportGraphRows(report.Graph))
 	case nvfleetint.ErrorReportViewOverview:
@@ -878,6 +879,7 @@ func reportInventoryRows(nodes []nvfleetint.InventoryNode) [][]string {
 			clioutput.DisplayString(node.FirmwareCheck),
 			clioutput.DisplayString(node.PublicIP),
 			clioutput.DisplayString(node.PrivateIP),
+			clioutput.DisplayString(node.AgentVersion),
 		})
 	}
 	return rows
@@ -887,8 +889,13 @@ func reportInventoryRows(nodes []nvfleetint.InventoryNode) [][]string {
 func reportErrorRows(errorsByType []nvfleetint.ErrorReportError) [][]string {
 	rows := make([][]string, 0, len(errorsByType))
 	for _, item := range errorsByType {
+		severities := make([]string, len(item.Severities))
+		for i, severity := range item.Severities {
+			severities[i] = string(severity)
+		}
 		rows = append(rows, []string{
 			clioutput.DisplayString(item.Name),
+			clioutput.FormatStringList(severities),
 			clioutput.FormatOptionalInt(item.Count),
 			clioutput.FormatOptionalInt(item.NodeCount),
 			formatSuggestedAction(item.SuggestedAction),

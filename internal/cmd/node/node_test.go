@@ -1314,3 +1314,41 @@ func TestNodeUUIDFilterValidationBeforeAuth(t *testing.T) {
 		}
 	}
 }
+
+func TestNodeVerificationPolicyStatusFilters(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	statuses := []string{"Full Attestation", "Partial Attestation", "Verification Failed"}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !slices.Equal(r.URL.Query()["verificationChecks"], statuses) {
+			t.Errorf("incorrect verification filters: %s", r.URL)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","verificationCheck":"Full Attestation"}],"total":1}`))
+	}))
+	defer server.Close()
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+	for _, source := range []string{"inband", "oob"} {
+		var out bytes.Buffer
+		cmd := newRootCmd()
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{"node", "list", "--data-source", source, "--verification-check", strings.Join(statuses, ",")})
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(out.String(), "Full Attestation") {
+			t.Fatalf("missing status: %s", &out)
+		}
+	}
+	var help bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&help)
+	cmd.SetArgs([]string{"node", "list", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range statuses {
+		if !strings.Contains(help.String(), status) {
+			t.Fatalf("missing help status %s", status)
+		}
+	}
+}

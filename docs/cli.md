@@ -195,7 +195,8 @@ all pages for each. JSON output, CSV, and signed CSV bundles require
 An explicit source also selects a single table. OOB rows use node name, BMC MAC identifier, and BMC
 IP, plus GPU type and count from the OOB source; shared enrollment/removal
 times and verification fields remain available. Both sources support `gpuType`
-and `gpuCount` sorting. In-band-only sorts include hostname and public/private
+and `gpuCount` sorting. Tables show agent version for in-band inventory and
+collector version for OOB inventory. In-band-only sorts include hostname and public/private
 IP; OOB identity sorts are `nodeName`, `bmcMac`, and `bmcIP`.
 
 ```bash

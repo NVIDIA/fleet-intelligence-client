@@ -580,3 +580,43 @@ func TestInventoryIdentityAndVersionFields(t *testing.T) {
 		t.Fatal("absent identities acquired values")
 	}
 }
+
+func TestInventoryVerificationDetails(t *testing.T) {
+	body := []byte(`{"nodes":[{"nodeUUID":"node-1","verificationCheck":"Partial Attestation","verificationCheckExtraInfo":{"policy":{"approved":true,"tier":2,"policyVersion":"v1","gpus":{"gpu-1":{"approved":true,"tier":2}}}}}]}`)
+	for _, decode := range []func([]byte) (InventoryReport, error){decodeInventoryReport, decodeOOBInventoryReport} {
+		report, err := decode(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		info := report.Nodes[0].VerificationCheckExtraInfo
+		if info == nil || info.Policy == nil || info.Policy.Tier == nil || *info.Policy.Tier != VerificationPolicyTierPartialAttestation || info.Policy.Approved == nil || !*info.Policy.Approved || len(info.Policy.GPUs) != 1 || info.EAR != nil {
+			t.Fatalf("missing inventory policy: %#v", info)
+		}
+		if !bytes.Equal(body, report.RawJSON) {
+			t.Fatal("inventory JSON changed")
+		}
+	}
+}
+
+func TestErrorReportSeverities(t *testing.T) {
+	for _, tc := range []struct {
+		raw  string
+		want []ErrorSeverity
+	}{
+		{`"severities":["Fatal","Critical","Warning"],`, []ErrorSeverity{ErrorSeverityFatal, ErrorSeverityCritical, ErrorSeverityWarning}},
+		{`"severities":["Warning"],`, []ErrorSeverity{ErrorSeverityWarning}},
+		{`"severities":[],`, []ErrorSeverity{}}, {"", nil},
+	} {
+		body := []byte(`{"errors":[{` + tc.raw + `"name":"XID 79","count":3}]}`)
+		report, err := decodeErrorReport(body, ErrorReportViewList, ErrorReportGroupByError)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(report.Errors) != 1 || !slices.Equal(report.Errors[0].Severities, tc.want) {
+			t.Fatalf("incorrect severities: %#v", report.Errors)
+		}
+		if !bytes.Equal(body, report.RawJSON) {
+			t.Fatal("error report JSON changed")
+		}
+	}
+}
