@@ -37,9 +37,11 @@ const (
 
 	ErrorSeverityCritical ErrorSeverity = "Critical"
 	ErrorSeverityFatal    ErrorSeverity = "Fatal"
-	ErrorSeverityInfo     ErrorSeverity = "Info"
 	ErrorSeverityWarning  ErrorSeverity = "Warning"
 
+	InventoryReportSortByNodeName          InventoryReportSortBy = "nodeName"
+	InventoryReportSortByBMCMAC            InventoryReportSortBy = "bmcMac"
+	InventoryReportSortByBMCIP             InventoryReportSortBy = "bmcIP"
 	InventoryReportSortByHostname          InventoryReportSortBy = "hostname"
 	InventoryReportSortByNodeUUID          InventoryReportSortBy = "nodeUUID"
 	InventoryReportSortByNodeGroup         InventoryReportSortBy = "nodeGroup"
@@ -102,7 +104,7 @@ type ErrorSeverity string
 
 // Reports whether the error severity is accepted by the API
 func (severity ErrorSeverity) Valid() bool {
-	return fleetapi.ModelsEventSeverity(severity).Valid()
+	return fleetapi.ModelsErrorSeverity(severity).Valid()
 }
 
 // Represents supported inventory report sort fields
@@ -123,6 +125,8 @@ func (order InventoryReportSortOrder) Valid() bool {
 
 // Represents request options for inventory reports
 type InventoryReportOptions struct {
+	// DataSource defaults to in-band when omitted.
+	DataSource     DataSource
 	Format         ReportFormat
 	Signed         bool
 	ComputeZoneIDs []string
@@ -138,13 +142,15 @@ type InventoryReportOptions struct {
 
 // Represents an inventory report response
 type InventoryReport struct {
-	Nodes    []InventoryNode `json:"nodes"`
-	HasMore  bool            `json:"hasMore"`
-	Page     int             `json:"page"`
-	PageSize int             `json:"pageSize"`
-	Total    int             `json:"total"`
-	RawJSON  []byte          `json:"-"`
-	RawCSV   []byte          `json:"-"`
+	// DataSource records the selected source for source-specific rendering.
+	DataSource DataSource      `json:"-"`
+	Nodes      []InventoryNode `json:"nodes"`
+	HasMore    bool            `json:"hasMore"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"pageSize"`
+	Total      int             `json:"total"`
+	RawJSON    []byte          `json:"-"`
+	RawCSV     []byte          `json:"-"`
 
 	// RawSigned holds the signed CSV bundle (a zip) when Signed is requested.
 	RawSigned []byte `json:"-"`
@@ -166,6 +172,19 @@ func (page InventoryReport) PageInfo() PageInfo {
 
 // Represents one inventory row in an inventory report
 type InventoryNode struct {
+	VerificationCheckExtraInfo *VerificationCheckExtraInfo `json:"verificationCheckExtraInfo,omitempty"`
+	AgentUUID                  string                      `json:"agentUUID,omitempty"`
+	SystemUUID                 string                      `json:"systemUUID,omitempty"`
+	GPUUUIDs                   []string                    `json:"gpuUUIDs,omitempty"`
+	AgentVersion               string                      `json:"agentVersion,omitempty"`
+	CollectorVersion           string                      `json:"collectorVersion,omitempty"`
+	KernelVersion              string                      `json:"kernelVersion,omitempty"`
+	GPUDriverVersion           string                      `json:"gpuDriverVersion,omitempty"`
+	GPUFirmwareVersions        []GPUFirmwareVersion        `json:"gpuFirmwareVersions,omitempty"`
+
+	NodeName                  string    `json:"nodeName,omitempty"`
+	BMCMAC                    string    `json:"bmcMac,omitempty"`
+	BMCIP                     string    `json:"bmcIP,omitempty"`
 	NodeUUID                  string    `json:"nodeUUID"`
 	Hostname                  string    `json:"hostname,omitempty"`
 	ComputeZone               string    `json:"computeZone,omitempty"`
@@ -186,6 +205,8 @@ type InventoryNode struct {
 
 // Represents request options for error reports
 type ErrorReportOptions struct {
+	// DataSource defaults to in-band when omitted, for every view and format.
+	DataSource     DataSource
 	View           ErrorReportView
 	GroupBy        ErrorReportGroupBy
 	Format         ReportFormat
@@ -205,18 +226,21 @@ type ErrorReportOptions struct {
 
 // Represents an error report response
 type ErrorReport struct {
-	View     ErrorReportView      `json:"view"`
-	GroupBy  ErrorReportGroupBy   `json:"groupBy,omitempty"`
-	Errors   []ErrorReportError   `json:"errors,omitempty"`
-	Nodes    []ErrorReportNode    `json:"nodes,omitempty"`
-	Overview *ErrorReportOverview `json:"overview,omitempty"`
-	Graph    *ErrorReportGraph    `json:"graph,omitempty"`
-	HasMore  bool                 `json:"hasMore"`
-	Page     int                  `json:"page"`
-	PageSize int                  `json:"pageSize"`
-	Total    int                  `json:"total"`
-	RawJSON  []byte               `json:"-"`
-	RawCSV   []byte               `json:"-"`
+	// DataSource records the requested source for source-specific rendering.
+	// Empty means the API's in-band default.
+	DataSource DataSource           `json:"-"`
+	View       ErrorReportView      `json:"view"`
+	GroupBy    ErrorReportGroupBy   `json:"groupBy,omitempty"`
+	Errors     []ErrorReportError   `json:"errors,omitempty"`
+	Nodes      []ErrorReportNode    `json:"nodes,omitempty"`
+	Overview   *ErrorReportOverview `json:"overview,omitempty"`
+	Graph      *ErrorReportGraph    `json:"graph,omitempty"`
+	HasMore    bool                 `json:"hasMore"`
+	Page       int                  `json:"page"`
+	PageSize   int                  `json:"pageSize"`
+	Total      int                  `json:"total"`
+	RawJSON    []byte               `json:"-"`
+	RawCSV     []byte               `json:"-"`
 }
 
 // PageInfo reports the pagination envelope of the response.
@@ -233,6 +257,8 @@ func (page ErrorReport) PageInfo() PageInfo {
 
 // Represents one error grouping row in an error list report
 type ErrorReportError struct {
+	// Severities contains every observed severity remaining after server-side filtering.
+	Severities      []ErrorSeverity  `json:"severities,omitempty"`
 	Name            string           `json:"name,omitempty"`
 	Count           *int             `json:"count,omitempty"`
 	NodeCount       *int             `json:"nodeCount,omitempty"`
@@ -243,6 +269,8 @@ type ErrorReportError struct {
 type ErrorReportNode struct {
 	NodeUUID string   `json:"nodeUUID,omitempty"`
 	Hostname string   `json:"hostname,omitempty"`
+	NodeName string   `json:"nodeName,omitempty"`
+	BMCMAC   string   `json:"bmcMac,omitempty"`
 	Errors   []string `json:"errors,omitempty"`
 }
 
@@ -319,7 +347,14 @@ func (c *Client) GetInventoryReport(ctx context.Context, opts InventoryReportOpt
 		return InventoryReport{RawCSV: append([]byte(nil), resp.Body...)}, nil
 	}
 
-	return decodeInventoryReport(resp.Body)
+	var report InventoryReport
+	if normalized.DataSource == DataSourceOOB {
+		report, err = decodeOOBInventoryReport(resp.Body)
+	} else {
+		report, err = decodeInventoryReport(resp.Body)
+	}
+	report.DataSource = normalized.DataSource
+	return report, err
 }
 
 // Retrieves an error report using the configured API client
@@ -342,13 +377,16 @@ func (c *Client) GetErrorReport(ctx context.Context, opts ErrorReportOptions) (E
 	}
 	if normalized.Format == ReportFormatCSV {
 		return ErrorReport{
-			View:    normalized.View,
-			GroupBy: normalized.GroupBy,
-			RawCSV:  append([]byte(nil), resp.Body...),
+			DataSource: normalized.DataSource,
+			View:       normalized.View,
+			GroupBy:    normalized.GroupBy,
+			RawCSV:     append([]byte(nil), resp.Body...),
 		}, nil
 	}
 
-	return decodeErrorReport(resp.Body, normalized.View, normalized.GroupBy)
+	report, err := decodeErrorReport(resp.Body, normalized.View, normalized.GroupBy)
+	report.DataSource = normalized.DataSource
+	return report, err
 }
 
 // The accepted values named in each report option's error
@@ -357,9 +395,9 @@ const (
 	errorReportViewValues       = "list, graph, or overview"
 	errorReportGroupByValues    = "error or node"
 	errorReportTimeModeValues   = "absolute or relative"
-	errorReportSeverityValues   = "Critical, Fatal, Info, or Warning"
+	errorReportSeverityValues   = "Critical, Fatal, or Warning"
 	inventoryReportOrderValues  = "asc or desc"
-	inventoryReportSortByValues = "hostname, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
+	inventoryReportSortByValues = "hostname, nodeName, bmcMac, bmcIP, nodeUUID, nodeGroup, computeZone, gpuType, gpuCount, publicIP, privateIP, verificationCheck, or location"
 )
 
 // Defaults an omitted report format and rejects unsupported values
@@ -388,6 +426,9 @@ func (opts ErrorReportOptions) Validate() error {
 // combination rules, which it phrases in its own vocabulary: the CLI names the
 // flag the user typed. Validate covers both and is what the request path uses.
 func (opts ErrorReportOptions) ValidateValues() error {
+	if err := opts.DataSource.Validate(); err != nil {
+		return err
+	}
 	if opts.View == "" {
 		return errors.New("error report view is required")
 	}
@@ -518,6 +559,9 @@ func (opts InventoryReportOptions) Validate() error {
 // accepts, without checking how the options combine. See
 // ErrorReportOptions.ValidateValues for why the two are separate.
 func (opts InventoryReportOptions) ValidateValues() error {
+	if err := opts.DataSource.Validate(); err != nil {
+		return err
+	}
 	if _, err := normalizeReportFormat(opts.Format); err != nil {
 		return err
 	}
@@ -566,6 +610,7 @@ func normalizeInventoryReportOptions(opts InventoryReportOptions) (InventoryRepo
 // Builds generated inventory report query parameters
 func inventoryReportParams(opts InventoryReportOptions) fleetapi.GetV1ReportsInventoryParams {
 	return fleetapi.GetV1ReportsInventoryParams{
+		DataSource:     optionalEnum[fleetapi.GetV1ReportsInventoryParamsDataSource](opts.DataSource),
 		Format:         optionalEnum[fleetapi.GetV1ReportsInventoryParamsFormat](opts.Format),
 		Signed:         optionalTrueBool(opts.Signed),
 		Page:           cloneInt(opts.Page),
@@ -583,6 +628,7 @@ func inventoryReportParams(opts InventoryReportOptions) fleetapi.GetV1ReportsInv
 // Builds generated error report query parameters
 func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams {
 	return fleetapi.GetV1ReportsErrorParams{
+		DataSource:     optionalEnum[fleetapi.GetV1ReportsErrorParamsDataSource](opts.DataSource),
 		View:           fleetapi.GetV1ReportsErrorParamsView(opts.View),
 		GroupBy:        optionalEnum[fleetapi.GetV1ReportsErrorParamsGroupBy](opts.GroupBy),
 		Format:         optionalEnum[fleetapi.GetV1ReportsErrorParamsFormat](opts.Format),
@@ -593,7 +639,7 @@ func errorReportParams(opts ErrorReportOptions) fleetapi.GetV1ReportsErrorParams
 		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
 		Tags:           optionalSlice(opts.Tags),
 		Errors:         optionalSlice(opts.Errors),
-		Severities:     optionalEnumSlice[fleetapi.ModelsEventSeverity](opts.Severities),
+		Severities:     optionalEnumSlice[fleetapi.ModelsErrorSeverity](opts.Severities),
 		TimeMode:       optionalEnum[string](opts.TimeMode),
 		Window:         optionalString(opts.Window),
 		StartTime:      optionalString(opts.StartTime),
@@ -671,6 +717,45 @@ func decodeInventoryReport(data []byte) (InventoryReport, error) {
 		}
 	}
 
+	return report, nil
+}
+
+// Decodes the OOB inventory shape without losing its BMC identity fields.
+func decodeOOBInventoryReport(data []byte) (InventoryReport, error) {
+	var resp fleetapi.ModelsOobInventoryReportResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return InventoryReport{}, err
+	}
+	report := InventoryReport{
+		HasMore:  boolValue(resp.HasMore),
+		Page:     intValue(resp.Page),
+		PageSize: intValue(resp.PageSize),
+		Total:    intValue(resp.Total),
+		RawJSON:  append([]byte(nil), data...),
+	}
+	if resp.Nodes != nil {
+		report.Nodes = make([]InventoryNode, 0, len(*resp.Nodes))
+		for _, node := range *resp.Nodes {
+			report.Nodes = append(report.Nodes, InventoryNode{
+				CollectorVersion:           stringValue(node.CollectorVersion),
+				VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+				NodeUUID:                   stringValue(node.NodeUUID),
+				NodeName:                   stringValue(node.NodeName),
+				BMCMAC:                     stringValue(node.BmcMac),
+				BMCIP:                      stringValue(node.BmcIP),
+				ComputeZone:                stringValue(node.ComputeZone),
+				NodeGroup:                  stringValue(node.NodeGroup),
+				GPUType:                    stringValue(node.GpuType),
+				GPUCount:                   cloneInt(node.GpuCount),
+				VerificationCheck:          enumStringValue(node.VerificationCheck),
+				VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+				LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+				EnrolledAt:                 stringValue(node.EnrolledAt),
+				RemovedAt:                  stringValue(node.RemovedAt),
+				Location:                   locationFromGenerated(node.Location),
+			})
+		}
+	}
 	return report, nil
 }
 
@@ -779,28 +864,44 @@ func decodeErrorReportOverview(data []byte, view ErrorReportView) (ErrorReport, 
 // Maps inventory node API models into SDK values
 func inventoryNodeFromGenerated(node fleetapi.ModelsInbandInventoryNode) InventoryNode {
 	return InventoryNode{
-		NodeUUID:                  stringValue(node.NodeUUID),
-		Hostname:                  stringValue(node.Hostname),
-		ComputeZone:               stringValue(node.ComputeZone),
-		NodeGroup:                 stringValue(node.NodeGroup),
-		GPUType:                   stringValue(node.GpuType),
-		GPUCount:                  cloneInt(node.GpuCount),
-		PublicIP:                  stringValue(node.PublicIP),
-		PrivateIP:                 stringValue(node.PrivateIP),
-		VerificationCheck:         enumStringValue(node.VerificationCheck),
-		VerificationCheckReason:   stringValue(node.VerificationCheckReason),
-		LastVerificationCheckTime: stringValue(node.LastVerificationCheckTS),
-		FirmwareCheck:             enumStringValue(node.FirmwareCheck),
-		EnrolledAt:                stringValue(node.EnrolledAt),
-		RemovedAt:                 stringValue(node.RemovedAt),
-		Location:                  locationFromGenerated(node.Location),
-		SerialNumbers:             cloneStringSlice(node.SerialNumbers),
+		AgentUUID:                  stringValue(node.AgentUUID),
+		VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
+		SystemUUID:                 stringValue(node.SystemUUID),
+		GPUUUIDs:                   cloneStringSlice(node.GpuUUIDs),
+		AgentVersion:               stringValue(node.AgentVersion),
+		KernelVersion:              stringValue(node.KernelVersion),
+		GPUDriverVersion:           stringValue(node.GpuDriverVersion),
+		GPUFirmwareVersions:        gpuFirmwareVersionsFromGenerated(node.GpuFirmwareVersions),
+		NodeUUID:                   stringValue(node.NodeUUID),
+		Hostname:                   stringValue(node.Hostname),
+		ComputeZone:                stringValue(node.ComputeZone),
+		NodeGroup:                  stringValue(node.NodeGroup),
+		GPUType:                    stringValue(node.GpuType),
+		GPUCount:                   cloneInt(node.GpuCount),
+		PublicIP:                   stringValue(node.PublicIP),
+		PrivateIP:                  stringValue(node.PrivateIP),
+		VerificationCheck:          enumStringValue(node.VerificationCheck),
+		VerificationCheckReason:    stringValue(node.VerificationCheckReason),
+		LastVerificationCheckTime:  stringValue(node.LastVerificationCheckTS),
+		FirmwareCheck:              enumStringValue(node.FirmwareCheck),
+		EnrolledAt:                 stringValue(node.EnrolledAt),
+		RemovedAt:                  stringValue(node.RemovedAt),
+		Location:                   locationFromGenerated(node.Location),
+		SerialNumbers:              cloneStringSlice(node.SerialNumbers),
 	}
 }
 
 // Maps error report error API models into SDK values
 func errorReportErrorFromGenerated(item fleetapi.ModelsByError) ErrorReportError {
+	var severities []ErrorSeverity
+	if item.Severities != nil {
+		severities = make([]ErrorSeverity, len(*item.Severities))
+		for i, severity := range *item.Severities {
+			severities[i] = ErrorSeverity(severity)
+		}
+	}
 	return ErrorReportError{
+		Severities:      severities,
 		Name:            stringValue(item.Name),
 		Count:           cloneInt(item.Count),
 		NodeCount:       cloneInt(item.NodeCount),
@@ -813,6 +914,8 @@ func errorReportNodeFromGenerated(item fleetapi.ModelsByNode) ErrorReportNode {
 	return ErrorReportNode{
 		NodeUUID: stringValue(item.NodeUUID),
 		Hostname: stringValue(item.Hostname),
+		NodeName: stringValue(item.NodeName),
+		BMCMAC:   stringValue(item.BmcMac),
 		Errors:   cloneStringSlice(item.Errors),
 	}
 }

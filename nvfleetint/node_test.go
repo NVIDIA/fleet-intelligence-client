@@ -5,9 +5,12 @@ package nvfleetint
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -158,7 +161,7 @@ func TestListNodesBasic(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","nodeName":"machine-001","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","nodeName":"machine-001","bmcMac":"bmc-001","bmcIP":"192.0.2.10:443"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -179,7 +182,7 @@ func TestListNodesBasic(t *testing.T) {
 	if len(got.Nodes) != 1 || got.Nodes[0].UUID != "node-1" || got.Nodes[0].Hostname != "gpu-001" {
 		t.Fatalf("unexpected nodes: %#v", got.Nodes)
 	}
-	if got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10:443" {
+	if got.Nodes[0].BMCMAC != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10:443" {
 		t.Fatalf("unexpected basic BMC fields: %#v", got.Nodes[0])
 	}
 	if got.Nodes[0].NodeName != "machine-001" {
@@ -240,8 +243,8 @@ func TestDescribeNodeSendsAuthAndDecodesDetails(t *testing.T) {
 // Verifies OOB detail selection and nested inventory decoding
 func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("agentType"); got != "oob" {
-			t.Fatalf("unexpected agentType: %q", got)
+		if got := r.URL.Query().Get("dataSource"); got != "oob" {
+			t.Fatalf("unexpected dataSource: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -249,18 +252,17 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 			"hostname":"host-001",
 			"nodeName":"machine-001",
 			"nodeKind":"nvswitch",
-			"agentType":"oob",
-			"bmcHostname":"bmc-001",
+			"dataSource":"oob",
+			"bmcMac":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
 				"schemaVersion":"inventory.v1alpha1",
-				"primarySystemId":"System.Embedded.1",
-				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","hostName":"bmc-001"},
-				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
+				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","mac":"02:00:0a:00:00:0a"},
+				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","processorSummary":{"count":2},"memorySummary":{"totalSystemMemoryGiB":2048},"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
 				"managers":[{"id":"iDRAC.Embedded.1","firmwareVersion":"7.10.00.00"}],
 				"chassis":[{"id":"System.Embedded.1","pcieDevices":[{"id":"GPU.Slot.1","model":"NVIDIA H100"}]}],
-				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","statusState":"Enabled","health":"OK","healthRollup":"Warning"}],
+				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","status":{"state":"Enabled","health":"OK","healthRollup":"Warning"}}],
 				"domainErrors":[{"domain":"firmware","message":"partial collection"}]
 			}
 		}`))
@@ -272,31 +274,31 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.DescribeNodeWithOptions(context.Background(), "node-oob-1", DescribeNodeOptions{
-		AgentType: NodeAgentTypeOOB,
+		DataSource: DataSourceOOB,
 	})
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if got.AgentType != "oob" || got.NodeName != "machine-001" || got.NodeKind != NodeKindNVSwitch ||
-		got.BMCHostname != "bmc-001" || got.BMCIP != "192.0.2.10" {
+	if got.DataSource != "oob" || got.NodeName != "machine-001" || got.NodeKind != NodeKindNVSwitch ||
+		got.BMCMAC != "bmc-001" || got.BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB node fields: %#v", got.Node)
 	}
 	if got.OOBInventory == nil || got.OOBInventory.SchemaVersion != "inventory.v1alpha1" {
 		t.Fatalf("unexpected inventory: %#v", got.OOBInventory)
 	}
-	if got.OOBInventory.Source == nil || got.OOBInventory.Source.Hostname != "bmc-001" {
+	if got.OOBInventory.Source == nil || got.OOBInventory.Source.MAC != "02:00:0a:00:00:0a" {
 		t.Fatalf("unexpected inventory source: %#v", got.OOBInventory.Source)
 	}
-	if len(got.OOBInventory.Systems) != 1 || got.OOBInventory.Systems[0].CPUCount == nil ||
-		*got.OOBInventory.Systems[0].CPUCount != 2 {
+	if len(got.OOBInventory.Systems) != 1 || got.OOBInventory.Systems[0].ProcessorSummary == nil || got.OOBInventory.Systems[0].ProcessorSummary.Count == nil ||
+		*got.OOBInventory.Systems[0].ProcessorSummary.Count != 2 {
 		t.Fatalf("unexpected systems: %#v", got.OOBInventory.Systems)
 	}
 	if len(got.OOBInventory.Chassis) != 1 || len(got.OOBInventory.Chassis[0].PCIeDevices) != 1 {
 		t.Fatalf("unexpected chassis: %#v", got.OOBInventory.Chassis)
 	}
 	if len(got.OOBInventory.Firmware) != 1 || got.OOBInventory.Firmware[0].ServiceID != "fw-service" ||
-		got.OOBInventory.Firmware[0].StatusState != "Enabled" || got.OOBInventory.Firmware[0].Health != "OK" ||
-		got.OOBInventory.Firmware[0].HealthRollup != "Warning" {
+		got.OOBInventory.Firmware[0].Status == nil || got.OOBInventory.Firmware[0].Status.State != "Enabled" || got.OOBInventory.Firmware[0].Status.Health != "OK" ||
+		got.OOBInventory.Firmware[0].Status.HealthRollup != "Warning" {
 		t.Fatalf("unexpected firmware: %#v", got.OOBInventory.Firmware)
 	}
 }
@@ -305,11 +307,11 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 func TestListNodesOOB(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		if query.Get("agentType") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcHostname") != "bmc" || query.Get("sortBy") != "nodeName" {
+		if query.Get("dataSource") != "oob" || query.Get("nodeName") != "machine" || query.Get("bmcMac") != "bmc" || query.Get("sortBy") != "nodeName" {
 			t.Fatalf("unexpected query: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-oob-1","hostname":"host-001","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcMac":"bmc-001","bmcIP":"192.0.2.10"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`))
 	}))
 	defer server.Close()
 
@@ -318,16 +320,16 @@ func TestListNodesOOB(t *testing.T) {
 		t.Fatalf("new client failed: %v", err)
 	}
 	got, err := client.ListNodes(context.Background(), ListNodesOptions{
-		AgentType:   NodeAgentTypeOOB,
-		NodeName:    "machine",
-		BMCHostname: "bmc",
-		SortBy:      NodeSortByNodeName,
+		DataSource: DataSourceOOB,
+		NodeName:   "machine",
+		BMCMAC:     "bmc",
+		SortBy:     NodeSortByNodeName,
 	})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}
 	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "machine-001" || got.Nodes[0].NodeKind != NodeKindNVSwitch ||
-		got.Nodes[0].BMCHostname != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
+		got.Nodes[0].BMCMAC != "bmc-001" || got.Nodes[0].BMCIP != "192.0.2.10" {
 		t.Fatalf("unexpected OOB nodes: %#v", got.Nodes)
 	}
 }
@@ -391,7 +393,7 @@ func TestListNodesRejectsInvalidOptions(t *testing.T) {
 		want string
 	}{
 		{name: "view", opts: ListNodesOptions{View: "wide"}, want: "invalid node view"},
-		{name: "agent type", opts: ListNodesOptions{AgentType: "sideband"}, want: "invalid node agent type"},
+		{name: "data source", opts: ListNodesOptions{DataSource: "sideband"}, want: "invalid data source"},
 		{name: "health", opts: ListNodesOptions{HealthStatuses: []NodeHealthStatus{"Broken"}}, want: "invalid node health"},
 		{name: "agent", opts: ListNodesOptions{AgentStatuses: []NodeAgentStatus{"Missing"}}, want: "invalid node agent status"},
 		{name: "verification", opts: ListNodesOptions{VerificationChecks: []NodeVerificationCheck{"Missing"}}, want: "invalid node verification check"},
@@ -453,7 +455,7 @@ func TestNodeSortByValid(t *testing.T) {
 		NodeSortByGPUDriverVersion,
 		NodeSortByGPUFirmwareVersions,
 		NodeSortByNodeName,
-		NodeSortByBMCHostname,
+		NodeSortByBMCMAC,
 	}
 
 	for _, sortBy := range tests {
@@ -510,13 +512,12 @@ func TestListNodesOptionsValidate(t *testing.T) {
 	}
 }
 
-// Verifies basic view accepts only the columns it actually returns. The CLI and
-// the SDK used to answer this differently, so it is pinned on both sides.
+// Verifies basic view accepts identity and inventory sorting, but not health sorting.
 func TestListNodesOptionsBasicSortCompatibility(t *testing.T) {
-	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname}
+	accepted := []NodeSortBy{NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCMAC,
+		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone}
 	rejected := []NodeSortBy{
 		NodeSortByHealthStatus, NodeSortByVerificationCheck, NodeSortByAgentStatus,
-		NodeSortByGPUType, NodeSortByGPUCount, NodeSortByNodeGroup, NodeSortByComputeZone,
 	}
 
 	for _, sortBy := range accepted {
@@ -551,5 +552,140 @@ func TestInvalidOptionErrorCarriesOption(t *testing.T) {
 	}
 	if !strings.Contains(optionErr.Expected, "Verified") {
 		t.Fatalf("expected accepted values, got %q", optionErr.Expected)
+	}
+}
+
+func TestNodeUUIDFilters(t *testing.T) {
+	for _, view := range []NodeView{NodeViewBasic, NodeViewDetail} {
+		for _, source := range []DataSource{"", DataSourceInband, DataSourceOOB} {
+			for _, populated := range []bool{false, true} {
+				t.Run(string(view)+"/"+string(source)+"/"+map[bool]string{false: "omitted", true: "filtered"}[populated], func(t *testing.T) {
+					opts := ListNodesOptions{View: view, DataSource: source}
+					if populated {
+						opts.SystemUUIDs = []string{"system-A", "system-B"}
+						if source != DataSourceOOB {
+							opts.AgentUUIDs = []string{"agent-A", "agent-B"}
+						}
+					}
+					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						q := r.URL.Query()
+						if !slices.Equal(q["agentUUIDs"], opts.AgentUUIDs) || !slices.Equal(q["systemUUIDs"], opts.SystemUUIDs) {
+							t.Errorf("incorrect repeated UUID filters: %s", r.URL)
+						}
+						if q.Get("dataSource") != string(source) || q.Get("view") != string(view) {
+							t.Errorf("incorrect scope: %s", r.URL)
+						}
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","agentUUID":"agent-A"}],"total":1}`))
+					}))
+					defer server.Close()
+					client, err := NewClient(server.URL, "test-key")
+					if err != nil {
+						t.Fatal(err)
+					}
+					page, err := client.ListNodes(context.Background(), opts)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if source != DataSourceOOB && (len(page.Nodes) != 1 || page.Nodes[0].AgentUUID != "agent-A") {
+						t.Fatalf("missing agent identity: %#v", page.Nodes)
+					}
+					if !strings.Contains(string(page.RawJSON), `"agentUUID":"agent-A"`) {
+						t.Fatal("raw JSON changed")
+					}
+				})
+			}
+		}
+	}
+	for _, view := range []NodeView{NodeViewBasic, NodeViewDetail} {
+		if err := (ListNodesOptions{View: view, DataSource: DataSourceOOB, AgentUUIDs: []string{"agent-A"}}).Validate(); err == nil {
+			t.Fatal("OOB agent UUID filter accepted")
+		}
+	}
+}
+
+func TestDescribeNodeUUIDIdentities(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodeUUID":"node-1","agentUUID":"agent-1","systemInfo":{"systemUUID":"system-1"},"resources":{"gpuInfo":{"gpus":[{"uuid":"gpu-1","cliqueID":0,"clusterUUID":"cluster-1"}]}}}`))
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := client.DescribeNode(context.Background(), "node-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if node.AgentUUID != "agent-1" || node.SystemInfo == nil || node.SystemInfo.SystemUUID != "system-1" {
+		t.Fatalf("missing node identities: %#v", node)
+	}
+	if node.Resources == nil || node.Resources.GPUInfo == nil || len(node.Resources.GPUInfo.GPUs) != 1 {
+		t.Fatalf("missing GPUs: %#v", node.Resources)
+	}
+	gpu := node.Resources.GPUInfo.GPUs[0]
+	if gpu.UUID != "gpu-1" || gpu.ClusterUUID != "cluster-1" || gpu.CliqueID == nil || *gpu.CliqueID != 0 {
+		t.Fatalf("missing GPU identity: %#v", gpu)
+	}
+}
+
+func TestVerificationPolicyAndEAR(t *testing.T) {
+	var source fleetapi.ModelsVerificationCheckExtraInfo
+	payload := []byte(`{"overallAttestationResult":false,"policy":{"approved":false,"tier":3,"reason":"verification rejected","policyVersion":"v1","denials":["measurement mismatch"],"gpus":{"gpu-1":{"approved":false,"tier":3,"reason":"mismatch","denials":["digest mismatch"]},"gpu-2":{}}},"ear":{"submods":{"gpu-1":{"status":"failed","scores":[0,false,null]}}}}`)
+	if err := json.Unmarshal(payload, &source); err != nil {
+		t.Fatal(err)
+	}
+	got := verificationCheckExtraInfoFromGenerated(&source)
+	data, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wantJSON, gotJSON any
+	if err := json.Unmarshal(payload, &wantJSON); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &gotJSON); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotJSON, wantJSON) {
+		t.Fatalf("verification fields changed: %s", data)
+	}
+	if got.Policy.Tier == nil || *got.Policy.Tier != VerificationPolicyTierRejected || got.Policy.Approved == nil || *got.Policy.Approved {
+		t.Fatalf("lost false or tier: %#v", got.Policy)
+	}
+	(*source.Policy.Denials)[0] = "changed"
+	verdict := (*source.Policy.Gpus)["gpu-1"]
+	(*verdict.Denials)[0] = "changed"
+	*verdict.Approved = true
+	(*source.Ear)["submods"].(map[string]any)["gpu-1"].(map[string]any)["scores"].([]any)[0] = 99
+	cloned, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(cloned) != string(data) {
+		t.Fatal("SDK verification data aliases the generated response")
+	}
+	if got := verificationCheckExtraInfoFromGenerated(&fleetapi.ModelsVerificationCheckExtraInfo{}); got.Policy != nil || got.EAR != nil {
+		t.Fatal("absent policy/EAR acquired values")
+	}
+	if verificationCheckExtraInfoFromGenerated(nil) != nil {
+		t.Fatal("absent extra info acquired values")
+	}
+}
+
+func TestVerificationStatusConstants(t *testing.T) {
+	for _, status := range []NodeVerificationCheck{NodeVerificationFullAttestation, NodeVerificationPartialAttestation, NodeVerificationVerificationFailed} {
+		if !status.Valid() {
+			t.Fatalf("invalid new status: %s", status)
+		}
+		for _, source := range []DataSource{DataSourceInband, DataSourceOOB} {
+			if err := (ListNodesOptions{DataSource: source, VerificationChecks: []NodeVerificationCheck{status}}).Validate(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if NodeVerificationFailed != NodeVerificationUnverified {
+		t.Fatal("legacy alias changed meaning")
 	}
 }

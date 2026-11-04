@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -18,6 +19,36 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
+
+const completeOOBNodeJSON = `{
+ "nodeUUID":"node-1", "dataSource":"oob", "nodeKind":"nvswitch",
+ "oobInventory":{
+  "schemaVersion":"inventory.v1alpha1", "collectedAt":"2026-10-28T12:00:00Z",
+  "source":{"sourceType":"redfish","address":"192.0.2.10","mac":"02:00:0a:00:00:0a"},
+  "systems":[{
+   "id":"system-1","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning"},
+   "memorySummary":{"totalSystemMemoryGiB":0},
+   "processorSummary":{"count":0,"coreCount":0,"model":"Grace"},
+   "processors":[{"id":"gpu-1","processorType":"GPU","status":{"health":"Warning"},"nvidiaGpu":{"totalNvLinks":18,"migModeEnabled":false,"nvlinkTopology":{"hostId":0,"ibGuid":"0x1234","traySerialNumber":"NA"}},"location":{"partLocation":{"serviceLabel":"GPU slot 1"}}},
+    {"id":"cpu-1","processorType":"CPU","status":{"health":"Warning"}}],
+   "memory":[{"id":"dimm-1","systemId":"system-1","deviceLocator":"DIMM A1","capacityMib":65536,"status":{"health":"OK"},"location":{"partLocation":{"serviceLabel":"memory slot 1"}}}],
+   "storage":[{"id":"storage-1","systemId":"system-1","drives":[{"id":"drive-1","storageId":"storage-1","systemId":"system-1","capacityBytes":4000000000000,"protocol":"NVMe","status":{"health":"OK"}}]}],
+   "links":{"Chassis":[{"odataId":"/redfish/v1/Chassis/chassis-1"}]}
+  }],
+  "managers":[{"id":"manager-1","status":{"health":"OK"}}],
+  "chassis":[{
+   "id":"chassis-1","status":{"health":"Warning"},
+   "location":{"placement":{"rack":"R01","rackOffset":0,"rackOffsetUnits":"EIA_310"},"partLocation":{"serviceLabel":"compute tray"}},
+   "pcieDevices":[{"id":"pcie-1","status":{"health":"OK"}}],
+   "powerSupplies":[{"id":"psu-1","chassisId":"chassis-1","powerCapacityWatts":2400,"status":{"health":"OK"}}]
+  }],
+  "fabrics":[{"id":"fabric-1","name":"NVLink Fabric","fabricType":"NVLink","status":{"health":"OK"},"switches":[
+   {"id":"switch-1","name":"NVSwitch","status":{"health":"Warning"},"location":{"placement":{"rack":"R02","rackOffset":10}},"nvidiaSwitch":{"pcieReferenceClockEnabled":false,"deviceId":"0x1234"}}
+  ]}],
+  "firmware":[{"id":"firmware-1","name":"Firmware","serviceId":"service-1","status":{"health":"OK"},"relatedItem":[{"odataId":"/redfish/v1/Systems/system-1"}]}],
+  "futureField":{"preserved":true}
+ }
+}`
 
 // newRootCmd builds a root command carrying only this package's commands, so
 // the tests drive them through the same argument path a user types.
@@ -56,7 +87,7 @@ func TestNodeListLocalJSONAndSort(t *testing.T) {
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", "healthStatus",
+		"node", "list", "--data-source", "inband", "--output", "json", "--sort-by", "healthStatus",
 	})
 
 	if err := cmd.Execute(); err != nil {
@@ -88,7 +119,7 @@ func TestNodeListDetailSortFields(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetOut(&out)
 			cmd.SetArgs([]string{
-				"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", field,
+				"node", "list", "--data-source", "inband", "--output", "json", "--sort-by", field,
 			})
 
 			if err := cmd.Execute(); err != nil {
@@ -117,7 +148,7 @@ func TestNodeListSortVerificationCheck(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--output", "json", "--sort-by", "verificationCheck"})
+	cmd.SetArgs([]string{"node", "list", "--data-source", "inband", "--output", "json", "--sort-by", "verificationCheck"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -245,14 +276,14 @@ func TestNodeListTableFiltersAndSort(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computezone", "--order", "desc", "--page-size", "10"})
+	cmd.SetArgs([]string{"node", "list", "--data-source", "inband", "--node-uuids", "node-1,node-2", "--health", "Healthy,Degraded", "--hostname", "gpu", "--agent-status", "Online", "--verification-check", "Verified", "--firmware-check", "Unknown", "--compute-zone-ids", "cz-1,cz-2", "--compute-zone-names", "East", "--nodegroup-ids", "ng-1", "--nodegroup-names", "Training", "--gpu-type", "NVIDIA-H100", "--gpu-count", "8,4", "--public-ip", "203.0.113.10", "--private-ip", "10.0.0.10", "--sort-by", "computezone", "--order", "desc", "--page-size", "10"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS", "node-1", "gpu-001", "East", "Training", "Verified", "Unknown", "Online", "Page: 1"} {
+	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "ATTESTATION", "FIRMWARE CHECK", "AGENT STATUS", "node-1", "gpu-001", "East", "Training", "Verified", "Unknown", "Online", "Page: 1"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
@@ -268,20 +299,20 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 			t.Errorf("unexpected view: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		switch r.URL.Query().Get("agentType") {
+		switch r.URL.Query().Get("dataSource") {
 		case "inband":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-inband","hostname":"gpu-001","agentType":"inband","healthStatus":"Healthy"}],
+				"nodes":[{"nodeUUID":"node-inband","hostname":"gpu-001","dataSource":"inband","healthStatus":"Healthy"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
-				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","agentType":"oob","bmcHostname":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
+				"nodes":[{"nodeUUID":"node-oob","nodeName":"machine-001","nodeKind":"nvswitch","dataSource":"oob","bmcMac":"bmc-001","bmcIP":"192.0.2.10:443","healthStatus":"Degraded"}],
 				"hasMore":false,"page":0,"pageSize":20,"total":1
 			}`))
 		default:
-			t.Errorf("unexpected agentType: %q", r.URL.Query().Get("agentType"))
-			http.Error(w, "missing agentType", http.StatusBadRequest)
+			t.Errorf("unexpected dataSource: %q", r.URL.Query().Get("dataSource"))
+			http.Error(w, "missing dataSource", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -299,44 +330,13 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"In-band", "node-inband", "gpu-001", "GPU TYPE",
-		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "nvswitch", "NODE KIND", "bmc-001", "BMC HOSTNAME",
+		"Out-of-band", "node-oob", "machine-001", "NODE NAME", "nvswitch", "NODE KIND", "bmc-001", "BMC MAC",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("combined table missing %q: %q", want, got)
 		}
 	}
 
-	out.Reset()
-	cmd = newRootCmd()
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--output", "json"})
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("combined JSON command failed: %v", err)
-	}
-
-	var combined struct {
-		Inband struct {
-			Nodes []map[string]any `json:"nodes"`
-			Page  int              `json:"page"`
-		} `json:"inband"`
-		OOB struct {
-			Nodes []map[string]any `json:"nodes"`
-			Page  int              `json:"page"`
-		} `json:"oob"`
-	}
-	if err := json.Unmarshal(out.Bytes(), &combined); err != nil {
-		t.Fatalf("decode combined JSON: %v", err)
-	}
-	if len(combined.Inband.Nodes) != 1 || combined.Inband.Nodes[0]["nodeUUID"] != "node-inband" {
-		t.Fatalf("unexpected in-band JSON: %#v", combined.Inband)
-	}
-	if len(combined.OOB.Nodes) != 1 || combined.OOB.Nodes[0]["nodeUUID"] != "node-oob" ||
-		combined.OOB.Nodes[0]["nodeKind"] != "nvswitch" {
-		t.Fatalf("unexpected OOB JSON: %#v", combined.OOB)
-	}
-	if combined.Inband.Page != 1 || combined.OOB.Page != 1 {
-		t.Fatalf("combined JSON pages should be 1-based: %#v", combined)
-	}
 }
 
 // Verifies all-page JSON output
@@ -425,7 +425,7 @@ func TestNodeListAllDefaultsPageSize(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "list", "--agent-type", "inband", "--all", "--output", "json"})
+	cmd.SetArgs([]string{"node", "list", "--data-source", "inband", "--all", "--output", "json"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -464,7 +464,7 @@ func TestNodeListAllRetriesFailedPage(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs([]string{
-		"node", "list", "--agent-type", "inband", "--all", "--output", "json", "--timeout", "5s",
+		"node", "list", "--data-source", "inband", "--all", "--output", "json", "--timeout", "5s",
 	})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("execute failed: %v", err)
@@ -510,7 +510,7 @@ func TestNodeDescribeTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "describe", "node-1", "--agent-type", "inband"})
+	cmd.SetArgs([]string{"node", "describe", "node-1", "--data-source", "inband"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -530,20 +530,20 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch r.URL.Query().Get("agentType") {
+		switch r.URL.Query().Get("dataSource") {
 		case "inband":
 			_, _ = w.Write([]byte(`{
 				"nodeUUID":"node-1",
 				"hostname":"gpu-001",
-				"agentType":"inband",
+				"dataSource":"inband",
 				"healthStatus":"Healthy",
 				"agentStatus":"Online"
 			}`))
 		case "oob":
 			_, _ = w.Write([]byte(`{
 				"nodeUUID":"node-1",
-				"agentType":"oob",
-				"bmcHostname":"bmc-001",
+				"dataSource":"oob",
+				"bmcMac":"bmc-001",
 				"bmcIP":"192.0.2.10:443",
 				"healthStatus":"Degraded",
 				"oobInventory":{
@@ -552,8 +552,8 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 				}
 			}`))
 		default:
-			t.Errorf("unexpected agentType: %q", r.URL.Query().Get("agentType"))
-			http.Error(w, "missing agentType", http.StatusBadRequest)
+			t.Errorf("unexpected dataSource: %q", r.URL.Query().Get("dataSource"))
+			http.Error(w, "missing dataSource", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -598,7 +598,7 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 	if combined.Inband["hostname"] != "gpu-001" {
 		t.Fatalf("unexpected in-band JSON: %#v", combined.Inband)
 	}
-	if combined.OOB["bmcHostname"] != "bmc-001" {
+	if combined.OOB["bmcMac"] != "bmc-001" {
 		t.Fatalf("unexpected OOB JSON: %#v", combined.OOB)
 	}
 }
@@ -608,7 +608,7 @@ func TestNodeDescribeCombinedViewAllowsNotFound(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("agentType") == "oob" {
+		if r.URL.Query().Get("dataSource") == "oob" {
 			http.Error(w, `{"error":"node does not have an OOB agent"}`, http.StatusNotFound)
 			return
 		}
@@ -616,7 +616,7 @@ func TestNodeDescribeCombinedViewAllowsNotFound(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"nodeUUID":"node-1",
 			"hostname":"gpu-001",
-			"agentType":"inband"
+			"dataSource":"inband"
 		}`))
 	}))
 	defer server.Close()
@@ -645,25 +645,25 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("agentType"); got != "oob" {
-			t.Fatalf("unexpected agentType: %q", got)
+		if got := r.URL.Query().Get("dataSource"); got != "oob" {
+			t.Fatalf("unexpected dataSource: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"nodeUUID":"node-oob-1",
 			"nodeKind":"nvswitch",
 			"hostname":"host-001",
-			"agentType":"oob",
-			"bmcHostname":"bmc-001",
+			"dataSource":"oob",
+			"bmcMac":"bmc-001",
 			"bmcIP":"192.0.2.10",
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
 				"schemaVersion":"inventory.v1alpha1",
 				"source":{"sourceType":"redfish","vendor":"Dell","address":"192.0.2.10:443","mac":"00:11:22:33:44:55","redfishVersion":"1.17.0"},
-				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning","conditions":[{"messageId":"ResourceEvent.1.0.ResourceErrorsDetected","severity":"Critical","message":"nested status condition"}]},"statusState":"Enabled","health":"OK","healthRollup":"Warning","cpuCount":2,"memoryGib":2048,"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"statusState":"Enabled","health":"OK","healthRollup":"OK"},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
-				"managers":[{"id":"iDRAC.Embedded.1","uuid":"manager-uuid","model":"iDRAC","managerType":"bmc","firmwareVersion":"7.10.00.00","statusState":"Enabled","health":"OK","healthRollup":"OK"}],
-				"chassis":[{"id":"System.Embedded.1","chassisType":"rack_mount","manufacturer":"Dell","model":"XE9680","sku":"sku-1","serialNumber":"serial-1","partNumber":"part-1","assetTag":"asset-1","powerState":"on","statusState":"Enabled","health":"OK","healthRollup":"Warning","pcieDevices":[{"id":"GPU.Slot.1","uuid":"gpu-uuid","deviceType":"single_function","manufacturer":"NVIDIA","model":"NVIDIA H100","sku":"gpu-sku","serialNumber":"gpu-serial","partNumber":"gpu-part","firmwareVersion":"96.00.00","statusState":"Enabled","health":"OK","healthRollup":"OK"}]}],
-				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","releaseDate":"2026-01-01","statusState":"Enabled","health":"OK","healthRollup":"Warning"}],
+				"systems":[{"id":"System.Embedded.1","uuid":"system-uuid","manufacturer":"Dell","model":"PowerEdge XE9680","sku":"sku-1","serialNumber":"serial-1","biosVersion":"2.1.0","hostName":"host-001","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning","conditions":[{"messageId":"ResourceEvent.1.0.ResourceErrorsDetected","severity":"Critical","message":"nested status condition"}]},"processorSummary":{"count":2},"memorySummary":{"totalSystemMemoryGiB":2048},"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","socket":"CPU 1","processorType":"cpu","processorArchitecture":"x86","manufacturer":"Intel","model":"Xeon","maxSpeedMhz":3800,"totalCores":56,"totalThreads":112,"status":{"state":"Enabled","health":"OK","healthRollup":"OK"}},{"id":"GPU.Slot.1","processorType":"gpu","manufacturer":"NVIDIA","model":"NVIDIA H100","status":{"state":"Enabled","health":"OK","healthRollup":"OK"}}]}],
+				"managers":[{"id":"iDRAC.Embedded.1","uuid":"manager-uuid","model":"iDRAC","managerType":"bmc","firmwareVersion":"7.10.00.00","status":{"state":"Enabled","health":"OK","healthRollup":"OK"}}],
+				"chassis":[{"id":"System.Embedded.1","chassisType":"rack_mount","manufacturer":"Dell","model":"XE9680","sku":"sku-1","serialNumber":"serial-1","partNumber":"part-1","assetTag":"asset-1","powerState":"on","status":{"state":"Enabled","health":"OK","healthRollup":"Warning"},"pcieDevices":[{"id":"GPU.Slot.1","uuid":"gpu-uuid","deviceType":"single_function","manufacturer":"NVIDIA","model":"NVIDIA H100","sku":"gpu-sku","serialNumber":"gpu-serial","partNumber":"gpu-part","firmwareVersion":"96.00.00","status":{"state":"Enabled","health":"OK","healthRollup":"OK"}}]}],
+				"firmware":[{"id":"BIOS","name":"System BIOS","serviceId":"fw-service","version":"1.2.3","releaseDate":"2026-01-01","status":{"state":"Enabled","health":"OK","healthRollup":"Warning"}}],
 				"domainErrors":[{"domain":"storage","resource":"Disk.1","message":"collection failed"}]
 			}
 		}`))
@@ -675,7 +675,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--agent-type", "oob"})
+	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--data-source", "oob"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -684,7 +684,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"FIELD", "VALUE",
-		"BMC HOSTNAME", "bmc-001",
+		"BMC MAC", "bmc-001",
 		"INVENTORY SCHEMA VERSION", "inventory.v1alpha1",
 		"NODE KIND", "nvswitch",
 		"SOURCE ADDRESS", "192.0.2.10:443", "SOURCE MAC", "00:11:22:33:44:55", "SOURCE VENDOR", "Dell",
@@ -695,7 +695,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 		}
 	}
 	for _, unwanted := range []string{
-		"\nHOSTNAME ", "\nAGENT TYPE ", "\nGPU TYPE ", "\nGPU COUNT ",
+		"\nHOSTNAME ", "\nAGENT TYPE ",
 		"\nFIRMWARE CHECK ", "\nPUBLIC IP ", "\nPRIVATE IP ",
 		"nested status condition", "ResourceEvent.1.0.ResourceErrorsDetected",
 	} {
@@ -713,7 +713,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"node", "describe", "node-oob-1", "--agent-type", "oob",
+		"node", "describe", "node-oob-1", "--data-source", "oob",
 		"--section", "systems,chassis",
 	})
 	if err := cmd.Execute(); err != nil {
@@ -740,7 +740,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 		}
 	}
 	for _, unwanted := range []string{
-		"FIELD", "INVENTORY SCHEMA VERSION", "SOURCE ADDRESS", "BMC HOSTNAME",
+		"FIELD", "INVENTORY SCHEMA VERSION", "SOURCE ADDRESS", "BMC MAC",
 	} {
 		if strings.Contains(got, unwanted) {
 			t.Fatalf("section output unexpectedly contains summary value %q: %q", unwanted, got)
@@ -751,7 +751,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{
-		"node", "describe", "node-oob-1", "--agent-type", "oob", "--section", "all",
+		"node", "describe", "node-oob-1", "--data-source", "oob", "--section", "all",
 	})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("all sections command failed: %v", err)
@@ -778,7 +778,7 @@ func TestNodeDescribeOOBTable(t *testing.T) {
 	out.Reset()
 	cmd = newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--agent-type", "oob", "--output", "json"})
+	cmd.SetArgs([]string{"node", "describe", "node-oob-1", "--data-source", "oob", "--output", "json"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("JSON command failed: %v", err)
 	}
@@ -804,13 +804,13 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 	}{
 		{
 			name: "unknown section",
-			args: []string{"node", "describe", "node-1", "--agent-type", "oob", "--section", "storage"},
+			args: []string{"node", "describe", "node-1", "--data-source", "oob", "--section", "storage"},
 			want: "invalid OOB inventory section",
 		},
 		{
 			name: "all with another section",
 			args: []string{
-				"node", "describe", "node-1", "--agent-type", "oob",
+				"node", "describe", "node-1", "--data-source", "oob",
 				"--section", "all,systems",
 			},
 			want: "section all cannot be combined with other sections",
@@ -818,7 +818,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 		{
 			name: "inband section",
 			args: []string{
-				"node", "describe", "node-1", "--agent-type", "inband",
+				"node", "describe", "node-1", "--data-source", "inband",
 				"--section", "systems",
 			},
 			want: "--section requires the OOB view",
@@ -826,7 +826,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 		{
 			name: "json section",
 			args: []string{
-				"node", "describe", "node-1", "--agent-type", "oob",
+				"node", "describe", "node-1", "--data-source", "oob",
 				"--section", "systems", "--output", "json",
 			},
 			want: "--section cannot be used with --output json",
@@ -854,7 +854,7 @@ func TestNodeDescribeRejectsInvalidSectionFlags(t *testing.T) {
 func TestWriteNodeBasicTable(t *testing.T) {
 	var out bytes.Buffer
 	err := writeNodeTable(&out, string(nvfleetint.NodeViewBasic), "", []nvfleetint.Node{
-		{UUID: "node-1", Hostname: "gpu-001", NodeName: "machine-001", BMCHostname: "bmc-001", BMCIP: "192.0.2.10:443"},
+		{UUID: "node-1", Hostname: "gpu-001", NodeName: "machine-001", BMCMAC: "bmc-001", BMCIP: "192.0.2.10:443"},
 	})
 	if err != nil {
 		t.Fatalf("write table failed: %v", err)
@@ -862,7 +862,7 @@ func TestWriteNodeBasicTable(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP",
+		"UUID", "HOSTNAME", "NODE NAME", "BMC MAC", "BMC IP",
 		"node-1", "gpu-001", "machine-001", "bmc-001", "192.0.2.10:443",
 	} {
 		if !strings.Contains(got, want) {
@@ -873,15 +873,15 @@ func TestWriteNodeBasicTable(t *testing.T) {
 
 func TestOOBDetailNodeRowsOmitInbandHostname(t *testing.T) {
 	rows := oobDetailNodeRows([]nvfleetint.Node{{
-		UUID:        "node-1",
-		Hostname:    "inband-hostname",
-		NodeName:    "machine-001",
-		NodeKind:    nvfleetint.NodeKindNVSwitch,
-		BMCHostname: "bmc-001",
-		BMCIP:       "192.0.2.10:443",
+		UUID:     "node-1",
+		Hostname: "inband-hostname",
+		NodeName: "machine-001",
+		NodeKind: nvfleetint.NodeKindNVSwitch,
+		BMCMAC:   "bmc-001",
+		BMCIP:    "192.0.2.10:443",
 	}})
 
-	if len(rows) != 1 || len(rows[0]) != 10 {
+	if len(rows) != 1 || len(rows[0]) != 12 {
 		t.Fatalf("unexpected OOB row shape: %#v", rows)
 	}
 	if slices.Contains(rows[0], "inband-hostname") {
@@ -898,7 +898,7 @@ func TestOOBNodeDescribeRowsOmitInbandFields(t *testing.T) {
 			UUID:          "node-1",
 			Hostname:      "inband-hostname",
 			NodeName:      "machine-001",
-			AgentType:     "oob",
+			DataSource:    "oob",
 			GPUType:       "NVIDIA H100",
 			FirmwareCheck: "Passed",
 			PublicIP:      "192.0.2.20",
@@ -911,7 +911,7 @@ func TestOOBNodeDescribeRowsOmitInbandFields(t *testing.T) {
 		labels = append(labels, row[0])
 	}
 	for _, unwanted := range []string{
-		"HOSTNAME", "AGENT TYPE", "GPU TYPE", "GPU COUNT",
+		"HOSTNAME", "AGENT TYPE",
 		"FIRMWARE CHECK", "PUBLIC IP", "PRIVATE IP",
 	} {
 		if slices.Contains(labels, unwanted) {
@@ -940,9 +940,9 @@ func TestNodeListRejectsInvalidFlags(t *testing.T) {
 		{name: "order", args: []string{"node", "list", "--order", "up"}, want: "invalid order"},
 		{name: "basic filter", args: []string{"node", "list", "--view", "basic", "--health", "Healthy"}, want: "basic node view is incompatible"},
 		{name: "basic sort", args: []string{"node", "list", "--view", "basic", "--sort-by", "healthStatus"}, want: "basic node view supports sorting only by"},
-		{name: "filter without agent-type", args: []string{"node", "list", "--hostname", "gpu"}, want: "--agent-type is required when using --hostname"},
-		{name: "sort-by without agent-type", args: []string{"node", "list", "--sort-by", "hostname"}, want: "--agent-type is required when using --sort-by"},
-		{name: "order without agent-type", args: []string{"node", "list", "--order", "asc"}, want: "--agent-type is required when using --order"},
+		{name: "filter without data-source", args: []string{"node", "list", "--hostname", "gpu"}, want: "--data-source is required when using --hostname"},
+		{name: "sort-by without data-source", args: []string{"node", "list", "--sort-by", "hostname"}, want: "--data-source is required when using --sort-by"},
+		{name: "order without data-source", args: []string{"node", "list", "--order", "asc"}, want: "--data-source is required when using --order"},
 	}
 
 	for _, tt := range tests {
@@ -988,12 +988,12 @@ func TestNodeOptionsOutput(t *testing.T) {
 		`{"name":"brandNewFilter","options":["surprise"]}` +
 		`]},"sorting":{"fields":["hostname","nodeGroup","computeZone","verificationCheck","integrityCheck"],"orders":["asc","desc"],"defaults":{"field":"integrityCheck","order":"asc"}}}`
 
-	var agentTypes []string
+	var dataSources []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes/options" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		agentTypes = append(agentTypes, r.URL.Query().Get("agentType"))
+		dataSources = append(dataSources, r.URL.Query().Get("dataSource"))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
 	}))
@@ -1004,7 +1004,7 @@ func TestNodeOptionsOutput(t *testing.T) {
 	var tableOut bytes.Buffer
 	tableCmd := newRootCmd()
 	tableCmd.SetOut(&tableOut)
-	tableCmd.SetArgs([]string{"node", "options", "--agent-type", "oob"})
+	tableCmd.SetArgs([]string{"node", "options", "--data-source", "oob"})
 	if err := tableCmd.Execute(); err != nil {
 		t.Fatalf("node options command failed: %v", err)
 	}
@@ -1046,20 +1046,20 @@ func TestNodeOptionsOutput(t *testing.T) {
 	var jsonOut bytes.Buffer
 	jsonCmd := newRootCmd()
 	jsonCmd.SetOut(&jsonOut)
-	jsonCmd.SetArgs([]string{"node", "options", "--output", "json"})
+	jsonCmd.SetArgs([]string{"node", "options", "--data-source", "inband", "--output", "json"})
 	if err := jsonCmd.Execute(); err != nil {
 		t.Fatalf("node options JSON command failed: %v", err)
 	}
 	if strings.TrimSpace(jsonOut.String()) != body {
 		t.Fatalf("JSON output is not the raw payload:\n%s", jsonOut.String())
 	}
-	if len(agentTypes) != 2 || agentTypes[0] != "oob" || agentTypes[1] != "" {
-		t.Fatalf("unexpected agentType values: %#v", agentTypes)
+	if len(dataSources) != 2 || dataSources[0] != "oob" || dataSources[1] != "inband" {
+		t.Fatalf("unexpected dataSource values: %#v", dataSources)
 	}
 }
 
-// Verifies an unsupported agent type is rejected before any request.
-func TestNodeOptionsRejectsAgentType(t *testing.T) {
+// Verifies an unsupported data source is rejected before any request.
+func TestNodeOptionsRejectsDataSource(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	var requests int
@@ -1071,9 +1071,9 @@ func TestNodeOptionsRejectsAgentType(t *testing.T) {
 	cmdtest.SaveConfig(t, server.URL, "test-key")
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"node", "options", "--agent-type", "bmc"})
+	cmd.SetArgs([]string{"node", "options", "--data-source", "bmc"})
 	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "invalid agent-type") {
+	if err == nil || !strings.Contains(err.Error(), "invalid data-source") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if requests != 0 {
@@ -1104,7 +1104,7 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"node", "options"})
+	cmd.SetArgs([]string{"node", "options", "--data-source", "inband"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("node options command failed: %v", err)
 	}
@@ -1131,5 +1131,223 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	}
 	if !strings.Contains(computeZones, "Values nested under these are listed under --nodegroup-ids.") {
 		t.Fatalf("--compute-zone-ids section does not point at --nodegroup-ids:\n%s", computeZones)
+	}
+}
+
+func TestNodeDescribeCompleteOOBInventory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("dataSource") != "oob" {
+			t.Errorf("unexpected source: %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(completeOOBNodeJSON))
+	}))
+	defer server.Close()
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+	for _, tc := range []struct {
+		name, section string
+		want, absent  []string
+	}{
+		{"summary", "", []string{"INVENTORY MEMORY MODULES", "INVENTORY STORAGE", "INVENTORY DRIVES", "INVENTORY POWER SUPPLIES", "INVENTORY FABRICS", "INVENTORY SWITCHES"}, []string{"\nSystems\n", "\nFabrics\n"}},
+		{"systems", "systems", []string{"\nMemory Modules\n", "DIMM A1", "65536", "\nStorage\n", "\nDrives\n", "drive-1", "4000000000000", "CPU COUNT", "Grace", "Critical"}, []string{"\nPower Supplies\n", "\nFabrics\n"}},
+		{"chassis", "chassis", []string{"\nPower Supplies\n", "psu-1", "2400"}, []string{"\nSystems\n", "\nFabrics\n"}},
+		{"fabrics", "fabrics", []string{"\nFabrics\n", "\nSwitches\n", "fabric-1", "switch-1", "NVSwitch", "Warning"}, []string{"\nSystems\n", "\nChassis\n"}},
+		{"all", "all", []string{"\nSystems\n", "\nMemory Modules\n", "\nDrives\n", "\nPower Supplies\n", "\nFabrics\n", "\nSwitches\n", "\nFirmware\n", "INVENTORY SWITCHES"}, []string{"PRIMARY"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			args := []string{"node", "describe", "node-1", "--data-source", "oob"}
+			if tc.section != "" {
+				args = append(args, "--section", tc.section)
+			}
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(out.String(), want) {
+					t.Errorf("missing %q in %s", want, &out)
+				}
+			}
+			for _, absent := range append(tc.absent, "  LOCATION", "GPU slot 1", "memory slot 1", "compute tray", "rack R01 U0", "rack R02 U10") {
+				if strings.Contains(out.String(), absent) {
+					t.Errorf("unexpected %q in %s", absent, &out)
+				}
+			}
+		})
+	}
+	var out bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"node", "describe", "node-1", "--data-source", "oob", "--output", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var got, want any
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(completeOOBNodeJSON), &want); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatal("raw JSON changed, including unknown fields or references")
+	}
+}
+
+// Absent nested fields stay empty; explicit zero values remain visible.
+func TestOOBTablesHandleAbsentAndZeroNestedFields(t *testing.T) {
+	var inventory nvfleetint.OOBInventory
+	if err := json.Unmarshal([]byte(`{"systems":[{"id":"system-1"}]}`), &inventory); err != nil {
+		t.Fatal(err)
+	}
+	row := oobSystemRows(&inventory)[0]
+	for _, column := range []int{10, 11, 12, 13, 15, 16, 17} {
+		if row[column] != "" {
+			t.Fatalf("absent nested column %d = %q", column, row[column])
+		}
+	}
+	zeroMemory, zeroCount := float32(0), 0
+	inventory.Systems[0].Status = &nvfleetint.OOBInventoryStatus{Health: "OK"}
+	inventory.Systems[0].MemorySummary = &nvfleetint.OOBMemorySummary{TotalSystemMemoryGiB: &zeroMemory}
+	inventory.Systems[0].ProcessorSummary = &nvfleetint.OOBProcessorSummary{Count: &zeroCount}
+	row = oobSystemRows(&inventory)[0]
+	if row[11] != "OK" || row[13] != "0" || row[15] != "0" || row[10] != "" || row[12] != "" || row[16] != "" || row[17] != "" {
+		t.Fatalf("partial canonical values rendered incorrectly: %v", row)
+	}
+}
+
+func TestOOBInventorySummaryCounts(t *testing.T) {
+	inventory := nvfleetint.OOBInventory{
+		Systems: []nvfleetint.OOBSystem{
+			{Memory: make([]nvfleetint.OOBMemory, 2), Storage: []nvfleetint.OOBStorage{{Drives: make([]nvfleetint.OOBDrive, 2)}, {}}},
+			{Memory: make([]nvfleetint.OOBMemory, 3), Storage: []nvfleetint.OOBStorage{{Drives: make([]nvfleetint.OOBDrive, 4)}}},
+		},
+		Chassis: []nvfleetint.OOBChassis{{PowerSupplies: make([]nvfleetint.OOBPowerSupply, 2)}, {PowerSupplies: make([]nvfleetint.OOBPowerSupply, 1)}},
+		Fabrics: []nvfleetint.OOBFabric{{Switches: make([]nvfleetint.OOBSwitch, 2)}, {Switches: make([]nvfleetint.OOBSwitch, 4)}},
+	}
+	got := map[string]string{}
+	for _, row := range oobInventorySummaryRows(&inventory) {
+		got[row[0]] = row[1]
+	}
+	for name, want := range map[string]string{"MEMORY MODULES": "5", "STORAGE": "3", "DRIVES": "6", "POWER SUPPLIES": "3", "FABRICS": "2", "SWITCHES": "6"} {
+		if got["INVENTORY "+name] != want {
+			t.Errorf("%s count = %s, want %s", name, got["INVENTORY "+name], want)
+		}
+	}
+}
+
+func TestOOBEmptyFabricSection(t *testing.T) {
+	options, err := parseOOBInventorySections(nodeDescribeFlags{sections: "fabrics"}, nvfleetint.DataSourceOOB, "table")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := writeOOBInventoryTables(&out, &nvfleetint.OOBInventory{}, options); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "Fabrics") || strings.Contains(out.String(), "\nSwitches\n") {
+		t.Fatalf("unexpected empty section: %s", &out)
+	}
+	for _, tc := range []struct {
+		source nvfleetint.DataSource
+		output string
+	}{{nvfleetint.DataSourceInband, "table"}, {nvfleetint.DataSourceOOB, "json"}} {
+		if _, err := parseOOBInventorySections(nodeDescribeFlags{sections: "fabrics"}, tc.source, tc.output); err == nil {
+			t.Fatal("fabric section accepted invalid source/output combination")
+		}
+	}
+}
+
+func TestNodeUUIDFilterFlagsAndPagination(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		q := r.URL.Query()
+		if !slices.Equal(q["agentUUIDs"], []string{"agent-A", "agent-B"}) || !slices.Equal(q["systemUUIDs"], []string{"system-A", "system-B"}) {
+			t.Errorf("UUID filters lost: %s", r.URL)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if q.Get("page") == "0" {
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","agentUUID":"agent-A"}],"page":0,"pageSize":1,"hasMore":true,"total":2}`))
+		} else {
+			_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-2","agentUUID":"agent-B"}],"page":1,"pageSize":1,"hasMore":false,"total":2}`))
+		}
+	}))
+	defer server.Close()
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+	for _, scope := range [][]string{{"--view", "basic"}, {"--data-source", "inband"}} {
+		var out bytes.Buffer
+		cmd := newRootCmd()
+		cmd.SetOut(&out)
+		args := []string{"node", "list", "--agent-uuids", "agent-A,agent-B", "--system-uuids", "system-A,system-B", "--all", "--page-size", "1", "--output", "json"}
+		cmd.SetArgs(append(args, scope...))
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(out.String(), `"agentUUID":"agent-A"`) || !strings.Contains(out.String(), `"agentUUID":"agent-B"`) {
+			t.Fatalf("missing agent identities: %s", &out)
+		}
+	}
+	if requests != 4 {
+		t.Fatalf("wanted two pages per query, got %d requests", requests)
+	}
+}
+
+func TestNodeUUIDFilterValidationBeforeAuth(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	for _, args := range [][]string{
+		{"--data-source", "oob", "--agent-uuids", "agent-A"},
+		{"--view", "basic", "--data-source", "oob", "--agent-uuids", "agent-A"},
+		{"--agent-uuids", "agent-A"}, {"--system-uuids", "system-A"},
+	} {
+		cmd := newRootCmd()
+		cmd.SetArgs(append([]string{"node", "list"}, args...))
+		err := cmd.Execute()
+		if err == nil || (!strings.Contains(err.Error(), "agent-uuids") && !strings.Contains(err.Error(), "system-uuids")) {
+			t.Fatalf("unexpected validation: %v", err)
+		}
+	}
+}
+
+func TestNodeVerificationPolicyStatusFilters(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	statuses := []string{"Full Attestation", "Partial Attestation", "Verification Failed"}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !slices.Equal(r.URL.Query()["verificationChecks"], statuses) {
+			t.Errorf("incorrect verification filters: %s", r.URL)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"nodes":[{"nodeUUID":"node-1","verificationCheck":"Full Attestation"}],"total":1}`))
+	}))
+	defer server.Close()
+	cmdtest.SaveConfig(t, server.URL, "test-key")
+	for _, source := range []string{"inband", "oob"} {
+		var out bytes.Buffer
+		cmd := newRootCmd()
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{"node", "list", "--data-source", source, "--verification-check", strings.Join(statuses, ",")})
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(out.String(), "Full Attestation") {
+			t.Fatalf("missing status: %s", &out)
+		}
+	}
+	var help bytes.Buffer
+	cmd := newRootCmd()
+	cmd.SetOut(&help)
+	cmd.SetArgs([]string{"node", "list", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range statuses {
+		if !strings.Contains(help.String(), status) {
+			t.Fatalf("missing help status %s", status)
+		}
 	}
 }

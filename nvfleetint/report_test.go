@@ -482,6 +482,7 @@ func TestGetErrorReportRejectsInvalidOptions(t *testing.T) {
 		{name: "zero window", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeRelative, Window: "0s"}, want: "invalid window"},
 		{name: "malformed start", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "not-a-date", EndTime: "2026-05-02T00:00:00Z"}, want: "start time must be RFC3339"},
 		{name: "malformed end", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, TimeMode: ErrorReportTimeModeAbsolute, StartTime: "2026-05-01T00:00:00Z", EndTime: "not-a-date"}, want: "end time must be RFC3339"},
+		{name: "info excluded", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Severities: []ErrorSeverity{"Info"}}, want: "invalid error report severity"},
 		{name: "bad severity", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Severities: []ErrorSeverity{"Broken"}}, want: "invalid error report severity"},
 		{name: "step with list", opts: ErrorReportOptions{View: ErrorReportViewList, GroupBy: ErrorReportGroupByError, Step: "5m"}, want: "step is only supported for graph view"},
 		{name: "short step", opts: ErrorReportOptions{View: ErrorReportViewGraph, Step: "30s"}, want: "expected at least 1m"},
@@ -498,5 +499,124 @@ func TestGetErrorReportRejectsInvalidOptions(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+// OOB GPU fields are optional: absent/null counts must not become measured zero.
+func TestGetOOBInventoryReportGPUFields(t *testing.T) {
+	const body = `{"nodes":[
+  {"nodeUUID":"gpu","gpuType":"NVIDIA-H100-80GB-HBM3","gpuCount":8},
+  {"nodeUUID":"zero","gpuCount":0},
+  {"nodeUUID":"missing"},
+  {"nodeUUID":"null","gpuType":null,"gpuCount":null}
+ ],"page":0,"pageSize":10,"total":4,"hasMore":false}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("dataSource") != "oob" {
+			t.Errorf("unexpected source: %s", r.URL)
+		}
+		sortBy := r.URL.Query().Get("sortBy")
+		if sortBy != "gpuType" && sortBy != "gpuCount" {
+			t.Errorf("missing GPU sort: %s", r.URL)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL, "test-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sortBy := range []InventoryReportSortBy{InventoryReportSortByGPUType, InventoryReportSortByGPUCount} {
+		report, err := client.GetInventoryReport(context.Background(), InventoryReportOptions{DataSource: DataSourceOOB, SortBy: sortBy})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(report.Nodes) != 4 {
+			t.Fatalf("unexpected nodes: %#v", report.Nodes)
+		}
+		gpu := report.Nodes[0]
+		if gpu.GPUType != "NVIDIA-H100-80GB-HBM3" || gpu.GPUCount == nil || *gpu.GPUCount != 8 {
+			t.Fatalf("lost GPU fields: %#v", gpu)
+		}
+		if count := report.Nodes[1].GPUCount; count == nil || *count != 0 {
+			t.Fatalf("lost reported zero: %v", count)
+		}
+		for _, node := range report.Nodes[2:] {
+			if node.GPUType != "" || node.GPUCount != nil {
+				t.Fatalf("invented missing GPU fields: %#v", node)
+			}
+		}
+		if string(report.RawJSON) != body {
+			t.Fatalf("raw JSON changed: %s", report.RawJSON)
+		}
+	}
+}
+
+func TestInventoryIdentityAndVersionFields(t *testing.T) {
+	body := []byte(`{"nodes":[{"nodeUUID":"node-1","agentUUID":"agent-1","systemUUID":"system-1","gpuUUIDs":["gpu-1","gpu-2"],"agentVersion":"1.2.3","kernelVersion":"6.8","gpuDriverVersion":"570.1","gpuFirmwareVersions":[{"gpuIndex":"0","firmwareVersion":"96.1"}]}]}`)
+	report, err := decodeInventoryReport(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node := report.Nodes[0]
+	if node.AgentUUID != "agent-1" || node.SystemUUID != "system-1" || !slices.Equal(node.GPUUUIDs, []string{"gpu-1", "gpu-2"}) || node.AgentVersion != "1.2.3" || node.KernelVersion != "6.8" || node.GPUDriverVersion != "570.1" || len(node.GPUFirmwareVersions) != 1 || node.GPUFirmwareVersions[0].FirmwareVersion != "96.1" {
+		t.Fatalf("missing inventory fields: %#v", node)
+	}
+	if !bytes.Equal(report.RawJSON, body) {
+		t.Fatal("raw inventory JSON changed")
+	}
+	oob, err := decodeOOBInventoryReport([]byte(`{"nodes":[{"nodeUUID":"node-oob","collectorVersion":"2.3.4"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if oob.Nodes[0].CollectorVersion != "2.3.4" || oob.Nodes[0].AgentUUID != "" || oob.Nodes[0].SystemUUID != "" {
+		t.Fatalf("incorrect OOB identities: %#v", oob.Nodes)
+	}
+	absent, err := decodeInventoryReport([]byte(`{"nodes":[{"nodeUUID":"node-1"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if absent.Nodes[0].AgentUUID != "" || absent.Nodes[0].SystemUUID != "" || absent.Nodes[0].GPUUUIDs != nil {
+		t.Fatal("absent identities acquired values")
+	}
+}
+
+func TestInventoryVerificationDetails(t *testing.T) {
+	body := []byte(`{"nodes":[{"nodeUUID":"node-1","verificationCheck":"Partial Attestation","verificationCheckExtraInfo":{"policy":{"approved":true,"tier":2,"policyVersion":"v1","gpus":{"gpu-1":{"approved":true,"tier":2}}}}}]}`)
+	for _, decode := range []func([]byte) (InventoryReport, error){decodeInventoryReport, decodeOOBInventoryReport} {
+		report, err := decode(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		info := report.Nodes[0].VerificationCheckExtraInfo
+		if info == nil || info.Policy == nil || info.Policy.Tier == nil || *info.Policy.Tier != VerificationPolicyTierPartialAttestation || info.Policy.Approved == nil || !*info.Policy.Approved || len(info.Policy.GPUs) != 1 || info.EAR != nil {
+			t.Fatalf("missing inventory policy: %#v", info)
+		}
+		if !bytes.Equal(body, report.RawJSON) {
+			t.Fatal("inventory JSON changed")
+		}
+	}
+}
+
+func TestErrorReportSeverities(t *testing.T) {
+	for _, tc := range []struct {
+		raw  string
+		want []ErrorSeverity
+	}{
+		{`"severities":["Fatal","Critical","Warning"],`, []ErrorSeverity{ErrorSeverityFatal, ErrorSeverityCritical, ErrorSeverityWarning}},
+		{`"severities":["Warning"],`, []ErrorSeverity{ErrorSeverityWarning}},
+		{`"severities":[],`, []ErrorSeverity{}}, {"", nil},
+	} {
+		body := []byte(`{"errors":[{` + tc.raw + `"name":"XID 79","count":3}]}`)
+		report, err := decodeErrorReport(body, ErrorReportViewList, ErrorReportGroupByError)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(report.Errors) != 1 || !slices.Equal(report.Errors[0].Severities, tc.want) {
+			t.Fatalf("incorrect severities: %#v", report.Errors)
+		}
+		if !bytes.Equal(body, report.RawJSON) {
+			t.Fatal("error report JSON changed")
+		}
 	}
 }

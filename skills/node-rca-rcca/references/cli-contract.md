@@ -19,11 +19,27 @@ Read this before querying live data.
 
 ## Pagination
 
-- Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `node options`, `nodegroup options`, `xidburst options`, `event buckets`, `tag list`, and `report error --view overview|graph`.
-- Single pages use backend arrays (`nodes`, `nodeGroups`, `computezones`, `alerts`, `events`) plus top-level `total`, `page`, and `pageSize`. Most use `hasMore`; `alert list` uses nonempty `pageCursorNext` instead. `alert summary` uses `nodes`, `alert node` uses `alerts`, and report-error list uses `nodes`. Detailed `node list` without `--agent-type` wraps independent pages as `{inband: ..., oob: ...}`.
-- `--all` normalizes every paginated list to `{items, pagination:{total,hasMore,pagesFetched}}`; detailed `node list` without `--agent-type` wraps one normalized result under each of `inband` and `oob`. Non-paginated commands keep their native shape, except default `node describe` similarly wraps its available agent views.
+- Lists accept `--page`, `--page-size` (1–100), and `--all`. Non-paginated: `overview`, `node describe`, `node health`, `alert options`, `alert describe`, `node options`, `nodegroup options`, `xidburst options`, `event options`, `event buckets`, `tag list`, and `report error --view overview|graph`.
+- Single pages use backend arrays (`nodes`, `nodeGroups`, `computezones`, `alerts`, `events`) plus top-level `total`, `page`, and `pageSize`. Most use `hasMore`; `alert list` uses nonempty `pageCursorNext` instead. `alert summary` uses `nodes`, `alert node` uses `alerts`, and report-error list uses `nodes`.
+- `--all` normalizes every paginated list to `{items, pagination:{total,hasMore,pagesFetched}}`. Non-paginated commands keep their native shape, except default `node describe` wraps its available source views as `{inband: ..., oob: ...}`.
 - Count cheaply with the same filters plus `--page-size 1`, reading `.total`. For `alert summary`, `.total` is nodes with matching alerts; use `totalCritical` and `totalWarning` for alert aggregates. `tag list` is the exception: count its non-paginated `tags`.
-- `--view basic` returns identities only: node returns UUID with available hostname and BMC identity; compute zone and node group return `id`/`name`. Node basic rejects `--health`, `--agent-status`, `--verification-check`, and `--firmware-check`, and sorts only by hostname, nodeUUID, or bmcHostname. Compute-zone basic rejects `--include-metrics`. Node-group basic rejects `--include-metrics`, compute-zone name filters, health, gpu-type, and sorting.
+- `--view basic` returns identities only: node returns UUID with available hostname and BMC identity; compute zone and node group return `id`/`name`. Node basic rejects `--health`, `--agent-status`, `--verification-check`, and `--firmware-check`, and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting, plus GPU type/count filters. Compute-zone basic rejects `--include-metrics`. Node-group basic rejects `--include-metrics`, compute-zone name filters, health, gpu-type, and sorting.
+
+## Data sources
+
+- `--data-source` uses `inband`/`oob`: for nodes and inventory it selects the source view; for `alert summary`, `alert node`, `event list`, and `event buckets` it filters the record's producer, independently of current agent status. The latter accept comma-separated sources and default to both in one response. `alert list` has no source filter.
+- Node basic list/options combine both sources when omitted, including JSON. Detail list/options and inventory tables fetch both sources separately; pagination and `--all` apply per source. Their detail JSON requires one explicit source and has no source wrapper; inventory CSV/signed downloads also require one. Inventory source-specific sorts (`hostname`, `publicIP`, `privateIP`, `nodeName`, `bmcMac`, `bmcIP`) require an explicit source; shared sorts apply to both.
+- Node describe defaults to both source views; an explicit source selects one.
+
+- XID burst list/options default to `inband` and accept `oob` or `all`; use the same source for both. Combined results retain separate observations of a fault from each path. Describe resolves the source from the burst ID.
+- `report error` selects one source (`inband` by default, or `oob`) for every view and format; OOB node rows use `nodeName` and `bmcMac`.
+
+## Interpretation
+
+- Alert-summary agent-status filters describe current enrollment/liveness even in historical view: OR within a flag, AND across flags, omitted means unrestricted. Missing status data is not `not_enrolled`.
+- Event and XID burst identity, membership, and GPU type describe current inventory, not inventory at observation time. `event options` is a catalog, not evidence of matching events; `Others` matches names outside that catalog.
+
+XID device-map keys are opaque labels; OOB keys may be GPU UUIDs or unresolved Redfish tokens.
 
 ## JSON names
 
@@ -31,7 +47,7 @@ Use backend names: `healthStatus`, `verificationCheck`, `verificationCheckReason
 
 ## Completeness
 
-Before analysis require exit 0, nonempty valid JSON, and no top-level `error`/`api_error`. For every `--all` response require an `items` array, `hasMore == false`, `pagesFetched >= 1`, and—when `total > 0`—item count equal to total. For a default detailed node list, apply those checks independently to `.inband` and `.oob`. A missing or null total is unreported; a nonempty result with explicit `total: 0` is malformed. Empty with `hasMore: false` is valid.
+Before analysis require exit 0, nonempty valid JSON, and no top-level `error`/`api_error`. For every `--all` response require an `items` array, `hasMore == false`, `pagesFetched >= 1`, and—when `total > 0`—item count equal to total. A missing or null total is unreported; a nonempty result with explicit `total: 0` is malformed. Empty with `hasMore: false` is valid.
 
 Filtered pulls may be composed only when each is complete and the disjoint filters cover the domain. Record each reported total or validated item count, then union. Never analyze partial pages. On malformed/incomplete data, use only the report workflow's allowed fallback or stop.
 

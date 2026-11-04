@@ -47,27 +47,36 @@ nvfleetint nodegroup list --gpu-type H100 --sort-by health --order desc --output
 ### Nodes
 
 ```bash
-nvfleetint node list --agent-type inband --health Degraded,Unhealthy --output json
-nvfleetint node list --agent-type inband --agent-status Offline --output json
-nvfleetint node list --agent-type inband --hostname gpu-node-7 --view basic --output json
-nvfleetint node list --agent-type inband --compute-zone-names ord --output json
-nvfleetint node list --agent-type inband --nodegroup-names training --output json
-nvfleetint node list --agent-type oob --bmc-hostname bmc-01 --output json
+nvfleetint node list --data-source inband --health Degraded,Unhealthy --output json
+nvfleetint node list --data-source inband --agent-status Offline --output json
+nvfleetint node list --data-source inband --hostname gpu-node-7 --view basic --output json
+nvfleetint node list --data-source inband --compute-zone-names ord --output json
+nvfleetint node list --data-source inband --nodegroup-names training --output json
+nvfleetint node list --data-source oob --bmc-mac 02:00:0a:00:00:0a --output json
 nvfleetint node describe <node-uuid> --output json
-nvfleetint node describe <node-uuid> --agent-type oob --output json
+nvfleetint node describe <node-uuid> --data-source oob --output json
 nvfleetint node health <node-uuid> --start <rfc3339> --end <rfc3339> --output json
 ```
 
 Ask users for human-readable zone/group names, never IDs. Name filters are comma-separated partial matches. For exact scope, resolve with `computezone list --view basic` or `nodegroup list --view basic`, clarify ambiguous names with recognizable detail metadata, then use IDs internally. Accept an ID already supplied by the user.
 
-Detailed node list and describe query both agent views by default and return
-`{inband: ..., oob: ...}` in JSON. Use `--agent-type inband|oob` when only one
-view is needed; `node list` requires `--agent-type` whenever any filter or
+Detailed node list and describe tables query both sources by default. Detail
+`node list --output json` requires `--data-source inband|oob`, including with
+`--all`, and returns one source without a wrapper. Default node describe JSON
+returns `{inband: ..., oob: ...}`; select a source for one view.
+Detail `node list` also requires `--data-source` whenever any filter or
 `--sort-by`/`--order` flag is set, since in-band and OOB nodes carry different
-fields. OOB list supports `--bmc-hostname`; OOB describe includes full
+fields. OOB list supports `--bmc-mac`; OOB describe includes full
 inventory JSON and supports table sections `managers`, `systems`, `chassis`,
-and `firmware`. Node basic rejects health, agent, verification, and firmware
-filters and supports sorting by `hostname`, `nodeUUID`, or `bmcHostname`.
+`firmware`, and `fabrics` (including switches). Node basic rejects health, agent, verification, and firmware
+filters and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting.
+`node options` shows separate in-band/OOB detail tables by default. Detail
+JSON requires `--data-source` and returns a single response.
+`node options --view basic` discovers combined basic-view filters and sorts;
+basic list and options JSON allow source omission.
+`report inventory` tables show both sources by default, with independent
+pagination and `--all` traversal. JSON, CSV, and signed downloads require
+`--data-source inband|oob`; an explicit source selects one report.
 `node health` requires both absolute boundaries. It does not support `--window`.
 
 Filter values:
@@ -75,11 +84,11 @@ Filter values:
 | Flag | Values |
 | --- | --- |
 | `--health` | Healthy, Degraded, Unhealthy, Unknown |
-| `--agent-status` | Online, Offline, Unknown |
-| `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
+| `--agent-status` | Online, Offline |
+| `--verification-check` | Full Attestation, Partial Attestation, Verification Failed, Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
-Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcHostname`. Node-group sort keys are `health` and `nodes`.
+Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcMac`. Node-group sort keys are `health` and `nodes`.
 
 ### Alerts and events
 
@@ -88,15 +97,21 @@ nvfleetint alert list --severity Critical --output json
 nvfleetint alert list --node <node-uuid> --state Triggered --output json
 nvfleetint alert summary --output json
 nvfleetint alert summary --view historical --output json
+nvfleetint alert summary --data-source oob --oob-agent-status offline --output json
 nvfleetint alert node <node-uuid> --output json
 nvfleetint alert node <node-uuid> --view historical --output json
 nvfleetint alert describe <alert-uuid> --node <node-uuid> --output json
 nvfleetint alert options --output json
+nvfleetint event options --output json
 nvfleetint event list --window 24h --output json
 nvfleetint event buckets --window 168h --max-buckets 50 --output json
 ```
 
 Alert severity is Critical/Warning; state is Detected/Triggered/Resolved. `alert summary`, `alert node`, and `alert options` default to the active view; use `--view historical` for history. Summary returns impacted nodes plus fleet-wide alert aggregates. Node returns alerts for one node. Describe returns one alert's event history. In node-alert results, Critical/Warning values are active severity; Detected/Resolved are inactive audit values. Don't count every non-Resolved row as active.
+
+Use `alert options` to discover filter values before narrowing an investigation.
+See the [CLI contract](references/cli-contract.md) for alert source/status
+filter semantics and how to interpret missing status data.
 
 Events require `--window` or both `--start`/`--end`. Durations use Go units through hours—no `d`. Event list paginates; buckets do not.
 
@@ -105,8 +120,8 @@ Events require `--window` or both `--start`/`--end`. Durations use Go units thro
 ```bash
 nvfleetint tag list --prefix gpu --output json
 nvfleetint tag list --computezone <zone-id> --output json
-nvfleetint report inventory --compute-zone-ids <zone-id> --nodegroup-ids <group-id> --all --output json
-nvfleetint report inventory --format csv --signed --output-path ./reports/
+nvfleetint report inventory --data-source inband --compute-zone-ids <zone-id> --nodegroup-ids <group-id> --all --output json
+nvfleetint report inventory --data-source inband --format csv --signed --output-path ./reports/
 nvfleetint report error --view list --group-by error --window 168h --severities Critical,Fatal --output json
 nvfleetint report error --view graph --window 24h --step 5m --output json
 nvfleetint report verify --csv report.csv --bundle report.sig.bundle

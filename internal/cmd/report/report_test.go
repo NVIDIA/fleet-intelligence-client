@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -98,14 +99,14 @@ func TestReportInventoryTable(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--compute-zone-ids", "cz-1,cz-2", "--nodegroup-ids", "ng-1", "--tags", "prod,h100", "--start", "2026-05-01T00:00:00Z", "--end", "2026-05-02T00:00:00Z", "--sort-by", "hostname", "--order", "asc"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--compute-zone-ids", "cz-1,cz-2", "--nodegroup-ids", "ng-1", "--tags", "prod,h100", "--start", "2026-05-01T00:00:00Z", "--end", "2026-05-02T00:00:00Z", "--sort-by", "hostname", "--order", "asc"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
 	}
 
 	got := out.String()
-	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "node-1", "gpu-001", "NVIDIA-H100", "Page: 1"} {
+	for _, want := range []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "GPU TYPE", "GPU COUNT", "ATTESTATION", "FIRMWARE CHECK", "node-1", "gpu-001", "NVIDIA-H100", "Page: 1"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q: %q", want, got)
 		}
@@ -138,7 +139,7 @@ func TestReportInventoryCSV(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -158,7 +159,7 @@ func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 		t.Run(output, func(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetOut(&bytes.Buffer{})
-			cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--output", output})
+			cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--output", output})
 
 			err := cmd.Execute()
 			if err == nil {
@@ -202,6 +203,95 @@ func TestReportInventoryRejectsInvalidFlags(t *testing.T) {
 	}
 }
 
+// Verifies sort validation happens before fetching, and shared sorts reach both sources.
+func TestReportInventorySortSources(t *testing.T) {
+	sorts := []struct {
+		field  string
+		source string
+	}{
+		{field: "hostname", source: "inband"},
+		{field: "publicIP", source: "inband"},
+		{field: "privateIP", source: "inband"},
+		{field: "nodeName", source: "oob"},
+		{field: "bmcMac", source: "oob"},
+		{field: "bmcIP", source: "oob"},
+		{field: "nodeUUID"},
+		{field: "nodeGroup"},
+		{field: "computeZone"},
+		{field: "gpuType"},
+		{field: "gpuCount"},
+		{field: "verificationCheck"},
+		{field: "location"},
+		{field: ""},
+	}
+	for _, sort := range sorts {
+		for _, explicit := range []bool{false, true} {
+			if explicit && sort.source == "" {
+				continue
+			}
+			name := sort.field + "/both"
+			if explicit {
+				name = sort.field + "/" + sort.source
+			}
+			t.Run(name, func(t *testing.T) {
+				t.Setenv("HOME", t.TempDir())
+				requests := make(chan string, 2)
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					query := r.URL.Query()
+					requests <- query.Get("dataSource")
+					if got := query.Get("sortBy"); got != sort.field {
+						t.Errorf("sortBy = %q, want %q", got, sort.field)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"total":0}`))
+				}))
+				defer server.Close()
+				cmdtest.SaveConfig(t, server.URL, "test-key")
+				args := []string{"report", "inventory"}
+				if sort.field != "" {
+					args = append(args, "--sort-by", sort.field)
+				}
+				if explicit {
+					args = append(args, "--data-source", sort.source)
+				}
+				cmd := newRootCmd()
+				var out bytes.Buffer
+				cmd.SetOut(&out)
+				cmd.SetArgs(args)
+				err := cmd.Execute()
+				if sort.source != "" && !explicit {
+					want := "--data-source is required for --sort-by " + sort.field
+					if err == nil || !strings.Contains(err.Error(), want) {
+						t.Fatalf("error = %v, want %q", err, want)
+					}
+					if len(requests) != 0 {
+						t.Fatal("source-specific sort fetched before validation")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("command failed: %v", err)
+				}
+				wantSources := []string{"inband", "oob"}
+				if explicit {
+					wantSources = []string{sort.source}
+				}
+				if len(requests) != len(wantSources) {
+					t.Fatalf("request count = %d, want %d", len(requests), len(wantSources))
+				}
+				var gotSources []string
+				for range wantSources {
+					gotSources = append(gotSources, <-requests)
+				}
+				slices.Sort(gotSources)
+				if !slices.Equal(gotSources, wantSources) {
+					t.Errorf("data sources = %v, want %v", gotSources, wantSources)
+				}
+			})
+		}
+	}
+}
+
 // Verifies a signed inventory report is written to the current directory
 func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -233,7 +323,7 @@ func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -270,7 +360,7 @@ func TestReportInventorySignedJSONStatus(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output", "json"})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed", "--output", "json"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -305,7 +395,7 @@ func TestReportInventorySignedOutputPath(t *testing.T) {
 	var out bytes.Buffer
 	cmd := newRootCmd()
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output-path", target})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed", "--output-path", target})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -338,7 +428,7 @@ func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 
 	cmd := newRootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"report", "inventory", "--format", "csv", "--signed", "--output-path", dir})
+	cmd.SetArgs([]string{"report", "inventory", "--data-source", "inband", "--format", "csv", "--signed", "--output-path", dir})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("command failed: %v", err)
@@ -930,5 +1020,40 @@ func TestReportVerifyRequiresFlags(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestInventoryVersionColumns(t *testing.T) {
+	for _, source := range []nvfleetint.DataSource{nvfleetint.DataSourceInband, nvfleetint.DataSourceOOB} {
+		for _, empty := range []bool{false, true} {
+			var out bytes.Buffer
+			report := nvfleetint.InventoryReport{DataSource: source}
+			if !empty {
+				report.Nodes = []nvfleetint.InventoryNode{{NodeUUID: "node-1", AgentVersion: "agent-1.2.3", CollectorVersion: "collector-2.3.4"}}
+			}
+			if err := writeReportInventoryTableForSource(&out, report); err != nil {
+				t.Fatal(err)
+			}
+			header, value, absent := "AGENT VERSION", "agent-1.2.3", "COLLECTOR VERSION"
+			if source == nvfleetint.DataSourceOOB {
+				header, value, absent = "COLLECTOR VERSION", "collector-2.3.4", "AGENT VERSION"
+			}
+			if !strings.Contains(out.String(), header) || strings.Contains(out.String(), absent) || (!empty && !strings.Contains(out.String(), value)) {
+				t.Fatalf("incorrect source version table: %s", &out)
+			}
+		}
+	}
+}
+
+func TestErrorReportSeverityColumn(t *testing.T) {
+	var out bytes.Buffer
+	report := nvfleetint.ErrorReport{View: nvfleetint.ErrorReportViewList, GroupBy: nvfleetint.ErrorReportGroupByError, Errors: []nvfleetint.ErrorReportError{{Name: "XID 79", Severities: []nvfleetint.ErrorSeverity{nvfleetint.ErrorSeverityFatal, nvfleetint.ErrorSeverityWarning}}, {Name: "No severity"}}}
+	if err := writeReportErrorTable(&out, report); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"SEVERITIES", "XID 79", "Fatal", "Warning", "No severity"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("missing %s: %s", want, &out)
+		}
 	}
 }

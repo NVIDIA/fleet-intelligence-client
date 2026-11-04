@@ -24,13 +24,16 @@ import (
 // Lists the sort fields accepted by node list
 const nodeSortByList = "hostname, nodeUUID, healthStatus, nodegroup, computezone, gpuType, gpuCount, " +
 	"verificationCheck, agentStatus, agentVersion, kernelVersion, gpuDriverVersion, gpuFirmwareVersions, " +
-	"nodeName, or bmcHostname"
+	"nodeName, or bmcMac"
 
 // Stores local flag values for node list
 type nodeListFlags struct {
+	search            string
 	view              string
-	agentType         string
+	dataSource        string
 	nodeUUIDs         string
+	agentUUIDs        string
+	systemUUIDs       string
 	health            string
 	computeZoneIDs    string
 	computeZoneNames  string
@@ -42,7 +45,7 @@ type nodeListFlags struct {
 	privateIP         string
 	hostname          string
 	nodeName          string
-	bmcHostname       string
+	bmcMac            string
 	agentStatus       string
 	verificationCheck string
 	firmwareCheck     string
@@ -52,27 +55,17 @@ type nodeListFlags struct {
 
 // Stores data ready for node list rendering
 type nodeListOutput struct {
-	Nodes     []nvfleetint.Node
-	View      string
-	AgentType nvfleetint.NodeAgentType
-	JSONValue any
-	RawJSON   []byte
-	Page      *clioutput.Pagination
-}
-
-type nodeListResult struct {
-	Inband *nodeListOutput
-	OOB    *nodeListOutput
-}
-
-type combinedNodeListJSON struct {
-	Inband any `json:"inband"`
-	OOB    any `json:"oob"`
+	Nodes      []nvfleetint.Node
+	View       string
+	DataSource nvfleetint.DataSource
+	JSONValue  any
+	RawJSON    []byte
+	Page       *clioutput.Pagination
 }
 
 type nodeDescribeFlags struct {
-	agentType string
-	sections  string
+	dataSource string
+	sections   string
 }
 
 type nodeDescribeRenderOptions struct {
@@ -97,6 +90,7 @@ const (
 	oobInventorySectionSystems  oobInventorySection = "systems"
 	oobInventorySectionChassis  oobInventorySection = "chassis"
 	oobInventorySectionFirmware oobInventorySection = "firmware"
+	oobInventorySectionFabrics  oobInventorySection = "fabrics"
 )
 
 var oobInventorySectionOrder = []oobInventorySection{
@@ -104,6 +98,7 @@ var oobInventorySectionOrder = []oobInventorySection{
 	oobInventorySectionSystems,
 	oobInventorySectionChassis,
 	oobInventorySectionFirmware,
+	oobInventorySectionFabrics,
 }
 
 // Creates the top-level node command group
@@ -133,8 +128,8 @@ func newNodeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List nodes",
 		Long: "List nodes.\n\n" +
-			"--agent-type is required whenever any filter or --sort-by/--order flag is set, " +
-			"since in-band and OOB nodes carry different fields.\n\n" +
+			"Detail tables default to separate in-band and OOB results. Use --data-source for detail JSON, filtering, or sorting.\n" +
+			"Basic view without a source combines identities and supports shared GPU filters and sorts.\n\n" +
 			cmdutil.OptionsHelpNote("nvfleetint node options",
 				"--health", "--compute-zone-ids", "--nodegroup-ids",
 				"--gpu-type", "--agent-status", "--sort-by", "--order"),
@@ -145,12 +140,9 @@ func newNodeListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
-	cmd.Flags().StringVar(
-		&flags.agentType,
-		"agent-type",
-		flags.agentType,
-		"Agent type view: inband or oob (detail view defaults to both)",
-	)
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (required for detail JSON; omitted: both in detail tables, combined in basic)")
+	cmd.Flags().StringVar(&flags.agentUUIDs, "agent-uuids", "", "Comma-separated exact agent UUIDs (in-band or combined basic view only)")
+	cmd.Flags().StringVar(&flags.systemUUIDs, "system-uuids", "", "Comma-separated system UUIDs in the selected source inventory")
 	cmd.Flags().StringVar(&flags.nodeUUIDs, "node-uuids", "", "Comma-separated node UUIDs to filter")
 	cmd.Flags().StringVar(&flags.health, "health", "", "Comma-separated health states to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
@@ -161,11 +153,12 @@ func newNodeListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.gpuCount, "gpu-count", "", "Comma-separated GPU counts to filter")
 	cmd.Flags().StringVar(&flags.publicIP, "public-ip", "", "Comma-separated public IP addresses to filter")
 	cmd.Flags().StringVar(&flags.privateIP, "private-ip", "", "Comma-separated private IP addresses to filter")
+	cmd.Flags().StringVar(&flags.search, "search", "", "Case-insensitive partial match across node UUID and source-appropriate names (all names in combined basic view)")
 	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
 	cmd.Flags().StringVar(&flags.nodeName, "node-name", "", "Node name partial match (OOB view)")
-	cmd.Flags().StringVar(&flags.bmcHostname, "bmc-hostname", "", "BMC hostname partial match (OOB view)")
-	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter")
-	cmd.Flags().StringVar(&flags.verificationCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
+	cmd.Flags().StringVar(&flags.bmcMac, "bmc-mac", "", "BMC MAC identifier partial match (OOB view)")
+	cmd.Flags().StringVar(&flags.agentStatus, "agent-status", "", "Comma-separated agent statuses to filter: Online or Offline")
+	cmd.Flags().StringVar(&flags.verificationCheck, "verification-check", "", "Comma-separated verification check statuses to filter: Full Attestation, Partial Attestation, Verification Failed, Verified, Unverified, Degraded, Pending, Unsupported, or Unknown")
 	cmd.Flags().StringVar(&flags.firmwareCheck, "firmware-check", "", "Comma-separated firmware check statuses to filter: Passed, Failed, or Unknown")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field (including verificationCheck)")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
@@ -187,31 +180,24 @@ func newNodeDescribeCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(
-		&flags.agentType,
-		"agent-type",
-		flags.agentType,
-		"Agent type view: inband or oob (default: both)",
-	)
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (default: both)")
 	cmd.Flags().StringVar(
 		&flags.sections,
 		"section",
 		"",
-		"Comma-separated OOB inventory sections: managers, systems, chassis, firmware, or all",
+		"Comma-separated OOB inventory sections: managers, systems, chassis, firmware, fabrics, or all",
 	)
 	cmdutil.RegisterReadFlags(cmd, common)
 
 	return cmd
 }
 
-// Flags that filter or sort node list results. --agent-type is required
-// whenever any of these is set, because in-band and OOB nodes carry
-// different fields and a filter or sort spelled for one view silently
-// misbehaves against the other.
+// Detail queries require an explicit source for filters and sorting because
+// the default fetches separate in-band and OOB pages. Basic queries are combined.
 var nodeListFilterAndSortFlagNames = []string{
-	"node-uuids", "health", "compute-zone-ids", "compute-zone-names",
+	"node-uuids", "agent-uuids", "system-uuids", "health", "compute-zone-ids", "compute-zone-names",
 	"nodegroup-ids", "nodegroup-names", "gpu-type", "gpu-count",
-	"public-ip", "private-ip", "hostname", "node-name", "bmc-hostname",
+	"public-ip", "private-ip", "search", "hostname", "node-name", "bmc-mac",
 	"agent-status", "verification-check", "firmware-check", "sort-by", "order",
 }
 
@@ -224,10 +210,13 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 	if err != nil {
 		return err
 	}
-	if flags.agentType == "" {
+	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic {
+		if common.Output == clioutput.FormatJSON {
+			return errors.New("--data-source is required for detail JSON output; choose inband or oob")
+		}
 		for _, name := range nodeListFilterAndSortFlagNames {
 			if cmd.Flags().Changed(name) {
-				return fmt.Errorf("--agent-type is required when using --%s", name)
+				return fmt.Errorf("--data-source is required when using --%s", name)
 			}
 		}
 	}
@@ -238,13 +227,18 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 	}
 
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
-	agentType := nvfleetint.NodeAgentType(flags.agentType)
-	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewDetail && agentType == "" {
-		result, err := listNodeViews(cmd.Context(), client, opts, common)
-		if err != nil {
-			return err
-		}
-		return writeNodeListResult(cmd.OutOrStdout(), common, result)
+	dataSource := opts.DataSource
+	if nvfleetint.NodeView(flags.view) == nvfleetint.NodeViewDetail && dataSource == "" {
+		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "node list",
+			func(ctx context.Context, source nvfleetint.DataSource) (nodeListOutput, error) {
+				sourceOpts := opts
+				sourceOpts.DataSource = source
+				return fetchNodeList(ctx, client, sourceOpts, common)
+			},
+			func(w io.Writer, result nodeListOutput) error {
+				return writeNodeListOutput(w, common, result)
+			},
+		)
 	}
 
 	result, err := fetchNodeList(cmd.Context(), client, opts, common)
@@ -252,45 +246,6 @@ func runNodeList(cmd *cobra.Command, flags nodeListFlags, common cmdutil.Resolve
 		return err
 	}
 	return writeNodeListOutput(cmd.OutOrStdout(), common, result)
-}
-
-func listNodeViews(
-	ctx context.Context,
-	client *nvfleetint.Client,
-	opts nvfleetint.ListNodesOptions,
-	common cmdutil.Resolved,
-) (nodeListResult, error) {
-	var result nodeListResult
-	var inbandOutput nodeListOutput
-	var oobOutput nodeListOutput
-	var inbandErr error
-	var oobErr error
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(2)
-
-	go func() {
-		defer waitGroup.Done()
-		inbandOptions := opts
-		inbandOptions.AgentType = nvfleetint.NodeAgentTypeInband
-		inbandOutput, inbandErr = fetchNodeList(ctx, client, inbandOptions, common)
-	}()
-	go func() {
-		defer waitGroup.Done()
-		oobOptions := opts
-		oobOptions.AgentType = nvfleetint.NodeAgentTypeOOB
-		oobOutput, oobErr = fetchNodeList(ctx, client, oobOptions, common)
-	}()
-	waitGroup.Wait()
-
-	if inbandErr != nil {
-		return nodeListResult{}, fmt.Errorf("fetch in-band node list: %w", inbandErr)
-	}
-	if oobErr != nil {
-		return nodeListResult{}, fmt.Errorf("fetch OOB node list: %w", oobErr)
-	}
-	result.Inband = &inbandOutput
-	result.OOB = &oobOutput
-	return result, nil
 }
 
 func fetchNodeList(
@@ -312,10 +267,10 @@ func fetchNodeList(
 			return nodeListOutput{}, err
 		}
 		return nodeListOutput{
-			Nodes:     nodes,
-			View:      string(opts.View),
-			AgentType: opts.AgentType,
-			JSONValue: result,
+			Nodes:      nodes,
+			View:       string(opts.View),
+			DataSource: opts.DataSource,
+			JSONValue:  result,
 		}, nil
 	}
 
@@ -324,10 +279,10 @@ func fetchNodeList(
 		return nodeListOutput{}, err
 	}
 	return nodeListOutput{
-		Nodes:     page.Nodes,
-		View:      string(opts.View),
-		AgentType: opts.AgentType,
-		RawJSON:   page.RawJSON,
+		Nodes:      page.Nodes,
+		View:       string(opts.View),
+		DataSource: opts.DataSource,
+		RawJSON:    page.RawJSON,
 		Page: &clioutput.Pagination{
 			Page:     page.Page,
 			PageSize: page.PageSize,
@@ -351,11 +306,11 @@ func runNodeDescribe(
 	if nodeUUID == "" {
 		return errors.New("node UUID is required")
 	}
-	agentType := nvfleetint.NodeAgentType(flags.agentType)
-	if agentType != "" && !agentType.Valid() {
-		return fmt.Errorf("invalid agent-type %q: expected inband or oob", agentType)
+	dataSource := nvfleetint.DataSource(flags.dataSource)
+	if err := dataSource.Validate(); err != nil {
+		return cmdutil.RenderOptionError(err, nodeListFlagNames)
 	}
-	renderOptions, err := parseOOBInventorySections(flags, agentType, common.Output)
+	renderOptions, err := parseOOBInventorySections(flags, dataSource, common.Output)
 	if err != nil {
 		return err
 	}
@@ -365,34 +320,34 @@ func runNodeDescribe(
 		return err
 	}
 
-	result, err := describeNodeResult(cmd.Context(), client, nodeUUID, agentType)
+	result, err := describeNodeResult(cmd.Context(), client, nodeUUID, dataSource)
 	if err != nil {
 		return err
 	}
 
 	if common.Output == clioutput.FormatJSON {
-		return writeNodeDescribeJSON(cmd.OutOrStdout(), result, agentType)
+		return writeNodeDescribeJSON(cmd.OutOrStdout(), result, dataSource)
 	}
 	if !renderOptions.showSummary && (result.OOB == nil || result.OOB.OOBInventory == nil) {
 		return fmt.Errorf("node %q does not have an OOB view for the requested section", nodeUUID)
 	}
-	return writeNodeDescribeResultTable(cmd.OutOrStdout(), result, agentType, renderOptions)
+	return writeNodeDescribeResultTable(cmd.OutOrStdout(), result, dataSource, renderOptions)
 }
 
 func describeNodeResult(
 	ctx context.Context,
 	client *nvfleetint.Client,
 	nodeUUID string,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.DataSource,
 ) (nodeDescribeResult, error) {
-	if agentType != "" {
+	if dataSource != "" {
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			AgentType: agentType,
+			DataSource: dataSource,
 		})
 		if err != nil {
 			return nodeDescribeResult{}, err
 		}
-		if agentType == nvfleetint.NodeAgentTypeOOB {
+		if dataSource == nvfleetint.DataSourceOOB {
 			return nodeDescribeResult{OOB: &node}, nil
 		}
 		return nodeDescribeResult{Inband: &node}, nil
@@ -406,7 +361,7 @@ func describeNodeResult(
 	go func() {
 		defer waitGroup.Done()
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			AgentType: nvfleetint.NodeAgentTypeInband,
+			DataSource: nvfleetint.DataSourceInband,
 		})
 		if err != nil {
 			inbandErr = err
@@ -417,7 +372,7 @@ func describeNodeResult(
 	go func() {
 		defer waitGroup.Done()
 		node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-			AgentType: nvfleetint.NodeAgentTypeOOB,
+			DataSource: nvfleetint.DataSourceOOB,
 		})
 		if err != nil {
 			oobErr = err
@@ -449,12 +404,12 @@ func apiErrorHasStatus(err error, statusCode int) bool {
 func writeNodeDescribeJSON(
 	w io.Writer,
 	result nodeDescribeResult,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.DataSource,
 ) error {
-	if agentType == nvfleetint.NodeAgentTypeInband && result.Inband != nil {
+	if dataSource == nvfleetint.DataSourceInband && result.Inband != nil {
 		return clioutput.WriteRawJSON(w, result.Inband.RawJSON)
 	}
-	if agentType == nvfleetint.NodeAgentTypeOOB && result.OOB != nil {
+	if dataSource == nvfleetint.DataSourceOOB && result.OOB != nil {
 		return clioutput.WriteRawJSON(w, result.OOB.RawJSON)
 	}
 
@@ -470,7 +425,7 @@ func writeNodeDescribeJSON(
 
 func parseOOBInventorySections(
 	flags nodeDescribeFlags,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.DataSource,
 	output string,
 ) (nodeDescribeRenderOptions, error) {
 	values, err := cmdutil.ParseCommaList(flags.sections)
@@ -487,8 +442,8 @@ func parseOOBInventorySections(
 		return nodeDescribeRenderOptions{}, errors.New("section all cannot be combined with other sections")
 	}
 	if len(values) > 0 &&
-		agentType != "" &&
-		agentType != nvfleetint.NodeAgentTypeOOB {
+		dataSource != "" &&
+		dataSource != nvfleetint.DataSourceOOB {
 		return nodeDescribeRenderOptions{}, errors.New("--section requires the OOB view")
 	}
 	if len(values) > 0 && output == clioutput.FormatJSON {
@@ -513,11 +468,12 @@ func parseOOBInventorySections(
 		case oobInventorySectionManagers,
 			oobInventorySectionSystems,
 			oobInventorySectionChassis,
-			oobInventorySectionFirmware:
+			oobInventorySectionFirmware,
+			oobInventorySectionFabrics:
 			options.sections[section] = true
 		default:
 			return nodeDescribeRenderOptions{}, fmt.Errorf(
-				"invalid OOB inventory section %q: expected managers, systems, chassis, or firmware",
+				"invalid OOB inventory section %q: expected managers, systems, chassis, firmware, or fabrics",
 				value,
 			)
 		}
@@ -528,8 +484,9 @@ func parseOOBInventorySections(
 // Names the flag carrying each node list option, for rendering SDK validation
 // errors against what the user typed.
 var nodeListFlagNames = map[string]cmdutil.OptionFlagName{
+	"agentUUIDs":        {Flag: "agent-uuids"},
 	"view":              {Flag: "view"},
-	"agentType":         {Flag: "agent-type"},
+	"dataSource":        {Flag: "data-source"},
 	"health":            {Flag: "health"},
 	"agentStatus":       {Flag: "agent-status"},
 	"verificationCheck": {Flag: "verification-check"},
@@ -548,13 +505,14 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 	var err error
 
 	opts := nvfleetint.ListNodesOptions{
-		View:        nvfleetint.NodeView(flags.view),
-		AgentType:   nvfleetint.NodeAgentType(flags.agentType),
-		Hostname:    strings.TrimSpace(flags.hostname),
-		NodeName:    strings.TrimSpace(flags.nodeName),
-		BMCHostname: strings.TrimSpace(flags.bmcHostname),
-		SortBy:      nvfleetint.NodeSortBy(strings.TrimSpace(flags.sortBy)),
-		Order:       nvfleetint.NodeSortOrder(flags.order),
+		Search:     strings.TrimSpace(flags.search),
+		View:       nvfleetint.NodeView(flags.view),
+		DataSource: nvfleetint.DataSource(flags.dataSource),
+		Hostname:   strings.TrimSpace(flags.hostname),
+		NodeName:   strings.TrimSpace(flags.nodeName),
+		BMCMAC:     strings.TrimSpace(flags.bmcMac),
+		SortBy:     nvfleetint.NodeSortBy(strings.TrimSpace(flags.sortBy)),
+		Order:      nvfleetint.NodeSortOrder(flags.order),
 	}
 
 	if opts.HealthStatuses, err = cmdutil.ParseTypedList[nvfleetint.NodeHealthStatus](
@@ -580,6 +538,8 @@ func nodeListOptions(flags nodeListFlags) (nvfleetint.ListNodesOptions, error) {
 		dest *[]string
 	}{
 		{name: "node-uuids", raw: flags.nodeUUIDs, dest: &opts.NodeUUIDs},
+		{name: "agent-uuids", raw: flags.agentUUIDs, dest: &opts.AgentUUIDs},
+		{name: "system-uuids", raw: flags.systemUUIDs, dest: &opts.SystemUUIDs},
 		{name: "compute-zone-ids", raw: flags.computeZoneIDs, dest: &opts.ComputeZoneIDs},
 		{name: "compute-zone-names", raw: flags.computeZoneNames, dest: &opts.ComputeZoneNames},
 		{name: "nodegroup-ids", raw: flags.nodeGroupIDs, dest: &opts.NodeGroupIDs},
@@ -616,7 +576,7 @@ func writeNodeListOutput(w io.Writer, common cmdutil.Resolved, result nodeListOu
 		return cmdutil.WritePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
-	if err := writeNodeTable(w, result.View, result.AgentType, result.Nodes); err != nil {
+	if err := writeNodeTable(w, result.View, result.DataSource, result.Nodes); err != nil {
 		return err
 	}
 	if result.Page == nil {
@@ -625,87 +585,34 @@ func writeNodeListOutput(w io.Writer, common cmdutil.Resolved, result nodeListOu
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-func writeNodeListResult(w io.Writer, common cmdutil.Resolved, result nodeListResult) error {
-	if common.Output == clioutput.FormatJSON {
-		return clioutput.WriteJSON(w, combinedNodeListJSON{
-			Inband: nodeListJSONValue(result.Inband),
-			OOB:    nodeListJSONValue(result.OOB),
-		})
-	}
-
-	if result.Inband != nil {
-		if err := writeNodeListSection(w, "In-band", *result.Inband, false); err != nil {
-			return err
-		}
-	}
-	if result.OOB != nil {
-		if err := writeNodeListSection(w, "Out-of-band", *result.OOB, result.Inband != nil); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func writeNodeListSection(w io.Writer, title string, result nodeListOutput, leadingNewline bool) error {
-	if leadingNewline {
-		if _, err := fmt.Fprintln(w); err != nil {
-			return err
-		}
-	}
-	if _, err := fmt.Fprintln(w, title); err != nil {
-		return err
-	}
-	if err := writeNodeTable(w, result.View, result.AgentType, result.Nodes); err != nil {
-		return err
-	}
-	if result.Page != nil {
-		return clioutput.WritePaginationFooter(w, *result.Page)
-	}
-	return nil
-}
-
-func nodeListJSONValue(result *nodeListOutput) any {
-	if result == nil {
-		return nil
-	}
-	if result.RawJSON != nil {
-		return json.RawMessage(cmdutil.OneIndexRawPage(result.RawJSON))
-	}
-	if merged, ok := result.JSONValue.(cmdutil.MergedJSONResult); ok {
-		merged.Pagination.Page++
-		return merged
-	}
-	return result.JSONValue
-}
-
 // Renders nodes using the selected view columns
 func writeNodeTable(
 	w io.Writer,
 	view string,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.DataSource,
 	nodes []nvfleetint.Node,
 ) error {
 	if nvfleetint.NodeView(view) == nvfleetint.NodeViewBasic {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC HOSTNAME", "BMC IP"},
+			[]string{"UUID", "HOSTNAME", "NODE NAME", "BMC MAC", "BMC IP"},
 			basicNodeRows(nodes),
 		)
 	}
-	if agentType == nvfleetint.NodeAgentTypeOOB || nodeListIsOOB(nodes) {
+	if dataSource == nvfleetint.DataSourceOOB || nodeListIsOOB(nodes) {
 		return clioutput.WriteTable(
 			w,
-			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC HOSTNAME", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "VERIFICATION CHECK", "AGENT STATUS"},
+			[]string{"UUID", "NODE NAME", "NODE KIND", "BMC MAC", "BMC IP", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "ATTESTATION", "AGENT STATUS"},
 			oobDetailNodeRows(nodes),
 		)
 	}
-	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "VERIFICATION CHECK", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
+	return clioutput.WriteTable(w, []string{"UUID", "HOSTNAME", "COMPUTE ZONE", "NODE GROUP", "HEALTH", "GPU TYPE", "GPU COUNT", "ATTESTATION", "FIRMWARE CHECK", "AGENT STATUS"}, detailNodeRows(nodes))
 }
 
 // Reports whether a node list contains OOB-view records
 func nodeListIsOOB(nodes []nvfleetint.Node) bool {
 	for _, node := range nodes {
-		if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.NodeName != "" || node.BMCHostname != "" || node.BMCIP != "" {
+		if node.DataSource == string(nvfleetint.DataSourceOOB) || node.NodeName != "" || node.BMCMAC != "" || node.BMCIP != "" {
 			return true
 		}
 	}
@@ -720,7 +627,7 @@ func basicNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.Hostname),
 			clioutput.DisplayString(node.NodeName),
-			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 		})
 	}
@@ -755,11 +662,13 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 			clioutput.DisplayString(node.UUID),
 			clioutput.DisplayString(node.NodeName),
 			clioutput.DisplayString(string(node.NodeKind)),
-			clioutput.DisplayString(node.BMCHostname),
+			clioutput.DisplayString(node.BMCMAC),
 			clioutput.DisplayString(node.BMCIP),
 			clioutput.DisplayString(node.ComputeZone),
 			clioutput.DisplayString(node.NodeGroup),
 			clioutput.DisplayString(node.Health),
+			clioutput.DisplayString(node.GPUType),
+			clioutput.FormatOptionalInt(node.GPUCount),
 			clioutput.DisplayString(node.VerificationCheck),
 			clioutput.DisplayString(node.AgentStatus),
 		})
@@ -771,13 +680,13 @@ func oobDetailNodeRows(nodes []nvfleetint.Node) [][]string {
 func writeNodeDescribeResultTable(
 	w io.Writer,
 	result nodeDescribeResult,
-	agentType nvfleetint.NodeAgentType,
+	dataSource nvfleetint.DataSource,
 	options nodeDescribeRenderOptions,
 ) error {
-	if agentType == nvfleetint.NodeAgentTypeInband && result.Inband != nil {
+	if dataSource == nvfleetint.DataSourceInband && result.Inband != nil {
 		return writeNodeDescribeTable(w, *result.Inband, options)
 	}
-	if agentType == nvfleetint.NodeAgentTypeOOB && result.OOB != nil {
+	if dataSource == nvfleetint.DataSourceOOB && result.OOB != nil {
 		return writeNodeDescribeTable(w, *result.OOB, options)
 	}
 
@@ -838,7 +747,7 @@ func writeNodeDescribeTable(
 
 func nodeDescribeSummaryRows(node nvfleetint.NodeDetails) [][]string {
 	rows := nodeDescribeRows(node)
-	if node.AgentType == string(nvfleetint.NodeAgentTypeOOB) || node.OOBInventory != nil {
+	if node.DataSource == string(nvfleetint.DataSourceOOB) || node.OOBInventory != nil {
 		rows = oobNodeDescribeRows(node)
 	}
 	if node.OOBInventory == nil {
@@ -867,23 +776,26 @@ func nodeDescribeSummaryRows(node nvfleetint.NodeDetails) [][]string {
 func oobNodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 	return [][]string{
 		{"UUID", clioutput.DisplayString(node.UUID)},
+		{"DATA SOURCE", clioutput.DisplayString(node.DataSource)},
 		{"HEALTH", clioutput.DisplayString(node.Health)},
+		{"GPU TYPE", clioutput.DisplayString(node.GPUType)},
+		{"GPU COUNT", clioutput.FormatOptionalInt(node.GPUCount)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},
 		{"NODE GROUP", clioutput.FormatNameAndID(node.NodeGroup, node.NodeGroupID)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		{"VERIFICATION CHECK", clioutput.DisplayString(node.VerificationCheck)},
-		{"VERIFICATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
+		{"ATTESTATION", clioutput.DisplayString(node.VerificationCheck)},
+		{"ATTESTATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastVerificationCheckTime)},
+		{"LAST ATTESTATION", clioutput.DisplayString(node.LastVerificationCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 		{"NODE NAME", clioutput.DisplayString(node.NodeName)},
 		{"NODE KIND", clioutput.DisplayString(string(node.NodeKind))},
-		{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
+		{"BMC MAC", clioutput.DisplayString(node.BMCMAC)},
 		{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 	}
 }
@@ -893,31 +805,32 @@ func nodeDescribeRows(node nvfleetint.NodeDetails) [][]string {
 	rows := [][]string{
 		{"UUID", clioutput.DisplayString(node.UUID)},
 		{"HOSTNAME", clioutput.DisplayString(node.Hostname)},
-		{"AGENT TYPE", clioutput.DisplayString(node.AgentType)},
+		{"AGENT UUID", clioutput.DisplayString(node.AgentUUID)},
+		{"DATA SOURCE", clioutput.DisplayString(node.DataSource)},
 		{"HEALTH", clioutput.DisplayString(node.Health)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(node.ComputeZone, node.ComputeZoneID)},
 		{"NODE GROUP", clioutput.FormatNameAndID(node.NodeGroup, node.NodeGroupID)},
 		{"GPU TYPE", clioutput.DisplayString(node.GPUType)},
 		{"GPU COUNT", clioutput.FormatOptionalInt(node.GPUCount)},
 		{"AGENT STATUS", clioutput.DisplayString(node.AgentStatus)},
-		{"VERIFICATION CHECK", clioutput.DisplayString(node.VerificationCheck)},
-		{"VERIFICATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
+		{"ATTESTATION", clioutput.DisplayString(node.VerificationCheck)},
+		{"ATTESTATION REASON", clioutput.DisplayString(node.VerificationCheckReason)},
 		{"FIRMWARE CHECK", clioutput.DisplayString(node.FirmwareCheck)},
 		{"PUBLIC IP", clioutput.DisplayString(node.PublicIP)},
 		{"PRIVATE IP", clioutput.DisplayString(node.PrivateIP)},
 		{"TAGS", clioutput.FormatStringList(node.Tags)},
 		{"ENROLLED AT", clioutput.DisplayString(node.EnrolledAt)},
 		{"LAST UPDATED", clioutput.DisplayString(node.LastUpdatedTime)},
-		{"LAST VERIFICATION CHECK", clioutput.DisplayString(node.LastVerificationCheckTime)},
+		{"LAST ATTESTATION", clioutput.DisplayString(node.LastVerificationCheckTime)},
 		{"HEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.HealthyComponentCount)},
 		{"DEGRADED COMPONENTS", clioutput.FormatOptionalInt(node.DegradedComponentCount)},
 		{"UNHEALTHY COMPONENTS", clioutput.FormatOptionalInt(node.UnhealthyComponentCount)},
 		{"LOCATION", cmdutil.FormatLocation(node.Location)},
 	}
 
-	if node.BMCHostname != "" || node.BMCIP != "" {
+	if node.BMCMAC != "" || node.BMCIP != "" {
 		rows = append(rows,
-			[]string{"BMC HOSTNAME", clioutput.DisplayString(node.BMCHostname)},
+			[]string{"BMC MAC", clioutput.DisplayString(node.BMCMAC)},
 			[]string{"BMC IP", clioutput.DisplayString(node.BMCIP)},
 		)
 	}
@@ -946,8 +859,9 @@ func writeOOBInventoryTables(
 	if options.sections[oobInventorySectionSystems] {
 		if err := writeOOBSection(w, "Systems",
 			[]string{
-				"PRIMARY", "ID", "UUID", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "BIOS",
+				"ID", "UUID", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "BIOS",
 				"HOSTNAME", "ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP", "MEMORY GIB", "SECURE BOOT",
+				"CPU COUNT", "CPU CORES", "CPU MODEL",
 			},
 			oobSystemRows(inventory)); err != nil {
 			return err
@@ -970,12 +884,15 @@ func writeOOBInventoryTables(
 				return err
 			}
 		}
+		if err := writeOOBSystemComponents(w, inventory.Systems); err != nil {
+			return err
+		}
 	}
 	if options.sections[oobInventorySectionChassis] {
 		if err := writeOOBSection(w, "Chassis",
 			[]string{
 				"ID", "TYPE", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "PART",
-				"ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP", "LOCATION",
+				"ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP",
 			},
 			oobChassisRows(inventory.Chassis)); err != nil {
 			return err
@@ -990,6 +907,16 @@ func writeOOBInventoryTables(
 				pcieRows); err != nil {
 				return err
 			}
+		}
+		if rows := oobPowerSupplyRows(inventory.Chassis); len(rows) > 0 {
+			if err := writeOOBSection(w, "Power Supplies", []string{"CHASSIS", "ID", "MODEL", "SERIAL", "PART", "FIRMWARE", "CAPACITY WATTS", "STATUS", "HEALTH", "ROLLUP"}, rows); err != nil {
+				return err
+			}
+		}
+	}
+	if options.sections[oobInventorySectionFabrics] {
+		if err := writeOOBFabricTables(w, inventory.Fabrics); err != nil {
+			return err
 		}
 	}
 	if options.sections[oobInventorySectionFirmware] {
@@ -1013,14 +940,33 @@ func writeOOBSection(w io.Writer, title string, headers []string, rows [][]strin
 }
 
 func oobInventorySummaryRows(inventory *nvfleetint.OOBInventory) [][]string {
+	memory, storage, drives, powerSupplies, switches := 0, 0, 0, 0, 0
+	for _, system := range inventory.Systems {
+		memory += len(system.Memory)
+		storage += len(system.Storage)
+		for _, item := range system.Storage {
+			drives += len(item.Drives)
+		}
+	}
+	for _, chassis := range inventory.Chassis {
+		powerSupplies += len(chassis.PowerSupplies)
+	}
+	for _, fabric := range inventory.Fabrics {
+		switches += len(fabric.Switches)
+	}
 	return [][]string{
 		{"INVENTORY SCHEMA VERSION", clioutput.DisplayString(inventory.SchemaVersion)},
 		{"INVENTORY COLLECTED AT", clioutput.DisplayString(inventory.CollectedAt)},
-		{"INVENTORY PRIMARY SYSTEM", clioutput.DisplayString(inventory.PrimarySystemID)},
 		{"INVENTORY MANAGERS", strconv.Itoa(len(inventory.Managers))},
 		{"INVENTORY SYSTEMS", strconv.Itoa(len(inventory.Systems))},
 		{"INVENTORY CHASSIS", strconv.Itoa(len(inventory.Chassis))},
 		{"INVENTORY FIRMWARE", strconv.Itoa(len(inventory.Firmware))},
+		{"INVENTORY MEMORY MODULES", strconv.Itoa(memory)},
+		{"INVENTORY STORAGE", strconv.Itoa(storage)},
+		{"INVENTORY DRIVES", strconv.Itoa(drives)},
+		{"INVENTORY POWER SUPPLIES", strconv.Itoa(powerSupplies)},
+		{"INVENTORY FABRICS", strconv.Itoa(len(inventory.Fabrics))},
+		{"INVENTORY SWITCHES", strconv.Itoa(switches)},
 		{"INVENTORY DOMAIN ERRORS", strconv.Itoa(len(inventory.DomainErrors))},
 		{"INVENTORY TARGET ERROR", clioutput.DisplayString(inventory.TargetError)},
 	}
@@ -1031,7 +977,6 @@ func oobSourceRows(source *nvfleetint.OOBSource) [][]string {
 		{"SOURCE TYPE", clioutput.DisplayString(source.SourceType)},
 		{"SOURCE MAC", clioutput.DisplayString(source.MAC)},
 		{"SOURCE ADDRESS", clioutput.DisplayString(source.Address)},
-		{"SOURCE HOSTNAME", clioutput.DisplayString(source.Hostname)},
 		{"SOURCE REDFISH VERSION", clioutput.DisplayString(source.RedfishVersion)},
 		{"SOURCE SERVICE UUID", clioutput.DisplayString(source.ServiceUUID)},
 		{"SOURCE VENDOR", clioutput.DisplayString(source.Vendor)},
@@ -1041,9 +986,10 @@ func oobSourceRows(source *nvfleetint.OOBSource) [][]string {
 func oobManagerRows(managers []nvfleetint.OOBManager) [][]string {
 	rows := make([][]string, 0, len(managers))
 	for _, manager := range managers {
+		status := oobStatusValue(manager.Status)
 		rows = append(rows, []string{
 			manager.ID, manager.UUID, manager.Model, manager.ManagerType, manager.FirmwareVersion,
-			manager.StatusState, manager.Health, manager.HealthRollup,
+			status.State, status.Health, status.HealthRollup,
 		})
 	}
 	return rows
@@ -1052,8 +998,16 @@ func oobManagerRows(managers []nvfleetint.OOBManager) [][]string {
 func oobSystemRows(inventory *nvfleetint.OOBInventory) [][]string {
 	rows := make([][]string, 0, len(inventory.Systems))
 	for _, system := range inventory.Systems {
+		memory := nvfleetint.OOBMemorySummary{}
+		if system.MemorySummary != nil {
+			memory = *system.MemorySummary
+		}
+		processors := nvfleetint.OOBProcessorSummary{}
+		if system.ProcessorSummary != nil {
+			processors = *system.ProcessorSummary
+		}
+		status := oobStatusValue(system.Status)
 		rows = append(rows, []string{
-			strconv.FormatBool(system.ID == inventory.PrimarySystemID),
 			system.ID,
 			system.UUID,
 			system.Manufacturer,
@@ -1064,11 +1018,12 @@ func oobSystemRows(inventory *nvfleetint.OOBInventory) [][]string {
 			system.Hostname,
 			system.AssetTag,
 			system.PowerState,
-			system.StatusState,
-			system.Health,
-			system.HealthRollup,
-			formatOOBFloat32(system.MemoryGiB),
+			status.State,
+			status.Health,
+			status.HealthRollup,
+			formatOOBFloat32(memory.TotalSystemMemoryGiB),
 			formatOOBBool(system.SecureBootEnabled),
+			formatOOBInt(processors.Count), formatOOBInt(processors.CoreCount), processors.Model,
 		})
 	}
 	return rows
@@ -1079,11 +1034,12 @@ func oobProcessorRows(systems []nvfleetint.OOBSystem) ([][]string, [][]string) {
 	gpuRows := [][]string{}
 	for _, system := range systems {
 		for _, processor := range system.Processors {
+			status := oobStatusValue(processor.Status)
 			if strings.EqualFold(strings.TrimSpace(processor.ProcessorType), "gpu") {
 				gpuRows = append(gpuRows, []string{
 					system.ID, processor.ID, processor.Manufacturer, processor.Model,
-					formatOOBInt(processor.MaxSpeedMHz), processor.StatusState,
-					processor.Health, processor.HealthRollup,
+					formatOOBInt(processor.MaxSpeedMHz), status.State,
+					status.Health, status.HealthRollup,
 				})
 				continue
 			}
@@ -1091,8 +1047,8 @@ func oobProcessorRows(systems []nvfleetint.OOBSystem) ([][]string, [][]string) {
 				system.ID, processor.ID, processor.Socket, processor.ProcessorArchitecture,
 				processor.Manufacturer, processor.Model,
 				formatOOBInt(processor.MaxSpeedMHz), formatOOBInt(processor.TotalCores),
-				formatOOBInt(processor.TotalThreads), processor.StatusState,
-				processor.Health, processor.HealthRollup,
+				formatOOBInt(processor.TotalThreads), status.State,
+				status.Health, status.HealthRollup,
 			})
 		}
 	}
@@ -1102,10 +1058,11 @@ func oobProcessorRows(systems []nvfleetint.OOBSystem) ([][]string, [][]string) {
 func oobChassisRows(chassis []nvfleetint.OOBChassis) [][]string {
 	rows := make([][]string, 0, len(chassis))
 	for _, item := range chassis {
+		status := oobStatusValue(item.Status)
 		rows = append(rows, []string{
 			item.ID, item.ChassisType, item.Manufacturer, item.Model, item.SKU,
 			item.SerialNumber, item.PartNumber, item.AssetTag, item.PowerState,
-			item.StatusState, item.Health, item.HealthRollup, formatOOBLocation(item.Location),
+			status.State, status.Health, status.HealthRollup,
 		})
 	}
 	return rows
@@ -1115,10 +1072,11 @@ func oobPCIeDeviceRows(chassis []nvfleetint.OOBChassis) [][]string {
 	rows := [][]string{}
 	for _, item := range chassis {
 		for _, device := range item.PCIeDevices {
+			status := oobStatusValue(device.Status)
 			rows = append(rows, []string{
 				item.ID, device.ID, device.UUID, device.DeviceType, device.Manufacturer,
 				device.Model, device.SKU, device.SerialNumber, device.PartNumber,
-				device.FirmwareVersion, device.StatusState, device.Health, device.HealthRollup,
+				device.FirmwareVersion, status.State, status.Health, status.HealthRollup,
 			})
 		}
 	}
@@ -1128,9 +1086,10 @@ func oobPCIeDeviceRows(chassis []nvfleetint.OOBChassis) [][]string {
 func oobFirmwareRows(firmware []nvfleetint.OOBFirmware) [][]string {
 	rows := make([][]string, 0, len(firmware))
 	for _, item := range firmware {
+		status := oobStatusValue(item.Status)
 		rows = append(rows, []string{
 			item.ID, item.Name, item.Version, item.ReleaseDate,
-			item.StatusState, item.Health, item.HealthRollup,
+			status.State, status.Health, status.HealthRollup,
 		})
 	}
 	return rows
@@ -1144,30 +1103,84 @@ func oobDomainErrorRows(domainErrors []nvfleetint.OOBDomainError) [][]string {
 	return rows
 }
 
-func formatOOBLocation(location *nvfleetint.OOBChassisLocation) string {
-	if location == nil {
-		return ""
+// oobStatusValue makes an absent status safe to render as empty table cells.
+func oobStatusValue(status *nvfleetint.OOBInventoryStatus) nvfleetint.OOBInventoryStatus {
+	if status == nil {
+		return nvfleetint.OOBInventoryStatus{}
 	}
-	parts := []string{}
-	if location.ServiceLabel != "" {
-		parts = append(parts, location.ServiceLabel)
-	}
-	if location.Rack != "" {
-		rack := "rack " + location.Rack
-		if location.RackOffset != nil {
-			rack += fmt.Sprintf(" U%d", *location.RackOffset)
+	return *status
+}
+
+func writeOOBSystemComponents(w io.Writer, systems []nvfleetint.OOBSystem) error {
+	memoryRows, storageRows, driveRows := [][]string{}, [][]string{}, [][]string{}
+	for _, system := range systems {
+		for _, memory := range system.Memory {
+			status := oobStatusValue(memory.Status)
+			memoryRows = append(memoryRows, []string{system.ID, memory.ID, memory.DeviceLocator,
+				memory.MemoryDeviceType, memory.Manufacturer, memory.PartNumber, memory.SerialNumber,
+				formatOOBInt(memory.CapacityMiB), status.State, status.Health, status.HealthRollup})
 		}
-		parts = append(parts, rack)
-	} else if location.RackOffset != nil {
-		parts = append(parts, fmt.Sprintf("U%d", *location.RackOffset))
+		for _, storage := range system.Storage {
+			storageRows = append(storageRows, []string{system.ID, storage.ID, strconv.Itoa(len(storage.Drives))})
+			for _, drive := range storage.Drives {
+				status := oobStatusValue(drive.Status)
+				driveRows = append(driveRows, []string{system.ID, storage.ID, drive.ID, drive.Model,
+					drive.SerialNumber, drive.MediaType, drive.Protocol, drive.Revision,
+					formatOOBInt(drive.CapacityBytes), status.State, status.Health, status.HealthRollup})
+			}
+		}
 	}
-	if location.Row != "" {
-		parts = append(parts, "row "+location.Row)
+	for _, section := range []struct {
+		title   string
+		headers []string
+		rows    [][]string
+	}{
+		{"Memory Modules", []string{"SYSTEM", "ID", "LOCATOR", "TYPE", "MANUFACTURER", "PART", "SERIAL", "CAPACITY MIB", "STATUS", "HEALTH", "ROLLUP"}, memoryRows},
+		{"Storage", []string{"SYSTEM", "ID", "DRIVES"}, storageRows},
+		{"Drives", []string{"SYSTEM", "STORAGE", "ID", "MODEL", "SERIAL", "MEDIA", "PROTOCOL", "REVISION", "CAPACITY BYTES", "STATUS", "HEALTH", "ROLLUP"}, driveRows},
+	} {
+		if len(section.rows) > 0 {
+			if err := writeOOBSection(w, section.title, section.headers, section.rows); err != nil {
+				return err
+			}
+		}
 	}
-	if location.Room != "" {
-		parts = append(parts, "room "+location.Room)
+	return nil
+}
+
+func oobPowerSupplyRows(chassis []nvfleetint.OOBChassis) [][]string {
+	rows := [][]string{}
+	for _, item := range chassis {
+		for _, supply := range item.PowerSupplies {
+			status := oobStatusValue(supply.Status)
+			rows = append(rows, []string{item.ID, supply.ID, supply.Model, supply.SerialNumber,
+				supply.PartNumber, supply.FirmwareVersion, formatOOBFloat32(supply.PowerCapacityWatts),
+				status.State, status.Health, status.HealthRollup})
+		}
 	}
-	return strings.Join(parts, ", ")
+	return rows
+}
+
+func writeOOBFabricTables(w io.Writer, fabrics []nvfleetint.OOBFabric) error {
+	fabricRows, switchRows := [][]string{}, [][]string{}
+	for _, fabric := range fabrics {
+		status := oobStatusValue(fabric.Status)
+		fabricRows = append(fabricRows, []string{fabric.ID, fabric.Name, fabric.UUID,
+			fabric.FabricType, strconv.Itoa(len(fabric.Switches)), status.State, status.Health, status.HealthRollup})
+		for _, item := range fabric.Switches {
+			status := oobStatusValue(item.Status)
+			switchRows = append(switchRows, []string{fabric.ID, item.ID, item.Name, item.UUID,
+				item.SwitchType, item.Manufacturer, item.Model, item.SKU, item.SerialNumber,
+				item.PartNumber, item.FirmwareVersion, status.State, status.Health, status.HealthRollup})
+		}
+	}
+	if err := writeOOBSection(w, "Fabrics", []string{"ID", "NAME", "UUID", "TYPE", "SWITCHES", "STATUS", "HEALTH", "ROLLUP"}, fabricRows); err != nil {
+		return err
+	}
+	if len(switchRows) > 0 {
+		return writeOOBSection(w, "Switches", []string{"FABRIC", "ID", "NAME", "UUID", "TYPE", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "PART", "FIRMWARE", "STATUS", "HEALTH", "ROLLUP"}, switchRows)
+	}
+	return nil
 }
 
 func formatOOBInt(value *int) string {
@@ -1245,7 +1258,8 @@ func systemInfoRows(system *nvfleetint.SystemInfo) [][]string {
 
 // Stores local flag values for node options.
 type nodeOptionsFlags struct {
-	agentType string
+	view       string
+	dataSource string
 }
 
 // Maps each filter field returned by the node options endpoint to the flag on
@@ -1283,7 +1297,7 @@ var nodeDeprecatedSortFields = map[string]bool{
 
 // Creates the node options command
 func newNodeOptionsCmd() *cobra.Command {
-	flags := nodeOptionsFlags{}
+	flags := nodeOptionsFlags{view: string(nvfleetint.NodeViewDetail)}
 	common := cmdutil.NewCommon()
 	cmd := &cobra.Command{
 		Use:   "options",
@@ -1294,7 +1308,8 @@ func newNodeOptionsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&flags.agentType, "agent-type", "", "Agent type view: inband or oob; oob returns a reduced set")
+	cmd.Flags().StringVar(&flags.view, "view", flags.view, "View mode: detail or basic")
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Data source: inband or oob (required for detail JSON; omitted: both in detail tables, combined in basic)")
 	cmdutil.RegisterReadFlags(cmd, common)
 
 	return cmd
@@ -1305,16 +1320,33 @@ func runNodeOptions(cmd *cobra.Command, flags nodeOptionsFlags, common cmdutil.R
 	if err := cmdutil.ValidateReadFlags(common); err != nil {
 		return err
 	}
-	agentType := nvfleetint.NodeAgentType(strings.TrimSpace(flags.agentType))
-	if agentType != "" && !agentType.Valid() {
-		return fmt.Errorf("invalid agent-type %q: expected inband or oob", flags.agentType)
+	opts := nvfleetint.NodeFilterOptionsRequest{
+		View:       nvfleetint.NodeView(flags.view),
+		DataSource: nvfleetint.DataSource(strings.TrimSpace(flags.dataSource)),
+	}
+	if err := opts.Validate(); err != nil {
+		return cmdutil.RenderOptionError(err, nodeListFlagNames)
+	}
+
+	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic && common.Output == clioutput.FormatJSON {
+		return errors.New("--data-source is required for detail JSON output; choose inband or oob")
 	}
 
 	client, err := cmdutil.New(common)
 	if err != nil {
 		return err
 	}
-	options, err := client.GetNodeFilterOptions(cmd.Context(), agentType)
+	if opts.DataSource == "" && opts.View != nvfleetint.NodeViewBasic {
+		return cmdutil.WriteBothSourceTables(cmd.Context(), cmd.OutOrStdout(), "node options",
+			func(ctx context.Context, source nvfleetint.DataSource) (nvfleetint.FilterOptions, error) {
+				sourceOpts := opts
+				sourceOpts.DataSource = source
+				return client.GetNodeFilterOptionsWithOptions(ctx, sourceOpts)
+			},
+			nodeOptionsRenderer.Write,
+		)
+	}
+	options, err := client.GetNodeFilterOptionsWithOptions(cmd.Context(), opts)
 	if err != nil {
 		return err
 	}

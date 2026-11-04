@@ -81,8 +81,8 @@ func TestAlertTimelineMethodsDecode(t *testing.T) {
 			if got := query.Get("active"); got != "true" {
 				t.Fatalf("unexpected active: %q", got)
 			}
-			if got := query.Get("hostname"); got != "gpu" {
-				t.Fatalf("unexpected hostname: %q", got)
+			if got := query.Get("nameSearch"); got != "gpu" {
+				t.Fatalf("unexpected nameSearch: %q", got)
 			}
 			if got := query.Get("sortBy"); got != "alert" {
 				t.Fatalf("unexpected sortBy: %q", got)

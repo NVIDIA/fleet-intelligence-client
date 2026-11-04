@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
@@ -18,20 +19,20 @@ const (
 	NodeViewDetail NodeView = "detail"
 	NodeViewBasic  NodeView = "basic"
 
-	NodeAgentTypeInband NodeAgentType = "inband"
-	NodeAgentTypeOOB    NodeAgentType = "oob"
-
 	NodeHealthHealthy   NodeHealthStatus = "Healthy"
 	NodeHealthDegraded  NodeHealthStatus = "Degraded"
 	NodeHealthUnhealthy NodeHealthStatus = "Unhealthy"
 	NodeHealthUnknown   NodeHealthStatus = "Unknown"
 
-	NodeVerificationVerified    NodeVerificationCheck = "Verified"
-	NodeVerificationUnverified  NodeVerificationCheck = "Unverified"
-	NodeVerificationDegraded    NodeVerificationCheck = "Degraded"
-	NodeVerificationPending     NodeVerificationCheck = "Pending"
-	NodeVerificationUnsupported NodeVerificationCheck = "Unsupported"
-	NodeVerificationUnknown     NodeVerificationCheck = "Unknown"
+	NodeVerificationFullAttestation    NodeVerificationCheck = "Full Attestation"
+	NodeVerificationPartialAttestation NodeVerificationCheck = "Partial Attestation"
+	NodeVerificationVerificationFailed NodeVerificationCheck = "Verification Failed"
+	NodeVerificationVerified           NodeVerificationCheck = "Verified"
+	NodeVerificationUnverified         NodeVerificationCheck = "Unverified"
+	NodeVerificationDegraded           NodeVerificationCheck = "Degraded"
+	NodeVerificationPending            NodeVerificationCheck = "Pending"
+	NodeVerificationUnsupported        NodeVerificationCheck = "Unsupported"
+	NodeVerificationUnknown            NodeVerificationCheck = "Unknown"
 	// Deprecated: use NodeVerificationVerified
 	NodeVerificationPassed NodeVerificationCheck = NodeVerificationVerified
 	// Deprecated: use NodeVerificationUnverified
@@ -43,6 +44,7 @@ const (
 
 	NodeAgentOnline  NodeAgentStatus = "Online"
 	NodeAgentOffline NodeAgentStatus = "Offline"
+	// Deprecated: Unknown is no longer accepted as an agent-status filter.
 	NodeAgentUnknown NodeAgentStatus = "Unknown"
 
 	NodeSortByHostname            NodeSortBy = "hostname"
@@ -59,7 +61,7 @@ const (
 	NodeSortByGPUDriverVersion    NodeSortBy = "gpuDriverVersion"
 	NodeSortByGPUFirmwareVersions NodeSortBy = "gpuFirmwareVersions"
 	NodeSortByNodeName            NodeSortBy = "nodeName"
-	NodeSortByBMCHostname         NodeSortBy = "bmcHostname"
+	NodeSortByBMCMAC              NodeSortBy = "bmcMac"
 
 	NodeOrderAsc  NodeSortOrder = "asc"
 	NodeOrderDesc NodeSortOrder = "desc"
@@ -71,14 +73,6 @@ type NodeView string
 // Reports whether the view is accepted by the API
 func (view NodeView) Valid() bool {
 	return fleetapi.GetV1NodesParamsView(view).Valid()
-}
-
-// Represents the agent source used to list or describe nodes
-type NodeAgentType string
-
-// Reports whether the agent type is accepted by the API
-func (agentType NodeAgentType) Valid() bool {
-	return fleetapi.GetV1NodesParamsAgentType(agentType).Valid()
 }
 
 // Represents supported health filters for listing nodes
@@ -131,9 +125,18 @@ func (order NodeSortOrder) Valid() bool {
 
 // Represents request options for listing nodes
 type ListNodesOptions struct {
-	View               NodeView
-	AgentType          NodeAgentType
-	NodeUUIDs          []string
+	// Search matches node UUID and source-appropriate names, case-insensitively.
+	// Inband searches hostname; OOB searches nodeName and bmcMac; combined
+	// basic searches all three. Surrounding whitespace is ignored; blank is omitted.
+	Search string
+
+	View       NodeView
+	DataSource DataSource
+	NodeUUIDs  []string
+	// AgentUUIDs matches exact in-band agent identities; unavailable for OOB.
+	AgentUUIDs []string
+	// SystemUUIDs matches system identities in the selected source, or either active source in combined basic view.
+	SystemUUIDs        []string
 	HealthStatuses     []NodeHealthStatus
 	ComputeZoneIDs     []string
 	ComputeZoneNames   []string
@@ -145,7 +148,7 @@ type ListNodesOptions struct {
 	PrivateIPs         []string
 	Hostname           string
 	NodeName           string
-	BMCHostname        string
+	BMCMAC             string
 	AgentStatuses      []NodeAgentStatus
 	VerificationChecks []NodeVerificationCheck
 	FirmwareChecks     []NodeFirmwareCheck
@@ -179,13 +182,15 @@ func (page NodesPage) PageInfo() PageInfo {
 
 // Represents a node
 type Node struct {
+	AgentUUID                  string                      `json:"agentUUID,omitempty"`
 	UUID                       string                      `json:"nodeUUID"`
 	Hostname                   string                      `json:"hostname,omitempty"`
 	NodeName                   string                      `json:"nodeName,omitempty"`
 	NodeKind                   NodeKind                    `json:"nodeKind,omitempty"`
-	AgentType                  string                      `json:"agentType,omitempty"`
+	DataSource                 string                      `json:"dataSource,omitempty"`
 	AgentVersion               string                      `json:"agentVersion,omitempty"`
-	BMCHostname                string                      `json:"bmcHostname,omitempty"`
+	CollectorVersion           string                      `json:"collectorVersion,omitempty"`
+	BMCMAC                     string                      `json:"bmcMac,omitempty"`
 	BMCIP                      string                      `json:"bmcIP,omitempty"`
 	ComputeZone                string                      `json:"computeZone,omitempty"`
 	NodeGroup                  string                      `json:"nodeGroup,omitempty"`
@@ -214,11 +219,41 @@ type GPUFirmwareVersion struct {
 
 // Represents structured details returned with a verification check
 type VerificationCheckExtraInfo struct {
+	// EAR retains the attestation result object; only node details returns it.
+	EAR                      map[string]any       `json:"ear,omitempty"`
+	Policy                   *VerificationPolicy  `json:"policy,omitempty"`
 	ErrorDetails             string               `json:"errorDetails,omitempty"`
 	GPUEvidencePresent       *bool                `json:"gpuEvidencePresent,omitempty"`
 	GPUResults               map[string]JWTClaims `json:"gpuResults,omitempty"`
 	NRASCallResult           string               `json:"nrasCallResult,omitempty"`
 	OverallAttestationResult *bool                `json:"overallAttestationResult,omitempty"`
+}
+
+// VerificationPolicyTier classifies the verification policy decision.
+type VerificationPolicyTier int
+
+const (
+	VerificationPolicyTierFullAttestation    VerificationPolicyTier = 1
+	VerificationPolicyTierPartialAttestation VerificationPolicyTier = 2
+	VerificationPolicyTierRejected           VerificationPolicyTier = 3
+)
+
+// VerificationPolicy contains the aggregate decision and per-GPU verdicts.
+type VerificationPolicy struct {
+	Approved      *bool                                `json:"approved,omitempty"`
+	Denials       []string                             `json:"denials,omitempty"`
+	GPUs          map[string]VerificationPolicyVerdict `json:"gpus,omitempty"`
+	PolicyVersion string                               `json:"policyVersion,omitempty"`
+	Reason        string                               `json:"reason,omitempty"`
+	Tier          *VerificationPolicyTier              `json:"tier,omitempty"`
+}
+
+// VerificationPolicyVerdict is the verification decision for one GPU.
+type VerificationPolicyVerdict struct {
+	Approved *bool                   `json:"approved,omitempty"`
+	Denials  []string                `json:"denials,omitempty"`
+	Reason   string                  `json:"reason,omitempty"`
+	Tier     *VerificationPolicyTier `json:"tier,omitempty"`
 }
 
 // Represents claims returned for a GPU attestation result
@@ -285,7 +320,7 @@ type NodeDetails struct {
 
 // Represents request options for describing a node
 type DescribeNodeOptions struct {
-	AgentType NodeAgentType
+	DataSource DataSource
 }
 
 // Represents hardware and network resource metadata for a node
@@ -335,6 +370,8 @@ type GPUInfo struct {
 
 // Represents a GPU device on a node
 type GPUDevice struct {
+	CliqueID     *int   `json:"cliqueID,omitempty"`
+	ClusterUUID  string `json:"clusterUUID,omitempty"`
 	BoardID      *int   `json:"boardID,omitempty"`
 	BusID        string `json:"busID,omitempty"`
 	ChassisSN    string `json:"chassisSN,omitempty"`
@@ -390,11 +427,14 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 
 	params := fleetapi.GetV1NodesParams{
 		View:             nodeViewParam(view),
-		AgentType:        optionalEnum[fleetapi.GetV1NodesParamsAgentType](opts.AgentType),
+		DataSource:       optionalEnum[fleetapi.GetV1NodesParamsDataSource](opts.DataSource),
 		NodeUUIDs:        optionalSlice(opts.NodeUUIDs),
+		AgentUUIDs:       optionalSlice(opts.AgentUUIDs),
+		SystemUUIDs:      optionalSlice(opts.SystemUUIDs),
+		Search:           optionalTrimmedString(opts.Search),
 		Hostname:         optionalString(opts.Hostname),
 		NodeName:         optionalString(opts.NodeName),
-		BmcHostname:      optionalString(opts.BMCHostname),
+		BmcMac:           optionalString(opts.BMCMAC),
 		ComputeZoneIds:   optionalSlice(opts.ComputeZoneIDs),
 		ComputeZoneNames: optionalSlice(opts.ComputeZoneNames),
 		NodeGroupIds:     optionalSlice(opts.NodeGroupIDs),
@@ -428,7 +468,7 @@ func (c *Client) ListNodes(ctx context.Context, opts ListNodesOptions) (NodesPag
 	if view == NodeViewBasic {
 		return decodeBasicNodes(resp.Body)
 	}
-	if opts.AgentType == NodeAgentTypeOOB {
+	if opts.DataSource == DataSourceOOB {
 		return decodeOOBDetailNodes(resp.Body)
 	}
 
@@ -440,7 +480,7 @@ func (c *Client) DescribeNode(ctx context.Context, nodeUUID string) (NodeDetails
 	return c.DescribeNodeWithOptions(ctx, nodeUUID, DescribeNodeOptions{})
 }
 
-// Retrieves agent-specific detail for a single node using the configured API client
+// Retrieves source-specific detail for a single node using the configured API client
 func (c *Client) DescribeNodeWithOptions(
 	ctx context.Context,
 	nodeUUID string,
@@ -452,12 +492,12 @@ func (c *Client) DescribeNodeWithOptions(
 	if nodeUUID == "" {
 		return NodeDetails{}, fmt.Errorf("node UUID is required")
 	}
-	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return NodeDetails{}, invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
+	if err := opts.DataSource.Validate(); err != nil {
+		return NodeDetails{}, err
 	}
 
 	params := fleetapi.GetV1NodesNodeUuidParams{
-		AgentType: optionalEnum[fleetapi.GetV1NodesNodeUuidParamsAgentType](opts.AgentType),
+		DataSource: optionalEnum[fleetapi.GetV1NodesNodeUuidParamsDataSource](opts.DataSource),
 	}
 	resp, err := c.api.GetV1NodesNodeUuidWithResponse(ctx, nodeUUID, &params)
 	if err != nil {
@@ -468,7 +508,7 @@ func (c *Client) DescribeNodeWithOptions(
 	}
 
 	var node NodeDetails
-	if opts.AgentType == NodeAgentTypeOOB {
+	if opts.DataSource == DataSourceOOB {
 		var data fleetapi.ModelsOobNodeDetailsResponse
 		if err := json.Unmarshal(resp.Body, &data); err != nil {
 			return NodeDetails{}, err
@@ -489,10 +529,9 @@ func (c *Client) DescribeNodeWithOptions(
 // The accepted values named in each node option's error
 const (
 	nodeViewValues              = "basic or detail"
-	nodeAgentTypeValues         = "inband or oob"
 	nodeHealthValues            = "Healthy, Degraded, Unhealthy, or Unknown"
-	nodeAgentStatusValues       = "Online, Offline, or Unknown"
-	nodeVerificationCheckValues = "Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
+	nodeAgentStatusValues       = "Online or Offline"
+	nodeVerificationCheckValues = "Full Attestation, Partial Attestation, Verification Failed, Verified, Unverified, Degraded, Pending, Unsupported, or Unknown"
 	nodeFirmwareCheckValues     = "Passed, Failed, or Unknown"
 	nodeOrderValues             = "asc or desc"
 )
@@ -514,8 +553,11 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 		return "", invalidOption("view", "node view", string(view), nodeViewValues)
 	}
 
-	if opts.AgentType != "" && !opts.AgentType.Valid() {
-		return "", invalidOption("agentType", "node agent type", string(opts.AgentType), nodeAgentTypeValues)
+	if err := opts.DataSource.Validate(); err != nil {
+		return "", err
+	}
+	if opts.DataSource == DataSourceOOB && len(opts.AgentUUIDs) > 0 {
+		return "", invalidOption("agentUUIDs", "agent UUID filter", strings.Join(opts.AgentUUIDs, ","), "in-band or combined basic view")
 	}
 	for _, status := range opts.HealthStatuses {
 		if !status.Valid() {
@@ -557,19 +599,18 @@ func (opts ListNodesOptions) normalize() (NodeView, error) {
 		// the value here is the backend spelling of a sort field a front end
 		// may name differently.
 		if opts.SortBy != "" && !nodeBasicSortCompatible(opts.SortBy) {
-			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, or bmcHostname")
+			return "", errors.New("basic node view supports sorting only by hostname, nodeName, nodeUUID, bmcMac, nodegroup, computezone, gpuType, or gpuCount")
 		}
 	}
 
 	return view, nil
 }
 
-// Reports whether a sort field works with basic view. Basic responses carry
-// only the identity columns, so those are the only fields there is anything to
-// sort on.
+// Reports whether a sort field is supported by basic-view queries.
 func nodeBasicSortCompatible(sortBy NodeSortBy) bool {
 	switch sortBy {
-	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCHostname:
+	case NodeSortByHostname, NodeSortByNodeName, NodeSortByUUID, NodeSortByBMCMAC,
+		NodeSortByNodeGroup, NodeSortByComputeZone, NodeSortByGPUType, NodeSortByGPUCount:
 		return true
 	default:
 		return false
@@ -657,9 +698,10 @@ func decodeBasicNodes(data []byte) (NodesPage, error) {
 // Maps detail API models into SDK values
 func inbandNodeFromGenerated(node fleetapi.ModelsInbandNode) Node {
 	return Node{
+		AgentUUID:                  stringValue(node.AgentUUID),
 		UUID:                       node.NodeUUID,
 		Hostname:                   stringValue(node.Hostname),
-		AgentType:                  stringValue(node.AgentType),
+		DataSource:                 node.DataSource,
 		AgentVersion:               stringValue(node.AgentVersion),
 		ComputeZone:                stringValue(node.ComputeZone),
 		NodeGroup:                  stringValue(node.NodeGroup),
@@ -687,13 +729,15 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 		UUID:                       node.NodeUUID,
 		NodeName:                   stringValue(node.NodeName),
 		NodeKind:                   nodeKindFromGenerated(node.NodeKind),
-		AgentType:                  stringValue(node.AgentType),
-		AgentVersion:               stringValue(node.AgentVersion),
-		BMCHostname:                stringValue(node.BmcHostname),
+		DataSource:                 node.DataSource,
+		CollectorVersion:           stringValue(node.CollectorVersion),
+		BMCMAC:                     stringValue(node.BmcMac),
 		BMCIP:                      stringValue(node.BmcIP),
 		ComputeZone:                stringValue(node.ComputeZone),
 		NodeGroup:                  stringValue(node.NodeGroup),
 		Health:                     enumStringValue(node.HealthStatus),
+		GPUType:                    stringValue(node.GpuType),
+		GPUCount:                   cloneInt(node.GpuCount),
 		AgentStatus:                enumStringValue(node.AgentStatus),
 		VerificationCheck:          enumStringValue(node.VerificationCheck),
 		VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
@@ -706,11 +750,12 @@ func oobNodeFromGenerated(node fleetapi.ModelsOobNode) Node {
 // Maps basic API models into SDK values
 func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 	return Node{
-		UUID:        node.NodeUUID,
-		Hostname:    stringValue(node.Hostname),
-		NodeName:    stringValue(node.NodeName),
-		BMCHostname: stringValue(node.BmcHostname),
-		BMCIP:       stringValue(node.BmcIP),
+		AgentUUID: stringValue(node.AgentUUID),
+		UUID:      node.NodeUUID,
+		Hostname:  stringValue(node.Hostname),
+		NodeName:  stringValue(node.NodeName),
+		BMCMAC:    stringValue(node.BmcMac),
+		BMCIP:     stringValue(node.BmcIP),
 	}
 }
 
@@ -718,9 +763,10 @@ func nodeFromSimple(node fleetapi.ModelsSimpleNode) Node {
 func inbandNodeDetailsFromGenerated(node fleetapi.ModelsInbandNodeDetailsResponse) NodeDetails {
 	return NodeDetails{
 		Node: Node{
+			AgentUUID:                  stringValue(node.AgentUUID),
 			UUID:                       node.NodeUUID,
 			Hostname:                   stringValue(node.Hostname),
-			AgentType:                  stringValue(node.AgentType),
+			DataSource:                 node.DataSource,
 			AgentVersion:               stringValue(node.AgentVersion),
 			ComputeZone:                stringValue(node.ComputeZone),
 			NodeGroup:                  stringValue(node.NodeGroup),
@@ -760,13 +806,15 @@ func oobNodeDetailsFromGenerated(node fleetapi.ModelsOobNodeDetailsResponse) Nod
 			UUID:                       node.NodeUUID,
 			NodeName:                   stringValue(node.NodeName),
 			NodeKind:                   nodeKindFromGenerated(node.NodeKind),
-			AgentType:                  stringValue(node.AgentType),
-			AgentVersion:               stringValue(node.AgentVersion),
-			BMCHostname:                stringValue(node.BmcHostname),
+			DataSource:                 node.DataSource,
+			CollectorVersion:           stringValue(node.CollectorVersion),
+			BMCMAC:                     stringValue(node.BmcMac),
 			BMCIP:                      stringValue(node.BmcIP),
 			ComputeZone:                stringValue(node.ComputeZone),
 			NodeGroup:                  stringValue(node.NodeGroup),
 			Health:                     enumStringValue(node.HealthStatus),
+			GPUType:                    stringValue(node.GpuType),
+			GPUCount:                   cloneInt(node.GpuCount),
 			AgentStatus:                enumStringValue(node.AgentStatus),
 			VerificationCheck:          enumStringValue(node.VerificationCheck),
 			VerificationCheckExtraInfo: verificationCheckExtraInfoFromGenerated(node.VerificationCheckExtraInfo),
@@ -807,11 +855,16 @@ func verificationCheckExtraInfoFromGenerated(
 		return nil
 	}
 	out := &VerificationCheckExtraInfo{
+		Policy:                   verificationPolicyFromGenerated(info.Policy),
 		ErrorDetails:             stringValue(info.ErrorDetails),
 		GPUEvidencePresent:       cloneBool(info.GpuEvidencePresent),
 		NRASCallResult:           stringValue(info.NrasCallResult),
 		OverallAttestationResult: cloneBool(info.OverallAttestationResult),
 	}
+	if info.Ear != nil {
+		out.EAR = cloneAttestationJSON(*info.Ear).(map[string]any)
+	}
+
 	if info.GpuResults != nil {
 		out.GPUResults = make(map[string]JWTClaims, len(*info.GpuResults))
 		for gpuID, claims := range *info.GpuResults {
@@ -968,6 +1021,8 @@ func gpuInfoFromGenerated(info *fleetapi.ModelsGPUInfo) *GPUInfo {
 // Maps GPU device API models into SDK values
 func gpuDeviceFromGenerated(device fleetapi.ModelsGPUDevice) GPUDevice {
 	return GPUDevice{
+		CliqueID:     cloneInt(device.CliqueID),
+		ClusterUUID:  stringValue(device.ClusterUUID),
 		BoardID:      cloneInt(device.BoardID),
 		BusID:        stringValue(device.BusID),
 		ChassisSN:    stringValue(device.ChassisSN),
@@ -1031,5 +1086,57 @@ func systemInfoFromGenerated(info *fleetapi.ModelsSystemInfo) *SystemInfo {
 		OSImage:                 stringValue(info.OsImage),
 		StartedAt:               stringValue(info.StartedAt),
 		SystemUUID:              stringValue(info.SystemUUID),
+	}
+}
+
+func verificationPolicyFromGenerated(policy *fleetapi.ModelsVerificationPolicy) *VerificationPolicy {
+	if policy == nil {
+		return nil
+	}
+	out := &VerificationPolicy{
+		Approved: cloneBool(policy.Approved), Denials: cloneStringSlice(policy.Denials),
+		PolicyVersion: stringValue(policy.PolicyVersion), Reason: stringValue(policy.Reason),
+	}
+	if policy.Tier != nil {
+		tier := VerificationPolicyTier(*policy.Tier)
+		out.Tier = &tier
+	}
+	if policy.Gpus != nil {
+		out.GPUs = make(map[string]VerificationPolicyVerdict, len(*policy.Gpus))
+		for id, verdict := range *policy.Gpus {
+			mapped := VerificationPolicyVerdict{Approved: cloneBool(verdict.Approved), Denials: cloneStringSlice(verdict.Denials), Reason: stringValue(verdict.Reason)}
+			if verdict.Tier != nil {
+				tier := VerificationPolicyTier(*verdict.Tier)
+				mapped.Tier = &tier
+			}
+			out.GPUs[id] = mapped
+		}
+	}
+	return out
+}
+
+// EAR is decoded JSON: clone objects and arrays so SDK values own their data.
+func cloneAttestationJSON(value any) any {
+	switch value := value.(type) {
+	case map[string]any:
+		if value == nil {
+			return map[string]any(nil)
+		}
+		out := make(map[string]any, len(value))
+		for key, item := range value {
+			out[key] = cloneAttestationJSON(item)
+		}
+		return out
+	case []any:
+		if value == nil {
+			return []any(nil)
+		}
+		out := make([]any, len(value))
+		for i, item := range value {
+			out[i] = cloneAttestationJSON(item)
+		}
+		return out
+	default:
+		return value
 	}
 }

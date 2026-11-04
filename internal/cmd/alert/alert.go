@@ -27,18 +27,21 @@ type alertListFlags struct {
 
 // Stores local flag values for alert timeline
 type alertTimelineFlags struct {
-	active         bool
-	view           string
-	node           string
-	hostname       string
-	sortBy         string
-	order          string
-	gpuType        string
-	nodeGroupIDs   string
-	computeZoneIDs string
-	alertState     string
-	componentType  string
-	withoutPSIRT   bool
+	dataSource        string
+	inbandAgentStatus string
+	oobAgentStatus    string
+	active            bool
+	view              string
+	node              string
+	hostname          string
+	sortBy            string
+	order             string
+	gpuType           string
+	nodeGroupIDs      string
+	computeZoneIDs    string
+	alertState        string
+	componentType     string
+	withoutPSIRT      bool
 }
 
 // Stores local flag values for alert timeline options.
@@ -145,7 +148,7 @@ func newAlertSummaryCmd() *cobra.Command {
 		Long: "Summarize impacted nodes and their alert counts.\n\n" +
 			cmdutil.OptionsHelpNote("nvfleetint alert options",
 				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
-				"--alert-state", "--component-type", "--sort-by", "--order"),
+				"--alert-state", "--component-type", "--data-source", "--inband-agent-status", "--oob-agent-status", "--sort-by", "--order"),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runAlertSummary(cmd, flags, cmdutil.ResolveCommon(cmd, common))
@@ -153,7 +156,11 @@ func newAlertSummaryCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
+	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Partial match across hostname, OOB node name, BMC MAC identifier, and node UUID")
+	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Compatibility alias for --name-search")
+	cmd.MarkFlagsMutuallyExclusive("name-search", "hostname")
+	cmd.Flags().StringVar(&flags.inbandAgentStatus, "inband-agent-status", "", "Comma-separated in-band statuses: online, offline, not_enrolled (OR within this filter; AND with --oob-agent-status)")
+	cmd.Flags().StringVar(&flags.oobAgentStatus, "oob-agent-status", "", "Comma-separated OOB statuses: online, offline, not_enrolled (OR within this filter; AND with --inband-agent-status)")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
@@ -161,6 +168,7 @@ func newAlertSummaryCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
 	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states to filter")
 	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Comma-separated alert sources: inband or oob (omitted: both)")
 	cmdutil.RegisterListFlags(cmd, common)
 
 	return cmd
@@ -179,7 +187,7 @@ func newAlertNodeCmd() *cobra.Command {
 		Long: "List alerts for one node.\n\n" +
 			cmdutil.OptionsHelpNote("nvfleetint alert options",
 				"--gpu-type", "--nodegroup-ids", "--compute-zone-ids",
-				"--alert-state", "--component-type"),
+				"--alert-state", "--component-type", "--data-source"),
 		Args: cmdutil.RequireSingleArg("node UUID"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAlertNode(cmd, args[0], flags, cmdutil.ResolveCommon(cmd, common))
@@ -187,13 +195,14 @@ func newAlertNodeCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&flags.view, "view", "", "Alert view: active or historical (default: active)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime or lastUpdate (default: lastUpdate)")
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: startTime, lastUpdate, or dataSource (default: lastUpdate)")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc (default: desc)")
 	cmd.Flags().StringVar(&flags.gpuType, "gpu-type", "", "Comma-separated GPU types to filter")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
 	cmd.Flags().StringVar(&flags.alertState, "alert-state", "", "Comma-separated timeline states to filter")
 	cmd.Flags().StringVar(&flags.componentType, "component-type", "", "Comma-separated component types to include")
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Comma-separated alert sources: inband or oob (omitted: both)")
 	cmd.Flags().BoolVar(&flags.withoutPSIRT, "without-psirt", false, "Exclude PSIRT alerts")
 	cmdutil.RegisterListFlags(cmd, common)
 
@@ -553,17 +562,21 @@ func validateAlertTimelineFlags(flags alertTimelineFlags) error {
 // accept different sort fields, so each names its own.
 var (
 	alertTimelineNodesFlagNames = map[string]cmdutil.OptionFlagName{
-		"order":      {Flag: "order"},
-		"alertState": {Flag: "alert-state"},
+		"dataSources":         {Flag: "data-source"},
+		"inbandAgentStatuses": {Flag: "inband-agent-status"},
+		"oobAgentStatuses":    {Flag: "oob-agent-status"},
+		"order":               {Flag: "order"},
+		"alertState":          {Flag: "alert-state"},
 		"sortBy": {
 			Flag:     "sort-by",
-			Expected: "hostname, alert, gpuType, nodeGroup, computeZone, or lastUpdate",
+			Expected: "hostname, nodeName, bmcMac, nodeUUID, alert, gpuType, nodeGroup, computeZone, or lastUpdate",
 		},
 	}
 	nodeAlertTimelineFlagNames = map[string]cmdutil.OptionFlagName{
-		"order":      {Flag: "order"},
-		"alertState": {Flag: "alert-state"},
-		"sortBy":     {Flag: "sort-by", Expected: "startTime or lastUpdate"},
+		"dataSources": {Flag: "data-source"},
+		"order":       {Flag: "order"},
+		"alertState":  {Flag: "alert-state"},
+		"sortBy":      {Flag: "sort-by", Expected: "startTime, lastUpdate, or dataSource"},
 	}
 )
 
@@ -610,6 +623,20 @@ func alertTimelineNodesOptions(flags alertTimelineFlags) (nvfleetint.ListAlertTi
 		NodeGroupIDs:   lists[2],
 		ComputeZoneIDs: lists[3],
 	}
+	opts.DataSources, err = cmdutil.ParseTypedList[nvfleetint.DataSource]("data-source", flags.dataSource)
+	if err != nil {
+		return opts, err
+	}
+
+	opts.InbandAgentStatuses, err = cmdutil.ParseTypedList[nvfleetint.AlertAgentStatus]("inband-agent-status", flags.inbandAgentStatus)
+	if err != nil {
+		return opts, err
+	}
+	opts.OOBAgentStatuses, err = cmdutil.ParseTypedList[nvfleetint.AlertAgentStatus]("oob-agent-status", flags.oobAgentStatus)
+	if err != nil {
+		return opts, err
+	}
+
 	if err := opts.Validate(); err != nil {
 		return opts, cmdutil.RenderOptionError(err, alertTimelineNodesFlagNames)
 	}
@@ -637,6 +664,11 @@ func nodeAlertTimelineOptions(flags alertTimelineFlags) (nvfleetint.ListNodeAler
 		NodeGroupIDs:   lists[2],
 		ComputeZoneIDs: lists[3],
 	}
+	opts.DataSources, err = cmdutil.ParseTypedList[nvfleetint.DataSource]("data-source", flags.dataSource)
+	if err != nil {
+		return opts, err
+	}
+
 	if err := opts.Validate(); err != nil {
 		return opts, cmdutil.RenderOptionError(err, nodeAlertTimelineFlagNames)
 	}
@@ -677,7 +709,7 @@ func writeAlertListOutput(w io.Writer, common cmdutil.Resolved, result alertList
 		return cmdutil.WritePaginatedListJSON(w, result.RawJSON, result.JSONValue)
 	}
 
-	if err := clioutput.WriteTable(w, []string{"UUID", "NODE UUID", "COMPONENT", "SEVERITY", "STATE", "FIRED-AT"}, alertRows(result.Alerts)); err != nil {
+	if err := clioutput.WriteTable(w, []string{"UUID", "NODE UUID", "COMPONENT", "DATA SOURCE", "SEVERITY", "STATE", "FIRED-AT"}, alertRows(result.Alerts)); err != nil {
 		return err
 	}
 	if result.Page == nil {
@@ -694,10 +726,10 @@ func writeAlertTimelineOutput(w io.Writer, common cmdutil.Resolved, result alert
 
 	var err error
 	if result.Mode == alertTimelineModeAlerts {
-		err = clioutput.WriteTable(w, []string{"ALERT UUID", "COMPONENT", "STATUS", "START TIME", "LAST EVENT TIME"}, alertTimelineAlertRows(result.Alerts))
+		err = clioutput.WriteTable(w, []string{"ALERT UUID", "COMPONENT", "DATA SOURCE", "STATUS", "START TIME", "LAST EVENT TIME"}, alertTimelineAlertRows(result.Alerts))
 	} else {
 		err = clioutput.WriteTable(w, []string{
-			"NODE UUID", "HOSTNAME", "CRITICAL", "WARNING", "RESOLVED", "GPU TYPE", "NODE GROUP", "COMPUTE ZONE", "LAST ALERT TIME",
+			"NODE UUID", "HOSTNAME", "NODE NAME", "BMC MAC", "INBAND STATUS", "OOB STATUS", "CRITICAL", "WARNING", "RESOLVED", "GPU TYPE", "NODE GROUP", "COMPUTE ZONE", "LAST ALERT TIME",
 		}, alertTimelineNodeRows(result.Nodes))
 	}
 	if err != nil {
@@ -714,11 +746,14 @@ func writeAlertTimelineOutput(w io.Writer, common cmdutil.Resolved, result alert
 var alertOptionsRenderer = cmdutil.OptionsRenderer{
 	Consumers: []string{"alert summary", "alert node"},
 	Filters: map[string]cmdutil.OptionFlag{
-		"gpuTypes":       {Name: "--gpu-type"},
-		"nodeGroups":     {Name: "--nodegroup-ids"},
-		"computeZones":   {Name: "--compute-zone-ids", Promote: "--nodegroup-ids"},
-		"componentTypes": {Name: "--component-type"},
-		"alertStates":    {Name: "--alert-state"},
+		"gpuTypes":            {Name: "--gpu-type"},
+		"nodeGroups":          {Name: "--nodegroup-ids"},
+		"computeZones":        {Name: "--compute-zone-ids", Promote: "--nodegroup-ids"},
+		"componentTypes":      {Name: "--component-type"},
+		"alertStates":         {Name: "--alert-state"},
+		"dataSources":         {Name: "--data-source"},
+		"inbandAgentStatuses": {Name: "--inband-agent-status"},
+		"oobAgentStatuses":    {Name: "--oob-agent-status"},
 	},
 	// The endpoint advertises only the Level 1 nodes-list columns, which are
 	// `alert summary`'s, so the sorting block is labelled as that command's
@@ -733,6 +768,9 @@ var alertOptionsRenderer = cmdutil.OptionsRenderer{
 // Writes alert timeline filter values grouped by the flag that accepts them,
 // followed by the sorting flags.
 func writeAlertTimelineOptionsTable(w io.Writer, options nvfleetint.AlertTimelineFilterOptions) error {
+	if _, err := fmt.Fprintln(w, "Agent-status filters apply to 'alert summary' only."); err != nil {
+		return err
+	}
 	return alertOptionsRenderer.Write(w, options)
 }
 
@@ -764,6 +802,7 @@ func alertRows(alerts []nvfleetint.Alert) [][]string {
 			clioutput.DisplayString(alert.UUID),
 			clioutput.DisplayString(alert.NodeUUID),
 			clioutput.DisplayString(alert.Component),
+			clioutput.DisplayString(alert.DataSource),
 			clioutput.DisplayString(alert.Severity),
 			clioutput.DisplayString(alert.State),
 			clioutput.DisplayString(alert.FiredAt),
@@ -779,6 +818,10 @@ func alertTimelineNodeRows(nodes []nvfleetint.AlertTimelineNode) [][]string {
 		rows = append(rows, []string{
 			clioutput.DisplayString(node.NodeUUID),
 			clioutput.DisplayString(node.Hostname),
+			clioutput.DisplayString(node.NodeName),
+			clioutput.DisplayString(node.BMCMAC),
+			alertAgentStatusCell(node.AgentStatus, nvfleetint.DataSourceInband),
+			alertAgentStatusCell(node.AgentStatus, nvfleetint.DataSourceOOB),
 			fmt.Sprintf("%d", node.CriticalCount),
 			fmt.Sprintf("%d", node.WarningCount),
 			fmt.Sprintf("%d", node.ResolvedCount),
@@ -791,6 +834,21 @@ func alertTimelineNodeRows(nodes []nvfleetint.AlertTimelineNode) [][]string {
 	return rows
 }
 
+// Missing status data is distinct from an explicitly not-enrolled source.
+func alertAgentStatusCell(statuses *nvfleetint.AlertAgentStatuses, source nvfleetint.DataSource) string {
+	if statuses == nil {
+		return clioutput.DisplayString("")
+	}
+	status := statuses.Inband
+	if source == nvfleetint.DataSourceOOB {
+		status = statuses.OOB
+	}
+	if status == nil {
+		return clioutput.DisplayString("")
+	}
+	return clioutput.DisplayString(string(status.Status))
+}
+
 // Converts node alert timeline entries into table rows
 func alertTimelineAlertRows(alerts []nvfleetint.AlertTimelineNodeAlert) [][]string {
 	rows := make([][]string, 0, len(alerts))
@@ -798,6 +856,7 @@ func alertTimelineAlertRows(alerts []nvfleetint.AlertTimelineNodeAlert) [][]stri
 		rows = append(rows, []string{
 			clioutput.DisplayString(alert.AlertUUID),
 			clioutput.DisplayString(alert.Component),
+			clioutput.DisplayString(alert.DataSource),
 			clioutput.DisplayString(alert.AlertStatus),
 			clioutput.DisplayString(alert.StartTime),
 			clioutput.DisplayString(alert.LastEventTime),

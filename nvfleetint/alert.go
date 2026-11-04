@@ -28,6 +28,13 @@ const (
 	AlertTimelineStateWarning  AlertTimelineState = "Warning"
 	AlertTimelineStateResolved AlertTimelineState = "Resolved"
 
+	AlertAgentOnline      AlertAgentStatus = "online"
+	AlertAgentOffline     AlertAgentStatus = "offline"
+	AlertAgentNotEnrolled AlertAgentStatus = "not_enrolled"
+
+	AlertTimelineNodeSortByNodeName    AlertTimelineNodeSortBy = "nodeName"
+	AlertTimelineNodeSortByBMCMAC      AlertTimelineNodeSortBy = "bmcMac"
+	AlertTimelineNodeSortByNodeUUID    AlertTimelineNodeSortBy = "nodeUUID"
 	AlertTimelineNodeSortByHostname    AlertTimelineNodeSortBy = "hostname"
 	AlertTimelineNodeSortByAlert       AlertTimelineNodeSortBy = "alert"
 	AlertTimelineNodeSortByGPUType     AlertTimelineNodeSortBy = "gpuType"
@@ -35,12 +42,34 @@ const (
 	AlertTimelineNodeSortByComputeZone AlertTimelineNodeSortBy = "computeZone"
 	AlertTimelineNodeSortByLastUpdate  AlertTimelineNodeSortBy = "lastUpdate"
 
+	AlertTimelineAlertSortByDataSource AlertTimelineAlertSortBy = "dataSource"
 	AlertTimelineAlertSortByStartTime  AlertTimelineAlertSortBy = "startTime"
 	AlertTimelineAlertSortByLastUpdate AlertTimelineAlertSortBy = "lastUpdate"
 
 	AlertTimelineOrderAsc  AlertTimelineSortOrder = "asc"
 	AlertTimelineOrderDesc AlertTimelineSortOrder = "desc"
 )
+
+// AlertAgentStatus describes current source enrollment and liveness.
+// Its lowercase values differ from the node endpoint's Online/Offline values.
+type AlertAgentStatus string
+
+// Valid reports whether the alert agent status is accepted by the API.
+func (status AlertAgentStatus) Valid() bool {
+	return fleetapi.ModelsAlertAgentStatus(status).Valid()
+}
+
+// AlertAgentSourceStatus retains the API's current status and last-seen timestamp.
+type AlertAgentSourceStatus struct {
+	Status     AlertAgentStatus `json:"status,omitempty"`
+	LastSeenAt string           `json:"lastSeenAt,omitempty"`
+}
+
+// AlertAgentStatuses contains the optional current status for each source.
+type AlertAgentStatuses struct {
+	Inband *AlertAgentSourceStatus `json:"inband,omitempty"`
+	OOB    *AlertAgentSourceStatus `json:"oob,omitempty"`
+}
 
 // Represents supported alert severity filters
 type AlertSeverity string
@@ -150,6 +179,7 @@ func (page AlertsPage) PageInfo() PageInfo {
 
 // Represents an alert
 type Alert struct {
+	DataSource           string `json:"dataSource,omitempty"`
 	UUID                 string `json:"alertUUID"`
 	NodeUUID             string `json:"nodeUUID,omitempty"`
 	Component            string `json:"component,omitempty"`
@@ -167,17 +197,22 @@ type Alert struct {
 
 // Represents request options for listing alert timeline nodes
 type ListAlertTimelineNodesOptions struct {
-	Active         bool
-	Hostname       string
-	SortBy         AlertTimelineNodeSortBy
-	Order          AlertTimelineSortOrder
-	GPUTypes       []string
-	NodeGroupIDs   []string
-	ComputeZoneIDs []string
-	AlertStates    []AlertTimelineState
-	ComponentTypes []string
-	Page           *int
-	PageSize       *int
+	// Omitted DataSources includes alerts from both sources.
+	DataSources []DataSource
+	// Values within each status filter are ORed; the two filters are ANDed.
+	InbandAgentStatuses []AlertAgentStatus
+	OOBAgentStatuses    []AlertAgentStatus
+	Active              bool
+	Hostname            string
+	SortBy              AlertTimelineNodeSortBy
+	Order               AlertTimelineSortOrder
+	GPUTypes            []string
+	NodeGroupIDs        []string
+	ComputeZoneIDs      []string
+	AlertStates         []AlertTimelineState
+	ComponentTypes      []string
+	Page                *int
+	PageSize            *int
 }
 
 // Represents a paginated alert timeline node response
@@ -210,20 +245,25 @@ func (page AlertTimelineNodesPage) PageInfo() PageInfo {
 
 // Represents a node that has alert timeline history
 type AlertTimelineNode struct {
-	NodeUUID      string `json:"nodeUuid"`
-	Hostname      string `json:"hostname,omitempty"`
-	ComputeZone   string `json:"computeZone,omitempty"`
-	NodeGroup     string `json:"nodeGroup,omitempty"`
-	GPUType       string `json:"gpuType,omitempty"`
-	CriticalCount int    `json:"criticalCount,omitempty"`
-	WarningCount  int    `json:"warningCount,omitempty"`
-	ResolvedCount int    `json:"resolvedCount,omitempty"`
-	HostStatus    string `json:"hostStatus,omitempty"`
-	LastAlertTime string `json:"lastAlertTime,omitempty"`
+	NodeName      string              `json:"nodeName,omitempty"`
+	BMCMAC        string              `json:"bmcMac,omitempty"`
+	AgentStatus   *AlertAgentStatuses `json:"agentStatus,omitempty"`
+	NodeUUID      string              `json:"nodeUuid"`
+	Hostname      string              `json:"hostname,omitempty"`
+	ComputeZone   string              `json:"computeZone,omitempty"`
+	NodeGroup     string              `json:"nodeGroup,omitempty"`
+	GPUType       string              `json:"gpuType,omitempty"`
+	CriticalCount int                 `json:"criticalCount,omitempty"`
+	WarningCount  int                 `json:"warningCount,omitempty"`
+	ResolvedCount int                 `json:"resolvedCount,omitempty"`
+	HostStatus    string              `json:"hostStatus,omitempty"`
+	LastAlertTime string              `json:"lastAlertTime,omitempty"`
 }
 
 // Represents request options for listing alert history for one node
 type ListNodeAlertTimelineOptions struct {
+	// Omitted DataSources includes alerts from both sources.
+	DataSources    []DataSource
 	NodeUUID       string
 	Active         bool
 	WithoutPSIRT   bool
@@ -264,6 +304,7 @@ func (page NodeAlertTimelinePage) PageInfo() PageInfo {
 
 // Represents one alert in a node's timeline history
 type AlertTimelineNodeAlert struct {
+	DataSource           string `json:"dataSource,omitempty"`
 	AlertUUID            string `json:"alertUuid"`
 	Component            string `json:"component,omitempty"`
 	ComponentDisplayName string `json:"componentDisplayName,omitempty"`
@@ -369,17 +410,20 @@ func (c *Client) ListAlertTimelineNodes(ctx context.Context, opts ListAlertTimel
 	}
 
 	params := fleetapi.GetV1AlertTimelineNodesParams{
-		Active:         optionalTrueBool(opts.Active),
-		Page:           cloneInt(opts.Page),
-		PageSize:       cloneInt(opts.PageSize),
-		Hostname:       optionalString(opts.Hostname),
-		SortBy:         optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsSortBy](opts.SortBy),
-		Order:          optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsOrder](opts.Order),
-		GpuTypes:       optionalSlice(opts.GPUTypes),
-		NodeGroupIds:   optionalSlice(opts.NodeGroupIDs),
-		ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
-		AlertStates:    optionalEnumSlice[fleetapi.GetV1AlertTimelineNodesParamsAlertStates](opts.AlertStates),
-		ComponentTypes: optionalSlice(opts.ComponentTypes),
+		DataSources:         optionalEnumSlice[fleetapi.GetV1AlertTimelineNodesParamsDataSources](opts.DataSources),
+		InbandAgentStatuses: optionalEnumSlice[fleetapi.ModelsAlertAgentStatus](opts.InbandAgentStatuses),
+		OobAgentStatuses:    optionalEnumSlice[fleetapi.ModelsAlertAgentStatus](opts.OOBAgentStatuses),
+		Active:              optionalTrueBool(opts.Active),
+		Page:                cloneInt(opts.Page),
+		PageSize:            cloneInt(opts.PageSize),
+		NameSearch:          optionalString(opts.Hostname),
+		SortBy:              optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsSortBy](opts.SortBy),
+		Order:               optionalEnum[fleetapi.GetV1AlertTimelineNodesParamsOrder](opts.Order),
+		GpuTypes:            optionalSlice(opts.GPUTypes),
+		NodeGroupIds:        optionalSlice(opts.NodeGroupIDs),
+		ComputeZoneIds:      optionalSlice(opts.ComputeZoneIDs),
+		AlertStates:         optionalEnumSlice[fleetapi.GetV1AlertTimelineNodesParamsAlertStates](opts.AlertStates),
+		ComponentTypes:      optionalSlice(opts.ComponentTypes),
 	}
 
 	resp, err := c.api.GetV1AlertTimelineNodesWithResponse(ctx, &params)
@@ -406,6 +450,7 @@ func (c *Client) ListNodeAlertTimeline(ctx context.Context, opts ListNodeAlertTi
 	}
 
 	params := fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParams{
+		DataSources:    optionalEnumSlice[fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsDataSources](opts.DataSources),
 		Active:         optionalTrueBool(opts.Active),
 		WithoutPsirt:   optionalTrueBool(opts.WithoutPSIRT),
 		SortBy:         optionalEnum[fleetapi.GetV1AlertTimelineNodesNodeUuidAlertsParamsSortBy](opts.SortBy),
@@ -505,6 +550,22 @@ func (opts ListAlertsOptions) Validate() error {
 // ListAlertTimelineNodes calls it, and a caller can call it first to reject a
 // bad request without opening a connection.
 func (opts ListAlertTimelineNodesOptions) Validate() error {
+	if err := validateDataSources(opts.DataSources); err != nil {
+		return err
+	}
+	for _, filter := range []struct {
+		name   string
+		values []AlertAgentStatus
+	}{
+		{"inbandAgentStatuses", opts.InbandAgentStatuses},
+		{"oobAgentStatuses", opts.OOBAgentStatuses},
+	} {
+		for _, status := range filter.values {
+			if !status.Valid() {
+				return invalidOption(filter.name, "alert agent status", string(status), "online, offline, or not_enrolled")
+			}
+		}
+	}
 	if opts.SortBy != "" && !opts.SortBy.Valid() {
 		return invalidOption("sortBy", "alert timeline node sort", string(opts.SortBy), "")
 	}
@@ -518,6 +579,9 @@ func (opts ListAlertTimelineNodesOptions) Validate() error {
 // ListNodeAlertTimeline calls it, and a caller can call it first to reject a
 // bad request without opening a connection.
 func (opts ListNodeAlertTimelineOptions) Validate() error {
+	if err := validateDataSources(opts.DataSources); err != nil {
+		return err
+	}
 	if opts.NodeUUID == "" {
 		return fmt.Errorf("node UUID is required")
 	}
@@ -623,7 +687,7 @@ func decodeNodeAlertTimeline(data []byte) (NodeAlertTimelinePage, error) {
 	}
 
 	page := NodeAlertTimelinePage{
-		NodeUUID: stringValue(resp.NodeUuid),
+		NodeUUID: resp.NodeUuid,
 		Hostname: stringValue(resp.Hostname),
 		HasMore:  boolValue(resp.HasMore),
 		Page:     intValue(resp.Page),
@@ -647,8 +711,9 @@ func alertFromGenerated(alert fleetapi.ModelsAlert) Alert {
 	triggeredAt := stringValue(alert.TriggeredAt)
 	eventTimestamp := stringValue(alert.EventTimestamp)
 	return Alert{
-		UUID:                 stringValue(alert.AlertUUID),
-		NodeUUID:             stringValue(alert.NodeUUID),
+		DataSource:           stringValue(alert.DataSource),
+		UUID:                 alert.AlertUUID,
+		NodeUUID:             alert.NodeUUID,
 		Component:            stringValue(alert.Component),
 		ComponentDisplayName: stringValue(alert.ComponentDisplayName),
 		Severity:             enumStringValue(alert.Severity),
@@ -666,7 +731,10 @@ func alertFromGenerated(alert fleetapi.ModelsAlert) Alert {
 // Maps timeline node API models into SDK values
 func alertTimelineNodeFromGenerated(node fleetapi.ModelsAlertTimelineNode) AlertTimelineNode {
 	return AlertTimelineNode{
-		NodeUUID:      stringValue(node.NodeUuid),
+		NodeName:      stringValue(node.NodeName),
+		BMCMAC:        stringValue(node.BmcMac),
+		AgentStatus:   alertAgentStatusesFromGenerated(node.AgentStatus),
+		NodeUUID:      node.NodeUuid,
 		Hostname:      stringValue(node.Hostname),
 		ComputeZone:   stringValue(node.ComputeZone),
 		NodeGroup:     stringValue(node.NodeGroup),
@@ -679,10 +747,31 @@ func alertTimelineNodeFromGenerated(node fleetapi.ModelsAlertTimelineNode) Alert
 	}
 }
 
+func alertAgentStatusesFromGenerated(statuses *fleetapi.ModelsAlertAgentStatuses) *AlertAgentStatuses {
+	if statuses == nil {
+		return nil
+	}
+	return &AlertAgentStatuses{
+		Inband: alertAgentSourceStatusFromGenerated(statuses.Inband),
+		OOB:    alertAgentSourceStatusFromGenerated(statuses.Oob),
+	}
+}
+
+func alertAgentSourceStatusFromGenerated(status *fleetapi.ModelsAlertAgentSourceStatus) *AlertAgentSourceStatus {
+	if status == nil {
+		return nil
+	}
+	return &AlertAgentSourceStatus{
+		Status:     AlertAgentStatus(enumStringValue(status.Status)),
+		LastSeenAt: stringValue(status.LastSeenAt),
+	}
+}
+
 // Maps timeline alert API models into SDK values
 func alertTimelineNodeAlertFromGenerated(alert fleetapi.ModelsAlertTimelineNodeAlert) AlertTimelineNodeAlert {
 	return AlertTimelineNodeAlert{
-		AlertUUID:            stringValue(alert.AlertUuid),
+		DataSource:           stringValue(alert.DataSource),
+		AlertUUID:            alert.AlertUuid,
 		Component:            stringValue(alert.Component),
 		ComponentDisplayName: stringValue(alert.ComponentDisplayName),
 		AlertStatus:          stringValue(alert.AlertStatus),
@@ -694,8 +783,8 @@ func alertTimelineNodeAlertFromGenerated(alert fleetapi.ModelsAlertTimelineNodeA
 // Maps timeline detail API models into SDK values
 func alertTimelineDetailsFromGenerated(details fleetapi.ModelsAlertTimelineDetailResponse) AlertTimelineDetails {
 	out := AlertTimelineDetails{
-		AlertUUID:            stringValue(details.AlertUuid),
-		NodeUUID:             stringValue(details.NodeUuid),
+		AlertUUID:            details.AlertUuid,
+		NodeUUID:             details.NodeUuid,
 		Component:            stringValue(details.Component),
 		ComponentDisplayName: stringValue(details.ComponentDisplayName),
 		AlertStatus:          stringValue(details.AlertStatus),

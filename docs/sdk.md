@@ -46,16 +46,16 @@ func main() {
 ```
 
 Select the out-of-band node view and retrieve its BMC inventory with explicit
-agent options:
+source options:
 
 ```go
 page, err := client.ListNodes(ctx, nvfleetint.ListNodesOptions{
-	AgentType:   nvfleetint.NodeAgentTypeOOB,
-	BMCHostname: "bmc-01",
+	DataSource: nvfleetint.DataSourceOOB,
+	BMCMAC:     "02:00:0a:00:00:0a",
 })
 
 node, err := client.DescribeNodeWithOptions(ctx, nodeUUID, nvfleetint.DescribeNodeOptions{
-	AgentType: nvfleetint.NodeAgentTypeOOB,
+	DataSource: nvfleetint.DataSourceOOB,
 })
 if err == nil && node.OOBInventory != nil {
 	fmt.Println(node.OOBInventory.SchemaVersion, node.NodeKind)
@@ -67,12 +67,72 @@ if err == nil && node.OOBInventory != nil {
 }
 ```
 
+`ListNodesOptions.AgentUUIDs` and `SystemUUIDs` send repeated query parameters.
+Agent UUID filters require in-band or combined basic view. `Node.AgentUUID`
+identifies the in-band agent; node system UUIDs remain under `SystemInfo` or
+`OOBInventory.Systems`. GPU details retain `CliqueID` and `ClusterUUID`.
+Inventory report rows expose `AgentUUID`, `SystemUUID`, `GPUUUIDs`, agent/kernel/
+GPU version fields, and OOB `CollectorVersion` where provided by the API.
+
+The shared `DataSource` type and `DataSourceInband` / `DataSourceOOB` constants
+are used by nodes, inventory and error reports, alerts, events, and XID bursts.
+Node, inventory, and error-report requests accept one source; alert timeline and event filters accept `[]DataSource`.
+`ErrorReportOptions.DataSource` defaults to in-band for every view and format;
+OOB `ErrorReportNode` values expose `NodeName` and `BMCMAC`.
+`ErrorReportError.Severities` retains all severities remaining after API filtering.
+XID burst list/options also accept `DataSourceAll`; omission defaults to in-band.
+Use the same source for the list and its filter-options lookup.
+
+Use `DataSource` on `ListNodesOptions`, `DescribeNodeOptions`,
+`NodeFilterOptionsRequest`, and `InventoryReportOptions`, with
+`DataSourceInband` or `DataSourceOOB`. Node results expose `DataSource`.
+
+With source omitted, SDK detail queries and inventory reports default to
+in-band. Basic node queries combine both sources. The CLI separately retains
+its default of fetching both detail views for node list, describe, and options
+in table output. Detail JSON for CLI node list and options requires
+`--data-source`. CLI inventory tables also fetch both sources by default,
+while inventory JSON, CSV, and signed downloads require `--data-source`.
+SDK defaults are unchanged.
+
+```go
+options, err := client.GetNodeFilterOptionsWithOptions(ctx, nvfleetint.NodeFilterOptionsRequest{
+    View: nvfleetint.NodeViewBasic,
+    DataSource: nvfleetint.DataSourceOOB,
+})
+report, err := client.GetInventoryReport(ctx, nvfleetint.InventoryReportOptions{
+    DataSource: nvfleetint.DataSourceOOB,
+    SortBy: nvfleetint.InventoryReportSortByBMCMAC,
+})
+```
+
+OOB report rows expose `NodeName`, `BMCMAC`, `BMCIP`, `GPUType`, and
+`GPUCount`, plus shared verification, location, enrollment, and removal
+information. GPU fields come from the selected source; a missing GPU count
+remains nil, while a reported zero remains zero. Both sources support
+`InventoryReportSortByGPUType` and `InventoryReportSortByGPUCount`. Source selection
+also applies to CSV and signed bundle downloads. `GetNodeFilterOptions(ctx, dataSource)`
+accepts `DataSource` for detail-view callers.
+
+OOB node list/detail results now retain optional `GPUType` and `GPUCount`.
+Basic node queries support GPU filters and inventory sorting while returning
+identity-only rows. Agent-status filters accept `NodeAgentOnline` and
+`NodeAgentOffline`; the deprecated `NodeAgentUnknown` value is rejected.
+
 OOB node list and detail results expose the inventory classification as
 `Node.NodeKind`.
 
+Verification statuses include `Full Attestation`, `Partial Attestation`, and
+`Verification Failed`. `VerificationCheckExtraInfo.Policy` retains the aggregate
+and per-GPU verdicts, including tier, approval, reasons, and denials, for nodes
+and inventory reports. `EAR` retains the structured attestation result returned
+by node details; omitted values remain absent.
+
 OOB inventory exposes node kinds (`unknown`, `compute`, `nvswitch`, and
-`power_shelf`) and nested Redfish status conditions on systems, processors,
-managers, chassis, PCIe devices, and firmware.
+`power_shelf`), nested Redfish status conditions, memory modules, storage/drives,
+power supplies, fabrics/switches, NVIDIA topology, summaries, links, and physical
+locations. Inventory references serialize as `odataId`. Use `Status`,
+`ProcessorSummary`, `MemorySummary`, and the nested location structures.
 
 `NewClient` requires an HTTPS API URL and an API key. Plain HTTP is accepted
 only for loopback addresses used during local development.
@@ -98,6 +158,28 @@ Alert timeline filter values and sorting choices are available through
 ```go
 options, err := client.GetAlertTimelineFilterOptions(ctx, true)
 ```
+
+`ListAlertTimelineNodesOptions` and `ListNodeAlertTimelineOptions` accept
+`DataSources` using the shared `DataSource` type. Omission includes both
+alert-producing sources, and multiple values are ORed. Summary options also
+accept `InbandAgentStatuses` and `OOBAgentStatuses`. Status values within one
+filter are ORed; the two filters are ANDed. Omitted status filters impose no
+restriction. `Active` selects active versus historical alerts, while the
+agent-status fields describe current source liveness/enrollment.
+
+```go
+nodes, err := client.ListAlertTimelineNodes(ctx, nvfleetint.ListAlertTimelineNodesOptions{
+    Active: true,
+    DataSources: []nvfleetint.DataSource{nvfleetint.DataSourceOOB},
+    InbandAgentStatuses: []nvfleetint.AlertAgentStatus{
+        nvfleetint.AlertAgentOffline, nvfleetint.AlertAgentNotEnrolled,
+    },
+    OOBAgentStatuses: []nvfleetint.AlertAgentStatus{nvfleetint.AlertAgentOnline},
+})
+```
+
+Summary `AgentStatus` and its per-source objects are optional. Absent objects
+remain nil, distinct from an explicit `not_enrolled` status.
 
 ## Writes
 

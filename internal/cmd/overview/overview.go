@@ -103,7 +103,7 @@ func metricLabel(metric nvfleetint.OverviewMetric) string {
 	return clioutput.DisplayString(label)
 }
 
-// Formats a metric value with its unit. A "%" unit is appended without a space
+// Formats a metric value with its unit. "percent" and "%" render as "%" without a space
 // to match the summary health-percentage formatting ("70%"); other units are
 // space-separated ("58 C").
 func metricValue(metric nvfleetint.OverviewMetric) string {
@@ -111,8 +111,8 @@ func metricValue(metric nvfleetint.OverviewMetric) string {
 		return "-"
 	}
 	unit := strings.TrimSpace(metric.Unit)
-	if unit == "%" {
-		// Reuse the shared percentage formatter so a "%" metric renders
+	if unit == "percent" || unit == "%" {
+		// Reuse the shared percentage formatter so a percentage metric renders
 		// identically to the summary health-percentage row ("70%").
 		return clioutput.FormatOptionalPercentage(metric.Value)
 	}

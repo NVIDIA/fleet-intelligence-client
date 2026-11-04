@@ -111,9 +111,10 @@ nvfleetint overview
 nvfleetint computezone list
 nvfleetint nodegroup list
 nvfleetint node list
-nvfleetint node list --agent-type oob --bmc-hostname bmc-01
+nvfleetint node list --data-source oob --bmc-mac 02:00:0a:00:00:0a
+nvfleetint node list --view basic --search 02:00:0a:00:00:0a
 nvfleetint node describe <node-uuid>
-nvfleetint node describe <node-uuid> --agent-type oob --section all
+nvfleetint node describe <node-uuid> --data-source oob --section all
 
 # Health, alerts, and events
 nvfleetint node health <node-uuid> \
@@ -123,6 +124,7 @@ nvfleetint alert node <node-uuid>
 nvfleetint alert list --severity Critical
 nvfleetint alert describe <alert-uuid> --node <node-uuid>
 nvfleetint alert options --view historical
+nvfleetint event options
 nvfleetint event list --window 24h
 nvfleetint event buckets --window 24h
 
@@ -149,20 +151,92 @@ List commands support shared flags including `--all`, `--page`, `--page-size`,
 `--timeout`, and `--output json`.
 
 Detailed node list and describe commands query both in-band and out-of-band
-(OOB) views by default. Table output labels the two sections; JSON output uses
-top-level `inband` and `oob` objects. Use `--agent-type inband` or
-`--agent-type oob` to request one view. OOB lists accept `--bmc-hostname` and
-the `bmcHostname` sort key. OOB describe tables can be narrowed with
-`--section managers,systems,chassis,firmware`; `--section all` includes every
-inventory section. Both the out-of-band node list and summary table include
+(OOB) views by default for table output, with labeled sections. Detail
+`node list --output json` requires `--data-source inband` or `--data-source oob`,
+including with `--all`, and returns one source without an `inband`/`oob` wrapper.
+Default `node describe` JSON still uses top-level `inband` and `oob` objects;
+select a source to request one view. OOB lists accept `--bmc-mac` and
+the `bmcMac` sort key. OOB describe tables can be narrowed with
+`--section managers,systems,chassis,firmware,fabrics`; `systems` includes memory
+and storage, `chassis` includes power supplies, and
+`fabrics` includes switches. Tables use nested status and resource summaries.
+Structured inventory locations are available in JSON output. `--section all`
+includes every inventory section. Both the out-of-band node list and summary table include
 `NODE KIND`. JSON describe output always includes
 the full inventory, including nested Redfish status and condition details.
+
+`node list --agent-uuids` filters exact, case-sensitive in-band agent identities;
+`--system-uuids` filters system identities in the selected source inventory.
+Both take comma-separated values and support basic view. Without a source, basic
+view matches active in-band agent identities or system identities from either
+active source. Agent UUID filtering is rejected for OOB. Omitted UUID filters
+leave the query unrestricted by those identities. Inventory reports do not
+accept these filters.
+
+Detail-list filters and sorting require an explicit source. Basic lists can filter by GPU type/count and sort by identity,
+node group, compute zone, GPU type, or GPU count without selecting a source.
+Basic responses still contain identity fields only. Agent-status filters accept
+`Online` or `Offline`; healthy liveness is online and all other liveness states
+are offline.
+
+`node options --view basic` returns the choices for combined basic queries.
+Without a source, `node options` displays both detail sources in separate
+In-band and Out-of-band table sections. Detail `node options --output json` requires
+`--data-source inband` or `--data-source oob` and keeps the original
+single-response JSON shape. For both list and options, `--view basic --output json`
+allows source omission and returns one combined API response. OOB list/detail tables include GPU
+type and count when available.
+
+`report inventory` tables default to separate In-band and Out-of-band sections.
+`--page` and `--page-size` apply independently to each source; `--all` fetches
+all pages for each. JSON output, CSV, and signed CSV bundles require
+`--data-source inband` or `--data-source oob` and contain one source.
+An explicit source also selects a single table. OOB rows use node name, BMC MAC identifier, and BMC
+IP, plus GPU type and count from the OOB source; shared enrollment/removal
+times and verification fields remain available. Both sources support `gpuType`
+and `gpuCount` sorting. Tables show agent version for in-band inventory and
+collector version for OOB inventory. In-band-only sorts include hostname and public/private
+IP; OOB identity sorts are `nodeName`, `bmcMac`, and `bmcIP`.
+
+```bash
+nvfleetint node list --view basic --gpu-type NVIDIA-H100 --sort-by gpuCount
+nvfleetint node options --view basic --data-source oob
+nvfleetint report inventory --data-source oob --sort-by bmcMac --all
+nvfleetint report inventory --data-source oob --format csv
+```
 
 The investigative alert workflow is `summary → node → describe`: start with
 impacted-node counts, inspect one node's alerts, then retrieve one alert's
 complete event timeline. `alert list` separately provides the fleet-wide flat
 alert records. `alert summary`, `alert node`, and `alert options` default to the
 active view; pass `--view historical` for history.
+
+`alert summary` and `alert node` accept `--data-source inband|oob` or
+`--data-source inband,oob`. Omission includes both sources in the same API
+response. This filters the source that produced the alert, independently of
+current agent status.
+
+`alert summary` also accepts `--inband-agent-status` and `--oob-agent-status`:
+`online`, `offline`, or `not_enrolled`. Values within each comma-separated
+filter are ORed; when both flags are supplied, both conditions must match.
+Omitting a status flag leaves that source's status unrestricted. Statuses
+describe current enrollment/liveness even in historical view; missing status
+data does not mean `not_enrolled`.
+
+Use `alert options` to discover available filter values for the selected view,
+and each command's `--help` for supported flags and sort keys.
+
+```bash
+nvfleetint alert summary --inband-agent-status offline,not_enrolled --oob-agent-status online
+nvfleetint alert node <node-uuid> --view historical --data-source oob --all --output json
+```
+
+`event list` and `event buckets` share filters; omitting `--data-source`
+includes both sources. `--component` and `--components` cannot be combined,
+nor can inclusion and exclusion filters for the same group/zone dimension.
+`event options` lists catalog values independently of time and inventory
+filters, so an option may have no matching events. The `Others` event name
+matches names outside the catalog; GPU types reflect current node inventory.
 
 `xidburst list` requires a time range (`--window`, or `--start` and `--end`),
 which applies to each burst's start time. Some of its filters and response
@@ -171,8 +245,21 @@ descriptions, and DC-admin actions — are available only to cloud-provider/NCP
 callers. Node groups and compute zones can be filtered inclusively
 (`--nodegroup-ids`, `--compute-zone-ids`) or by exclusion
 (`--exclude-nodegroup-ids`, `--exclude-compute-zone-ids`), but not both for the
-same dimension. `xidburst describe` adds the impacted GPU device IDs, per-XID
+same dimension.
+
+`xidburst list` and `xidburst options` default to in-band; use the same
+`--data-source inband|oob|all` for both. With `all`, the same fault observed on
+both paths remains two distinct bursts. Describe needs only the burst ID.
+`xidburst describe` adds the impacted device labels, per-XID
 catalog details, and suggested actions.
+
+`report error` selects one source with `--data-source inband|oob` and defaults
+to in-band for tables, JSON, and CSV in every view. OOB node rows use node name
+and BMC MAC identity. For example:
+
+```bash
+nvfleetint report error --data-source oob --view list --group-by node --window 24h
+```
 
 `computezone update` changes one compute zone's type, contact, and location.
 Contact and location are structured values on the API, so each of their fields
@@ -202,13 +289,13 @@ replacing them.
 Write an inventory report to a file:
 
 ```bash
-nvfleetint report inventory --format csv > inventory.csv
+nvfleetint report inventory --data-source inband --format csv > inventory.csv
 ```
 
 Download and verify a signed inventory bundle:
 
 ```bash
-nvfleetint report inventory --format csv --signed \
+nvfleetint report inventory --data-source inband --format csv --signed \
   --output-path inventory-report.zip
 unzip -l inventory-report.zip
 unzip inventory-report.zip

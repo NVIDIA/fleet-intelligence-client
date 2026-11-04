@@ -19,12 +19,14 @@ import (
 )
 
 // Lists the sort fields accepted by xidburst list
-const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeUuid, nodeGroup, computeZone, " +
+const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeName, bmcMac, nodeUuid, dataSource, gpuType, nodeGroup, computeZone, " +
 	"xidNumbers, xidCount, jobDisruption, jobDisruptionDueToPlatformIssue, category, subcategory, " +
 	"tenantAction, tenantInvestigation, dcAdminAction, or dcAdminInvestigation"
 
 // Stores local flag values for xidburst list
 type xidBurstListFlags struct {
+	dataSource                 string
+	gpuTypes                   string
 	window                     string
 	start                      string
 	end                        string
@@ -104,7 +106,7 @@ callers; for tenant callers the backend rejects them.
 ` + cmdutil.OptionsHelpNote("nvfleetint xidburst options",
 			"--xid-numbers", "--categories", "--subcategories", "--tenant-actions",
 			"--tenant-investigations", "--dc-admin-actions", "--dc-admin-investigations",
-			"--job-disruption", "--platform-disruption"),
+			"--job-disruption", "--platform-disruption", "--gpu-type"),
 		Example: `  nvfleetint xidburst list --window 24h
   nvfleetint xidburst list --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z
   nvfleetint xidburst list --window 168h --xid-numbers 48,94 --job-disruption`,
@@ -114,6 +116,7 @@ callers; for tenant callers the backend rejects them.
 	}
 
 	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Observation source: inband, oob, or all (default: inband)")
 	cmd.Flags().StringVar(&flags.node, "node", "", "Filter by node UUID")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to filter")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to filter")
@@ -124,7 +127,10 @@ callers; for tenant callers the backend rejects them.
 	cmd.Flags().BoolVar(&flags.jobDisruption, "job-disruption", false, "Filter by the public fatal-XID job-disruption value")
 	cmd.Flags().BoolVar(&flags.platformDisruption, "platform-disruption", false, "Filter by analyzer platform-attributed disruption (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.xidNumbers, "xid-numbers", "", "Comma-separated XID numbers; a burst matches if it contains any of them")
-	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Hostname partial match")
+	cmd.Flags().StringVar(&flags.hostname, "name-search", "", "Search hostname, OOB node name, or BMC MAC identifier")
+	cmd.Flags().StringVar(&flags.hostname, "hostname", "", "Compatibility alias for --name-search")
+	cmd.MarkFlagsMutuallyExclusive("name-search", "hostname")
+	cmd.Flags().StringVar(&flags.gpuTypes, "gpu-type", "", "Comma-separated resolved node GPU types; independent of observation source")
 	cmd.Flags().StringVar(&flags.categorySearch, "category-search", "", "Category partial match (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.subcategorySearch, "subcategory-search", "", "Subcategory partial match (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.tenantActionSearch, "tenant-action-search", "", "Tenant immediate-action code partial match")
@@ -177,11 +183,12 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 	}
 
 	opts := nvfleetint.ListXIDBurstsOptions{
+		DataSource:                 nvfleetint.DataSource(strings.TrimSpace(flags.dataSource)),
 		Window:                     strings.TrimSpace(flags.window),
 		StartTime:                  strings.TrimSpace(flags.start),
 		EndTime:                    strings.TrimSpace(flags.end),
 		NodeUUID:                   strings.TrimSpace(flags.node),
-		HostnameSearch:             strings.TrimSpace(flags.hostname),
+		NameSearch:                 strings.TrimSpace(flags.hostname),
 		CategorySearch:             strings.TrimSpace(flags.categorySearch),
 		SubcategorySearch:          strings.TrimSpace(flags.subcategorySearch),
 		TenantActionSearch:         strings.TrimSpace(flags.tenantActionSearch),
@@ -216,6 +223,7 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 		{name: "compute-zone-ids", raw: flags.computeZoneIDs, assign: func(v []string) { opts.ComputeZoneIDs = v }},
 		{name: "exclude-nodegroup-ids", raw: flags.excludeNodeGroupIDs, assign: func(v []string) { opts.ExcludeNodeGroupIDs = v }},
 		{name: "exclude-compute-zone-ids", raw: flags.excludeComputeZoneIDs, assign: func(v []string) { opts.ExcludeComputeZoneIDs = v }},
+		{name: "gpu-type", raw: flags.gpuTypes, assign: func(v []string) { opts.GPUTypes = v }},
 		{name: "categories", raw: flags.categories, assign: func(v []string) { opts.Categories = v }},
 		{name: "subcategories", raw: flags.subcategories, assign: func(v []string) { opts.Subcategories = v }},
 		{name: "tenant-actions", raw: flags.tenantActions, assign: func(v []string) { opts.TenantActions = v }},
@@ -235,6 +243,10 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 	}
 	if len(opts.ComputeZoneIDs) > 0 && len(opts.ExcludeComputeZoneIDs) > 0 {
 		return errors.New("--compute-zone-ids cannot be used with --exclude-compute-zone-ids")
+	}
+
+	if err := opts.Validate(); err != nil {
+		return renderXIDBurstOptionError(err)
 	}
 
 	client, err := cmdutil.New(common)
@@ -331,7 +343,7 @@ func writeXIDBurstListOutput(w io.Writer, common cmdutil.Resolved, result xidBur
 	}
 
 	headers := []string{
-		"BURST ID", "HOSTNAME", "XIDS", "XID COUNT", "START TIME", "DURATION (S)",
+		"BURST ID", "DATA SOURCE", "HOSTNAME", "NODE NAME", "BMC MAC", "GPU TYPE", "XIDS", "XID COUNT", "START TIME", "DURATION (S)",
 		"JOB DISRUPTION", "NODE GROUP", "COMPUTE ZONE",
 	}
 	if err := clioutput.WriteTable(w, headers, xidBurstRows(result.Bursts)); err != nil {
@@ -351,7 +363,11 @@ func xidBurstRows(bursts []nvfleetint.XIDBurst) [][]string {
 	for _, burst := range bursts {
 		rows = append(rows, []string{
 			clioutput.DisplayString(burst.BurstID),
+			clioutput.DisplayString(burst.DataSource),
 			clioutput.DisplayString(burst.Hostname),
+			clioutput.DisplayString(burst.NodeName),
+			clioutput.DisplayString(burst.BMCMAC),
+			clioutput.DisplayString(burst.GPUType),
 			formatXIDNumbers(burst.XIDNumbers),
 			clioutput.FormatOptionalInt(burst.XIDCount),
 			clioutput.DisplayString(burst.StartTime),
@@ -374,6 +390,10 @@ func xidBurstDescribeRows(burst nvfleetint.XIDBurstDetails) [][]string {
 	rows := [][]string{
 		{"BURST ID", clioutput.DisplayString(burst.BurstID)},
 		{"NODE UUID", clioutput.DisplayString(burst.NodeUUID)},
+		{"DATA SOURCE", clioutput.DisplayString(burst.DataSource)},
+		{"NODE NAME", clioutput.DisplayString(burst.NodeName)},
+		{"BMC MAC", clioutput.DisplayString(burst.BMCMAC)},
+		{"GPU TYPE", clioutput.DisplayString(burst.GPUType)},
 		{"HOSTNAME", clioutput.DisplayString(burst.Hostname)},
 		{"NODE GROUP", clioutput.FormatNameAndID(burst.NodeGroup, burst.NodeGroupID)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(burst.ComputeZone, burst.ComputeZoneID)},
@@ -473,6 +493,7 @@ const xidBurstOptionsConsumer = "'xidburst list'"
 
 // Stores local flag values for the XID burst options command
 type xidBurstOptionsFlags struct {
+	dataSource            string
 	window                string
 	start                 string
 	end                   string
@@ -493,9 +514,9 @@ func newXIDBurstOptionsCmd() *cobra.Command {
 		Long: `List the filter values available for 'xidburst list'.
 
 Every filter is optional. Supplying a time range or an inventory scope narrows
-the values to those present in that slice of the fleet, so each remaining option
-is one that returns results. Unlike 'xidburst list', a time range is not
-required. Column filters are not applied, and no counts are returned.`,
+the observed values. Boolean options always include both true and false.
+Unlike 'xidburst list', a time range is not required. Column filters are not applied, and no counts are returned.
+Use the same --data-source as the list, including all for combined results.`,
 		Example: `  nvfleetint xidburst options
   nvfleetint xidburst options --window 24h
   nvfleetint xidburst options --window 168h --compute-zone-ids cz-1`,
@@ -505,6 +526,7 @@ required. Column filters are not applied, and no counts are returned.`,
 	}
 
 	cmdutil.RegisterTimeRangeFlags(cmd, &flags.window, &flags.start, &flags.end)
+	cmd.Flags().StringVar(&flags.dataSource, "data-source", "", "Observation source: inband, oob, or all (default: inband)")
 	cmd.Flags().StringVar(&flags.nodeGroupIDs, "nodegroup-ids", "", "Comma-separated node group IDs to scope the options to")
 	cmd.Flags().StringVar(&flags.computeZoneIDs, "compute-zone-ids", "", "Comma-separated compute zone IDs to scope the options to")
 	cmd.Flags().StringVar(&flags.excludeNodeGroupIDs, "exclude-nodegroup-ids", "",
@@ -528,9 +550,10 @@ func runXIDBurstOptions(cmd *cobra.Command, flags xidBurstOptionsFlags, common c
 	}
 
 	scope := nvfleetint.XIDBurstFilterOptionsScope{
-		Window:    strings.TrimSpace(flags.window),
-		StartTime: strings.TrimSpace(flags.start),
-		EndTime:   strings.TrimSpace(flags.end),
+		DataSource: nvfleetint.DataSource(strings.TrimSpace(flags.dataSource)),
+		Window:     strings.TrimSpace(flags.window),
+		StartTime:  strings.TrimSpace(flags.start),
+		EndTime:    strings.TrimSpace(flags.end),
 	}
 	for _, filter := range []struct {
 		name   string
@@ -547,6 +570,10 @@ func runXIDBurstOptions(cmd *cobra.Command, flags xidBurstOptionsFlags, common c
 			return fmt.Errorf("invalid --%s: %w", filter.name, err)
 		}
 		filter.assign(values)
+	}
+
+	if err := scope.Validate(); err != nil {
+		return renderXIDBurstOptionError(err)
 	}
 
 	client, err := cmdutil.New(common)
@@ -571,7 +598,11 @@ func writeXIDBurstOptionsTable(w io.Writer, options nvfleetint.XIDBurstFilterOpt
 		return err
 	}
 
+	if _, err := fmt.Fprintf(w, "Data source: %s\n", clioutput.DisplayString(options.DataSource)); err != nil {
+		return err
+	}
 	sections := []cmdutil.OptionSection{
+		{Heading: "--gpu-type", Rows: cmdutil.ValueRows(options.GPUTypes)},
 		{Heading: "--xid-numbers", Rows: xidNumberRows(options.XIDNumbers)},
 		{Heading: "--categories", Rows: cmdutil.ValueRows(options.Categories)},
 		{Heading: "--subcategories", Rows: cmdutil.ValueRows(options.Subcategories)},
@@ -670,4 +701,10 @@ func boolRows(values []bool) [][]string {
 		rows = append(rows, []string{strconv.FormatBool(value)})
 	}
 	return rows
+}
+
+func renderXIDBurstOptionError(err error) error {
+	return cmdutil.RenderOptionError(err, map[string]cmdutil.OptionFlagName{
+		"dataSource": {Flag: "--data-source"},
+	})
 }

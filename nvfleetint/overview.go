@@ -102,7 +102,7 @@ func metricFromGenerated(metric fleetapi.ModelsMetric) OverviewMetric {
 	return OverviewMetric{
 		Name:        stringValue(metric.Name),
 		Description: stringValue(metric.Description),
-		Unit:        stringValue(metric.Unit),
+		Unit:        enumStringValue(metric.Unit),
 		Value:       cloneFloat32(metric.Value),
 		Aggregation: enumStringValue(metric.Aggregation),
 		LastUpdated: stringValue(metric.LastUpdated),
