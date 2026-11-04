@@ -3581,17 +3581,9 @@ type ModelsNotificationTarget struct {
 
 // ModelsOobChassis defines model for models.OobChassis.
 type ModelsOobChassis struct {
-	AssetTag    *string `json:"assetTag,omitempty"`
-	ChassisType *string `json:"chassisType,omitempty"`
-	Description *string `json:"description,omitempty"`
-
-	// Health Deprecated: use status.health.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Health *string `json:"health,omitempty"`
-
-	// HealthRollup Deprecated: use status.healthRollup.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup  *string                   `json:"healthRollup,omitempty"`
+	AssetTag      *string                   `json:"assetTag,omitempty"`
+	ChassisType   *string                   `json:"chassisType,omitempty"`
+	Description   *string                   `json:"description,omitempty"`
 	Id            string                    `json:"id"`
 	Links         *ModelsOobInventoryLinks  `json:"links,omitempty"`
 	Location      *ModelsOobChassisLocation `json:"location,omitempty"`
@@ -3606,10 +3598,6 @@ type ModelsOobChassis struct {
 	SerialNumber  *string                   `json:"serialNumber,omitempty"`
 	Sku           *string                   `json:"sku,omitempty"`
 	Status        *ModelsOobInventoryStatus `json:"status,omitempty"`
-
-	// StatusState Deprecated: use status.state.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	StatusState *string `json:"statusState,omitempty"`
 }
 
 // ModelsOobChassisLocation defines model for models.OobChassisLocation.
@@ -3617,16 +3605,6 @@ type ModelsOobChassisLocation struct {
 	PartLocation        *ModelsOobPartLocation `json:"partLocation,omitempty"`
 	PartLocationContext *string                `json:"partLocationContext,omitempty"`
 	Placement           *ModelsOobPlacement    `json:"placement,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Rack *string `json:"rack,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	RackOffset *int `json:"rackOffset,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Room *string `json:"room,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Row *string `json:"row,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ServiceLabel *string `json:"serviceLabel,omitempty"`
 }
 
 // ModelsOobDomainError defines model for models.OobDomainError.
@@ -3666,28 +3644,16 @@ type ModelsOobFabric struct {
 
 // ModelsOobFirmware defines model for models.OobFirmware.
 type ModelsOobFirmware struct {
-	Description *string `json:"description,omitempty"`
-
-	// Health Deprecated: use status.health.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Health *string `json:"health,omitempty"`
-
-	// HealthRollup Deprecated: use status.healthRollup.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup *string                        `json:"healthRollup,omitempty"`
-	Id           string                         `json:"id"`
-	Links        *ModelsOobInventoryLinks       `json:"links,omitempty"`
-	Name         string                         `json:"name"`
-	OdataId      *string                        `json:"odataId,omitempty"`
-	RelatedItem  *[]ModelsOobInventoryReference `json:"relatedItem,omitempty"`
-	ReleaseDate  *string                        `json:"releaseDate,omitempty"`
-	ServiceId    string                         `json:"serviceId"`
-	Status       *ModelsOobInventoryStatus      `json:"status,omitempty"`
-
-	// StatusState Deprecated: use status.state.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	StatusState *string `json:"statusState,omitempty"`
-	Version     *string `json:"version,omitempty"`
+	Description *string                        `json:"description,omitempty"`
+	Id          string                         `json:"id"`
+	Links       *ModelsOobInventoryLinks       `json:"links,omitempty"`
+	Name        string                         `json:"name"`
+	OdataId     *string                        `json:"odataId,omitempty"`
+	RelatedItem *[]ModelsOobInventoryReference `json:"relatedItem,omitempty"`
+	ReleaseDate *string                        `json:"releaseDate,omitempty"`
+	ServiceId   string                         `json:"serviceId"`
+	Status      *ModelsOobInventoryStatus      `json:"status,omitempty"`
+	Version     *string                        `json:"version,omitempty"`
 }
 
 // ModelsOobInventory defines model for models.OobInventory.
@@ -3699,9 +3665,6 @@ type ModelsOobInventory struct {
 	Firmware     *[]ModelsOobFirmware    `json:"firmware,omitempty"`
 	Managers     *[]ModelsOobManager     `json:"managers,omitempty"`
 
-	// PrimarySystemId Optional fields — omitted from the response when absent:
-	PrimarySystemId *string `json:"primarySystemId,omitempty"`
-
 	// SchemaVersion Required scalars — always present on a valid inventory document.
 	// `binding:"required"` is honored when this struct is embedded into
 	// OobNodeUpsertRequest and bound from a request body; the tag is
@@ -3710,8 +3673,10 @@ type ModelsOobInventory struct {
 	Source        ModelsOobSource `json:"source"`
 
 	// Systems List sections — always emitted as a JSON array, possibly empty:
-	Systems     *[]ModelsOobSystem `json:"systems,omitempty"`
-	TargetError *string            `json:"targetError,omitempty"`
+	Systems *[]ModelsOobSystem `json:"systems,omitempty"`
+
+	// TargetError Optional fields — omitted from the response when absent:
+	TargetError *string `json:"targetError,omitempty"`
 }
 
 // ModelsOobInventoryCondition defines model for models.OobInventoryCondition.
@@ -3795,28 +3760,16 @@ type ModelsOobInventoryStatus struct {
 
 // ModelsOobManager defines model for models.OobManager.
 type ModelsOobManager struct {
-	Description     *string `json:"description,omitempty"`
-	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
-
-	// Health Deprecated: use status.health.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Health *string `json:"health,omitempty"`
-
-	// HealthRollup Deprecated: use status.healthRollup.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup *string                   `json:"healthRollup,omitempty"`
-	Id           string                    `json:"id"`
-	Links        *ModelsOobInventoryLinks  `json:"links,omitempty"`
-	ManagerType  *string                   `json:"managerType,omitempty"`
-	Model        *string                   `json:"model,omitempty"`
-	Name         *string                   `json:"name,omitempty"`
-	OdataId      *string                   `json:"odataId,omitempty"`
-	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
-
-	// StatusState Deprecated: use status.state.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	StatusState *string `json:"statusState,omitempty"`
-	Uuid        *string `json:"uuid,omitempty"`
+	Description     *string                   `json:"description,omitempty"`
+	FirmwareVersion *string                   `json:"firmwareVersion,omitempty"`
+	Id              string                    `json:"id"`
+	Links           *ModelsOobInventoryLinks  `json:"links,omitempty"`
+	ManagerType     *string                   `json:"managerType,omitempty"`
+	Model           *string                   `json:"model,omitempty"`
+	Name            *string                   `json:"name,omitempty"`
+	OdataId         *string                   `json:"odataId,omitempty"`
+	Status          *ModelsOobInventoryStatus `json:"status,omitempty"`
+	Uuid            *string                   `json:"uuid,omitempty"`
 }
 
 // ModelsOobMemory defines model for models.OobMemory.
@@ -4009,32 +3962,20 @@ type ModelsOobPartLocation struct {
 
 // ModelsOobPcieDevice defines model for models.OobPcieDevice.
 type ModelsOobPcieDevice struct {
-	Description     *string `json:"description,omitempty"`
-	DeviceType      *string `json:"deviceType,omitempty"`
-	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
-
-	// Health Deprecated: use status.health.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Health *string `json:"health,omitempty"`
-
-	// HealthRollup Deprecated: use status.healthRollup.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup *string                   `json:"healthRollup,omitempty"`
-	Id           string                    `json:"id"`
-	Links        *ModelsOobInventoryLinks  `json:"links,omitempty"`
-	Manufacturer *string                   `json:"manufacturer,omitempty"`
-	Model        *string                   `json:"model,omitempty"`
-	Name         *string                   `json:"name,omitempty"`
-	OdataId      *string                   `json:"odataId,omitempty"`
-	PartNumber   *string                   `json:"partNumber,omitempty"`
-	SerialNumber *string                   `json:"serialNumber,omitempty"`
-	Sku          *string                   `json:"sku,omitempty"`
-	Status       *ModelsOobInventoryStatus `json:"status,omitempty"`
-
-	// StatusState Deprecated: use status.state.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	StatusState *string `json:"statusState,omitempty"`
-	Uuid        *string `json:"uuid,omitempty"`
+	Description     *string                   `json:"description,omitempty"`
+	DeviceType      *string                   `json:"deviceType,omitempty"`
+	FirmwareVersion *string                   `json:"firmwareVersion,omitempty"`
+	Id              string                    `json:"id"`
+	Links           *ModelsOobInventoryLinks  `json:"links,omitempty"`
+	Manufacturer    *string                   `json:"manufacturer,omitempty"`
+	Model           *string                   `json:"model,omitempty"`
+	Name            *string                   `json:"name,omitempty"`
+	OdataId         *string                   `json:"odataId,omitempty"`
+	PartNumber      *string                   `json:"partNumber,omitempty"`
+	SerialNumber    *string                   `json:"serialNumber,omitempty"`
+	Sku             *string                   `json:"sku,omitempty"`
+	Status          *ModelsOobInventoryStatus `json:"status,omitempty"`
+	Uuid            *string                   `json:"uuid,omitempty"`
 }
 
 // ModelsOobPlacement defines model for models.OobPlacement.
@@ -4063,15 +4004,7 @@ type ModelsOobPowerSupply struct {
 
 // ModelsOobProcessor defines model for models.OobProcessor.
 type ModelsOobProcessor struct {
-	Description *string `json:"description,omitempty"`
-
-	// Health Deprecated: use status.health.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Health *string `json:"health,omitempty"`
-
-	// HealthRollup Deprecated: use status.healthRollup.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup          *string                   `json:"healthRollup,omitempty"`
+	Description           *string                   `json:"description,omitempty"`
 	Id                    string                    `json:"id"`
 	InstructionSet        *string                   `json:"instructionSet,omitempty"`
 	Links                 *ModelsOobInventoryLinks  `json:"links,omitempty"`
@@ -4088,13 +4021,9 @@ type ModelsOobProcessor struct {
 	SerialNumber          *string                   `json:"serialNumber,omitempty"`
 	Socket                *string                   `json:"socket,omitempty"`
 	Status                *ModelsOobInventoryStatus `json:"status,omitempty"`
-
-	// StatusState Deprecated: use status.state.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	StatusState  *string `json:"statusState,omitempty"`
-	TotalCores   *int    `json:"totalCores,omitempty"`
-	TotalThreads *int    `json:"totalThreads,omitempty"`
-	Uuid         *string `json:"uuid,omitempty"`
+	TotalCores            *int                      `json:"totalCores,omitempty"`
+	TotalThreads          *int                      `json:"totalThreads,omitempty"`
+	Uuid                  *string                   `json:"uuid,omitempty"`
 }
 
 // ModelsOobProcessorSummary defines model for models.OobProcessorSummary.
@@ -4147,30 +4076,14 @@ type ModelsOobSwitch struct {
 
 // ModelsOobSystem defines model for models.OobSystem.
 type ModelsOobSystem struct {
-	AssetTag    *string `json:"assetTag,omitempty"`
-	BiosVersion *string `json:"biosVersion,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	CpuCoreCount *int `json:"cpuCoreCount,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	CpuCount *int `json:"cpuCount,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	CpuModel    *string `json:"cpuModel,omitempty"`
-	Description *string `json:"description,omitempty"`
-
-	// Health Deprecated: use status.health.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Health *string `json:"health,omitempty"`
-
-	// HealthRollup Deprecated: use status.healthRollup.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	HealthRollup *string                  `json:"healthRollup,omitempty"`
-	HostName     *string                  `json:"hostName,omitempty"`
-	Id           string                   `json:"id"`
-	Links        *ModelsOobInventoryLinks `json:"links,omitempty"`
-	Manufacturer *string                  `json:"manufacturer,omitempty"`
-	Memory       *[]ModelsOobMemory       `json:"memory,omitempty"`
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	MemoryGib         *float32                   `json:"memoryGib,omitempty"`
+	AssetTag          *string                    `json:"assetTag,omitempty"`
+	BiosVersion       *string                    `json:"biosVersion,omitempty"`
+	Description       *string                    `json:"description,omitempty"`
+	HostName          *string                    `json:"hostName,omitempty"`
+	Id                string                     `json:"id"`
+	Links             *ModelsOobInventoryLinks   `json:"links,omitempty"`
+	Manufacturer      *string                    `json:"manufacturer,omitempty"`
+	Memory            *[]ModelsOobMemory         `json:"memory,omitempty"`
 	MemorySummary     *ModelsOobMemorySummary    `json:"memorySummary,omitempty"`
 	Model             *string                    `json:"model,omitempty"`
 	Name              *string                    `json:"name,omitempty"`
@@ -4182,12 +4095,8 @@ type ModelsOobSystem struct {
 	SerialNumber      *string                    `json:"serialNumber,omitempty"`
 	Sku               *string                    `json:"sku,omitempty"`
 	Status            *ModelsOobInventoryStatus  `json:"status,omitempty"`
-
-	// StatusState Deprecated: use status.state.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	StatusState *string             `json:"statusState,omitempty"`
-	Storage     *[]ModelsOobStorage `json:"storage,omitempty"`
-	Uuid        *string             `json:"uuid,omitempty"`
+	Storage           *[]ModelsOobStorage        `json:"storage,omitempty"`
+	Uuid              *string                    `json:"uuid,omitempty"`
 }
 
 // ModelsOptions defines model for models.Options.

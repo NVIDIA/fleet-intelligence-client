@@ -26,27 +26,26 @@ const completeOOBNodeJSON = `{
   "schemaVersion":"inventory.v1alpha1", "collectedAt":"2026-10-28T12:00:00Z",
   "source":{"sourceType":"redfish","address":"192.0.2.10","mac":"02:00:0a:00:00:0a"},
   "systems":[{
-   "id":"system-1","health":"legacy-health","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning"},
-   "memoryGib":999,"memorySummary":{"totalSystemMemoryGiB":0},
-   "cpuCount":999,"cpuCoreCount":999,"cpuModel":"legacy-model",
+   "id":"system-1","status":{"state":"Enabled","health":"Critical","healthRollup":"Warning"},
+   "memorySummary":{"totalSystemMemoryGiB":0},
    "processorSummary":{"count":0,"coreCount":0,"model":"Grace"},
-   "processors":[{"id":"gpu-1","processorType":"GPU","health":"legacy-health","status":{"health":"Warning"},"nvidiaGpu":{"totalNvLinks":18,"migModeEnabled":false,"nvlinkTopology":{"hostId":0,"ibGuid":"0x1234","traySerialNumber":"NA"}},"location":{"partLocation":{"serviceLabel":"GPU slot 1"}}},
-    {"id":"cpu-1","processorType":"CPU","health":"legacy-health","status":{"health":"Warning"}}],
+   "processors":[{"id":"gpu-1","processorType":"GPU","status":{"health":"Warning"},"nvidiaGpu":{"totalNvLinks":18,"migModeEnabled":false,"nvlinkTopology":{"hostId":0,"ibGuid":"0x1234","traySerialNumber":"NA"}},"location":{"partLocation":{"serviceLabel":"GPU slot 1"}}},
+    {"id":"cpu-1","processorType":"CPU","status":{"health":"Warning"}}],
    "memory":[{"id":"dimm-1","systemId":"system-1","deviceLocator":"DIMM A1","capacityMib":65536,"status":{"health":"OK"},"location":{"partLocation":{"serviceLabel":"memory slot 1"}}}],
    "storage":[{"id":"storage-1","systemId":"system-1","drives":[{"id":"drive-1","storageId":"storage-1","systemId":"system-1","capacityBytes":4000000000000,"protocol":"NVMe","status":{"health":"OK"}}]}],
    "links":{"Chassis":[{"odataId":"/redfish/v1/Chassis/chassis-1"}]}
   }],
-  "managers":[{"id":"manager-1","health":"legacy-health","status":{"health":"OK"}}],
+  "managers":[{"id":"manager-1","status":{"health":"OK"}}],
   "chassis":[{
-   "id":"chassis-1","health":"legacy-health","status":{"health":"Warning"},
-   "location":{"rack":"legacy-rack","rackOffset":99,"serviceLabel":"legacy-label","placement":{"rack":"R01","rackOffset":0,"rackOffsetUnits":"EIA_310"},"partLocation":{"serviceLabel":"compute tray"}},
-   "pcieDevices":[{"id":"pcie-1","health":"legacy-health","status":{"health":"OK"}}],
+   "id":"chassis-1","status":{"health":"Warning"},
+   "location":{"placement":{"rack":"R01","rackOffset":0,"rackOffsetUnits":"EIA_310"},"partLocation":{"serviceLabel":"compute tray"}},
+   "pcieDevices":[{"id":"pcie-1","status":{"health":"OK"}}],
    "powerSupplies":[{"id":"psu-1","chassisId":"chassis-1","powerCapacityWatts":2400,"status":{"health":"OK"}}]
   }],
   "fabrics":[{"id":"fabric-1","name":"NVLink Fabric","fabricType":"NVLink","status":{"health":"OK"},"switches":[
    {"id":"switch-1","name":"NVSwitch","status":{"health":"Warning"},"location":{"placement":{"rack":"R02","rackOffset":10}},"nvidiaSwitch":{"pcieReferenceClockEnabled":false,"deviceId":"0x1234"}}
   ]}],
-  "firmware":[{"id":"firmware-1","name":"Firmware","serviceId":"service-1","health":"legacy-health","status":{"health":"OK"},"relatedItem":[{"odataId":"/redfish/v1/Systems/system-1"}]}],
+  "firmware":[{"id":"firmware-1","name":"Firmware","serviceId":"service-1","status":{"health":"OK"},"relatedItem":[{"odataId":"/redfish/v1/Systems/system-1"}]}],
   "futureField":{"preserved":true}
  }
 }`
@@ -1151,10 +1150,10 @@ func TestNodeDescribeCompleteOOBInventory(t *testing.T) {
 		want, absent  []string
 	}{
 		{"summary", "", []string{"INVENTORY MEMORY MODULES", "INVENTORY STORAGE", "INVENTORY DRIVES", "INVENTORY POWER SUPPLIES", "INVENTORY FABRICS", "INVENTORY SWITCHES"}, []string{"\nSystems\n", "\nFabrics\n"}},
-		{"systems", "systems", []string{"\nMemory Modules\n", "DIMM A1", "65536", "\nStorage\n", "\nDrives\n", "drive-1", "4000000000000", "CPU COUNT", "Grace", "Critical"}, []string{"legacy-", "999", "\nPower Supplies\n", "\nFabrics\n"}},
-		{"chassis", "chassis", []string{"\nPower Supplies\n", "psu-1", "2400"}, []string{"legacy-", "\nSystems\n", "\nFabrics\n"}},
+		{"systems", "systems", []string{"\nMemory Modules\n", "DIMM A1", "65536", "\nStorage\n", "\nDrives\n", "drive-1", "4000000000000", "CPU COUNT", "Grace", "Critical"}, []string{"\nPower Supplies\n", "\nFabrics\n"}},
+		{"chassis", "chassis", []string{"\nPower Supplies\n", "psu-1", "2400"}, []string{"\nSystems\n", "\nFabrics\n"}},
 		{"fabrics", "fabrics", []string{"\nFabrics\n", "\nSwitches\n", "fabric-1", "switch-1", "NVSwitch", "Warning"}, []string{"\nSystems\n", "\nChassis\n"}},
-		{"all", "all", []string{"\nSystems\n", "\nMemory Modules\n", "\nDrives\n", "\nPower Supplies\n", "\nFabrics\n", "\nSwitches\n", "\nFirmware\n", "INVENTORY SWITCHES"}, []string{"legacy-", "999", "PRIMARY"}},
+		{"all", "all", []string{"\nSystems\n", "\nMemory Modules\n", "\nDrives\n", "\nPower Supplies\n", "\nFabrics\n", "\nSwitches\n", "\nFirmware\n", "INVENTORY SWITCHES"}, []string{"PRIMARY"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var out bytes.Buffer
@@ -1199,16 +1198,16 @@ func TestNodeDescribeCompleteOOBInventory(t *testing.T) {
 	}
 }
 
-// Legacy-only input must not supply table values; explicit canonical zeros remain visible.
-func TestOOBTablesUseOnlyNestedFields(t *testing.T) {
+// Absent nested fields stay empty; explicit zero values remain visible.
+func TestOOBTablesHandleAbsentAndZeroNestedFields(t *testing.T) {
 	var inventory nvfleetint.OOBInventory
-	if err := json.Unmarshal([]byte(`{"systems":[{"id":"system-1","health":"Critical","statusState":"Enabled","healthRollup":"Warning","memoryGib":2048,"cpuCount":2,"cpuCoreCount":144,"cpuModel":"legacy","location":{"rack":"legacy"}}]}`), &inventory); err != nil {
+	if err := json.Unmarshal([]byte(`{"systems":[{"id":"system-1"}]}`), &inventory); err != nil {
 		t.Fatal(err)
 	}
 	row := oobSystemRows(&inventory)[0]
 	for _, column := range []int{10, 11, 12, 13, 15, 16, 17} {
 		if row[column] != "" {
-			t.Fatalf("legacy-only column %d = %q", column, row[column])
+			t.Fatalf("absent nested column %d = %q", column, row[column])
 		}
 	}
 	zeroMemory, zeroCount := float32(0), 0

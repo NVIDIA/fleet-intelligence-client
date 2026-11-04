@@ -36,9 +36,6 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 		MaxSpeedMhz:    testPointer(3200),
 		TotalCores:     testPointer(72),
 		TotalThreads:   testPointer(144),
-		StatusState:    testPointer("Enabled"),
-		Health:         testPointer("OK"),
-		HealthRollup:   testPointer("OK"),
 		ProcessorType:  testPointer("CPU"),
 		Socket:         testPointer("CPU0"),
 		InstructionSet: testPointer("ARM-A64"),
@@ -50,14 +47,11 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 		Manufacturer:    testPointer("NVIDIA"),
 		Model:           testPointer("H100"),
 		FirmwareVersion: testPointer("96.00.5E.00.01"),
-		StatusState:     testPointer("Enabled"),
-		Health:          testPointer("OK"),
 		Status:          status,
 	}
 	inventory := &fleetapi.ModelsOobInventory{
-		CollectedAt:     "2026-08-17T12:00:00Z",
-		SchemaVersion:   "inventory.v1alpha1",
-		PrimarySystemId: testPointer("system-1"),
+		CollectedAt:   "2026-08-17T12:00:00Z",
+		SchemaVersion: "inventory.v1alpha1",
 		Source: fleetapi.ModelsOobSource{
 			Address:        "192.0.2.10",
 			Mac:            "00:11:22:33:44:55",
@@ -80,7 +74,6 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 			FirmwareVersion: testPointer("7.10.00.00"),
 			ManagerType:     testPointer("BMC"),
 			Status:          status,
-			StatusState:     testPointer("Enabled"),
 		}},
 		Chassis: &[]fleetapi.ModelsOobChassis{{
 			Id:          "chassis-1",
@@ -92,14 +85,11 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 			Status:      status,
 		}},
 		Firmware: &[]fleetapi.ModelsOobFirmware{{
-			Id:           "bios-1",
-			Name:         "System BIOS",
-			ServiceId:    "firmware-service-1",
-			Version:      testPointer("1.2.3"),
-			StatusState:  testPointer("Enabled"),
-			Health:       testPointer("OK"),
-			HealthRollup: testPointer("Warning"),
-			Status:       status,
+			Id:        "bios-1",
+			Name:      "System BIOS",
+			ServiceId: "firmware-service-1",
+			Version:   testPointer("1.2.3"),
+			Status:    status,
 		}},
 		DomainErrors: &[]fleetapi.ModelsOobDomainError{{
 			Domain:   "firmware",
@@ -111,7 +101,6 @@ func TestOOBInventoryFromGenerated(t *testing.T) {
 
 	got := oobInventoryFromGenerated(inventory)
 	if got == nil || got.CollectedAt != inventory.CollectedAt || got.SchemaVersion != inventory.SchemaVersion ||
-		got.PrimarySystemID != "system-1" ||
 		got.TargetError != "one target was unavailable" {
 		t.Fatalf("unexpected inventory metadata: %#v", got)
 	}
@@ -167,7 +156,6 @@ func TestOOBInventoryCompleteContract(t *testing.T) {
 			var input fleetapi.ModelsOobInventory
 			populateOOBContract(t, reflect.ValueOf(&input).Elem(), "inventory", zero)
 			got := oobInventoryFromGenerated(&input)
-			clearDeprecatedOOBFields(reflect.ValueOf(&input).Elem())
 			wantJSON := oobJSONValue(t, input)
 			if actual := oobJSONValue(t, got); !reflect.DeepEqual(actual, wantJSON) {
 				t.Fatalf("SDK inventory lost or changed contract fields\ngot: %#v\nwant: %#v", actual, wantJSON)
@@ -274,35 +262,4 @@ func oobJSONValue(t *testing.T, value any) any {
 		t.Fatal(err)
 	}
 	return decoded
-}
-
-// The public SDK deliberately excludes these deprecated generated properties.
-// Clear only the documented aliases, so future unmapped current fields still fail.
-func clearDeprecatedOOBFields(value reflect.Value) {
-	switch value.Kind() {
-	case reflect.Pointer:
-		if !value.IsNil() {
-			clearDeprecatedOOBFields(value.Elem())
-		}
-	case reflect.Slice:
-		for i := 0; i < value.Len(); i++ {
-			clearDeprecatedOOBFields(value.Index(i))
-		}
-	case reflect.Struct:
-		var names []string
-		switch value.Type().Name() {
-		case "ModelsOobSystem":
-			names = []string{"Health", "HealthRollup", "StatusState", "CpuCount", "CpuCoreCount", "CpuModel", "MemoryGib"}
-		case "ModelsOobProcessor", "ModelsOobManager", "ModelsOobChassis", "ModelsOobPcieDevice", "ModelsOobFirmware":
-			names = []string{"Health", "HealthRollup", "StatusState"}
-		case "ModelsOobChassisLocation":
-			names = []string{"Rack", "RackOffset", "Row", "Room", "ServiceLabel"}
-		}
-		for _, name := range names {
-			value.FieldByName(name).SetZero()
-		}
-		for i := 0; i < value.NumField(); i++ {
-			clearDeprecatedOOBFields(value.Field(i))
-		}
-	}
 }

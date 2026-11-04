@@ -258,7 +258,6 @@ func TestDescribeNodeOOBDecodesInventory(t *testing.T) {
 			"oobInventory":{
 				"collectedAt":"2026-07-30T20:00:00Z",
 				"schemaVersion":"inventory.v1alpha1",
-				"primarySystemId":"System.Embedded.1",
 				"source":{"sourceType":"redfish","vendor":"Dell","redfishVersion":"1.17.0","mac":"02:00:0a:00:00:0a"},
 				"systems":[{"id":"System.Embedded.1","model":"PowerEdge XE9680","processorSummary":{"count":2},"memorySummary":{"totalSystemMemoryGiB":2048},"secureBootEnabled":true,"processors":[{"id":"CPU.Socket.1","totalCores":56}]}],
 				"managers":[{"id":"iDRAC.Embedded.1","firmwareVersion":"7.10.00.00"}],

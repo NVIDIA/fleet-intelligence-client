@@ -17,17 +17,16 @@ const (
 
 // Represents inventory collected out of band through a node's BMC
 type OOBInventory struct {
-	Chassis         []OOBChassis     `json:"chassis,omitempty"`
-	CollectedAt     string           `json:"collectedAt"`
-	DomainErrors    []OOBDomainError `json:"domainErrors,omitempty"`
-	Fabrics         []OOBFabric      `json:"fabrics,omitempty"`
-	Firmware        []OOBFirmware    `json:"firmware,omitempty"`
-	Managers        []OOBManager     `json:"managers,omitempty"`
-	PrimarySystemID string           `json:"primarySystemId,omitempty"`
-	SchemaVersion   string           `json:"schemaVersion"`
-	Source          *OOBSource       `json:"source,omitempty"`
-	Systems         []OOBSystem      `json:"systems,omitempty"`
-	TargetError     string           `json:"targetError,omitempty"`
+	Chassis       []OOBChassis     `json:"chassis,omitempty"`
+	CollectedAt   string           `json:"collectedAt"`
+	DomainErrors  []OOBDomainError `json:"domainErrors,omitempty"`
+	Fabrics       []OOBFabric      `json:"fabrics,omitempty"`
+	Firmware      []OOBFirmware    `json:"firmware,omitempty"`
+	Managers      []OOBManager     `json:"managers,omitempty"`
+	SchemaVersion string           `json:"schemaVersion"`
+	Source        *OOBSource       `json:"source,omitempty"`
+	Systems       []OOBSystem      `json:"systems,omitempty"`
+	TargetError   string           `json:"targetError,omitempty"`
 }
 
 // OOBInventoryStatus represents the Redfish status reported for an inventory resource.
@@ -365,12 +364,11 @@ func oobInventoryFromGenerated(inventory *fleetapi.ModelsOobInventory) *OOBInven
 	}
 
 	out := &OOBInventory{
-		Fabrics:         mapOOBItems(inventory.Fabrics, oobFabricFromGenerated),
-		CollectedAt:     inventory.CollectedAt,
-		PrimarySystemID: stringValue(inventory.PrimarySystemId),
-		SchemaVersion:   inventory.SchemaVersion,
-		Source:          oobSourceFromGenerated(inventory.Source),
-		TargetError:     stringValue(inventory.TargetError),
+		Fabrics:       mapOOBItems(inventory.Fabrics, oobFabricFromGenerated),
+		CollectedAt:   inventory.CollectedAt,
+		SchemaVersion: inventory.SchemaVersion,
+		Source:        oobSourceFromGenerated(inventory.Source),
+		TargetError:   stringValue(inventory.TargetError),
 	}
 	if inventory.Systems != nil {
 		out.Systems = make([]OOBSystem, 0, len(*inventory.Systems))

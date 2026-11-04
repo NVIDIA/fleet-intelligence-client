@@ -8470,16 +8470,6 @@ components:
           type: string
         description:
           type: string
-        health:
-          description: 'Deprecated: use status.health.'
-          example: OK
-          type: string
-          deprecated: true
-        healthRollup:
-          description: 'Deprecated: use status.healthRollup.'
-          example: OK
-          type: string
-          deprecated: true
         id:
           example: HGX_GPU_SXM_1
           type: string
@@ -8522,11 +8512,6 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/models.OobInventoryStatus'
-        statusState:
-          description: 'Deprecated: use status.state.'
-          example: Enabled
-          type: string
-          deprecated: true
       required:
         - id
       type: object
@@ -8538,26 +8523,6 @@ components:
           type: string
         placement:
           $ref: '#/components/schemas/models.OobPlacement'
-        rack:
-          example: Rack-1
-          type: string
-          deprecated: true
-        rackOffset:
-          example: 10
-          type: integer
-          deprecated: true
-        room:
-          example: DC-1
-          type: string
-          deprecated: true
-        row:
-          example: Row-A
-          type: string
-          deprecated: true
-        serviceLabel:
-          example: SXM1
-          type: string
-          deprecated: true
       type: object
     models.OobDomainError:
       properties:
@@ -8640,16 +8605,6 @@ components:
       properties:
         description:
           type: string
-        health:
-          description: 'Deprecated: use status.health.'
-          example: OK
-          type: string
-          deprecated: true
-        healthRollup:
-          description: 'Deprecated: use status.healthRollup.'
-          example: OK
-          type: string
-          deprecated: true
         id:
           example: HGX_FW_GPU_SXM_1
           type: string
@@ -8674,11 +8629,6 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/models.OobInventoryStatus'
-        statusState:
-          description: 'Deprecated: use status.state.'
-          example: Enabled
-          type: string
-          deprecated: true
         version:
           example: 96.00.DA.00.0C
           type: string
@@ -8717,10 +8667,6 @@ components:
             $ref: '#/components/schemas/models.OobManager'
           type: array
           uniqueItems: false
-        primarySystemId:
-          description: 'Optional fields — omitted from the response when absent:'
-          example: DGX
-          type: string
         schemaVersion:
           description: 'Required scalars — always present on a valid inventory document.
 
@@ -8740,6 +8686,7 @@ components:
           type: array
           uniqueItems: false
         targetError:
+          description: 'Optional fields — omitted from the response when absent:'
           type: string
       required:
         - collectedAt
@@ -8905,16 +8852,6 @@ components:
         firmwareVersion:
           example: 26.03.03
           type: string
-        health:
-          description: 'Deprecated: use status.health.'
-          example: OK
-          type: string
-          deprecated: true
-        healthRollup:
-          description: 'Deprecated: use status.healthRollup.'
-          example: OK
-          type: string
-          deprecated: true
         id:
           example: BMC
           type: string
@@ -8933,11 +8870,6 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/models.OobInventoryStatus'
-        statusState:
-          description: 'Deprecated: use status.state.'
-          example: Enabled
-          type: string
-          deprecated: true
         uuid:
           example: 6b00139a-bfde-1000-02b9-f2e9fb35ff5c
           type: string
@@ -9290,16 +9222,6 @@ components:
         firmwareVersion:
           example: 96.00.DA.00.0C
           type: string
-        health:
-          description: 'Deprecated: use status.health.'
-          example: OK
-          type: string
-          deprecated: true
-        healthRollup:
-          description: 'Deprecated: use status.healthRollup.'
-          example: OK
-          type: string
-          deprecated: true
         id:
           example: GPU_SXM_1
           type: string
@@ -9327,11 +9249,6 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/models.OobInventoryStatus'
-        statusState:
-          description: 'Deprecated: use status.state.'
-          example: Enabled
-          type: string
-          deprecated: true
         uuid:
           example: beea8cdf-7b7d-035c-ed07-360e311fcbe1
           type: string
@@ -9383,16 +9300,6 @@ components:
       properties:
         description:
           type: string
-        health:
-          description: 'Deprecated: use status.health.'
-          example: OK
-          type: string
-          deprecated: true
-        healthRollup:
-          description: 'Deprecated: use status.healthRollup.'
-          example: OK
-          type: string
-          deprecated: true
         id:
           example: DevType1_CPU0
           type: string
@@ -9436,11 +9343,6 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/models.OobInventoryStatus'
-        statusState:
-          description: 'Deprecated: use status.state.'
-          example: Enabled
-          type: string
-          deprecated: true
         totalCores:
           example: 56
           type: integer
@@ -9568,30 +9470,8 @@ components:
         biosVersion:
           example: 1.7.8
           type: string
-        cpuCoreCount:
-          example: 112
-          type: integer
-          deprecated: true
-        cpuCount:
-          example: 2
-          type: integer
-          deprecated: true
-        cpuModel:
-          example: Intel(R) Xeon(R) Platinum 8480CL
-          type: string
-          deprecated: true
         description:
           type: string
-        health:
-          description: 'Deprecated: use status.health.'
-          example: OK
-          type: string
-          deprecated: true
-        healthRollup:
-          description: 'Deprecated: use status.healthRollup.'
-          example: OK
-          type: string
-          deprecated: true
         hostName:
           example: dgx-01
           type: string
@@ -9608,10 +9488,6 @@ components:
             $ref: '#/components/schemas/models.OobMemory'
           type: array
           uniqueItems: false
-        memoryGib:
-          example: 2048
-          type: number
-          deprecated: true
         memorySummary:
           $ref: '#/components/schemas/models.OobMemorySummary'
         model:
@@ -9643,11 +9519,6 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/models.OobInventoryStatus'
-        statusState:
-          description: 'Deprecated: use status.state.'
-          example: Enabled
-          type: string
-          deprecated: true
         storage:
           items:
             $ref: '#/components/schemas/models.OobStorage'
