@@ -17,6 +17,7 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmd/report"
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmd/tag"
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmd/xidburst"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdutil"
 
 	"github.com/spf13/cobra"
 )
@@ -33,12 +34,19 @@ func execute(ctx context.Context, build release.BuildInfo, args []string) error 
 // Creates the root nvfleetint command. Each top-level command is a package of
 // its own, so this file is only the assembly order.
 func newRootCmd(build release.BuildInfo) *cobra.Command {
+	cliVersion := build.Version
+	if cliVersion == "" {
+		cliVersion = "dev"
+	}
 	cmd := &cobra.Command{
 		Use:           "nvfleetint",
 		Short:         "Fleet Intelligence CLI",
 		Long:          "Fleet Intelligence CLI for the Fleet Intelligence customer API.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Annotations: map[string]string{
+			cmdutil.UserAgentAnnotation: "nvfleetint/" + cliVersion,
+		},
 	}
 
 	cmd.AddCommand(auth.NewCmd())

@@ -13,6 +13,10 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
+// UserAgentAnnotation carries the CLI's versioned User-Agent from the root
+// command to its API clients.
+const UserAgentAnnotation = "nvfleetint/user-agent"
+
 // New builds an SDK client from the credentials selected by the common flags.
 func New(common Resolved) (*nvfleetint.Client, error) {
 	resolved, err := ResolveCredentials(common.Profile)
@@ -153,5 +157,6 @@ func FixAPIURLHint(resolved config.Resolved) string {
 func commonClientOptions(common Resolved) []nvfleetint.Option {
 	return []nvfleetint.Option{
 		nvfleetint.WithTimeout(common.Timeout),
+		nvfleetint.WithUserAgent(common.userAgent),
 	}
 }

@@ -25,11 +25,14 @@ func TestFetchSigningKey(t *testing.T) {
 		if got := r.Header.Get("Accept"); got != signingKeyAcceptHeader {
 			t.Fatalf("unexpected accept header: %q", got)
 		}
+		if got := r.Header.Get("User-Agent"); got != "fleet-integration/2.0" {
+			t.Errorf("unexpected user agent: %q", got)
+		}
 		_, _ = w.Write([]byte("-----BEGIN PUBLIC KEY-----\nkeydata\n-----END PUBLIC KEY-----\n"))
 	}))
 	defer server.Close()
 
-	client, err := NewClient(server.URL, "test-key")
+	client, err := NewClient(server.URL, "test-key", WithUserAgent("fleet-integration/2.0"))
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}

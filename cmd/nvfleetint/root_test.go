@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,54 @@ var testBuild = release.BuildInfo{Version: "dev", Commit: "unknown", BuildDate: 
 // newTestRootCmd assembles the full command tree the binary ships.
 func newTestRootCmd() *cobra.Command {
 	return newRootCmd(testBuild)
+}
+
+func TestCLIRequestsIncludeVersionedUserAgent(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		version   string
+		userAgent string
+	}{
+		{name: "release", version: "1.2.3", userAgent: "nvfleetint/1.2.3"},
+		{name: "development", version: "dev", userAgent: "nvfleetint/dev"},
+		{name: "unspecified", userAgent: "nvfleetint/dev"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/auth/status" {
+					t.Errorf("unexpected path: %s", r.URL.Path)
+				}
+				if got := r.Header.Get("User-Agent"); got != tt.userAgent {
+					t.Errorf("unexpected user agent: got %q, want %q", got, tt.userAgent)
+				}
+				if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+					t.Errorf("unexpected authorization header: %q", got)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"authenticated":true}`))
+			}))
+			defer server.Close()
+			cmdtest.SaveConfig(t, server.URL, "test-key")
+
+			cmd := newRootCmd(release.BuildInfo{Version: tt.version})
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetArgs([]string{"auth", "status", "--output", "json"})
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("auth status failed: %v", err)
+			}
+			var status struct {
+				Connection string `json:"connection"`
+			}
+			if err := json.Unmarshal(out.Bytes(), &status); err != nil {
+				t.Fatalf("decode auth status failed: %v", err)
+			}
+			if status.Connection != "ok" {
+				t.Fatalf("expected a successful connection, got: %s", out.String())
+			}
+		})
+	}
 }
 
 func TestHelpCommand(t *testing.T) {

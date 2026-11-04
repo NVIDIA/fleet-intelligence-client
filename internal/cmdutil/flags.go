@@ -25,7 +25,7 @@ type Common struct {
 	Profile  string
 }
 
-// Resolved stores common flag values plus explicit-set state.
+// Resolved stores common flag values, explicit-set state, and CLI request metadata.
 type Resolved struct {
 	Output      string
 	All         bool
@@ -39,6 +39,7 @@ type Resolved struct {
 	PageSizeSet bool
 	TimeoutSet  bool
 	ProfileSet  bool
+	userAgent   string
 }
 
 // NewCommon creates common flags with default values.
@@ -105,6 +106,7 @@ func ResolveCommon(cmd *cobra.Command, flags *Common) Resolved {
 		PageSizeSet: cmd.Flags().Changed("page-size"),
 		TimeoutSet:  cmd.Flags().Changed("timeout"),
 		ProfileSet:  cmd.Flags().Changed("profile"),
+		userAgent:   cmd.Root().Annotations[UserAgentAnnotation],
 	}
 }
 

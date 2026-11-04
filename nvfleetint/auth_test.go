@@ -21,13 +21,16 @@ func TestGetAuthStatusSendsAuthAndDecodes(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Fatalf("unexpected auth header: %q", got)
 		}
+		if got := r.Header.Get("User-Agent"); got != "fleet-integration/2.0" {
+			t.Errorf("unexpected user agent: %q", got)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"authenticated":true}`))
 	}))
 	defer server.Close()
 
-	client, err := NewClient(server.URL, "test-key")
+	client, err := NewClient(server.URL, "test-key", WithUserAgent("fleet-integration/2.0"))
 	if err != nil {
 		t.Fatalf("new client failed: %v", err)
 	}
@@ -46,7 +49,10 @@ func TestGetAuthStatusSendsAuthAndDecodes(t *testing.T) {
 
 // Verifies a false authenticated flag is surfaced without error
 func TestGetAuthStatusReportsUnauthenticated(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("User-Agent"); strings.HasPrefix(got, "nvfleetint/") {
+			t.Errorf("direct SDK request must not identify as the CLI: %q", got)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"authenticated":false}`))
 	}))
