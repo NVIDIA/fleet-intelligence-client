@@ -68,7 +68,7 @@ Detail `node list` also requires `--data-source` whenever any filter or
 `--sort-by`/`--order` flag is set, since in-band and OOB nodes carry different
 fields. OOB list supports `--bmc-mac`; OOB describe includes full
 inventory JSON and supports table sections `managers`, `systems`, `chassis`,
-and `firmware`. Node basic rejects health, agent, verification, and firmware
+`firmware`, and `fabrics` (including switches). Node basic rejects health, agent, verification, and firmware
 filters and supports identity, node-group, compute-zone, GPU-type, and GPU-count sorting.
 `node options` shows separate in-band/OOB detail tables by default. Detail
 JSON requires `--data-source` and returns a single response.
@@ -85,7 +85,7 @@ Filter values:
 | --- | --- |
 | `--health` | Healthy, Degraded, Unhealthy, Unknown |
 | `--agent-status` | Online, Offline |
-| `--verification-check` | Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
+| `--verification-check` | Full Attestation, Partial Attestation, Verification Failed, Verified, Unverified, Degraded, Pending, Unsupported, Unknown |
 | `--firmware-check` | Passed, Failed, Unknown |
 
 Node sort keys are `hostname`, `nodeUUID`, `healthStatus`, `nodegroup`, `computezone`, `gpuType`, `gpuCount`, `verificationCheck`, `agentStatus`, `agentVersion`, `kernelVersion`, `gpuDriverVersion`, `gpuFirmwareVersions`, and `bmcMac`. Node-group sort keys are `health` and `nodes`.
