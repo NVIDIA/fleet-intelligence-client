@@ -173,7 +173,6 @@ active source. Agent UUID filtering is rejected for OOB. Omitted UUID filters
 leave the query unrestricted by those identities. Inventory reports do not
 accept these filters.
 
-`--agent-type` has been removed from node commands; use `--data-source`.
 Detail-list filters and sorting require an explicit source. Basic lists can filter by GPU type/count and sort by identity,
 node group, compute zone, GPU type, or GPU count without selecting a source.
 Basic responses still contain identity fields only. Agent-status filters accept

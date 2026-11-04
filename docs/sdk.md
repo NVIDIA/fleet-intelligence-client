@@ -84,10 +84,8 @@ XID burst list/options also accept `DataSourceAll`; omission defaults to in-band
 Use the same source for the list and its filter-options lookup.
 
 Use `DataSource` on `ListNodesOptions`, `DescribeNodeOptions`,
-`NodeFilterOptionsRequest`, and `InventoryReportOptions`. This is a breaking
-rename: `AgentType`, `NodeAgentType`, and its constants have been removed from
-the public SDK. Use `DataSourceInband` or `DataSourceOOB`; node results
-expose `DataSource` only.
+`NodeFilterOptionsRequest`, and `InventoryReportOptions`, with
+`DataSourceInband` or `DataSourceOOB`. Node results expose `DataSource`.
 
 With source omitted, SDK detail queries and inventory reports default to
 in-band. Basic node queries combine both sources. The CLI separately retains
@@ -133,8 +131,7 @@ by node details; omitted values remain absent.
 OOB inventory exposes node kinds (`unknown`, `compute`, `nvswitch`, and
 `power_shelf`), nested Redfish status conditions, memory modules, storage/drives,
 power supplies, fabrics/switches, NVIDIA topology, summaries, links, and physical
-locations. Inventory references serialize as `odataId`. Deprecated flat status,
-CPU, memory, and location aliases are excluded from the public SDK; use `Status`,
+locations. Inventory references serialize as `odataId`. Use `Status`,
 `ProcessorSummary`, `MemorySummary`, and the nested location structures.
 
 `NewClient` requires an HTTPS API URL and an API key. Plain HTTP is accepted

@@ -1154,7 +1154,7 @@ func TestNodeDescribeCompleteOOBInventory(t *testing.T) {
 		{"systems", "systems", []string{"\nMemory Modules\n", "DIMM A1", "65536", "\nStorage\n", "\nDrives\n", "drive-1", "4000000000000", "CPU COUNT", "Grace", "Critical"}, []string{"legacy-", "999", "\nPower Supplies\n", "\nFabrics\n"}},
 		{"chassis", "chassis", []string{"\nPower Supplies\n", "psu-1", "2400"}, []string{"legacy-", "\nSystems\n", "\nFabrics\n"}},
 		{"fabrics", "fabrics", []string{"\nFabrics\n", "\nSwitches\n", "fabric-1", "switch-1", "NVSwitch", "Warning"}, []string{"\nSystems\n", "\nChassis\n"}},
-		{"all", "all", []string{"\nSystems\n", "\nMemory Modules\n", "\nDrives\n", "\nPower Supplies\n", "\nFabrics\n", "\nSwitches\n", "\nFirmware\n", "INVENTORY SWITCHES"}, []string{"legacy-", "999"}},
+		{"all", "all", []string{"\nSystems\n", "\nMemory Modules\n", "\nDrives\n", "\nPower Supplies\n", "\nFabrics\n", "\nSwitches\n", "\nFirmware\n", "INVENTORY SWITCHES"}, []string{"legacy-", "999", "PRIMARY"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var out bytes.Buffer
@@ -1206,7 +1206,7 @@ func TestOOBTablesUseOnlyNestedFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := oobSystemRows(&inventory)[0]
-	for _, column := range []int{11, 12, 13, 14, 16, 17, 18} {
+	for _, column := range []int{10, 11, 12, 13, 15, 16, 17} {
 		if row[column] != "" {
 			t.Fatalf("legacy-only column %d = %q", column, row[column])
 		}
@@ -1216,7 +1216,7 @@ func TestOOBTablesUseOnlyNestedFields(t *testing.T) {
 	inventory.Systems[0].MemorySummary = &nvfleetint.OOBMemorySummary{TotalSystemMemoryGiB: &zeroMemory}
 	inventory.Systems[0].ProcessorSummary = &nvfleetint.OOBProcessorSummary{Count: &zeroCount}
 	row = oobSystemRows(&inventory)[0]
-	if row[12] != "OK" || row[14] != "0" || row[16] != "0" || row[11] != "" || row[13] != "" || row[17] != "" || row[18] != "" {
+	if row[11] != "OK" || row[13] != "0" || row[15] != "0" || row[10] != "" || row[12] != "" || row[16] != "" || row[17] != "" {
 		t.Fatalf("partial canonical values rendered incorrectly: %v", row)
 	}
 }

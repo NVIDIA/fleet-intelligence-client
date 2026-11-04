@@ -859,7 +859,7 @@ func writeOOBInventoryTables(
 	if options.sections[oobInventorySectionSystems] {
 		if err := writeOOBSection(w, "Systems",
 			[]string{
-				"PRIMARY", "ID", "UUID", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "BIOS",
+				"ID", "UUID", "MANUFACTURER", "MODEL", "SKU", "SERIAL", "BIOS",
 				"HOSTNAME", "ASSET", "POWER", "STATUS", "HEALTH", "ROLLUP", "MEMORY GIB", "SECURE BOOT",
 				"CPU COUNT", "CPU CORES", "CPU MODEL",
 			},
@@ -957,7 +957,6 @@ func oobInventorySummaryRows(inventory *nvfleetint.OOBInventory) [][]string {
 	return [][]string{
 		{"INVENTORY SCHEMA VERSION", clioutput.DisplayString(inventory.SchemaVersion)},
 		{"INVENTORY COLLECTED AT", clioutput.DisplayString(inventory.CollectedAt)},
-		{"INVENTORY PRIMARY SYSTEM", clioutput.DisplayString(inventory.PrimarySystemID)},
 		{"INVENTORY MANAGERS", strconv.Itoa(len(inventory.Managers))},
 		{"INVENTORY SYSTEMS", strconv.Itoa(len(inventory.Systems))},
 		{"INVENTORY CHASSIS", strconv.Itoa(len(inventory.Chassis))},
@@ -1009,7 +1008,6 @@ func oobSystemRows(inventory *nvfleetint.OOBInventory) [][]string {
 		}
 		status := oobStatusValue(system.Status)
 		rows = append(rows, []string{
-			strconv.FormatBool(system.ID == inventory.PrimarySystemID),
 			system.ID,
 			system.UUID,
 			system.Manufacturer,

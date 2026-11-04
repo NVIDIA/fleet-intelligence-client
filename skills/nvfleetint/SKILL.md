@@ -76,7 +76,7 @@ JSON requires `--data-source` and returns a single response.
 basic list and options JSON allow source omission.
 `report inventory` tables show both sources by default, with independent
 pagination and `--all` traversal. JSON, CSV, and signed downloads require
-`--data-source inband|oob`; an explicit source selects one report. `--agent-type` is no longer accepted; use `--data-source`.
+`--data-source inband|oob`; an explicit source selects one report.
 `node health` requires both absolute boundaries. It does not support `--window`.
 
 Filter values:
