@@ -10,8 +10,7 @@ const (
 	DataSourceInband DataSource = "inband"
 	DataSourceOOB    DataSource = "oob"
 	// DataSourceAll selects both observation paths on XID burst list/options only.
-	DataSourceAll    DataSource = "all"
-	dataSourceValues            = "inband or oob"
+	DataSourceAll DataSource = "all"
 )
 
 // Valid reports whether the value is a concrete source (inband or oob).
@@ -29,7 +28,7 @@ func (source DataSource) Valid() bool {
 // default; XID burst options validate their additional all selector separately.
 func (source DataSource) Validate() error {
 	if source != "" && !source.Valid() {
-		return invalidOption("dataSource", "data source", string(source), dataSourceValues)
+		return invalidOption("dataSource", "data source", string(source), "inband or oob")
 	}
 	return nil
 }
@@ -38,7 +37,7 @@ func (source DataSource) Validate() error {
 func validateDataSources(sources []DataSource) error {
 	for _, source := range sources {
 		if !source.Valid() {
-			return invalidOption("dataSources", "data source", string(source), dataSourceValues)
+			return invalidOption("dataSources", "data source", string(source), "inband or oob")
 		}
 	}
 	return nil

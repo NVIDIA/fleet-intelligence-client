@@ -90,7 +90,7 @@ func TestXIDBurstSources(t *testing.T) {
 }
 
 func TestXIDBurstRejectsInvalidSources(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Error("unexpected request")
 		w.WriteHeader(http.StatusBadRequest)
 	}))

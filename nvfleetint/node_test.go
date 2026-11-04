@@ -606,7 +606,7 @@ func TestNodeUUIDFilters(t *testing.T) {
 }
 
 func TestDescribeNodeUUIDIdentities(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"nodeUUID":"node-1","agentUUID":"agent-1","systemInfo":{"systemUUID":"system-1"},"resources":{"gpuInfo":{"gpus":[{"uuid":"gpu-1","cliqueID":0,"clusterUUID":"cluster-1"}]}}}`))
 	}))
