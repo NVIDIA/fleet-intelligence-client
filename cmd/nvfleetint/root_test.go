@@ -38,7 +38,9 @@ func TestCLIRequestsIncludeVersionedUserAgent(t *testing.T) {
 		{name: "unspecified", userAgent: "nvfleetint/dev"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("HOME", t.TempDir())
+			homeDir := t.TempDir()
+			t.Setenv("HOME", homeDir)
+			t.Setenv("USERPROFILE", homeDir)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/v1/auth/status" {
 					t.Errorf("unexpected path: %s", r.URL.Path)
