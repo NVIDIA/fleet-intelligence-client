@@ -203,6 +203,95 @@ func TestReportInventoryRejectsInvalidFlags(t *testing.T) {
 	}
 }
 
+// Verifies sort validation happens before fetching, and shared sorts reach both sources.
+func TestReportInventorySortSources(t *testing.T) {
+	sorts := []struct {
+		field  string
+		source string
+	}{
+		{field: "hostname", source: "inband"},
+		{field: "publicIP", source: "inband"},
+		{field: "privateIP", source: "inband"},
+		{field: "nodeName", source: "oob"},
+		{field: "bmcMac", source: "oob"},
+		{field: "bmcIP", source: "oob"},
+		{field: "nodeUUID"},
+		{field: "nodeGroup"},
+		{field: "computeZone"},
+		{field: "gpuType"},
+		{field: "gpuCount"},
+		{field: "verificationCheck"},
+		{field: "location"},
+		{field: ""},
+	}
+	for _, sort := range sorts {
+		for _, explicit := range []bool{false, true} {
+			if explicit && sort.source == "" {
+				continue
+			}
+			name := sort.field + "/both"
+			if explicit {
+				name = sort.field + "/" + sort.source
+			}
+			t.Run(name, func(t *testing.T) {
+				t.Setenv("HOME", t.TempDir())
+				requests := make(chan string, 2)
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					query := r.URL.Query()
+					requests <- query.Get("dataSource")
+					if got := query.Get("sortBy"); got != sort.field {
+						t.Errorf("sortBy = %q, want %q", got, sort.field)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"nodes":[],"hasMore":false,"total":0}`))
+				}))
+				defer server.Close()
+				cmdtest.SaveConfig(t, server.URL, "test-key")
+				args := []string{"report", "inventory"}
+				if sort.field != "" {
+					args = append(args, "--sort-by", sort.field)
+				}
+				if explicit {
+					args = append(args, "--data-source", sort.source)
+				}
+				cmd := newRootCmd()
+				var out bytes.Buffer
+				cmd.SetOut(&out)
+				cmd.SetArgs(args)
+				err := cmd.Execute()
+				if sort.source != "" && !explicit {
+					want := "--data-source is required for --sort-by " + sort.field
+					if err == nil || !strings.Contains(err.Error(), want) {
+						t.Fatalf("error = %v, want %q", err, want)
+					}
+					if len(requests) != 0 {
+						t.Fatal("source-specific sort fetched before validation")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("command failed: %v", err)
+				}
+				wantSources := []string{"inband", "oob"}
+				if explicit {
+					wantSources = []string{sort.source}
+				}
+				if len(requests) != len(wantSources) {
+					t.Fatalf("request count = %d, want %d", len(requests), len(wantSources))
+				}
+				var gotSources []string
+				for range wantSources {
+					gotSources = append(gotSources, <-requests)
+				}
+				slices.Sort(gotSources)
+				if !slices.Equal(gotSources, wantSources) {
+					t.Errorf("data sources = %v, want %v", gotSources, wantSources)
+				}
+			})
+		}
+	}
+}
+
 // Verifies a signed inventory report is written to the current directory
 func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())

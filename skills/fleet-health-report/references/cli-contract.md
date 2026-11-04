@@ -28,7 +28,7 @@ Read this before querying live data.
 ## Data sources
 
 - `--data-source` uses `inband`/`oob`: for nodes and inventory it selects the source view; for `alert summary`, `alert node`, `event list`, and `event buckets` it filters the record's producer, independently of current agent status. The latter accept comma-separated sources and default to both in one response. `alert list` has no source filter.
-- Node basic list/options combine both sources when omitted, including JSON. Detail list/options and inventory tables fetch both sources separately; pagination and `--all` apply per source. Their detail JSON requires one explicit source and has no source wrapper; inventory CSV/signed downloads also require one.
+- Node basic list/options combine both sources when omitted, including JSON. Detail list/options and inventory tables fetch both sources separately; pagination and `--all` apply per source. Their detail JSON requires one explicit source and has no source wrapper; inventory CSV/signed downloads also require one. Inventory source-specific sorts (`hostname`, `publicIP`, `privateIP`, `nodeName`, `bmcMac`, `bmcIP`) require an explicit source; shared sorts apply to both.
 - Node describe defaults to both source views; an explicit source selects one. Use `--data-source` in place of the removed node `--agent-type` flag.
 
 - XID burst list/options default to `inband` and accept `oob` or `all`; use the same source for both. Combined results retain separate observations of a fault from each path. Describe resolves the source from the burst ID.

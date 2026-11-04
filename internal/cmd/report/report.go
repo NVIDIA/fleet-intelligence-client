@@ -116,7 +116,8 @@ func newReportInventoryCmd() *cobra.Command {
 
 Table output shows separate in-band and OOB reports by default.
 Use --data-source inband or oob for one source; it is required for JSON output,
-CSV, and signed downloads. Pagination applies independently to each source.
+CSV, and signed downloads. Source-specific sort fields also require --data-source.
+Pagination applies independently to each source.
 
 Use --signed with --format csv to download a signed CSV bundle (a zip
 containing the CSV plus a cosign-verifiable signature). The bundle is
@@ -541,6 +542,13 @@ func inventoryReportOptions(flags reportInventoryFlags, common cmdutil.Resolved)
 	// combined, which only the CLI can phrase in terms of flags.
 	if err := opts.ValidateValues(); err != nil {
 		return opts, cmdutil.RenderOptionError(err, reportInventoryFlagNames)
+	}
+	if opts.DataSource == "" {
+		switch opts.SortBy {
+		case nvfleetint.InventoryReportSortByHostname, nvfleetint.InventoryReportSortByPublicIP, nvfleetint.InventoryReportSortByPrivateIP,
+			nvfleetint.InventoryReportSortByNodeName, nvfleetint.InventoryReportSortByBMCMAC, nvfleetint.InventoryReportSortByBMCIP:
+			return opts, fmt.Errorf("--data-source is required for --sort-by %s; choose inband or oob", opts.SortBy)
+		}
 	}
 	if opts.Signed && opts.Format != nvfleetint.ReportFormatCSV {
 		return opts, errors.New("--signed requires --format csv")
