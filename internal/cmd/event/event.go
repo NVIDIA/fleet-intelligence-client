@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdutil"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
@@ -274,7 +275,7 @@ func eventRows(events []nvfleetint.Event) [][]string {
 			clioutput.DisplayString(event.Name),
 			clioutput.DisplayString(event.Type),
 			clioutput.Truncate(clioutput.DisplayString(event.Message), eventMessageColumnWidth),
-			clioutput.DisplayString(event.Timestamp),
+			displayEventTimestamp(event.Timestamp),
 		})
 	}
 	return rows
@@ -294,10 +295,10 @@ func eventBucketRows(buckets []nvfleetint.EventBucket) [][]string {
 	rows := make([][]string, 0, len(buckets))
 	for _, bucket := range buckets {
 		rows = append(rows, []string{
-			clioutput.DisplayString(bucket.StartTime),
-			clioutput.DisplayString(bucket.EndTime),
+			displayEventTimestamp(bucket.StartTime),
+			displayEventTimestamp(bucket.EndTime),
 			clioutput.FormatOptionalInt(bucket.Count),
-			clioutput.DisplayString(bucket.FirstEventTime),
+			displayEventTimestamp(bucket.FirstEventTime),
 		})
 	}
 	return rows
@@ -421,4 +422,13 @@ func writeEventOptionsTable(w io.Writer, options nvfleetint.EventFilterOptions) 
 		}
 	}
 	return nil
+}
+
+// Rounds table timestamps to seconds while preserving unrecognized input for display.
+func displayEventTimestamp(value string) string {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return clioutput.DisplayString(value)
+	}
+	return parsed.Round(time.Second).Format(time.RFC3339)
 }
