@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
+	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
@@ -116,7 +117,7 @@ func TestEventListJSON(t *testing.T) {
 // while the full text remains available via -o json, and that the verbose
 // createdAt / suggestedActions fields are omitted from the table.
 func TestEventRowsTruncatesFreeText(t *testing.T) {
-	longMessage := strings.Repeat("x", eventMessageColumnWidth+50)
+	longMessage := strings.Repeat("x", eventMessageColumnWidth*eventMessageMaxLines+50)
 
 	rows := eventRows([]nvfleetint.Event{{
 		EventID:          "e1",
@@ -124,14 +125,14 @@ func TestEventRowsTruncatesFreeText(t *testing.T) {
 		CreatedAt:        "2024-01-15T14:30:00Z",
 		SuggestedActions: []nvfleetint.SuggestedAction{{Action: "reboot the node"}},
 	}})
-	if len(rows) != 1 {
-		t.Fatalf("expected 1 row, got %d", len(rows))
+	if len(rows) != eventMessageMaxLines {
+		t.Fatalf("expected %d rows, got %d", eventMessageMaxLines, len(rows))
 	}
 	if got := len(rows[0]); got != 8 {
 		t.Fatalf("expected 8 columns, got %d: %q", got, rows[0])
 	}
 
-	message := rows[0][6]
+	message := rows[len(rows)-1][6]
 	if runes := []rune(message); len(runes) != eventMessageColumnWidth {
 		t.Fatalf("message column width = %d, want %d", len(runes), eventMessageColumnWidth)
 	}
@@ -219,5 +220,51 @@ func TestEventBucketsMaxBucketsValidation(t *testing.T) {
 		if err := cmd.Execute(); err == nil {
 			t.Fatalf("expected error for --max-buckets %s", value)
 		}
+	}
+}
+
+func TestEventMessageWrapping(t *testing.T) {
+	for _, tc := range []struct {
+		name, text string
+		want       []string
+	}{
+		{"short", "hello world", []string{"hello world"}},
+		{"words", strings.Repeat("a", 75) + " hello world", []string{strings.Repeat("a", 75), "hello world"}},
+		{"long word", strings.Repeat("界", 81), []string{strings.Repeat("界", 80), "界"}},
+		{"newlines", "first\r\n\nthird", []string{"first", "", "third"}},
+		{"overflow", "first\nsecond\nthird\nfourth", []string{"first", "second", "third…"}},
+		{"exact capacity", strings.Repeat("x", 240), []string{strings.Repeat("x", 80), strings.Repeat("x", 80), strings.Repeat("x", 80)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := eventMessageLines(tc.text)
+			if strings.Join(got, "\n") != strings.Join(tc.want, "\n") || len(got) != len(tc.want) {
+				t.Fatalf("lines = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestEventMessageContinuationRows(t *testing.T) {
+	rows := eventRows([]nvfleetint.Event{{EventID: "first", Message: "one\ntwo\nthree\nfour", Timestamp: "2026-11-05T13:03:09.999999Z"}, {EventID: "second", Message: "next"}})
+	if len(rows) != 4 || rows[0][0] != "first" || rows[3][0] != "second" {
+		t.Fatalf("unexpected rows: %q", rows)
+	}
+	for _, row := range rows[1:3] {
+		for col, cell := range row {
+			if col != 6 && cell != "" {
+				t.Fatalf("continuation column %d repeated: %q", col, cell)
+			}
+		}
+	}
+	var out bytes.Buffer
+	if err := clioutput.WriteTable(&out, []string{"EVENT ID", "NODE UUID", "DATA SOURCE", "COMPONENT", "NAME", "TYPE", "MESSAGE", "TIMESTAMP"}, rows); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 5 {
+		t.Fatalf("rendered lines = %d: %s", len(lines), out.String())
+	}
+	if strings.Index(lines[1], "one") != strings.Index(lines[2], "two") {
+		t.Fatalf("message lines not aligned: %s", out.String())
 	}
 }

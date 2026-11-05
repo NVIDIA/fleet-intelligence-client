@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdutil"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
@@ -255,10 +256,11 @@ func writeEventListOutput(w io.Writer, common cmdutil.Resolved, result eventList
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-// The MESSAGE column is free-text and can be arbitrarily long, so it is
-// truncated with an ellipsis to keep the table readable; the full text (and the
-// omitted createdAt / suggestedActions fields) is available via -o json.
-const eventMessageColumnWidth = 60
+// Bound message previews while keeping full text available via -o json.
+const (
+	eventMessageColumnWidth = 80
+	eventMessageMaxLines    = 3
+)
 
 // Converts events into table rows. Each column corresponds to an event JSON
 // field. The verbose createdAt and suggestedActions fields are intentionally
@@ -266,6 +268,7 @@ const eventMessageColumnWidth = 60
 func eventRows(events []nvfleetint.Event) [][]string {
 	rows := make([][]string, 0, len(events))
 	for _, event := range events {
+		lines := eventMessageLines(clioutput.DisplayString(event.Message))
 		rows = append(rows, []string{
 			clioutput.DisplayString(event.EventID),
 			clioutput.DisplayString(event.NodeUUID),
@@ -273,9 +276,12 @@ func eventRows(events []nvfleetint.Event) [][]string {
 			clioutput.DisplayString(event.Component),
 			clioutput.DisplayString(event.Name),
 			clioutput.DisplayString(event.Type),
-			clioutput.Truncate(clioutput.DisplayString(event.Message), eventMessageColumnWidth),
+			lines[0],
 			clioutput.DisplayString(event.Timestamp),
 		})
+		for _, line := range lines[1:] {
+			rows = append(rows, []string{"", "", "", "", "", "", line, ""})
+		}
 	}
 	return rows
 }
@@ -421,4 +427,38 @@ func writeEventOptionsTable(w io.Writer, options nvfleetint.EventFilterOptions) 
 		}
 	}
 	return nil
+}
+
+// Wraps message paragraphs, keeping at most three lines and marking overflow.
+func eventMessageLines(message string) []string {
+	var lines []string
+	for _, paragraph := range strings.Split(strings.ReplaceAll(message, "\r\n", "\n"), "\n") {
+		remaining := []rune(strings.Join(strings.Fields(paragraph), " "))
+		for {
+			end := len(remaining)
+			if end > eventMessageColumnWidth {
+				end = eventMessageColumnWidth
+				for i := end; i > 0; i-- {
+					if unicode.IsSpace(remaining[i]) {
+						end = i
+						break
+					}
+				}
+			}
+			lines = append(lines, string(remaining[:end]))
+			if len(lines) > eventMessageMaxLines {
+				last := []rune(lines[eventMessageMaxLines-1])
+				if len(last) >= eventMessageColumnWidth {
+					last = last[:eventMessageColumnWidth-1]
+				}
+				lines[eventMessageMaxLines-1] = strings.TrimRightFunc(string(last), unicode.IsSpace) + "…"
+				return lines[:eventMessageMaxLines]
+			}
+			remaining = []rune(strings.TrimLeftFunc(string(remaining[end:]), unicode.IsSpace))
+			if len(remaining) == 0 {
+				break
+			}
+		}
+	}
+	return lines
 }
