@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"unicode"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdutil"
 	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
@@ -268,7 +267,7 @@ const (
 func eventRows(events []nvfleetint.Event) [][]string {
 	rows := make([][]string, 0, len(events))
 	for _, event := range events {
-		lines := eventMessageLines(clioutput.DisplayString(event.Message))
+		lines := clioutput.WrapText(clioutput.DisplayString(event.Message), eventMessageColumnWidth, eventMessageMaxLines)
 		rows = append(rows, []string{
 			clioutput.DisplayString(event.EventID),
 			clioutput.DisplayString(event.NodeUUID),
@@ -427,38 +426,4 @@ func writeEventOptionsTable(w io.Writer, options nvfleetint.EventFilterOptions) 
 		}
 	}
 	return nil
-}
-
-// Wraps message paragraphs, keeping at most three lines and marking overflow.
-func eventMessageLines(message string) []string {
-	var lines []string
-	for _, paragraph := range strings.Split(strings.ReplaceAll(message, "\r\n", "\n"), "\n") {
-		remaining := []rune(strings.Join(strings.Fields(paragraph), " "))
-		for {
-			end := len(remaining)
-			if end > eventMessageColumnWidth {
-				end = eventMessageColumnWidth
-				for i := end; i > 0; i-- {
-					if unicode.IsSpace(remaining[i]) {
-						end = i
-						break
-					}
-				}
-			}
-			lines = append(lines, string(remaining[:end]))
-			if len(lines) > eventMessageMaxLines {
-				last := []rune(lines[eventMessageMaxLines-1])
-				if len(last) >= eventMessageColumnWidth {
-					last = last[:eventMessageColumnWidth-1]
-				}
-				lines[eventMessageMaxLines-1] = strings.TrimRightFunc(string(last), unicode.IsSpace) + "…"
-				return lines[:eventMessageMaxLines]
-			}
-			remaining = []rune(strings.TrimLeftFunc(string(remaining[end:]), unicode.IsSpace))
-			if len(remaining) == 0 {
-				break
-			}
-		}
-	}
-	return lines
 }

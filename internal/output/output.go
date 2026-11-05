@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -427,4 +428,40 @@ func writeTableRow(w io.Writer, fields []string) error {
 	}
 	_, err := fmt.Fprintln(w, strings.Join(sanitized, "\t"))
 	return err
+}
+
+// WrapText wraps text at word boundaries, preserves line breaks, and splits long
+// words. Width counts runes. Overflow beyond maxLines is marked with an ellipsis.
+// A nonpositive width disables wrapping; a nonpositive maxLines disables the line limit.
+func WrapText(value string, width, maxLines int) []string {
+	var lines []string
+	for _, paragraph := range strings.Split(strings.ReplaceAll(value, "\r\n", "\n"), "\n") {
+		remaining := []rune(strings.Join(strings.Fields(paragraph), " "))
+		for {
+			end := len(remaining)
+			if width > 0 && end > width {
+				end = width
+				for i := end; i > 0; i-- {
+					if unicode.IsSpace(remaining[i]) {
+						end = i
+						break
+					}
+				}
+			}
+			lines = append(lines, string(remaining[:end]))
+			if maxLines > 0 && len(lines) > maxLines {
+				last := []rune(lines[maxLines-1])
+				if width > 0 && len(last) >= width {
+					last = last[:width-1]
+				}
+				lines[maxLines-1] = strings.TrimRightFunc(string(last), unicode.IsSpace) + "…"
+				return lines[:maxLines]
+			}
+			remaining = []rune(strings.TrimLeftFunc(string(remaining[end:]), unicode.IsSpace))
+			if len(remaining) == 0 {
+				break
+			}
+		}
+	}
+	return lines
 }

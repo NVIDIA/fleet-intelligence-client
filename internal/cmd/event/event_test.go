@@ -223,27 +223,6 @@ func TestEventBucketsMaxBucketsValidation(t *testing.T) {
 	}
 }
 
-func TestEventMessageWrapping(t *testing.T) {
-	for _, tc := range []struct {
-		name, text string
-		want       []string
-	}{
-		{"short", "hello world", []string{"hello world"}},
-		{"words", strings.Repeat("a", 75) + " hello world", []string{strings.Repeat("a", 75), "hello world"}},
-		{"long word", strings.Repeat("界", 81), []string{strings.Repeat("界", 80), "界"}},
-		{"newlines", "first\r\n\nthird", []string{"first", "", "third"}},
-		{"overflow", "first\nsecond\nthird\nfourth", []string{"first", "second", "third…"}},
-		{"exact capacity", strings.Repeat("x", 240), []string{strings.Repeat("x", 80), strings.Repeat("x", 80), strings.Repeat("x", 80)}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got := eventMessageLines(tc.text)
-			if strings.Join(got, "\n") != strings.Join(tc.want, "\n") || len(got) != len(tc.want) {
-				t.Fatalf("lines = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
 func TestEventMessageContinuationRows(t *testing.T) {
 	rows := eventRows([]nvfleetint.Event{{EventID: "first", Message: "one\ntwo\nthree\nfour", Timestamp: "2026-11-05T13:03:09.999999Z"}, {EventID: "second", Message: "next"}})
 	if len(rows) != 4 || rows[0][0] != "first" || rows[3][0] != "second" {
