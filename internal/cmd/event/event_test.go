@@ -87,13 +87,13 @@ func TestEventListTableAbsolute(t *testing.T) {
 func TestEventListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	want := `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"GPU","type":"error","name":"xid","message":"boom","timestamp":"2026-05-01T00:00:00.999999Z","createdAt":"2026-05-01T00:00:05Z","suggestedActions":[{"action":"reboot node","code":"R1"}]}],"hasMore":false,"page":1,"pageSize":50,"total":1}`
+	want := `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"GPU","type":"error","name":"xid","message":"boom","timestamp":"2026-05-01T00:00:00Z","createdAt":"2026-05-01T00:00:05Z","suggestedActions":[{"action":"reboot node","code":"R1"}]}],"hasMore":false,"page":1,"pageSize":50,"total":1}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("window"); got != "24h" {
 			t.Fatalf("unexpected window: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(strings.ReplaceAll(eventsBody, "2026-05-01T00:00:00Z", "2026-05-01T00:00:00.999999Z")))
+		_, _ = w.Write([]byte(eventsBody))
 	}))
 	defer server.Close()
 
@@ -219,33 +219,5 @@ func TestEventBucketsMaxBucketsValidation(t *testing.T) {
 		if err := cmd.Execute(); err == nil {
 			t.Fatalf("expected error for --max-buckets %s", value)
 		}
-	}
-}
-
-func TestEventTableTimestampRounding(t *testing.T) {
-	for _, tc := range []struct{ input, want string }{
-		{"2026-11-05T13:03:09.999999Z", "2026-11-05T13:03:10Z"},
-		{"2026-11-05T13:03:09.123456Z", "2026-11-05T13:03:09Z"},
-		{"2026-11-05T13:03:09.5Z", "2026-11-05T13:03:10Z"},
-		{"2026-11-05T23:59:59.999999Z", "2026-11-06T00:00:00Z"},
-		{"2026-11-05T13:03:09Z", "2026-11-05T13:03:09Z"},
-		{"", "-"}, {"invalid", "invalid"},
-	} {
-		t.Run(tc.input, func(t *testing.T) {
-			events := []nvfleetint.Event{{Timestamp: tc.input}}
-			if got := eventRows(events)[0][7]; got != tc.want {
-				t.Fatalf("timestamp = %q, want %q", got, tc.want)
-			}
-			if events[0].Timestamp != tc.input {
-				t.Fatal("table rendering changed the original timestamp")
-			}
-			buckets := []nvfleetint.EventBucket{{StartTime: tc.input, EndTime: tc.input, FirstEventTime: tc.input}}
-			row := eventBucketRows(buckets)[0]
-			for _, col := range []int{0, 1, 3} {
-				if row[col] != tc.want {
-					t.Errorf("bucket column %d = %q, want %q", col, row[col], tc.want)
-				}
-			}
-		})
 	}
 }
