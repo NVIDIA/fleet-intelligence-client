@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -464,4 +465,15 @@ func WrapText(value string, width, maxLines int) []string {
 		}
 	}
 	return lines
+}
+
+// DisplayTimestamp formats an RFC3339 timestamp rounded to the nearest second.
+// It preserves the input timezone, displays empty values as "-", and leaves
+// unrecognized values unchanged. Use only for display, not serialized data.
+func DisplayTimestamp(value string) string {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return DisplayString(value)
+	}
+	return parsed.Round(time.Second).Format(time.RFC3339)
 }

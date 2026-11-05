@@ -276,7 +276,7 @@ func eventRows(events []nvfleetint.Event) [][]string {
 			clioutput.DisplayString(event.Name),
 			clioutput.DisplayString(event.Type),
 			lines[0],
-			clioutput.DisplayString(event.Timestamp),
+			clioutput.DisplayTimestamp(event.Timestamp),
 		})
 		for _, line := range lines[1:] {
 			rows = append(rows, []string{"", "", "", "", "", "", line, ""})
@@ -299,10 +299,10 @@ func eventBucketRows(buckets []nvfleetint.EventBucket) [][]string {
 	rows := make([][]string, 0, len(buckets))
 	for _, bucket := range buckets {
 		rows = append(rows, []string{
-			clioutput.DisplayString(bucket.StartTime),
-			clioutput.DisplayString(bucket.EndTime),
+			clioutput.DisplayTimestamp(bucket.StartTime),
+			clioutput.DisplayTimestamp(bucket.EndTime),
 			clioutput.FormatOptionalInt(bucket.Count),
-			clioutput.DisplayString(bucket.FirstEventTime),
+			clioutput.DisplayTimestamp(bucket.FirstEventTime),
 		})
 	}
 	return rows

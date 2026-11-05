@@ -88,13 +88,13 @@ func TestEventListTableAbsolute(t *testing.T) {
 func TestEventListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	want := `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"GPU","type":"error","name":"xid","message":"boom","timestamp":"2026-05-01T00:00:00Z","createdAt":"2026-05-01T00:00:05Z","suggestedActions":[{"action":"reboot node","code":"R1"}]}],"hasMore":false,"page":1,"pageSize":50,"total":1}`
+	want := `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"GPU","type":"error","name":"xid","message":"boom","timestamp":"2026-05-01T00:00:00.999999Z","createdAt":"2026-05-01T00:00:05Z","suggestedActions":[{"action":"reboot node","code":"R1"}]}],"hasMore":false,"page":1,"pageSize":50,"total":1}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("window"); got != "24h" {
 			t.Fatalf("unexpected window: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(eventsBody))
+		_, _ = w.Write([]byte(strings.ReplaceAll(eventsBody, "2026-05-01T00:00:00Z", "2026-05-01T00:00:00.999999Z")))
 	}))
 	defer server.Close()
 
@@ -245,5 +245,27 @@ func TestEventMessageContinuationRows(t *testing.T) {
 	}
 	if strings.Index(lines[1], "one") != strings.Index(lines[2], "two") {
 		t.Fatalf("message lines not aligned: %s", out.String())
+	}
+}
+
+func TestEventTableTimestampRounding(t *testing.T) {
+	const original = "2026-11-05T13:03:09.999999Z"
+	const want = "2026-11-05T13:03:10Z"
+	events := []nvfleetint.Event{{Timestamp: original}}
+	if got := eventRows(events)[0][7]; got != want {
+		t.Errorf("event timestamp = %q, want %q", got, want)
+	}
+	if events[0].Timestamp != original {
+		t.Fatal("table rendering changed original timestamp")
+	}
+	buckets := []nvfleetint.EventBucket{{StartTime: original, EndTime: original, FirstEventTime: original}}
+	row := eventBucketRows(buckets)[0]
+	for _, column := range []int{0, 1, 3} {
+		if row[column] != want {
+			t.Errorf("bucket column %d = %q, want %q", column, row[column], want)
+		}
+	}
+	if buckets[0].StartTime != original || buckets[0].EndTime != original || buckets[0].FirstEventTime != original {
+		t.Fatal("table rendering changed bucket timestamps")
 	}
 }
