@@ -48,6 +48,7 @@ var (
 type Client struct {
 	baseURL     *url.URL
 	apiKey      string
+	userAgent   string
 	httpClient  *http.Client
 	requestDoer fleetapi.HttpRequestDoer
 	timeout     time.Duration
@@ -56,6 +57,14 @@ type Client struct {
 
 // Customizes client construction behavior
 type Option func(*Client)
+
+// WithUserAgent sets the User-Agent header on API requests. An empty value
+// leaves the HTTP client's default user agent in place.
+func WithUserAgent(userAgent string) Option {
+	return func(c *Client) {
+		c.userAgent = strings.TrimSpace(userAgent)
+	}
+}
 
 // Configures the HTTP client used for API requests. The client is used through
 // a shallow copy carrying the redirect guard (see guardRedirect), so a client
@@ -469,10 +478,13 @@ func (c *Client) requestContext(ctx context.Context) (context.Context, context.C
 	return context.WithTimeout(ctx, c.timeout)
 }
 
-// Attaches authentication and response format headers
+// Attaches authentication, client identification, and response format headers
 func (c *Client) authorizeRequest(_ context.Context, req *http.Request) error {
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "application/json")
+	if c.userAgent != "" {
+		req.Header.Set("User-Agent", c.userAgent)
+	}
 	return nil
 }
 
