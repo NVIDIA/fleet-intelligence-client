@@ -76,8 +76,8 @@ func TestXIDBurstListTable(t *testing.T) {
 
 	got := out.String()
 	for _, want := range []string{
-		"BURST ID", "HOSTNAME", "XIDS", "XID COUNT", "START TIME", "DURATION (S)",
-		"JOB DISRUPTION", "NODE GROUP", "COMPUTE ZONE",
+		"BURST ID", "HOSTNAME", "XIDS", "START TIME", "DURATION (S)",
+		"JOB DISRUPTED", "PLATFORM RELATED", "CATEGORY", "SUBCATEGORY", "GPU", "Memory",
 		"burst-1", "gpu-01", "48, 94", "2026-05-01T00:00:00Z", "300", "true",
 		"Total Entries: 1",
 	} {
@@ -85,8 +85,18 @@ func TestXIDBurstListTable(t *testing.T) {
 			t.Fatalf("output missing %q:\n%s", want, got)
 		}
 	}
+	headers := strings.Fields(strings.SplitN(got, "\n", 2)[0])
+	wantPrefix := strings.Fields("BURST ID XIDS JOB DISRUPTED PLATFORM RELATED CATEGORY SUBCATEGORY")
+	if len(headers) < len(wantPrefix) || !reflect.DeepEqual(headers[:len(wantPrefix)], wantPrefix) {
+		t.Fatalf("unexpected column order: %v", headers)
+	}
+	values := strings.Fields(strings.SplitN(got, "\n", 3)[1])
+	wantValues := []string{"burst-1", "48,", "94", "true", "-", "GPU", "Memory"}
+	if len(values) < len(wantValues) || !reflect.DeepEqual(values[:len(wantValues)], wantValues) {
+		t.Fatalf("unexpected leading values: %v", values)
+	}
 	// Detail-only fields stay out of the list table.
-	for _, absent := range []string{"Double Bit ECC", "0000:0f:00.0", "Drain the node"} {
+	for _, absent := range []string{"NODE GROUP", "COMPUTE ZONE", "XID COUNT", "Double Bit ECC", "0000:0f:00.0", "Drain the node"} {
 		if strings.Contains(got, absent) {
 			t.Fatalf("output should not contain %q:\n%s", absent, got)
 		}
@@ -236,7 +246,7 @@ func TestXIDBurstDescribeTable(t *testing.T) {
 		"NODE GROUP", "COMPUTE ZONE", "DURATION (S)", "300", "XIDS", "48",
 		"JOB DISRUPTION", "true", "CATEGORY", "GPU", "SUBCATEGORY", "Memory",
 		"XID 48", "DBE: Double Bit ECC", "DEVICE 0000:0f:00.0", "48, 94",
-		"TENANT IMMEDIATE", "DRAIN: Drain the node",
+		"TENANT IMMEDIATE", "DRAIN: Drain the node", "END TIME", "2026-05-01T00:05:00Z",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q:\n%s", want, got)

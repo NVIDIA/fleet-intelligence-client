@@ -343,8 +343,8 @@ func writeXIDBurstListOutput(w io.Writer, common cmdutil.Resolved, result xidBur
 	}
 
 	headers := []string{
-		"BURST ID", "DATA SOURCE", "HOSTNAME", "NODE NAME", "BMC MAC", "GPU TYPE", "XIDS", "XID COUNT", "START TIME", "DURATION (S)",
-		"JOB DISRUPTION", "NODE GROUP", "COMPUTE ZONE",
+		"BURST ID", "XIDS", "JOB DISRUPTED", "PLATFORM RELATED", "CATEGORY", "SUBCATEGORY",
+		"DATA SOURCE", "HOSTNAME", "NODE NAME", "BMC MAC", "GPU TYPE", "START TIME", "DURATION (S)",
 	}
 	if err := clioutput.WriteTable(w, headers, xidBurstRows(result.Bursts)); err != nil {
 		return err
@@ -355,26 +355,25 @@ func writeXIDBurstListOutput(w io.Writer, common cmdutil.Resolved, result xidBur
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-// Converts XID bursts into table rows. Category, subcategory, device IDs, and
-// suggested actions are omitted to keep the table narrow; use describe or
-// -o json for the full payload.
+// Converts XID bursts into table rows. Membership, counts, device IDs, and
+// suggested actions remain available through describe or JSON output.
 func xidBurstRows(bursts []nvfleetint.XIDBurst) [][]string {
 	rows := make([][]string, 0, len(bursts))
 	for _, burst := range bursts {
 		rows = append(rows, []string{
 			clioutput.DisplayString(burst.BurstID),
+			formatXIDNumbers(burst.XIDNumbers),
+			clioutput.FormatOptionalBool(burst.JobDisruption),
+			clioutput.FormatOptionalBool(burst.JobDisruptionDueToPlatformIssue),
+			clioutput.DisplayString(burst.Category),
+			clioutput.DisplayString(burst.Subcategory),
 			clioutput.DisplayString(burst.DataSource),
 			clioutput.DisplayString(burst.Hostname),
 			clioutput.DisplayString(burst.NodeName),
 			clioutput.DisplayString(burst.BMCMAC),
 			clioutput.DisplayString(burst.GPUType),
-			formatXIDNumbers(burst.XIDNumbers),
-			clioutput.FormatOptionalInt(burst.XIDCount),
 			clioutput.DisplayString(burst.StartTime),
 			clioutput.FormatOptionalInt(burst.BurstDurationSeconds),
-			clioutput.FormatOptionalBool(burst.JobDisruption),
-			clioutput.DisplayString(burst.NodeGroup),
-			clioutput.DisplayString(burst.ComputeZone),
 		})
 	}
 	return rows
@@ -398,6 +397,7 @@ func xidBurstDescribeRows(burst nvfleetint.XIDBurstDetails) [][]string {
 		{"NODE GROUP", clioutput.FormatNameAndID(burst.NodeGroup, burst.NodeGroupID)},
 		{"COMPUTE ZONE", clioutput.FormatNameAndID(burst.ComputeZone, burst.ComputeZoneID)},
 		{"START TIME", clioutput.DisplayString(burst.StartTime)},
+		{"END TIME", clioutput.DisplayString(burst.EndTime)},
 		{"DURATION (S)", clioutput.FormatOptionalInt(burst.BurstDurationSeconds)},
 		{"XID COUNT", clioutput.FormatOptionalInt(burst.XIDCount)},
 		{"XIDS", formatXIDNumbers(burst.XIDNumbers)},
