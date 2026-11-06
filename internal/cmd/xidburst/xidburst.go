@@ -345,7 +345,6 @@ func writeXIDBurstListOutput(w io.Writer, common cmdutil.Resolved, result xidBur
 	headers := []string{
 		"BURST ID", "XIDS", "JOB DISRUPTED", "PLATFORM RELATED", "CATEGORY", "SUBCATEGORY",
 		"DATA SOURCE", "HOSTNAME", "NODE NAME", "BMC MAC", "GPU TYPE", "START TIME", "DURATION (S)",
-		"NODE GROUP", "COMPUTE ZONE",
 	}
 	if err := clioutput.WriteTable(w, headers, xidBurstRows(result.Bursts)); err != nil {
 		return err
@@ -356,9 +355,8 @@ func writeXIDBurstListOutput(w io.Writer, common cmdutil.Resolved, result xidBur
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-// Converts XID bursts into table rows. Device IDs and suggested actions
-// are omitted to keep the table narrow; use describe or
-// -o json for the full payload.
+// Converts XID bursts into table rows. Membership, counts, device IDs, and
+// suggested actions remain available through describe or JSON output.
 func xidBurstRows(bursts []nvfleetint.XIDBurst) [][]string {
 	rows := make([][]string, 0, len(bursts))
 	for _, burst := range bursts {
@@ -376,8 +374,6 @@ func xidBurstRows(bursts []nvfleetint.XIDBurst) [][]string {
 			clioutput.DisplayString(burst.GPUType),
 			clioutput.DisplayString(burst.StartTime),
 			clioutput.FormatOptionalInt(burst.BurstDurationSeconds),
-			clioutput.DisplayString(burst.NodeGroup),
-			clioutput.DisplayString(burst.ComputeZone),
 		})
 	}
 	return rows
