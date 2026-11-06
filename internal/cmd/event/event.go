@@ -255,10 +255,11 @@ func writeEventListOutput(w io.Writer, common cmdutil.Resolved, result eventList
 	return clioutput.WritePaginationFooter(w, *result.Page)
 }
 
-// The MESSAGE column is free-text and can be arbitrarily long, so it is
-// truncated with an ellipsis to keep the table readable; the full text (and the
-// omitted createdAt / suggestedActions fields) is available via -o json.
-const eventMessageColumnWidth = 60
+// Bound message previews while keeping full text available via -o json.
+const (
+	eventMessageColumnWidth = 80
+	eventMessageMaxLines    = 3
+)
 
 // Converts events into table rows. Each column corresponds to an event JSON
 // field. The verbose createdAt and suggestedActions fields are intentionally
@@ -266,6 +267,7 @@ const eventMessageColumnWidth = 60
 func eventRows(events []nvfleetint.Event) [][]string {
 	rows := make([][]string, 0, len(events))
 	for _, event := range events {
+		lines := clioutput.WrapText(clioutput.DisplayString(event.Message), eventMessageColumnWidth, eventMessageMaxLines)
 		rows = append(rows, []string{
 			clioutput.DisplayString(event.EventID),
 			clioutput.DisplayString(event.NodeUUID),
@@ -273,9 +275,12 @@ func eventRows(events []nvfleetint.Event) [][]string {
 			clioutput.DisplayString(event.Component),
 			clioutput.DisplayString(event.Name),
 			clioutput.DisplayString(event.Type),
-			clioutput.Truncate(clioutput.DisplayString(event.Message), eventMessageColumnWidth),
-			clioutput.DisplayString(event.Timestamp),
+			lines[0],
+			clioutput.DisplayTimestamp(event.Timestamp),
 		})
+		for _, line := range lines[1:] {
+			rows = append(rows, []string{"", "", "", "", "", "", line, ""})
+		}
 	}
 	return rows
 }
@@ -294,10 +299,10 @@ func eventBucketRows(buckets []nvfleetint.EventBucket) [][]string {
 	rows := make([][]string, 0, len(buckets))
 	for _, bucket := range buckets {
 		rows = append(rows, []string{
-			clioutput.DisplayString(bucket.StartTime),
-			clioutput.DisplayString(bucket.EndTime),
+			clioutput.DisplayTimestamp(bucket.StartTime),
+			clioutput.DisplayTimestamp(bucket.EndTime),
 			clioutput.FormatOptionalInt(bucket.Count),
-			clioutput.DisplayString(bucket.FirstEventTime),
+			clioutput.DisplayTimestamp(bucket.FirstEventTime),
 		})
 	}
 	return rows

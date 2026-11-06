@@ -343,3 +343,63 @@ func TestWriteIndentedRowsSingleColumn(t *testing.T) {
 		}
 	}
 }
+
+func TestWrapText(t *testing.T) {
+	for _, tc := range []struct {
+		name, text string
+		want       []string
+	}{
+		{"short", "hello world", []string{"hello world"}},
+		{"words", strings.Repeat("a", 75) + " hello world", []string{strings.Repeat("a", 75), "hello world"}},
+		{"long word", strings.Repeat("界", 81), []string{strings.Repeat("界", 80), "界"}},
+		{"newlines", "first\r\n\nthird", []string{"first", "", "third"}},
+		{"overflow", "first\nsecond\nthird\nfourth", []string{"first", "second", "third…"}},
+		{"exact capacity", strings.Repeat("x", 240), []string{strings.Repeat("x", 80), strings.Repeat("x", 80), strings.Repeat("x", 80)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := WrapText(tc.text, 80, 3)
+			if strings.Join(got, "\n") != strings.Join(tc.want, "\n") || len(got) != len(tc.want) {
+				t.Fatalf("lines = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestWrapTextLimits(t *testing.T) {
+	for _, tc := range []struct {
+		text         string
+		width, lines int
+		want         []string
+	}{
+		{"one two three", 7, 2, []string{"one two", "three"}},
+		{"one two three", 7, 1, []string{"one tw…"}},
+		{"abcd", 1, 2, []string{"a", "…"}},
+		{"one two", 0, 1, []string{"one two"}},
+		{"one\ntwo", 0, 1, []string{"one…"}},
+		{"abcd", 2, 0, []string{"ab", "cd"}},
+		{"", 4, 2, []string{""}},
+	} {
+		got := WrapText(tc.text, tc.width, tc.lines)
+		if len(got) != len(tc.want) || strings.Join(got, "\n") != strings.Join(tc.want, "\n") {
+			t.Errorf("WrapText(%q,%d,%d)=%q, want %q", tc.text, tc.width, tc.lines, got, tc.want)
+		}
+	}
+}
+
+func TestDisplayTimestamp(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"2026-11-05T13:03:09.999999Z", "2026-11-05T13:03:10Z"},
+		{"2026-11-05T13:03:09.123456Z", "2026-11-05T13:03:09Z"},
+		{"2026-11-05T13:03:09.5Z", "2026-11-05T13:03:10Z"},
+		{"2026-11-05T23:59:59.999999Z", "2026-11-06T00:00:00Z"},
+		{"2026-11-05T13:03:09Z", "2026-11-05T13:03:09Z"},
+		{"2026-11-05T13:03:09.9-08:00", "2026-11-05T13:03:10-08:00"},
+		{"", "-"}, {" ", "-"}, {"invalid", "invalid"},
+	} {
+		t.Run(tc.input, func(t *testing.T) {
+			if got := DisplayTimestamp(tc.input); got != tc.want {
+				t.Errorf("DisplayTimestamp(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
