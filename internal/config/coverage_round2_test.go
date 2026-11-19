@@ -123,3 +123,35 @@ func TestRound2ConfigAtomicTempPathTooLong(t *testing.T) {
 		t.Errorf("directory entries = %v, want only original regular file %q", entries, "c")
 	}
 }
+
+// A live competing writer must time out without invoking the edit callback or
+// deleting the other process's lock/configuration. Only this test's temp files
+// are involved; the production 30-second acquisition deadline is exercised.
+func TestRound2CompetingConfigLockPreservesOwner(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	original := []byte("original configuration\n")
+	owner := []byte("another live writer owns this lock\n")
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path+".lock", owner, 0600); err != nil {
+		t.Fatal(err)
+	}
+	called := false
+	err := withConfigLock(path, func() error {
+		called = true
+		return os.WriteFile(path, []byte("unexpected edit"), 0600)
+	})
+	if err == nil || !strings.Contains(err.Error(), "config is locked by another nvfleetint process") || !strings.Contains(err.Error(), path+".lock") {
+		t.Fatalf("lock error = %v, want competing-writer error naming the lock", err)
+	}
+	if called {
+		t.Error("edit callback ran while another writer owned the lock")
+	}
+	for name, want := range map[string][]byte{path: original, path + ".lock": owner} {
+		got, readErr := os.ReadFile(name)
+		if readErr != nil || !bytes.Equal(got, want) {
+			t.Errorf("file %q changed: contents=%q error=%v", name, got, readErr)
+		}
+	}
+}

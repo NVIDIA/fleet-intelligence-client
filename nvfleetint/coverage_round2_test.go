@@ -5,9 +5,11 @@ package nvfleetint
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -133,5 +135,24 @@ func TestRound2DefaultHTTPClientNilSharedTransport(t *testing.T) {
 	redirect := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
 	if err := client.CheckRedirect(redirect, []*http.Request{origin}); !errors.Is(err, ErrInsecureBaseURL) {
 		t.Fatalf("CheckRedirect error = %v, want ErrInsecureBaseURL", err)
+	}
+}
+
+// HTTP/1-only clients still receive the TLS floor without mutating their base.
+func TestRound2HTTP1TransportTLSFloor(t *testing.T) {
+	t.Setenv("GODEBUG", os.Getenv("GODEBUG")+",http2client=0")
+	base := &http.Transport{}
+	got := hardenedTransport(base)
+	if got == nil || got == base {
+		t.Fatal("expected a distinct hardened transport")
+	}
+	if got.TLSClientConfig == nil || got.TLSClientConfig.MinVersion < tls.VersionTLS12 {
+		t.Fatalf("HTTP/1 transport TLS config = %#v, want TLS 1.2 or newer", got.TLSClientConfig)
+	}
+	if base.TLSClientConfig != nil {
+		t.Fatalf("caller transport was mutated: %#v", base.TLSClientConfig)
+	}
+	if got.MaxConnsPerHost != maxConnsPerHost || got.MaxIdleConnsPerHost != maxIdleConnsPerHost {
+		t.Fatalf("connection limits = %d/%d, want %d/%d", got.MaxConnsPerHost, got.MaxIdleConnsPerHost, maxConnsPerHost, maxIdleConnsPerHost)
 	}
 }
