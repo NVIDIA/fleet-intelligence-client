@@ -19,6 +19,7 @@ import (
 
 func TestInventoryOOBSourceOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++
@@ -91,6 +92,7 @@ func TestInventoryOOBSourceOutput(t *testing.T) {
 
 func TestInventoryOOBDownloads(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	for _, signed := range []bool{false, true} {
 		t.Run(fmt.Sprintf("signed=%v", signed), func(t *testing.T) {
 			payload := "nodeUUID,nodeName,bmcMac,gpuType,gpuCount\nn1,machine,bmc,NVIDIA-H100-80GB-HBM3,8\n"

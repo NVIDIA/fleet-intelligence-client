@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -35,6 +36,7 @@ func newRootCmd() *cobra.Command {
 // Verifies tag list table output and prefix filter translation
 func TestTagListTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/tags" {
@@ -70,6 +72,7 @@ func TestTagListTable(t *testing.T) {
 // Verifies tag list JSON output emits the raw backend payload
 func TestTagListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"tags":["gpu-health","gpu-burn"]}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -96,6 +99,7 @@ func TestTagListJSON(t *testing.T) {
 // Verifies more than one resource filter is rejected before any request
 func TestTagListRejectsMultipleResourceFilters(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request for invalid flags")
@@ -115,6 +119,7 @@ func TestTagListRejectsMultipleResourceFilters(t *testing.T) {
 // Verifies tag set writes the requested tags and renders the result
 func TestTagSetTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
@@ -157,6 +162,7 @@ func TestTagSetTable(t *testing.T) {
 // Verifies tag set JSON output emits the raw backend payload
 func TestTagSetJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"nodeUUID":"node-1","tags":["gpu-health"]}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -183,6 +189,7 @@ func TestTagSetJSON(t *testing.T) {
 // Verifies --clear sends an empty tag list
 func TestTagSetClear(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
@@ -216,6 +223,7 @@ func TestTagSetClear(t *testing.T) {
 // answering yes writes.
 func TestTagSetConfirms(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -254,6 +262,7 @@ func TestTagSetConfirms(t *testing.T) {
 // Verifies declining the confirmation writes nothing
 func TestTagSetAbortsWhenDeclined(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request after declining")
@@ -278,6 +287,7 @@ func TestTagSetAbortsWhenDeclined(t *testing.T) {
 // prompting for confirmation
 func TestTagSetDryRun(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request during --dry-run")
@@ -311,6 +321,7 @@ func TestTagSetDryRun(t *testing.T) {
 // structured document instead of the backend payload, since no request is made
 func TestTagSetDryRunJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request during --dry-run")
@@ -391,6 +402,7 @@ func TestTagSetRejectsInvalidFlags(t *testing.T) {
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 			server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 				t.Fatal("did not expect a request for invalid flags")

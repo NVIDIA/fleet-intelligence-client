@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -45,6 +46,7 @@ func TestEventCommandErrors(t *testing.T) {
 				}
 				t.Run(name, func(t *testing.T) {
 					t.Setenv("HOME", t.TempDir())
+					t.Setenv("USERPROFILE", os.Getenv("HOME"))
 					var mu sync.Mutex
 					var requests []request
 					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +129,7 @@ func TestEventCommandValidationBeforeRequest(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			var mu sync.Mutex
 			requests := 0
 			server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {

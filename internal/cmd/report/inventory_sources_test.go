@@ -22,6 +22,7 @@ func TestInventoryBothSourcesPagination(t *testing.T) {
 	for _, mode := range []string{"first", "second", "all", "empty"} {
 		t.Run(mode, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			var mu sync.Mutex
 			requests := map[string][]int{}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -117,6 +118,7 @@ func TestInventoryBothSourcesPagination(t *testing.T) {
 
 func TestInventoryRequiresSourceForJSONAndDownloads(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { requests++ }))
 	defer server.Close()
@@ -151,6 +153,7 @@ func TestInventoryBothSourcesFailureWritesNoPartialOutput(t *testing.T) {
 	for _, source := range []string{"inband", "oob"} {
 		t.Run(source, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if r.URL.Query().Get("dataSource") == source {

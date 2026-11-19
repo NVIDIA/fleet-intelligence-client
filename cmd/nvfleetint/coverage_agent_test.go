@@ -16,6 +16,7 @@ import (
 func TestMainVersionJSONBuildInfo(t *testing.T) {
 	configDir := t.TempDir()
 	t.Setenv("HOME", configDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	t.Setenv("XDG_CONFIG_HOME", configDir)
 
 	out, err := os.Create(filepath.Join(t.TempDir(), "stdout"))
@@ -64,6 +65,7 @@ func TestMainCommandErrorJSON(t *testing.T) {
 
 	configDir := t.TempDir()
 	t.Setenv("HOME", configDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	t.Setenv("XDG_CONFIG_HOME", configDir)
 	t.Setenv(helperEnv, "1")
 	cmd := exec.Command(os.Args[0], "-test.run=^TestMainCommandErrorJSON$")

@@ -705,7 +705,11 @@ func TestReportResponseDecodingErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			requests := make(chan struct{}, 1)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				requests <- struct{}{}
+				select {
+				case requests <- struct{}{}:
+				default:
+					t.Error("unexpected extra API request while recorder is full")
+				}
 				if r.Method != http.MethodGet || r.URL.Path != tc.path || r.URL.Query().Get("dataSource") != string(tc.source) || r.URL.Query().Get("view") != string(tc.view) || r.URL.Query().Get("groupBy") != string(tc.group) {
 					t.Errorf("unexpected request: %s %s", r.Method, r.URL.String())
 				}
@@ -749,7 +753,11 @@ func TestReportForbiddenResponses(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			requests := make(chan struct{}, 1)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				requests <- struct{}{}
+				select {
+				case requests <- struct{}{}:
+				default:
+					t.Error("unexpected extra API request while recorder is full")
+				}
 				if r.Method != http.MethodGet || r.URL.Path != tc.path || r.URL.Query().Get("dataSource") != string(DataSourceInband) || (tc.name == "errors" && (r.URL.Query().Get("view") != string(ErrorReportViewList) || r.URL.Query().Get("groupBy") != string(ErrorReportGroupByError))) {
 					t.Errorf("unexpected request: %s %s", r.Method, r.URL.String())
 				}

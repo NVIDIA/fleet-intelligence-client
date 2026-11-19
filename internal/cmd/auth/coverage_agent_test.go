@@ -32,6 +32,7 @@ func TestAuthListReportsEnvironmentOverrides(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			cfg := config.Config{CurrentProfile: "selected", Profiles: map[string]config.Profile{
 				"selected": {APIURL: apiURL, APIKey: storedKey},
@@ -71,6 +72,7 @@ func TestAuthMutationsRejectInvalidProfileName(t *testing.T) {
 	for _, action := range []string{"remove", "use"} {
 		t.Run(action, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			cmdtest.SaveConfig(t, apiURL, apiKey)
 
@@ -102,6 +104,7 @@ func TestAuthMutationsRejectMalformedConfigBeforePrompt(t *testing.T) {
 	for _, action := range []string{"add", "remove"} {
 		t.Run(action, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			path, err := config.Path()
 			if err != nil {
@@ -143,6 +146,7 @@ func TestAuthReadCommandsRejectInvalidOutput(t *testing.T) {
 	for _, action := range []string{"list", "status"} {
 		t.Run(action, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			var requests atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -184,6 +188,7 @@ func TestAuthStatusReportsUnsuccessfulConnectionsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			server := newAuthStatusServer(t, tt.code, tt.body)
 			defer server.Close()
@@ -216,6 +221,7 @@ func (w authListErrorWriter) Write([]byte) (int, error) { return 0, w.err }
 
 func TestAuthListPropagatesOutputError(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	cmdtest.SaveConfig(t, apiURL, apiKey)
 	sentinel := errors.New("list output failed")
@@ -230,6 +236,7 @@ func TestAuthListPropagatesOutputError(t *testing.T) {
 
 func TestAuthListRejectsMalformedConfig(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	path, err := config.Path()
 	if err != nil {
@@ -293,6 +300,7 @@ func TestAuthProfileChangesDuringPrompt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			if tt.initial {
 				if err := config.Save(config.Config{CurrentProfile: name, Profiles: map[string]config.Profile{
@@ -372,6 +380,7 @@ func TestAuthStatusReportsInsecureURLJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			storedURL := insecureURL
 			if tt.environment {
@@ -408,6 +417,7 @@ func TestAuthRemoveConfigBecomesMalformedDuringConfirmation(t *testing.T) {
 	const name = "target"
 	const secret = "removal-malformed-config-secret"
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	if err := config.Save(config.Config{CurrentProfile: name, Profiles: map[string]config.Profile{
 		name: {APIURL: "https://stored.example.com", APIKey: secret},

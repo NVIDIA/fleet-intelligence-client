@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -65,6 +66,7 @@ func TestAlertCommandsRejectMissingProfile(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			var requests atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				requests.Add(1)
@@ -98,6 +100,7 @@ func TestAlertCommandsRejectMissingProfile(t *testing.T) {
 
 func TestAlertNodeWithoutPSIRTRejectsBlankNode(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests.Add(1)
@@ -175,10 +178,15 @@ func TestAlertTablesWithoutPagination(t *testing.T) {
 
 func TestAlertDescribePropagatesTableWriterError(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	type request struct{ method, path string }
 	requests := make(chan request, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requests <- request{r.Method, r.URL.Path}
+		select {
+		case requests <- request{r.Method, r.URL.Path}:
+		default:
+			t.Error("unexpected extra API request while recorder is full")
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"alertUuid":"alert-1","nodeUuid":"node-1","timeline":[{"eventType":"triggered","message":"GPU critical"}]}`))
 	}))
@@ -230,6 +238,7 @@ func TestAlertCommandAPIErrorPropagation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			type request struct{ method, path, page, pageSize, authorization string }
 			var mu sync.Mutex
 			var requests []request
@@ -297,6 +306,7 @@ func TestAlertCommandAPIErrorPropagation(t *testing.T) {
 
 func TestAlertDescribeJSONPaginationPreservesPayload(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	const payload = `{"alertUuid":"alert-1","nodeUuid":"node-1","page":1,"pageSize":1,"total":3,"timeline":[{"eventType":"triggered","message":"GPU critical"}],"unknown":{"nested":{"value":"retained"}}}`
 	type request struct {
 		method, path   string
@@ -305,7 +315,11 @@ func TestAlertDescribeJSONPaginationPreservesPayload(t *testing.T) {
 	requests := make(chan request, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		requests <- request{r.Method, r.URL.Path, query["page"], query["pageSize"]}
+		select {
+		case requests <- request{r.Method, r.URL.Path, query["page"], query["pageSize"]}:
+		default:
+			t.Error("unexpected extra API request while recorder is full")
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(payload))
 	}))
@@ -331,7 +345,12 @@ func TestAlertDescribeJSONPaginationPreservesPayload(t *testing.T) {
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("describe failed: %v", err)
 			}
-			gotRequest := <-requests
+			var gotRequest request
+			select {
+			case gotRequest = <-requests:
+			default:
+				t.Fatal("expected a describe request")
+			}
 			if gotRequest.method != http.MethodGet || gotRequest.path != "/v1/alert_timeline/nodes/node-1/alerts/alert-1" || !reflect.DeepEqual(gotRequest.page, tc.page) || !reflect.DeepEqual(gotRequest.pageSize, tc.pageSize) {
 				t.Errorf("unexpected request: %+v", gotRequest)
 			}
@@ -357,6 +376,7 @@ func TestAlertDescribeJSONPaginationPreservesPayload(t *testing.T) {
 
 func TestAlertDescribeRejectsInvalidInputsBeforeRequest(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests.Add(1)
@@ -419,6 +439,7 @@ func TestAlertTimelineRejectsInvalidInputsBeforeRequest(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			var requests atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				requests.Add(1)

@@ -10,6 +10,7 @@ import (
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"testing"
@@ -21,6 +22,7 @@ func TestRound2ExplicitPageContract(t *testing.T) {
 	for _, cliPage := range []int{1, 3} {
 		t.Run(fmt.Sprintf("page_%d", cliPage), func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			apiPage := cliPage - 1
 			const pageSize = 7
 			body := []byte(fmt.Sprintf(`{"events":[{"eventId":"pagination-event","nodeUUID":"node-1","name":"xid","timestamp":"2026-05-01T00:00:00Z"}],"page":%d,"pageSize":7,"total":%d,"hasMore":false,"opaquePaginationContract":"preserved"}`, apiPage, apiPage*pageSize+1))

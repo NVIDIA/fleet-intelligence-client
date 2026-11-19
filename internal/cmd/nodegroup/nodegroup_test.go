@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -33,6 +34,7 @@ func newRootCmd() *cobra.Command {
 // Verifies table output, filters, and sort flags
 func TestNodeGroupListTableFiltersAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodegroups" {
@@ -97,6 +99,7 @@ func TestNodeGroupListTableFiltersAndSort(t *testing.T) {
 // Verifies all-page JSON output
 func TestNodeGroupListAllJSONMergesRawItems(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -240,6 +243,7 @@ func TestNodeGroupListRejectsInvalidFlags(t *testing.T) {
 // still pointing nested node groups at --nodegroup-ids.
 func TestNodeGroupOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"filters":{"fields":[` +
 		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +

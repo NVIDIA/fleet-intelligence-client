@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -65,6 +66,7 @@ func newRootCmd() *cobra.Command {
 // Verifies local output flags and sort field pass-through
 func TestNodeListLocalJSONAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	raw := `{"nodes":[{"nodeUUID":"node-1","hostname":"gpu-001","healthStatus":"Healthy"}],"hasMore":false,"page":0,"pageSize":20,"total":1}`
 	// JSON output presents the page 1-based, which re-serializes top-level keys.
@@ -103,6 +105,7 @@ func TestNodeListDetailSortFields(t *testing.T) {
 	for _, field := range []string{"agentVersion", "kernelVersion", "gpuDriverVersion", "gpuFirmwareVersions"} {
 		t.Run(field, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if got := r.URL.Query().Get("sortBy"); got != field {
@@ -133,6 +136,7 @@ func TestNodeListDetailSortFields(t *testing.T) {
 // the retired "integrityCheck" spelling is never sent in its place
 func TestNodeListSortVerificationCheck(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("sortBy"); got != "verificationCheck" {
@@ -159,6 +163,7 @@ func TestNodeListSortVerificationCheck(t *testing.T) {
 // the retired "integrityCheck" alias
 func TestNodeListSortHelpUsesVerificationCheck(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	usage := newNodeListCmd().Flags().Lookup("sort-by").Usage
 	if !strings.Contains(usage, "verificationCheck") {
@@ -202,6 +207,7 @@ func TestNodeListOptionsSupportsNodeName(t *testing.T) {
 // Verifies table output and filter translation
 func TestNodeListTableFiltersAndSort(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes" {
@@ -293,6 +299,7 @@ func TestNodeListTableFiltersAndSort(t *testing.T) {
 // Verifies detail lists combine independent in-band and OOB API views by default
 func TestNodeListCombinedDetailViews(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("view"); got != "detail" {
@@ -342,6 +349,7 @@ func TestNodeListCombinedDetailViews(t *testing.T) {
 // Verifies all-page JSON output
 func TestNodeListAllJSONMergesRawItems(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -407,6 +415,7 @@ func TestNodeListAllJSONMergesRawItems(t *testing.T) {
 // Verifies --all defaults the page size to the max when --page-size is omitted
 func TestNodeListAllDefaultsPageSize(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes" {
@@ -436,6 +445,7 @@ func TestNodeListAllDefaultsPageSize(t *testing.T) {
 // pagination and duplicating already collected nodes.
 func TestNodeListAllRetriesFailedPage(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var firstPageCalls atomic.Int32
 	var secondPageCalls atomic.Int32
@@ -495,6 +505,7 @@ func TestNodeListAllRetriesFailedPage(t *testing.T) {
 // Verifies node describe table output
 func TestNodeDescribeTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes/node-1" {
@@ -527,6 +538,7 @@ func TestNodeDescribeTable(t *testing.T) {
 // Verifies node describe combines independent in-band and OOB views by default
 func TestNodeDescribeCombinedViews(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -606,6 +618,7 @@ func TestNodeDescribeCombinedViews(t *testing.T) {
 // Verifies a missing agent-specific view does not hide the available view
 func TestNodeDescribeCombinedViewAllowsNotFound(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("dataSource") == "oob" {
@@ -643,6 +656,7 @@ func TestNodeDescribeCombinedViewAllowsNotFound(t *testing.T) {
 // Verifies OOB node describe defaults to a summary and supports domain drill-downs
 func TestNodeDescribeOOBTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("dataSource"); got != "oob" {
@@ -981,6 +995,7 @@ func TestListAllRejectsPage(t *testing.T) {
 // them, and that JSON output stays the raw backend payload.
 func TestNodeOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"filters":{"fields":[` +
 		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +
@@ -1061,6 +1076,7 @@ func TestNodeOptionsOutput(t *testing.T) {
 // Verifies an unsupported data source is rejected before any request.
 func TestNodeOptionsRejectsDataSource(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
@@ -1086,6 +1102,7 @@ func TestNodeOptionsRejectsDataSource(t *testing.T) {
 // a field with no promotion target are still shown rather than dropped.
 func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"filters":{"fields":[` +
 		`{"name":"computeZones","options":[{"id":"cz-1","value":"East","options":[{"id":"ng-1","value":"Training"}]}]},` +
@@ -1136,6 +1153,7 @@ func TestNodeOptionsPromotionEdgeCases(t *testing.T) {
 
 func TestNodeDescribeCompleteOOBInventory(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("dataSource") != "oob" {
 			t.Errorf("unexpected source: %s", r.URL.RawQuery)
@@ -1264,6 +1282,7 @@ func TestOOBEmptyFabricSection(t *testing.T) {
 
 func TestNodeUUIDFilterFlagsAndPagination(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++
@@ -1300,6 +1319,7 @@ func TestNodeUUIDFilterFlagsAndPagination(t *testing.T) {
 
 func TestNodeUUIDFilterValidationBeforeAuth(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	for _, args := range [][]string{
 		{"--data-source", "oob", "--agent-uuids", "agent-A"},
 		{"--view", "basic", "--data-source", "oob", "--agent-uuids", "agent-A"},
@@ -1316,6 +1336,7 @@ func TestNodeUUIDFilterValidationBeforeAuth(t *testing.T) {
 
 func TestNodeVerificationPolicyStatusFilters(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	statuses := []string{"Full Attestation", "Partial Attestation", "Verification Failed"}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !slices.Equal(r.URL.Query()["verificationChecks"], statuses) {

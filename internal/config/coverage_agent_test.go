@@ -20,6 +20,7 @@ import (
 func TestEditRecoversStaleLockThroughRelativeSymlink(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	clearEnv(t)
 
 	path, err := Path()
@@ -84,8 +85,14 @@ func TestEditRecoversStaleLockThroughRelativeSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat target: %v", err)
 	}
-	if info.Mode().Perm() != fileMode {
-		t.Fatalf("target permissions: got %o, want %o", info.Mode().Perm(), fileMode)
+	wantMode := os.FileMode(fileMode)
+	if runtime.GOOS == "windows" {
+		// Windows exposes writable regular files as 0666; Chmod applies only
+		// the owner write bit (see os.fileStat.mode in types_windows.go).
+		wantMode = 0666
+	}
+	if info.Mode().Perm() != wantMode {
+		t.Fatalf("target permissions: got %o, want %o", info.Mode().Perm(), wantMode)
 	}
 	if _, err := os.Lstat(lockPath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("lock remains or cannot be inspected: %v", err)
@@ -94,6 +101,7 @@ func TestEditRecoversStaleLockThroughRelativeSymlink(t *testing.T) {
 
 func TestEditReadErrorDoesNotMutateAndRemovesLock(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	clearEnv(t)
 	path, err := Path()
 	if err != nil {
@@ -120,6 +128,7 @@ func TestEditReadErrorDoesNotMutateAndRemovesLock(t *testing.T) {
 
 func TestEditAtomicRenameFailureCleansUpCredentials(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	clearEnv(t)
 	initial := Config{CurrentProfile: "dev", Profiles: map[string]Profile{
 		"dev": {APIURL: "https://fleet.example.com", APIKey: "original-key"},
@@ -183,6 +192,7 @@ func TestEditInvalidProfileNamesPreserveFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			clearEnv(t)
 			want := Config{CurrentProfile: "dev", Profiles: map[string]Profile{
 				"dev": {APIURL: "https://fleet.example.com", APIKey: "original-key"},
@@ -312,6 +322,7 @@ func TestConfigWriteDirectoryFailuresPreserveData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("HOME", home)
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			clearEnv(t)
 			cfg := Config{CurrentProfile: "dev", Profiles: map[string]Profile{
 				"dev": {APIURL: "https://fleet.example.com", APIKey: "distinct-test-key"},
@@ -526,6 +537,7 @@ func TestConfigInvalidHomeErrorPropagation(t *testing.T) {
 
 func TestEditRemoveProfilesWithNoCurrentSelection(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	clearEnv(t)
 
 	survivor := Profile{APIURL: "https://survivor.example.com", APIKey: "survivor-key"}

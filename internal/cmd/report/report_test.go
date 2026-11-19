@@ -55,6 +55,7 @@ func chdir(t *testing.T, dir string) {
 // Verifies inventory report table output
 func TestReportInventoryTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/reports/inventory" {
@@ -116,6 +117,7 @@ func TestReportInventoryTable(t *testing.T) {
 // Verifies inventory report CSV output
 func TestReportInventoryCSV(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	raw := "nodeUUID,hostname\nnode-1,gpu-001\n"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -152,6 +154,7 @@ func TestReportInventoryCSV(t *testing.T) {
 // Verifies an explicitly set --output is rejected with --format csv
 func TestReportInventoryRejectsOutputWithCSV(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	cmdtest.SaveConfig(t, "https://example.invalid", "test-key")
 
@@ -235,6 +238,7 @@ func TestReportInventorySortSources(t *testing.T) {
 			}
 			t.Run(name, func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
+				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				requests := make(chan string, 2)
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					query := r.URL.Query()
@@ -295,6 +299,7 @@ func TestReportInventorySortSources(t *testing.T) {
 // Verifies a signed inventory report is written to the current directory
 func TestReportInventorySignedWritesToCWD(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	payload := []byte("PK\x03\x04 signed-zip-bytes")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -343,6 +348,7 @@ func TestReportInventorySignedWritesToCWD(t *testing.T) {
 
 func TestReportInventorySignedJSONStatus(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	payload := []byte("PK\x03\x04 signed-zip-bytes")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -378,6 +384,7 @@ func TestReportInventorySignedJSONStatus(t *testing.T) {
 // Verifies --output-path directs the signed bundle to an explicit file
 func TestReportInventorySignedOutputPath(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	payload := []byte("PK\x03\x04 signed-zip-bytes")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -413,6 +420,7 @@ func TestReportInventorySignedOutputPath(t *testing.T) {
 // Verifies --output-path pointing at a directory keeps the suggested filename
 func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	payload := []byte("PK\x03\x04 signed-zip-bytes")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -446,6 +454,7 @@ func TestReportInventorySignedOutputPathDirectory(t *testing.T) {
 // Verifies signed inventory flag combinations are rejected before any request
 func TestReportInventorySignedValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	cmdtest.SaveConfig(t, "https://example.invalid", "test-key")
 
@@ -479,6 +488,7 @@ func TestReportInventorySignedValidation(t *testing.T) {
 // Verifies all-page error list reports merge raw JSON items
 func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -569,6 +579,7 @@ func TestReportErrorListAllJSONMergesItems(t *testing.T) {
 // Verifies overview error report table output and absolute time filters
 func TestReportErrorOverviewTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	start := "2026-05-01T00:00:00Z"
 	end := "2026-05-02T00:00:00Z"
@@ -617,6 +628,7 @@ func TestReportErrorOverviewTable(t *testing.T) {
 // Verifies the error report defaults to the overview view when --view is omitted
 func TestReportErrorDefaultsToOverview(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/reports/error" {
@@ -654,6 +666,7 @@ func TestReportErrorDefaultsToOverview(t *testing.T) {
 // Verifies seven-day hour windows pass through unchanged
 func TestReportErrorGraphSevenDayHourWindow(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/reports/error" {
@@ -703,6 +716,7 @@ func TestReportErrorGraphSevenDayHourWindow(t *testing.T) {
 // Verifies backend-style hour windows pass through unchanged
 func TestReportErrorGraphThreeHourWindow(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/reports/error" {
@@ -831,6 +845,7 @@ func writeSignedFixture(t *testing.T, dir string, csv []byte) (csvPath, bundlePa
 // Verifies a signed report passes verification with an offline --key
 func TestReportVerifySucceedsWithKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -850,6 +865,7 @@ func TestReportVerifySucceedsWithKey(t *testing.T) {
 
 func TestReportVerifySucceedsWithKeyJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -875,6 +891,7 @@ func TestReportVerifySucceedsWithKeyJSON(t *testing.T) {
 // Verifies a tampered CSV fails the verify command
 func TestReportVerifyTamperedFails(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -894,6 +911,7 @@ func TestReportVerifyTamperedFails(t *testing.T) {
 // Verifies the signing key is fetched from the API when --key is omitted
 func TestReportVerifyFetchesKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -928,6 +946,7 @@ func TestReportVerifyFetchesKey(t *testing.T) {
 // Verifies a clear message when a non-bundle file is passed to --bundle
 func TestReportVerifyRejectsNonBundle(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, _, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -952,6 +971,7 @@ func TestReportVerifyRejectsNonBundle(t *testing.T) {
 // Verifies a clear message when the report does not match the signature
 func TestReportVerifyMismatchMessage(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -976,6 +996,7 @@ func TestReportVerifyMismatchMessage(t *testing.T) {
 // Verifies a clear message when a flag points at a missing file
 func TestReportVerifyMissingFile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	dir := t.TempDir()
 	csvPath, bundlePath, _ := writeSignedFixture(t, dir, []byte("data\n"))
@@ -996,6 +1017,7 @@ func TestReportVerifyMissingFile(t *testing.T) {
 // Verifies required flags are enforced
 func TestReportVerifyRequiresFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	tests := []struct {
 		name string

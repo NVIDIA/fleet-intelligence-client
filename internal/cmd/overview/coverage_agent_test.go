@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -79,6 +80,7 @@ func TestOverviewCommandFailures(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			t.Setenv(config.EnvAPIKey, "")
 			t.Setenv(config.EnvAPIURL, "")
 			t.Setenv(config.EnvLegacyAPIKey, "")

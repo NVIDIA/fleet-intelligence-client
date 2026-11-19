@@ -150,6 +150,7 @@ func TestAuthSubcommandsRejectExtraProfileNames(t *testing.T) {
 	for _, args := range tests {
 		t.Run(args[0], func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 
 			err := runAuthErr(t, args...)
@@ -166,6 +167,7 @@ func TestAuthSubcommandsRejectExtraProfileNames(t *testing.T) {
 // nothing.
 func TestAuthRejectsRemovedUpdateSubcommand(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, "")
 
@@ -212,6 +214,7 @@ func TestAuthSubcommandsRejectPositionalArgs(t *testing.T) {
 
 func TestAuthAddStoresProfileAndSelectsIt(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	got := mustAddProfile(t, "prod", apiKey, "")
@@ -240,6 +243,7 @@ func TestAuthAddStoresProfileAndSelectsIt(t *testing.T) {
 
 func TestAuthAddSavesExplicitAPIURLAndKeepsCurrent(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -265,6 +269,7 @@ func TestAuthAddSavesExplicitAPIURLAndKeepsCurrent(t *testing.T) {
 // distinguishing a new profile from an overwritten one.
 func TestAuthAddUpdatesExistingProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, apiURL)
@@ -303,6 +308,7 @@ func TestAuthAddRejectsCredentialFlags(t *testing.T) {
 	for _, args := range tests {
 		t.Run(args[2], func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 
 			err := runAuthErr(t, args...)
@@ -317,6 +323,7 @@ func TestAuthAddRejectsCredentialFlags(t *testing.T) {
 // the whole point of reading the key from stdin is that it leaves no trace.
 func TestAuthAddPromptsOnStderrWithoutEchoingTheKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	var out, errOut bytes.Buffer
@@ -346,6 +353,7 @@ func TestAuthAddPromptsOnStderrWithoutEchoingTheKey(t *testing.T) {
 // endpoint never means re-entering — or seeing — the current credential.
 func TestAuthAddKeepsStoredKeyOnEmptyAnswer(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, apiURL)
 
@@ -381,6 +389,7 @@ func TestAuthAddKeepsStoredKeyOnEmptyAnswer(t *testing.T) {
 // --yes. The key must survive the refusal.
 func TestAuthAddPipedOverwriteRequiresYes(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, apiURL)
 
@@ -401,6 +410,7 @@ func TestAuthAddPipedOverwriteRequiresYes(t *testing.T) {
 // Creating a profile destroys nothing, so it must not need --yes.
 func TestAuthAddNewProfileNeedsNoConfirmation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, "")
 
@@ -423,6 +433,7 @@ func TestAuthAddNewProfileNeedsNoConfirmation(t *testing.T) {
 // must neither need --yes nor claim a stored key is being lost.
 func TestAuthAddDoesNotWarnWhenProfileHasNoStoredKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, apiURL, "")
 
 	var errOut bytes.Buffer
@@ -454,6 +465,7 @@ func TestAuthAddDoesNotWarnWhenProfileHasNoStoredKey(t *testing.T) {
 // printed fix is a dead end in cron and CI.
 func TestAuthAddRunsHintedFixesWithoutATerminal(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	// No key and an endpoint the SDK rejects: the state both hints repair.
 	cmdtest.SaveConfig(t, "http://fleet.example.com", "")
 
@@ -480,6 +492,7 @@ func TestAuthAddRunsHintedFixesWithoutATerminal(t *testing.T) {
 // mode, so `auth add prod </dev/null` would be treated as a conversation.
 func TestAuthAddRefusesToReplaceStoredKeyWithoutATerminal(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, "")
 
@@ -520,6 +533,7 @@ func TestAuthAddRefusesToReplaceStoredKeyWithoutATerminal(t *testing.T) {
 // pressing Enter twice does. Nothing is written and nothing is destroyed.
 func TestAuthAddReportsAnUnchangedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, apiURL)
 
@@ -544,6 +558,7 @@ func TestAuthAddReportsAnUnchangedProfile(t *testing.T) {
 // than reset to defaults or stripped of its key.
 func TestAuthAddWithClosedStdinLeavesProfileAlone(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, apiURL)
 
@@ -575,6 +590,7 @@ func TestAuthAddWithClosedStdinLeavesProfileAlone(t *testing.T) {
 // The other half of the partial update: a new URL alone keeps the stored key.
 func TestAuthAddChangesAPIURLWithoutKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "dev", apiKey, "")
@@ -596,6 +612,7 @@ func TestAuthAddChangesAPIURLWithoutKey(t *testing.T) {
 // Updating a profile must not steal the current-profile selection.
 func TestAuthAddExistingProfileKeepsCurrent(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -619,6 +636,7 @@ func TestAuthAddExistingProfileKeepsCurrent(t *testing.T) {
 // "default" so first-time setup is one command with nothing to invent.
 func TestAuthAddWithoutNameUsesDefaultProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	got := mustAddProfile(t, "", apiKey, "")
@@ -649,6 +667,7 @@ func TestAuthAddWithoutNameUsesDefaultProfile(t *testing.T) {
 // rotates a key.
 func TestAuthAddWithoutNameUpdatesDefaultProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "", apiKey, apiURL)
@@ -675,6 +694,7 @@ func TestAuthAddWithoutNameUpdatesDefaultProfile(t *testing.T) {
 // store, so a bare `auth add` must not create an empty default profile.
 func TestAuthAddWithoutNameStillRequiresKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	err := runAuthErr(t, "add")
@@ -697,6 +717,7 @@ func TestAuthRemoveAndUseStillRequireProfileName(t *testing.T) {
 	for _, name := range []string{"remove", "use"} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			mustAddProfile(t, "", apiKey, "")
 
@@ -720,6 +741,7 @@ func TestAuthRemoveAndUseStillRequireProfileName(t *testing.T) {
 // profile that cannot exist is worse than no question at all.
 func TestAuthAddRejectsInvalidProfileNameBeforePrompting(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	cmd := newRootCmd()
 	var errOut bytes.Buffer
@@ -739,6 +761,7 @@ func TestAuthAddRejectsInvalidProfileNameBeforePrompting(t *testing.T) {
 
 func TestAuthAddRequiresKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	err := runAuthInputErr(t, "\n\n", "add", "prod")
 	if !strings.Contains(err.Error(), "API key is required") {
@@ -748,6 +771,7 @@ func TestAuthAddRequiresKey(t *testing.T) {
 
 func TestAuthAddRejectsInvalidAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	err := runAuthInputErr(t, addAnswers(apiKey, "example.com"), "add", "prod")
 	if !strings.Contains(err.Error(), "absolute https URL is required") {
@@ -760,6 +784,7 @@ func TestAuthAddRejectsInvalidAPIURL(t *testing.T) {
 func TestAuthAddRejectsInsecureAPIURL(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	err := runAuthInputErr(t, addAnswers(apiKey, "http://api.example.com"), "add", "prod")
 	if !strings.Contains(err.Error(), "https is required") {
@@ -775,6 +800,7 @@ func TestAuthAddRejectsInsecureAPIURL(t *testing.T) {
 // Loopback stays usable so the local mock-server workflow keeps working.
 func TestAuthAddAcceptsLoopbackHTTPAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	const loopbackURL = "http://127.0.0.1:9999"
@@ -793,6 +819,7 @@ func TestAuthAddAcceptsLoopbackHTTPAPIURL(t *testing.T) {
 // with KEY unset keeps the stored key rather than wiping it.
 func TestAuthAddTreatsWhitespaceAnswersAsEmpty(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, apiURL)
 
@@ -813,6 +840,7 @@ func TestAuthAddTreatsWhitespaceAnswersAsEmpty(t *testing.T) {
 // A brand-new profile needs a key; only an existing one has a key to keep.
 func TestAuthAddNewProfileRequiresKeyEvenWithAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	err := runAuthInputErr(t, addAnswers("", apiURL), "add", "nope")
@@ -831,6 +859,7 @@ func TestAuthAddNewProfileRequiresKeyEvenWithAPIURL(t *testing.T) {
 
 func TestAuthRemoveCurrentProfileClearsSelection(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -858,6 +887,7 @@ func TestAuthRemoveCurrentProfileClearsSelection(t *testing.T) {
 
 func TestAuthRemoveOtherProfileKeepsSelection(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -879,6 +909,7 @@ func TestAuthRemoveOtherProfileKeepsSelection(t *testing.T) {
 
 func TestAuthRemoveLastProfileExplainsRecovery(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -899,6 +930,7 @@ func TestAuthRemoveLastProfileExplainsRecovery(t *testing.T) {
 
 func TestAuthRemoveRejectsUnknownProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	err := runAuthErr(t, "remove", "nope", "--yes")
@@ -925,6 +957,7 @@ func TestAuthRemovePromptsForConfirmation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			mustAddProfile(t, "prod", apiKey, "")
 
@@ -1025,6 +1058,7 @@ func TestAuthRemoveRefusesToPromptWithoutATerminal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			mustAddProfile(t, "prod", apiKey, "")
 
@@ -1056,6 +1090,7 @@ func TestAuthRemoveRefusesToPromptWithoutATerminal(t *testing.T) {
 // The prompt is about a real deletion, so a typo'd name must fail before it.
 func TestAuthRemoveUnknownProfileDoesNotPrompt(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	mustAddProfile(t, "prod", apiKey, "")
 
@@ -1076,6 +1111,7 @@ func TestAuthRemoveUnknownProfileDoesNotPrompt(t *testing.T) {
 
 func TestAuthUseSelectsProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -1097,6 +1133,7 @@ func TestAuthUseSelectsProfile(t *testing.T) {
 
 func TestAuthUseRejectsUnknownProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, "")
@@ -1110,6 +1147,7 @@ func TestAuthUseRejectsUnknownProfile(t *testing.T) {
 // "nothing is configured" needs a different remedy than "that name is wrong".
 func TestAuthUseWithoutAnyProfilesErrorsDistinctly(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	err := runAuthErr(t, "use", "prod")
@@ -1123,6 +1161,7 @@ func TestAuthUseWithoutAnyProfilesErrorsDistinctly(t *testing.T) {
 
 func TestAuthListShowsProfilesWithoutPrintingKeys(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, apiURL)
@@ -1141,6 +1180,7 @@ func TestAuthListShowsProfilesWithoutPrintingKeys(t *testing.T) {
 
 func TestAuthListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", apiKey, apiURL)
@@ -1167,6 +1207,7 @@ func TestAuthListJSON(t *testing.T) {
 
 func TestAuthListMarksSelectedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	mustAddProfile(t, "prod", "prod-key", "")
@@ -1193,6 +1234,7 @@ func TestAuthListMarksSelectedProfile(t *testing.T) {
 
 func TestAuthListWarnsAboutDanglingCurrentProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	cfg := config.Config{
@@ -1213,6 +1255,7 @@ func TestAuthListWarnsAboutDanglingCurrentProfile(t *testing.T) {
 
 func TestAuthListWithoutProfilesExplainsSetup(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	got := mustRunAuth(t, "list")
@@ -1226,6 +1269,7 @@ func TestAuthListWithoutProfilesExplainsSetup(t *testing.T) {
 
 func TestAuthStatusChecksConnectionAndDoesNotPrintSecret(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
 	defer server.Close()
@@ -1254,6 +1298,7 @@ func TestAuthStatusChecksConnectionAndDoesNotPrintSecret(t *testing.T) {
 // to run — and say what happened — when current_profile points at nothing.
 func TestAuthStatusReportsGoneCurrentProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
@@ -1279,6 +1324,7 @@ func TestAuthStatusReportsGoneCurrentProfile(t *testing.T) {
 // than useless.
 func TestAuthStatusReportsUnreadableConfig(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	path, err := config.Path()
@@ -1305,6 +1351,7 @@ func TestAuthStatusReportsUnreadableConfig(t *testing.T) {
 // The warnings are part of the answer, so JSON consumers get them too.
 func TestAuthStatusJSONIncludesWarnings(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	if err := config.Save(config.Config{CurrentProfile: "gone"}); err != nil {
@@ -1326,6 +1373,7 @@ func TestAuthStatusJSONIncludesWarnings(t *testing.T) {
 // `auth status --profile` must report the named profile, not the current one.
 func TestAuthStatusChecksNamedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
@@ -1346,6 +1394,7 @@ func TestAuthStatusChecksNamedProfile(t *testing.T) {
 // An explicit --profile ignores the credential environment, and says so.
 func TestAuthStatusReportsIgnoredEnvironment(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
@@ -1368,6 +1417,7 @@ func TestAuthStatusReportsIgnoredEnvironment(t *testing.T) {
 // there.
 func TestAuthStatusIgnoredEnvironmentNamesOnlySetVariables(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
@@ -1388,6 +1438,7 @@ func TestAuthStatusIgnoredEnvironmentNamesOnlySetVariables(t *testing.T) {
 // Same for the shadowing note: one variable reads "overrides the value".
 func TestAuthStatusShadowedProfileNamesOnlySetVariables(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
@@ -1409,6 +1460,7 @@ func TestAuthStatusShadowedProfileNamesOnlySetVariables(t *testing.T) {
 // name the profile it is shadowing or the override is undiagnosable.
 func TestAuthStatusReportsShadowedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)
 	defer server.Close()
@@ -1431,6 +1483,7 @@ func TestAuthStatusReportsShadowedProfile(t *testing.T) {
 
 func TestAuthStatusRejectsUnknownProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	err := runAuthErr(t, "status", "--profile", "nope")
@@ -1441,6 +1494,7 @@ func TestAuthStatusRejectsUnknownProfile(t *testing.T) {
 
 func TestAuthStatusReportsUnauthorizedOnRejectedKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := newAuthStatusServer(t, http.StatusUnauthorized, `{"error":"unauthorized"}`)
 	defer server.Close()
@@ -1456,6 +1510,7 @@ func TestAuthStatusReportsUnauthorizedOnRejectedKey(t *testing.T) {
 
 func TestAuthStatusWithoutConfigExitsZero(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	got := mustRunAuth(t, "status")
@@ -1472,6 +1527,7 @@ func TestAuthStatusWithoutConfigExitsZero(t *testing.T) {
 
 func TestAuthStatusJSONUsesEnvFallback(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	server := newAuthStatusServer(t, http.StatusOK, `{"authenticated":true}`)

@@ -48,6 +48,7 @@ func TestReportAPIPermissionFailures(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			var mu sync.Mutex
 			var requests []request
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +140,7 @@ func TestReportAPIPermissionFailures(t *testing.T) {
 
 func TestReportInventorySignedWriteFailure(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	type request struct {
 		method, path, accept string
 		query                url.Values
@@ -215,6 +217,7 @@ func TestReportVerifyArtifactAndKeyErrors(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			dir := t.TempDir()
 			csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
@@ -290,6 +293,7 @@ func TestReportVerifyArtifactAndKeyErrors(t *testing.T) {
 
 func TestReportValidationBoundariesRejectBeforeRequest(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	var mu sync.Mutex
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -464,6 +468,7 @@ func TestReportCommandsRequireCredentials(t *testing.T) {
 	for _, name := range []string{"inventory", "error", "verify"} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			cmdtest.ClearCredentialEnv(t)
 			var args []string
 			switch name {
@@ -496,6 +501,7 @@ func TestReportCommandsRequireCredentials(t *testing.T) {
 
 func TestReportVerifyTimeoutPrecedesArtifactAccess(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	dir := t.TempDir()
 	var out bytes.Buffer

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -18,6 +19,7 @@ const nodeHealthBody = `{"enrolledAt":"2026-01-01T00:00:00Z","healthSummary":{"h
 // Verifies the health table renders summary and timeline sections
 func TestNodeHealthTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/nodes/node-1/health_history" {
@@ -63,6 +65,7 @@ func TestNodeHealthTable(t *testing.T) {
 // Verifies JSON output emits the raw backend payload
 func TestNodeHealthJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -88,6 +91,7 @@ func TestNodeHealthJSON(t *testing.T) {
 // Verifies flag validation rejects missing or malformed time windows before any request
 func TestNodeHealthRequiresValidTimeRange(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request for invalid flags")

@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -36,6 +37,7 @@ func newRootCmd() *cobra.Command {
 // Verifies table output and request filters
 func TestComputeZoneListTableAndFilters(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/computezones" {
@@ -89,6 +91,7 @@ func TestComputeZoneListTableAndFilters(t *testing.T) {
 // Verifies all-page JSON output
 func TestComputeZoneListAllJSONMergesRawItems(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -227,6 +230,7 @@ func updateServer(t *testing.T, requests *[]string, body *[]byte) *httptest.Serv
 // is rendered as a FIELD/VALUE table
 func TestComputeZoneUpdateTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests []string
 	var body []byte
@@ -276,6 +280,7 @@ func TestComputeZoneUpdateTable(t *testing.T) {
 // the backend's own payload
 func TestComputeZoneUpdateClearsFieldJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests []string
 	var body []byte
@@ -311,6 +316,7 @@ func TestComputeZoneUpdateClearsFieldJSON(t *testing.T) {
 // Verifies that a declined confirmation writes nothing
 func TestComputeZoneUpdateDeclinedWritesNothing(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests []string
 	var body []byte
@@ -344,6 +350,7 @@ func TestComputeZoneUpdateDeclinedWritesNothing(t *testing.T) {
 // request or prompting for confirmation
 func TestComputeZoneUpdateDryRun(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests []string
 	var body []byte
@@ -382,6 +389,7 @@ func TestComputeZoneUpdateDryRun(t *testing.T) {
 // structured document instead of the backend payload, since no PUT is made
 func TestComputeZoneUpdateDryRunJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests []string
 	var body []byte
@@ -424,6 +432,7 @@ func TestComputeZoneUpdateDryRunJSON(t *testing.T) {
 // Verifies the flag validation that runs before any request
 func TestComputeZoneUpdateRejectsBadFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests []string
 	var body []byte

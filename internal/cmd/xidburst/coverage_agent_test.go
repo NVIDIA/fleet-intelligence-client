@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -23,9 +24,14 @@ import (
 
 func TestXIDBurstPlatformDisruptionFilterBoundaries(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	queries := make(chan url.Values, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		queries <- r.URL.Query()
+		select {
+		case queries <- r.URL.Query():
+		default:
+			t.Error("unexpected extra API request while recorder is full")
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(xidBurstsBody))
 	}))
@@ -149,6 +155,7 @@ func TestXIDBurstRenderingWriteFailures(t *testing.T) {
 
 func TestXIDBurstReadFlagValidationBeforeRequest(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		requests.Add(1)
@@ -184,6 +191,7 @@ func TestXIDBurstReadFlagValidationBeforeRequest(t *testing.T) {
 
 func TestXIDBurstRejectsMalformedFilterLists(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests.Add(1)
@@ -243,6 +251,7 @@ func TestXIDBurstCommandAPIErrorPropagation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			type request struct{ method, path, page, pageSize, authorization string }
 			var mu sync.Mutex
 			var requests []request

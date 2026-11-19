@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +20,7 @@ func TestNodeOptionsBothSources(t *testing.T) {
 	for _, explicitDetail := range []bool{false, true} {
 		t.Run(fmt.Sprintf("detail=%v", explicitDetail), func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			var mu sync.Mutex
 			requests := map[string]int{}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +76,7 @@ func TestNodeOptionsBothSourcesFailureDoesNotWritePartialOutput(t *testing.T) {
 	for _, failingSource := range []string{"inband", "oob"} {
 		t.Run(failingSource, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if r.URL.Query().Get("dataSource") == failingSource {
