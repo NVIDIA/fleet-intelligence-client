@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ const xidBurstsBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostn
 // Verifies xidburst list table output and filter translation
 func TestXIDBurstListTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/xid/bursts" {
@@ -106,6 +108,7 @@ func TestXIDBurstListTable(t *testing.T) {
 // Verifies xidburst list JSON output is the raw payload with a 1-based page
 func TestXIDBurstListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -139,6 +142,7 @@ func TestXIDBurstListJSON(t *testing.T) {
 // Verifies the exclusion filter flags reach the backend as query parameters
 func TestXIDBurstListExclusionFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var query url.Values
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -177,6 +181,7 @@ func TestXIDBurstListExclusionFlags(t *testing.T) {
 // Verifies xidburst list rejects invalid flags before any request
 func TestXIDBurstListFlagValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request for invalid flags")
@@ -219,6 +224,7 @@ func TestXIDBurstListFlagValidation(t *testing.T) {
 // Verifies xidburst describe renders the field/value table
 func TestXIDBurstDescribeTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/xid/bursts/burst-1" {
@@ -261,6 +267,7 @@ func TestXIDBurstDescribeTable(t *testing.T) {
 // Verifies xidburst describe JSON output is the raw backend payload
 func TestXIDBurstDescribeJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"burstId":"burst-1","hostname":"gpu-01","jobDisruption":true}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -287,6 +294,7 @@ func TestXIDBurstDescribeJSON(t *testing.T) {
 // Verifies xidburst describe requires exactly one burst ID
 func TestXIDBurstDescribeRequiresBurstID(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request for invalid args")
@@ -311,6 +319,7 @@ func TestXIDBurstDescribeRequiresBurstID(t *testing.T) {
 // Verifies --all merges pages using the derived has-more signal
 func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	pages := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -353,6 +362,7 @@ func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
 // Verifies the scope flags reach the options endpoint as query parameters
 func TestXIDBurstOptionsSendsScopeFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var query url.Values
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -401,6 +411,7 @@ func TestXIDBurstOptionsSendsScopeFlags(t *testing.T) {
 // the time range stays optional
 func TestXIDBurstOptionsRejectsInvalidScopeFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -458,6 +469,7 @@ func TestXIDBurstOptionsRejectsInvalidScopeFlags(t *testing.T) {
 
 func TestXIDBurstOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	body := `{"xidNumbers":[43],"categories":["User-App"],"subcategories":["Illegal Memory Access"],` +
 		`"jobDisruption":[true,false],"jobDisruptionDueToPlatformIssue":[true,false],"suggestedActions":[` +
@@ -548,6 +560,7 @@ func TestXIDBurstOptionsOutput(t *testing.T) {
 // sees which flags exist rather than a silently shortened list.
 func TestXIDBurstOptionsRendersEmptyFilters(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

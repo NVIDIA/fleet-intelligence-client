@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -260,6 +261,7 @@ func TestCommandsRejectUnexpectedArguments(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			// Credentials have to be configured for the command to get as far as
 			// a request, so that "no request was made" means the argument was
 			// rejected rather than that there was nothing to authenticate with.
@@ -330,6 +332,7 @@ func TestEveryCommandRejectsWrongArgCount(t *testing.T) {
 			}
 			t.Run(fmt.Sprintf("%s/%d args", cmd.CommandPath(), count), func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
+				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					t.Errorf("reached the API: %s %s", r.Method, r.URL.Path)
 					w.WriteHeader(http.StatusInternalServerError)

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -22,6 +23,7 @@ func TestAlertSourceStatusCommands(t *testing.T) {
 			for _, all := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/%s/all=%v", view, output, all), func(t *testing.T) {
 					t.Setenv("HOME", t.TempDir())
+					t.Setenv("USERPROFILE", os.Getenv("HOME"))
 					requests := 0
 					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						requests++
@@ -114,6 +116,7 @@ func TestAlertSourceStatusCommands(t *testing.T) {
 
 func TestAlertSourceStatusOptionsAndValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++

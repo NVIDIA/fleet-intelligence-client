@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -31,6 +32,7 @@ func newRootCmd() *cobra.Command {
 // Verifies the overview table renders summary fields and metrics
 func TestOverviewTableCommand(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/overview" {
@@ -71,6 +73,7 @@ func TestOverviewTableCommand(t *testing.T) {
 // Verifies --include-metrics=true is forwarded explicitly
 func TestOverviewForwardsIncludeMetricsTrue(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("includeMetrics"); got != "true" {
@@ -95,6 +98,7 @@ func TestOverviewForwardsIncludeMetricsTrue(t *testing.T) {
 // Verifies --include-metrics=false is forwarded and JSON output is raw
 func TestOverviewJSONWithoutMetrics(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	raw := `{"nodesCount":5}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -125,6 +129,7 @@ func TestOverviewJSONWithoutMetrics(t *testing.T) {
 // Verifies invalid output format is rejected
 func TestOverviewRejectsInvalidOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://example.com", "test-key")
 
 	cmd := newRootCmd()

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -25,6 +26,7 @@ func TestNodeSearchAcrossViewsAndPages(t *testing.T) {
 		for _, all := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/%s/all=%v", tc.view, tc.source, all), func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
+				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				calls := 0
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					q := r.URL.Query()
@@ -67,6 +69,7 @@ func TestNodeSearchAcrossViewsAndPages(t *testing.T) {
 
 func TestNodeDetailSearchRequiresSource(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmd := newRootCmd()
 	cmd.SetOut(new(bytes.Buffer))
 	cmd.SetArgs([]string{"node", "list", "--search", "node-01"})

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -34,6 +35,7 @@ const eventsBody = `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"
 // Verifies event list table output and time-range translation
 func TestEventListTableAbsolute(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/events" {
@@ -87,6 +89,7 @@ func TestEventListTableAbsolute(t *testing.T) {
 // Verifies event list JSON output presents the page 1-based
 func TestEventListJSON(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	want := `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"GPU","type":"error","name":"xid","message":"boom","timestamp":"2026-05-01T00:00:00.999999Z","createdAt":"2026-05-01T00:00:05Z","suggestedActions":[{"action":"reboot node","code":"R1"}]}],"hasMore":false,"page":1,"pageSize":50,"total":1}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -151,6 +154,7 @@ func TestEventRowsTruncatesFreeText(t *testing.T) {
 // Verifies event list rejects a missing time range before any request
 func TestEventListRequiresTimeRange(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request for invalid flags")
@@ -170,6 +174,7 @@ func TestEventListRequiresTimeRange(t *testing.T) {
 // Verifies event buckets table output, footer, and max-buckets translation
 func TestEventBucketsTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/events/buckets" {
@@ -205,6 +210,7 @@ func TestEventBucketsTable(t *testing.T) {
 // Verifies event buckets rejects an out-of-range max-buckets value
 func TestEventBucketsMaxBucketsValidation(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("did not expect a request for invalid flags")

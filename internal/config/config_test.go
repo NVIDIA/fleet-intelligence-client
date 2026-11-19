@@ -24,6 +24,7 @@ func clearEnv(t *testing.T) {
 
 func TestLoadMissingConfigReturnsEmpty(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	cfg, err := Load()
 	if err != nil {
@@ -40,6 +41,7 @@ func TestLoadMissingConfigReturnsEmpty(t *testing.T) {
 
 func TestSaveAndLoadRoundTrip(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var want Config
 	if err := want.AddProfile("prod", Profile{APIURL: "https://fleet.example.com", APIKey: "prod-key"}); err != nil {
@@ -69,6 +71,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 func TestSaveUsesExpectedPathAndMode(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var cfg Config
 	if err := cfg.AddProfile("prod", Profile{APIKey: "test-key"}); err != nil {
@@ -98,6 +101,7 @@ func TestSaveUsesExpectedPathAndMode(t *testing.T) {
 func TestSaveWritesThroughSymlinkedConfig(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	target := filepath.Join(homeDir, "dotfiles", "nvfleetint.yaml")
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
@@ -141,6 +145,7 @@ func TestSaveWritesThroughSymlinkedConfig(t *testing.T) {
 
 func TestEditConcurrentAddsPreserveProfiles(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	clearEnv(t)
 
 	const count = 20
@@ -179,6 +184,7 @@ func TestEditConcurrentAddsPreserveProfiles(t *testing.T) {
 // churn it (and any diff a user keeps on it) for no reason.
 func TestSaveIsDeterministic(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var cfg Config
 	for _, name := range []string{"zeta", "alpha", "prod", "dev", "m1"} {
@@ -218,6 +224,7 @@ func TestSaveIsDeterministic(t *testing.T) {
 func TestLoadInvalidYAMLFails(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	path := filepath.Join(homeDir, ".config", "nvfleetint", "config.yaml")
 	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
@@ -237,6 +244,7 @@ func TestLoadInvalidYAMLFails(t *testing.T) {
 func TestResolveEnvironmentOnlySurvivesMalformedConfig(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	clearEnv(t)
 	t.Setenv(EnvAPIURL, "https://env.example.com")
 	t.Setenv(EnvAPIKey, "env-key")
@@ -487,6 +495,7 @@ func TestValidateProfileName(t *testing.T) {
 func TestSaveReplacesFileAtomically(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var cfg Config
 	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {
@@ -714,6 +723,7 @@ func TestResolveExplicitMissingProfileStillFails(t *testing.T) {
 func TestResolveReportsUnreadableConfigWhenEnvironmentSucceeds(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	t.Setenv(EnvAPIKey, "env-key")
 
 	path, err := Path()
@@ -747,6 +757,7 @@ func TestResolveReportsUnreadableConfigWhenEnvironmentSucceeds(t *testing.T) {
 func TestResolveUnreadableConfigFailsWithoutEnvironmentKey(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	path, err := Path()
 	if err != nil {
@@ -767,6 +778,7 @@ func TestResolveUnreadableConfigFailsWithoutEnvironmentKey(t *testing.T) {
 func TestResolveLoadsFromDisk(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var cfg Config
 	if err := cfg.AddProfile("prod", Profile{APIURL: "https://prod.example.com", APIKey: "prod-key"}); err != nil {

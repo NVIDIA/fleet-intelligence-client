@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -22,6 +23,7 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 			for _, allPages := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/%s/allPages=%v", source, format, allPages), func(t *testing.T) {
 					t.Setenv("HOME", t.TempDir())
+					t.Setenv("USERPROFILE", os.Getenv("HOME"))
 					calls := 0
 					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						q := r.URL.Query()
@@ -142,6 +144,7 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 
 func TestXIDBurstOOBDescribe(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/xid/bursts/oob-burst" || r.URL.RawQuery != "" {
 			t.Errorf("describe request=%s", r.URL)
@@ -170,6 +173,7 @@ func TestXIDBurstInvalidSourceBeforeAuthentication(t *testing.T) {
 		for _, source := range []string{"invalid", "inband,oob", "ALL"} {
 			t.Run(command+"/"+source, func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
+				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				cmd := newRootCmd()
 				cmd.SetOut(new(bytes.Buffer))
 				cmd.SetArgs([]string{"xidburst", command, "--window", "24h", "--data-source", source})

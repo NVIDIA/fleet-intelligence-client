@@ -30,6 +30,7 @@ func testCommonFlags(profile string) Resolved {
 // Verifies the current profile is converted to an SDK client
 func TestNewConfiguredClientBuildsSDKClient(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://fleet.example.com", "test-key")
 
 	client, err := New(testCommonFlags(""))
@@ -47,6 +48,7 @@ func TestNewConfiguredClientBuildsSDKClient(t *testing.T) {
 // Verifies --profile picks the named profile rather than the current one
 func TestNewConfiguredClientUsesNamedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	var cfg config.Config
@@ -77,6 +79,7 @@ func TestNewConfiguredClientUsesNamedProfile(t *testing.T) {
 // Verifies an unknown --profile fails with a discoverable hint
 func TestNewConfiguredClientRejectsUnknownProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://fleet.example.com", "test-key")
 
 	_, err := New(testCommonFlags("nope"))
@@ -91,6 +94,7 @@ func TestNewConfiguredClientRejectsUnknownProfile(t *testing.T) {
 // Verifies a keyless profile fails clearly
 func TestNewConfiguredClientRequiresAPIKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://fleet.example.com", "")
 
 	_, err := New(testCommonFlags(""))
@@ -108,6 +112,7 @@ func TestNewConfiguredClientRequiresAPIKey(t *testing.T) {
 // Verifies the no-config case names the command that fixes it
 func TestNewConfiguredClientRequiresAProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	_, err := New(testCommonFlags(""))
@@ -121,6 +126,7 @@ func TestNewConfiguredClientRequiresAProfile(t *testing.T) {
 
 func TestNewConfiguredClientSuggestsUseWhenProfilesExist(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	cfg := config.Config{
@@ -149,6 +155,7 @@ func TestNewConfiguredClientSuggestsUseWhenProfilesExist(t *testing.T) {
 // the environment carries a working key.
 func TestNewConfiguredClientFallsBackWhenCurrentProfileIsGone(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	if err := config.Save(config.Config{CurrentProfile: "gone"}); err != nil {
@@ -170,6 +177,7 @@ func TestNewConfiguredClientFallsBackWhenCurrentProfileIsGone(t *testing.T) {
 // has to name the stale selection and the command that clears it.
 func TestNewConfiguredClientNamesGoneCurrentProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	if err := config.Save(config.Config{CurrentProfile: "gone"}); err != nil {
@@ -192,6 +200,7 @@ func TestNewConfiguredClientNamesGoneCurrentProfile(t *testing.T) {
 // fails as if it had set no credentials at all.
 func TestNewConfiguredClientNamesRenamedEnvironmentVariable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 	t.Setenv(config.EnvLegacyAPIKey, "legacy-key")
 
@@ -210,6 +219,7 @@ func TestNewConfiguredClientNamesRenamedEnvironmentVariable(t *testing.T) {
 // Once the new variable is set the old one is leftovers, not the cause.
 func TestNewConfiguredClientOmitsRenameHintWhenNewVariableIsSet(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://fleet.example.com", "")
 	t.Setenv(config.EnvLegacyAPIKey, "legacy-key")
 	t.Setenv(config.EnvAPIKey, "")
@@ -232,6 +242,7 @@ func TestNewConfiguredClientOmitsRenameHintWhenNewVariableIsSet(t *testing.T) {
 
 func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
 	t.Setenv(config.EnvAPIKey, "env-test-key")
 
@@ -249,6 +260,7 @@ func TestNewConfiguredClientUsesEnvFallback(t *testing.T) {
 
 func TestNewConfiguredClientEnvOverridesCurrentProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://file-fleet.example.com", "file-test-key")
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
 	t.Setenv(config.EnvAPIKey, "env-test-key")
@@ -266,6 +278,7 @@ func TestNewConfiguredClientEnvOverridesCurrentProfile(t *testing.T) {
 // override: that is how one tenant's key would reach another tenant's endpoint.
 func TestNewConfiguredClientIgnoresEnvForNamedProfile(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "https://file-fleet.example.com", "file-test-key")
 	t.Setenv(config.EnvAPIURL, "https://env-fleet.example.com")
 	t.Setenv(config.EnvAPIKey, "env-test-key")
@@ -282,6 +295,7 @@ func TestNewConfiguredClientIgnoresEnvForNamedProfile(t *testing.T) {
 // --profile selects a profile other than the stored current one.
 func TestNewConfiguredClientHonorsProfileFlag(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	var cfg config.Config
@@ -309,6 +323,7 @@ func TestNewConfiguredClientHonorsProfileFlag(t *testing.T) {
 // would otherwise smuggle a plaintext endpoint past validation.
 func TestNewConfiguredClientRejectsInsecureEnvAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	t.Setenv(config.EnvAPIURL, "http://evil.example.com")
 	t.Setenv(config.EnvAPIKey, "env-test-key")
 
@@ -328,6 +343,7 @@ func TestNewConfiguredClientRejectsInsecureEnvAPIURL(t *testing.T) {
 // A hand-edited config file bypasses `auth add` too.
 func TestNewConfiguredClientRejectsInsecureProfileAPIURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.SaveConfig(t, "http://evil.example.com", "test-key")
 
 	_, err := New(testCommonFlags(""))
@@ -343,6 +359,7 @@ func TestNewConfiguredClientRejectsInsecureProfileAPIURL(t *testing.T) {
 func TestNewConfiguredClientReturnsLoadError(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cmdtest.ClearCredentialEnv(t)
 
 	path := filepath.Join(homeDir, ".config", "nvfleetint", "config.yaml")

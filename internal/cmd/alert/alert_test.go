@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -32,6 +33,7 @@ func newRootCmd() *cobra.Command {
 // Verifies all-page alert JSON output
 func TestAlertListAllJSONMergesRawItems(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -100,6 +102,7 @@ func TestAlertListAllJSONMergesRawItems(t *testing.T) {
 // Verifies table alert rows and derived has-more metadata
 func TestAlertListTableAndHasMore(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/alerts" {
@@ -142,6 +145,7 @@ func TestAlertListTableAndHasMore(t *testing.T) {
 // Verifies fleet and node timeline table paths
 func TestAlertTimelineTables(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -202,6 +206,7 @@ func TestAlertTimelineTables(t *testing.T) {
 // Verifies level-1 --all JSON preserves backend cross-page aggregates
 func TestAlertTimelineAllJSONPreservesAggregates(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/alert_timeline/nodes" {
@@ -241,6 +246,7 @@ func TestAlertTimelineAllJSONPreservesAggregates(t *testing.T) {
 // Verifies node-alert --all JSON uses the CLI's 1-based pagination contract.
 func TestNodeAlertTimelineAllJSONNormalizesPagination(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/alert_timeline/nodes/node-1/alerts" {
@@ -277,6 +283,7 @@ func TestNodeAlertTimelineAllJSONNormalizesPagination(t *testing.T) {
 // Verifies the CLI exposes alert options in JSON and table formats.
 func TestAlertTimelineOptionsOutput(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -388,6 +395,7 @@ func TestAlertNodeHelpDocumentsSortColumns(t *testing.T) {
 // Verifies the visible alert workflow starts from the active summary view.
 func TestAlertSummaryUX(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/alert_timeline/nodes" {
@@ -462,6 +470,7 @@ func TestResolveAlertView(t *testing.T) {
 // Verifies alert describe timeline output
 func TestAlertDescribeTable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/alert_timeline/nodes/node-1/alerts/alert-1" {
@@ -495,6 +504,7 @@ func TestAlertDescribeTable(t *testing.T) {
 // the full payload
 func TestAlertDescribeTruncatesLongMessage(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	longMessage := strings.Repeat("x", 200)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
