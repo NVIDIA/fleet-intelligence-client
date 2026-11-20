@@ -36,13 +36,23 @@ func TestEventFiltersAcrossEndpoints(t *testing.T) {
 							expected["nodeGroupIds"] = []string{"ng1", "ng2"}
 							expected["computeZoneIds"] = []string{"cz1", "cz2"}
 						}
-						path := "/v1/events"
-						body := `{"events":[{"eventId":"e1","nodeUUID":"n1","hostname":"os-1","nodeName":"machine-1","bmcMac":"bmc-1","dataSource":"oob","gpuType":"H100","nodeGroup":"group","nodeGroupId":"ng1","computeZone":"zone","computeZoneId":"cz1"}],"total":1}`
+						path := "/v1/events/page"
+						body := `{"events":[{"eventId":"e1","nodeUUID":"n1","hostname":"os-1","nodeName":"machine-1","bmcMac":"bmc-1","dataSource":"oob","gpuType":"H100","nodeGroup":"group","nodeGroupId":"ng1","computeZone":"zone","computeZoneId":"cz1"}],"page":0,"pageSize":50,"hasMore":false}`
 						if endpoint == "list" {
-							expected["sortBy"] = []string{"bmcMac"}
-							expected["sortOrder"] = []string{"asc"}
+							delete(expected, "window")
+							expected["timeMode"] = []string{"absolute"}
+							expected["startTime"], expected["endTime"] = q["startTime"], q["endTime"]
+							if q.Get("startTime") == "" || q.Get("endTime") == "" {
+								t.Error("missing fixed time bounds")
+							}
+							if r.URL.Path == "/v1/events/count" {
+								path, body = "/v1/events/count", `{"total":1}`
+							} else {
+								expected["sortBy"] = []string{"bmcMac"}
+								expected["sortOrder"] = []string{"asc"}
+							}
 						} else {
-							path += "/buckets"
+							path = "/v1/events/buckets"
 							body = `{"bucketInterval":"1h","buckets":[]}`
 						}
 						if r.URL.Path != path || !reflect.DeepEqual(map[string][]string(q), expected) {

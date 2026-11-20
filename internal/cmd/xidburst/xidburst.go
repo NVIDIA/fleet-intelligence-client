@@ -25,6 +25,7 @@ const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeName,
 
 // Stores local flag values for xidburst list
 type xidBurstListFlags struct {
+	countOnly                  bool
 	dataSource                 string
 	gpuTypes                   string
 	window                     string
@@ -78,6 +79,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newXIDBurstListCmd())
+	cmd.AddCommand(newXIDBurstReadCmd(true))
 	cmd.AddCommand(newXIDBurstDescribeCmd())
 	cmd.AddCommand(newXIDBurstOptionsCmd())
 	cmdutil.RejectUnknownSubcommands(cmd)
@@ -87,7 +89,11 @@ func NewCmd() *cobra.Command {
 
 // Creates the xidburst list command
 func newXIDBurstListCmd() *cobra.Command {
-	flags := xidBurstListFlags{}
+	return newXIDBurstReadCmd(false)
+}
+
+func newXIDBurstReadCmd(countOnly bool) *cobra.Command {
+	flags := xidBurstListFlags{countOnly: countOnly}
 	common := cmdutil.NewCommon()
 
 	cmd := &cobra.Command{
@@ -145,7 +151,13 @@ callers; for tenant callers the backend rejects them.
 	cmd.Flags().StringVar(&flags.dcAdminInvestigations, "dc-admin-investigations", "", "Comma-separated exact DC-admin investigatory-action codes to filter (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+xidBurstSortByList)
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
-	cmdutil.RegisterListFlags(cmd, common)
+	if countOnly {
+		cmd.Use, cmd.Short = "count", "Count matching XID bursts without fetching rows"
+		cmd.Example = "  nvfleetint xidburst count --window 24h --xid-numbers 48,94"
+		cmdutil.RegisterReadFlags(cmd, common)
+	} else {
+		cmdutil.RegisterListFlags(cmd, common)
+	}
 
 	return cmd
 }
@@ -254,8 +266,24 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 		return err
 	}
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
+	if flags.countOnly {
+		count, err := client.CountXIDBursts(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		if common.Output == clioutput.FormatJSON {
+			return clioutput.WriteRawJSON(cmd.OutOrStdout(), count.RawJSON)
+		}
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Total Entries: %d\n", count.Total)
+		return err
+	}
 
 	if common.All {
+		opts.StartTime, opts.EndTime, err = nvfleetint.AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+		if err != nil {
+			return err
+		}
+		opts.Window, opts.SkipTotal = "", true
 		var bursts []nvfleetint.XIDBurst
 		result, err := cmdutil.FetchAllPages("items",
 			func(pageNumber int) (nvfleetint.XIDBurstsPage, error) {
@@ -267,6 +295,11 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 		if err != nil {
 			return err
 		}
+		count, err := client.CountXIDBursts(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		result.Pagination.Total = count.Total
 		return writeXIDBurstListOutput(cmd.OutOrStdout(), common, xidBurstListOutput{
 			Bursts:    bursts,
 			JSONValue: result,

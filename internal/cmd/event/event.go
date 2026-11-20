@@ -61,6 +61,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newEventListCmd())
+	cmd.AddCommand(newEventCountCmd())
 	cmd.AddCommand(newEventBucketsCmd())
 	cmd.AddCommand(newEventOptionsCmd())
 	cmdutil.RejectUnknownSubcommands(cmd)
@@ -126,6 +127,43 @@ A time range is required: use --window for a relative range, or --start and
 	return cmd
 }
 
+func newEventCountCmd() *cobra.Command {
+	flags := eventFilterFlags{}
+	common := cmdutil.NewCommon()
+	cmd := &cobra.Command{
+		Use: "count", Short: "Count matching events without fetching rows", Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			resolved := cmdutil.ResolveCommon(cmd, common)
+			if err := cmdutil.ValidateReadFlags(resolved); err != nil {
+				return err
+			}
+			if err := cmdutil.ValidateTimeRangeFlags(flags.window, flags.start, flags.end); err != nil {
+				return err
+			}
+			opts, err := eventFilterOptions(flags)
+			if err != nil {
+				return err
+			}
+			client, err := cmdutil.New(resolved)
+			if err != nil {
+				return err
+			}
+			count, err := client.CountEvents(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+			if resolved.Output == clioutput.FormatJSON {
+				return clioutput.WriteRawJSON(cmd.OutOrStdout(), count.RawJSON)
+			}
+			_, err = fmt.Fprintf(cmd.OutOrStdout(), "Total Entries: %d\n", count.Total)
+			return err
+		},
+	}
+	registerEventFilterFlags(cmd, &flags)
+	cmdutil.RegisterReadFlags(cmd, common)
+	return cmd
+}
+
 // Validates flags, calls the SDK, and writes output
 func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resolved) error {
 	if err := cmdutil.ValidateListFlags(common); err != nil {
@@ -151,6 +189,11 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resol
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.All {
+		opts.StartTime, opts.EndTime, err = nvfleetint.AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+		if err != nil {
+			return err
+		}
+		opts.Window, opts.SkipTotal = "", true
 		var events []nvfleetint.Event
 		result, err := cmdutil.FetchAllPages("events",
 			func(pageNumber int) (nvfleetint.EventsPage, error) {
@@ -162,6 +205,11 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resol
 		if err != nil {
 			return err
 		}
+		count, err := client.CountEvents(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		result.Pagination.Total = count.Total
 		return writeEventListOutput(cmd.OutOrStdout(), common, eventListOutput{
 			Events:    events,
 			JSONValue: result,
@@ -405,7 +453,7 @@ resolved node inventory, independently of event source.`,
 }
 
 func writeEventOptionsTable(w io.Writer, options nvfleetint.EventFilterOptions) error {
-	if _, err := fmt.Fprintf(w, "Filters for 'event list' and 'event buckets' (sorting applies to list only)\n%s\n", cmdutil.OptionsPreamble); err != nil {
+	if _, err := fmt.Fprintf(w, "Filters for 'event list', 'event count', and 'event buckets' (sorting applies to list only)\n%s\n", cmdutil.OptionsPreamble); err != nil {
 		return err
 	}
 	components := make([][]string, 0, len(options.Components))

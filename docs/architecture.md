@@ -42,6 +42,20 @@ Each layer has one job:
 
 ## Repository Boundary
 
+Event and XID burst lists use separate page and exact-count APIs. The SDK
+combines their responses to preserve existing list totals and raw JSON fields;
+`SkipTotal` opts out of the count query and leaves Total unqueried. Relative
+windows are resolved to fixed absolute bounds before paired requests. The CLI's
+`--all` traversal freezes bounds across every page, follows `hasMore`, and asks
+for the exact count only once after traversal. Separate requests are not a
+database snapshot. Count failures fail the command without emitting partial
+successful output, and there is no fallback to restricted legacy endpoints.
+
+`event count` and `xidburst count` call only the count APIs. `event buckets`
+remains a histogram operation: a scalar count is not a compatible replacement.
+Its retirement and the legacy SDK method require a separate compatibility
+decision before the corresponding service-key restriction can be published.
+
 The backend service remains the source of truth for API implementation and
 service behavior. This repository should depend only on the public customer API
 contract copied into `api/openapi/`. Do not import private backend packages.

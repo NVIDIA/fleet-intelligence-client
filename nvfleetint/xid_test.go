@@ -13,12 +13,17 @@ import (
 	"testing"
 )
 
-const xidBurstBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostname":"gpu-01","nodeGroup":"ng","nodeGroupId":"ng-1","computeZone":"cz","computeZoneId":"cz-1","startTime":"2026-05-01T00:00:00.123456789Z","endTime":"2026-05-01T00:05:00.987654321Z","burstDurationSeconds":300,"xidCount":2,"xidNumbers":[{"xidNumber":48,"mnemonic":"DBE","description":"Double Bit ECC"},{"xidNumber":94,"mnemonic":"CE"}],"deviceIds":{"0000:0f:00.0":[48,94]},"jobDisruption":true,"jobDisruptionDueToPlatformIssue":false,"category":"GPU","subcategory":"Memory","stickyXidsSuppressed":1,"suggestedActions":[{"action":"Drain the node","code":"DRAIN","persona":"tenant","type":"immediate"}]}],"page":0,"pageSize":20,"total":1}`
+const xidBurstBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostname":"gpu-01","nodeGroup":"ng","nodeGroupId":"ng-1","computeZone":"cz","computeZoneId":"cz-1","startTime":"2026-05-01T00:00:00.123456789Z","endTime":"2026-05-01T00:05:00.987654321Z","burstDurationSeconds":300,"xidCount":2,"xidNumbers":[{"xidNumber":48,"mnemonic":"DBE","description":"Double Bit ECC"},{"xidNumber":94,"mnemonic":"CE"}],"deviceIds":{"0000:0f:00.0":[48,94]},"jobDisruption":true,"jobDisruptionDueToPlatformIssue":false,"category":"GPU","subcategory":"Memory","stickyXidsSuppressed":1,"suggestedActions":[{"action":"Drain the node","code":"DRAIN","persona":"tenant","type":"immediate"}]}],"page":0,"pageSize":20,"total":1,"hasMore":false}`
 
 // Verifies XID burst list request construction and decoding
 func TestListXIDBurstsSendsParamsAndDecodes(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/xid/bursts" {
+		if r.URL.Path == "/v1/xid/bursts/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":1}`))
+			return
+		}
+		if r.URL.Path != "/v1/xid/bursts/page" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
@@ -26,8 +31,8 @@ func TestListXIDBurstsSendsParamsAndDecodes(t *testing.T) {
 		}
 		query := r.URL.Query()
 		for _, want := range []struct{ key, value string }{
-			{"timeMode", "relative"},
-			{"window", "24h"},
+			{"timeMode", "absolute"},
+			{"window", ""},
 			{"nodeUUID", "node-1"},
 			{"nameSearch", "gpu-0"},
 			{"jobDisruption", "true"},
@@ -57,7 +62,7 @@ func TestListXIDBurstsSendsParamsAndDecodes(t *testing.T) {
 				t.Fatalf("unexpected %s: %#v", want.key, got)
 			}
 		}
-		if query.Has("startTime") || query.Has("endTime") {
+		if !query.Has("startTime") || !query.Has("endTime") {
 			t.Fatalf("did not expect start/end in relative mode: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -134,6 +139,11 @@ func TestListXIDBurstsSendsParamsAndDecodes(t *testing.T) {
 // Verifies an absolute range sets absolute mode and omits the window
 func TestListXIDBurstsAbsoluteRange(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/xid/bursts/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":0}`))
+			return
+		}
 		query := r.URL.Query()
 		if got := query.Get("timeMode"); got != "absolute" {
 			t.Fatalf("unexpected timeMode: %q", got)
@@ -154,7 +164,7 @@ func TestListXIDBurstsAbsoluteRange(t *testing.T) {
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0}`))
+		_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0,"hasMore":false}`))
 	}))
 	defer server.Close()
 
@@ -174,6 +184,11 @@ func TestListXIDBurstsAbsoluteRange(t *testing.T) {
 // Verifies exclusion filters are sent and omitted when unset
 func TestListXIDBurstsSendsExclusionFilters(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/xid/bursts/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":0}`))
+			return
+		}
 		query := r.URL.Query()
 		if got := query["excludeNodeGroupIds"]; !reflect.DeepEqual(got, []string{"ng-1", "ng-2"}) {
 			t.Fatalf("unexpected excludeNodeGroupIds: %#v", got)
@@ -188,7 +203,7 @@ func TestListXIDBurstsSendsExclusionFilters(t *testing.T) {
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0}`))
+		_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0,"hasMore":false}`))
 	}))
 	defer server.Close()
 
@@ -238,11 +253,16 @@ func TestListXIDBurstsSortFields(t *testing.T) {
 			}
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v1/xid/bursts/count" {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"total":0}`))
+					return
+				}
 				if got := r.URL.Query().Get("sortBy"); got != string(sortBy) {
 					t.Fatalf("unexpected sortBy: %q", got)
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0}`))
+				_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":20,"total":0,"hasMore":false}`))
 			}))
 			defer server.Close()
 

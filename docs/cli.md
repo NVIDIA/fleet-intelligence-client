@@ -127,6 +127,8 @@ nvfleetint alert options --view historical
 nvfleetint event options
 nvfleetint event list --window 24h
 nvfleetint event buckets --window 24h
+nvfleetint event count --window 24h
+nvfleetint xidburst count --window 24h
 
 # XID bursts
 nvfleetint xidburst list --window 24h
@@ -231,12 +233,22 @@ nvfleetint alert summary --inband-agent-status offline,not_enrolled --oob-agent-
 nvfleetint alert node <node-uuid> --view historical --data-source oob --all --output json
 ```
 
-`event list` and `event buckets` share filters; omitting `--data-source`
+`event list`, `event count`, and `event buckets` share filters; omitting `--data-source`
 includes both sources. `--component` and `--components` cannot be combined,
 nor can inclusion and exclusion filters for the same group/zone dimension.
 `event options` lists catalog values independently of time and inventory
 filters, so an option may have no matching events. The `Others` event name
 matches names outside the catalog; GPU types reflect current node inventory.
+
+Event and XID list commands use separate page/count APIs and retain their total
+and pagination output. `--all` follows `hasMore` and counts once after fetching
+all pages. Relative windows are fixed to absolute bounds for the operation;
+the requests still do not represent an atomic snapshot.
+
+Use `event count` or `xidburst count` for only a matching total. These do not
+replace `event buckets`, which groups event counts into time intervals for a
+histogram. Buckets remains supported by this client pending its retirement
+decision and requires a backend/access policy that still permits that endpoint.
 
 `xidburst list` requires a time range (`--window`, or `--start` and `--end`),
 which applies to each burst's start time. Some of its filters and response
