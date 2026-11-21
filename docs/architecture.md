@@ -42,12 +42,6 @@ Each layer has one job:
 
 ## Repository Boundary
 
-Event and XID lists combine page and count responses in the SDK; `SkipTotal`
-omits the count request. The CLI's `--all` traversal follows `hasMore` and counts
-once after fetching all pages. Shared helpers fix relative time bounds and
-preserve unknown JSON fields. Separate requests are not an atomic snapshot;
-failures return errors without partial successful output or legacy fallback.
-
 The backend service remains the source of truth for API implementation and
 service behavior. This repository should depend only on the public customer API
 contract copied into `api/openapi/`. Do not import private backend packages.
