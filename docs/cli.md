@@ -246,6 +246,7 @@ all pages. Relative windows are fixed to absolute bounds for the operation;
 the requests still do not represent an atomic snapshot.
 
 Use `event count` or `xidburst count` for only a matching total. These do not
+accept sorting or pagination flags; those belong to the list commands. Counts do not
 replace `event buckets`, which groups event counts into time intervals for a
 histogram. Buckets remains supported by this client pending its retirement
 decision and requires a backend/access policy that still permits that endpoint.

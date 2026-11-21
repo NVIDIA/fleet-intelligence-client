@@ -84,3 +84,49 @@ func TestXIDBurstCountUsesOnlyCountAPI(t *testing.T) {
 		})
 	}
 }
+
+func TestXIDBurstCountRejectsListOnlyFlags(t *testing.T) {
+	for _, scenario := range []struct {
+		flag  string
+		value []string
+	}{
+		{"sort-by", []string{"startTime"}},
+		{"order", []string{"desc"}},
+		{"page", []string{"2"}},
+		{"page-size", []string{"10"}},
+		{"all", nil},
+	} {
+		t.Run(scenario.flag, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetOut(new(bytes.Buffer))
+			cmd.SetErr(new(bytes.Buffer))
+			args := []string{"xidburst", "count", "--window", "24h", "--" + scenario.flag}
+			cmd.SetArgs(append(args, scenario.value...))
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), "unknown flag: --"+scenario.flag) {
+				t.Fatalf("expected flag rejection before authentication, got %v", err)
+			}
+		})
+	}
+}
+
+func TestXIDBurstCountHelpOmitsSortingFlags(t *testing.T) {
+	cmd := newRootCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"xidburst", "count", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	for _, flag := range []string{"--sort-by", "--order", "--page", "--all"} {
+		if strings.Contains(out.String(), flag) {
+			t.Errorf("count help contains list-only flag %q", flag)
+		}
+	}
+	list := newXIDBurstListCmd()
+	for _, flag := range []string{"sort-by", "order", "page", "page-size", "all"} {
+		if list.Flags().Lookup(flag) == nil {
+			t.Errorf("list lost flag %q", flag)
+		}
+	}
+}

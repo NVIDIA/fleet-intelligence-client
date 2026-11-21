@@ -149,13 +149,15 @@ callers; for tenant callers the backend rejects them.
 	cmd.Flags().StringVar(&flags.tenantInvestigations, "tenant-investigations", "", "Comma-separated exact tenant investigatory-action codes to filter")
 	cmd.Flags().StringVar(&flags.dcAdminActions, "dc-admin-actions", "", "Comma-separated exact DC-admin immediate-action codes to filter (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.dcAdminInvestigations, "dc-admin-investigations", "", "Comma-separated exact DC-admin investigatory-action codes to filter (cloud-provider/NCP only)")
-	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+xidBurstSortByList)
-	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	if countOnly {
 		cmd.Use, cmd.Short = "count", "Count matching XID bursts without fetching rows"
+		cmd.Long = strings.Replace(cmd.Long, "List finalized XID bursts filtered by", "Count finalized XID bursts matching", 1) +
+			"\nReturns only the exact total. Sorting and pagination flags are not supported."
 		cmd.Example = "  nvfleetint xidburst count --window 24h --xid-numbers 48,94"
 		cmdutil.RegisterReadFlags(cmd, common)
 	} else {
+		cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+xidBurstSortByList)
+		cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 		cmdutil.RegisterListFlags(cmd, common)
 	}
 
@@ -181,7 +183,11 @@ func newXIDBurstDescribeCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil.Resolved) error {
-	if err := cmdutil.ValidateListFlags(common); err != nil {
+	validateFlags := cmdutil.ValidateReadFlags
+	if !flags.countOnly {
+		validateFlags = cmdutil.ValidateListFlags
+	}
+	if err := validateFlags(common); err != nil {
 		return err
 	}
 	if err := cmdutil.ValidateTimeRangeFlags(flags.window, flags.start, flags.end); err != nil {
@@ -265,7 +271,6 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 	if err != nil {
 		return err
 	}
-	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 	if flags.countOnly {
 		count, err := client.CountXIDBursts(cmd.Context(), opts)
 		if err != nil {
@@ -277,6 +282,7 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Total Entries: %d\n", count.Total)
 		return err
 	}
+	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.All {
 		opts.StartTime, opts.EndTime, err = nvfleetint.AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
