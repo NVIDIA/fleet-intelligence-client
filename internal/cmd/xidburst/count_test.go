@@ -55,7 +55,7 @@ func TestXIDBurstAllUsesTwoPagesAndOneCount(t *testing.T) {
 	}
 }
 
-func TestXIDBurstCountUsesOnlyCountAPI(t *testing.T) {
+func TestXIDBurstCountOnlyUsesOnlyCountAPI(t *testing.T) {
 	for _, format := range []string{"table", "json"} {
 		t.Run(format, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
@@ -74,7 +74,7 @@ func TestXIDBurstCountUsesOnlyCountAPI(t *testing.T) {
 			cmd := newRootCmd()
 			var out bytes.Buffer
 			cmd.SetOut(&out)
-			cmd.SetArgs([]string{"xidburst", "count", "--window", "24h", "--data-source", "oob", "--xid-numbers", "48", "--output", format})
+			cmd.SetArgs([]string{"xidburst", "list", "--count-only", "--window", "24h", "--data-source", "oob", "--xid-numbers", "48", "--output", format})
 			if err := cmd.Execute(); err != nil {
 				t.Fatal(err)
 			}
@@ -85,7 +85,7 @@ func TestXIDBurstCountUsesOnlyCountAPI(t *testing.T) {
 	}
 }
 
-func TestXIDBurstCountRejectsListOnlyFlags(t *testing.T) {
+func TestXIDBurstCountOnlyRejectsListOnlyFlags(t *testing.T) {
 	for _, scenario := range []struct {
 		flag  string
 		value []string
@@ -100,33 +100,85 @@ func TestXIDBurstCountRejectsListOnlyFlags(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetOut(new(bytes.Buffer))
 			cmd.SetErr(new(bytes.Buffer))
-			args := []string{"xidburst", "count", "--window", "24h", "--" + scenario.flag}
+			args := []string{"xidburst", "list", "--count-only", "--window", "24h", "--" + scenario.flag}
 			cmd.SetArgs(append(args, scenario.value...))
 			err := cmd.Execute()
-			if err == nil || !strings.Contains(err.Error(), "unknown flag: --"+scenario.flag) {
+			if err == nil || !strings.Contains(err.Error(), "--count-only cannot be used with --"+scenario.flag) {
 				t.Fatalf("expected flag rejection before authentication, got %v", err)
 			}
 		})
 	}
 }
 
-func TestXIDBurstCountHelpOmitsSortingFlags(t *testing.T) {
+func TestXIDBurstListHelpIncludesCountOnly(t *testing.T) {
 	cmd := newRootCmd()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"xidburst", "count", "--help"})
+	cmd.SetArgs([]string{"xidburst", "list", "--help"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	for _, flag := range []string{"--sort-by", "--order", "--page", "--all"} {
-		if strings.Contains(out.String(), flag) {
-			t.Errorf("count help contains list-only flag %q", flag)
+	for _, flag := range []string{"--count-only", "--sort-by", "--order", "--page", "--all"} {
+		if !strings.Contains(out.String(), flag) {
+			t.Errorf("list help missing %q", flag)
 		}
 	}
-	list := newXIDBurstListCmd()
-	for _, flag := range []string{"sort-by", "order", "page", "page-size", "all"} {
-		if list.Flags().Lookup(flag) == nil {
-			t.Errorf("list lost flag %q", flag)
+	for _, command := range NewCmd().Commands() {
+		if command.Name() == "count" {
+			t.Error("standalone count command remains registered")
 		}
+	}
+}
+
+func TestXIDBurstCountOnlyModes(t *testing.T) {
+	for _, scenario := range []struct {
+		name      string
+		args      []string
+		failCount bool
+		wantPages int
+		wantError bool
+	}{
+		{name: "explicit false lists rows", args: []string{"--count-only=false", "--page", "1"}, wantPages: 1},
+		{name: "count failure has no output", args: []string{"--count-only"}, failCount: true, wantError: true},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			pages, counts := 0, 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/v1/xid/bursts/page":
+					pages++
+					_, _ = w.Write([]byte(`{"items":[],"page":0,"pageSize":10,"hasMore":false}`))
+				case "/v1/xid/bursts/count":
+					counts++
+					if scenario.failCount {
+						http.Error(w, "count unavailable", http.StatusBadRequest)
+						return
+					}
+					_, _ = w.Write([]byte(`{"total":0}`))
+				default:
+					t.Errorf("unexpected request: %s", r.URL)
+				}
+			}))
+			defer server.Close()
+			cmdtest.SaveConfig(t, server.URL, "test-key")
+			cmd := newRootCmd()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetErr(new(bytes.Buffer))
+			args := []string{"xidburst", "list", "--window", "24h", "--output", "json"}
+			cmd.SetArgs(append(args, scenario.args...))
+			err := cmd.Execute()
+			if (err != nil) != scenario.wantError {
+				t.Fatalf("error=%v; wantError=%t", err, scenario.wantError)
+			}
+			if pages != scenario.wantPages || counts != 1 {
+				t.Fatalf("pages=%d counts=%d", pages, counts)
+			}
+			if scenario.wantError && out.Len() != 0 {
+				t.Fatalf("partial output: %s", out.String())
+			}
+		})
 	}
 }

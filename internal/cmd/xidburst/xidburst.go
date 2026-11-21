@@ -79,7 +79,6 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newXIDBurstListCmd())
-	cmd.AddCommand(newXIDBurstReadCmd(true))
 	cmd.AddCommand(newXIDBurstDescribeCmd())
 	cmd.AddCommand(newXIDBurstOptionsCmd())
 	cmdutil.RejectUnknownSubcommands(cmd)
@@ -89,11 +88,7 @@ func NewCmd() *cobra.Command {
 
 // Creates the xidburst list command
 func newXIDBurstListCmd() *cobra.Command {
-	return newXIDBurstReadCmd(false)
-}
-
-func newXIDBurstReadCmd(countOnly bool) *cobra.Command {
-	flags := xidBurstListFlags{countOnly: countOnly}
+	flags := xidBurstListFlags{}
 	common := cmdutil.NewCommon()
 
 	cmd := &cobra.Command{
@@ -105,6 +100,8 @@ and a time range.
 
 A time range is required: use --window for a relative range, or --start and
 --end for an absolute range. The range applies to each burst's start time.
+Use --count-only to return only the exact total without fetching rows; it cannot
+be combined with sorting or pagination flags.
 
 Some filters and response fields are only available to cloud-provider/NCP
 callers; for tenant callers the backend rejects them.
@@ -149,17 +146,10 @@ callers; for tenant callers the backend rejects them.
 	cmd.Flags().StringVar(&flags.tenantInvestigations, "tenant-investigations", "", "Comma-separated exact tenant investigatory-action codes to filter")
 	cmd.Flags().StringVar(&flags.dcAdminActions, "dc-admin-actions", "", "Comma-separated exact DC-admin immediate-action codes to filter (cloud-provider/NCP only)")
 	cmd.Flags().StringVar(&flags.dcAdminInvestigations, "dc-admin-investigations", "", "Comma-separated exact DC-admin investigatory-action codes to filter (cloud-provider/NCP only)")
-	if countOnly {
-		cmd.Use, cmd.Short = "count", "Count matching XID bursts without fetching rows"
-		cmd.Long = strings.Replace(cmd.Long, "List finalized XID bursts filtered by", "Count finalized XID bursts matching", 1) +
-			"\nReturns only the exact total. Sorting and pagination flags are not supported."
-		cmd.Example = "  nvfleetint xidburst count --window 24h --xid-numbers 48,94"
-		cmdutil.RegisterReadFlags(cmd, common)
-	} else {
-		cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+xidBurstSortByList)
-		cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
-		cmdutil.RegisterListFlags(cmd, common)
-	}
+	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+xidBurstSortByList)
+	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
+	cmdutil.RegisterListFlags(cmd, common)
+	cmd.Flags().BoolVar(&flags.countOnly, "count-only", false, "Return only the exact total; incompatible with sorting and pagination flags")
 
 	return cmd
 }
@@ -183,11 +173,10 @@ func newXIDBurstDescribeCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil.Resolved) error {
-	validateFlags := cmdutil.ValidateReadFlags
-	if !flags.countOnly {
-		validateFlags = cmdutil.ValidateListFlags
+	if err := cmdutil.ValidateCountOnlyFlags(cmd, flags.countOnly); err != nil {
+		return err
 	}
-	if err := validateFlags(common); err != nil {
+	if err := cmdutil.ValidateListFlags(common); err != nil {
 		return err
 	}
 	if err := cmdutil.ValidateTimeRangeFlags(flags.window, flags.start, flags.end); err != nil {
