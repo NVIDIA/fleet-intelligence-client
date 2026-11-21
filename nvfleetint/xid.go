@@ -107,6 +107,8 @@ type ListXIDBurstsOptions struct {
 	SortOrder XIDBurstSortOrder
 	Page      *int
 	PageSize  *int
+	// SkipTotal returns hasMore without running the exact count query.
+	SkipTotal bool
 }
 
 // XIDBurstsPage represents a paginated XID burst list with the raw backend payload
@@ -115,18 +117,23 @@ type XIDBurstsPage struct {
 	Page     int        `json:"page"`
 	PageSize int        `json:"pageSize"`
 	Total    int        `json:"total"`
+	HasMore  *bool      `json:"hasMore,omitempty"`
 	RawJSON  []byte     `json:"-"`
 }
 
-// PageInfo reports the pagination envelope of the response. The XID burst
-// endpoint sends no hasMore field, so it is derived from the counters.
+// PageInfo uses the page endpoint's authoritative hasMore value. It derives
+// the signal from counters only for manually constructed legacy SDK values.
 func (page XIDBurstsPage) PageInfo() PageInfo {
-	hasMore := hasMoreFromCounts(page.Page, page.PageSize, page.Total)
+	hasMore := page.HasMore
+	if hasMore == nil {
+		value := hasMoreFromCounts(page.Page, page.PageSize, page.Total)
+		hasMore = &value
+	}
 	return PageInfo{
 		Page:     page.Page,
 		PageSize: page.PageSize,
 		Total:    page.Total,
-		HasMore:  &hasMore,
+		HasMore:  hasMore,
 		RawJSON:  page.RawJSON,
 	}
 }
@@ -177,7 +184,9 @@ type XIDBurstXID struct {
 	Description string `json:"description,omitempty"`
 }
 
-// ListXIDBursts retrieves finalized XID bursts for the selected time range
+// ListXIDBursts combines /xid/bursts/page and /xid/bursts/count to retain Total.
+// With SkipTotal, Total is unqueried and RawJSON contains only the page response.
+// Paired requests share fixed time bounds, not a database snapshot.
 func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (XIDBurstsPage, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
@@ -185,14 +194,16 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 	if err := opts.Validate(); err != nil {
 		return XIDBurstsPage{}, err
 	}
-	timeRange, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+	start, end, err := AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
 	if err != nil {
 		return XIDBurstsPage{}, err
 	}
+	opts.Window, opts.StartTime, opts.EndTime = "", start, end
+	timeRange := eventTimeRange{timeMode: eventTimeModeAbsolute, startTime: start, endTime: end}
 
-	mode := fleetapi.GetV1XIDBurstsParamsTimeMode(timeRange.timeMode)
-	params := fleetapi.GetV1XIDBurstsParams{TimeMode: &mode}
-	params.DataSource = optionalEnum[fleetapi.GetV1XIDBurstsParamsDataSource](opts.DataSource)
+	mode := fleetapi.GetV1XIDBurstPageParamsTimeMode(timeRange.timeMode)
+	params := fleetapi.GetV1XIDBurstPageParams{TimeMode: &mode}
+	params.DataSource = optionalEnum[fleetapi.GetV1XIDBurstPageParamsDataSource](opts.DataSource)
 	params.GpuTypes = optionalSlice(opts.GPUTypes)
 	params.Window = optionalString(timeRange.window)
 	params.StartTime = optionalString(timeRange.startTime)
@@ -221,12 +232,12 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 	params.TenantInvestigations = optionalSlice(opts.TenantInvestigations)
 	params.DcAdminActions = optionalSlice(opts.DCAdminActions)
 	params.DcAdminInvestigations = optionalSlice(opts.DCAdminInvestigations)
-	params.SortBy = optionalEnum[fleetapi.GetV1XIDBurstsParamsSortBy](opts.SortBy)
-	params.SortOrder = optionalEnum[fleetapi.GetV1XIDBurstsParamsSortOrder](opts.SortOrder)
+	params.SortBy = optionalEnum[fleetapi.GetV1XIDBurstPageParamsSortBy](opts.SortBy)
+	params.SortOrder = optionalEnum[fleetapi.GetV1XIDBurstPageParamsSortOrder](opts.SortOrder)
 	params.Page = cloneInt(opts.Page)
 	params.PageSize = cloneInt(opts.PageSize)
 
-	resp, err := c.api.GetV1XIDBurstsWithResponse(ctx, &params)
+	resp, err := c.api.GetV1XIDBurstPageWithResponse(ctx, &params)
 	if err != nil {
 		return XIDBurstsPage{}, err
 	}
@@ -234,15 +245,18 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 		return XIDBurstsPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
-	var data fleetapi.ModelsXIDBurstsListResponse
+	var data fleetapi.ModelsXIDBurstsPageResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return XIDBurstsPage{}, err
+	}
+	if data.HasMore == nil {
+		return XIDBurstsPage{}, fmt.Errorf("XID burst page response is missing hasMore")
 	}
 
 	page := XIDBurstsPage{
 		Page:     intValue(data.Page),
 		PageSize: intValue(data.PageSize),
-		Total:    intValue(data.Total),
+		HasMore:  data.HasMore,
 		RawJSON:  append([]byte(nil), resp.Body...),
 	}
 	if data.Items != nil {
@@ -251,7 +265,54 @@ func (c *Client) ListXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (
 			page.Bursts = append(page.Bursts, xidBurstFromGenerated(item))
 		}
 	}
+	if !opts.SkipTotal {
+		count, err := c.CountXIDBursts(ctx, opts)
+		if err != nil {
+			return XIDBurstsPage{}, err
+		}
+		page.Total = count.Total
+		page.RawJSON, err = withExactTotal(page.RawJSON, count.Total)
+		if err != nil {
+			return XIDBurstsPage{}, err
+		}
+	}
 	return page, nil
+}
+
+// CountXIDBursts returns the exact total for burst filters without loading rows.
+func (c *Client) CountXIDBursts(ctx context.Context, opts ListXIDBurstsOptions) (CountResult, error) {
+	ctx, cancel := c.requestContext(ctx)
+	defer cancel()
+	if err := opts.Validate(); err != nil {
+		return CountResult{}, err
+	}
+	rangeInfo, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+	if err != nil {
+		return CountResult{}, err
+	}
+	params := fleetapi.GetV1XIDBurstCountParams{
+		TimeMode: optionalEnum[fleetapi.GetV1XIDBurstCountParamsTimeMode](rangeInfo.timeMode),
+		Window:   optionalString(rangeInfo.window), StartTime: optionalString(rangeInfo.startTime), EndTime: optionalString(rangeInfo.endTime),
+		DataSource: optionalEnum[fleetapi.GetV1XIDBurstCountParamsDataSource](opts.DataSource), GpuTypes: optionalSlice(opts.GPUTypes),
+		NodeUUID: optionalTrimmedString(opts.NodeUUID), NodeGroupIds: optionalSlice(opts.NodeGroupIDs), ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		ExcludeNodeGroupIds: optionalSlice(opts.ExcludeNodeGroupIDs), ExcludeComputeZoneIds: optionalSlice(opts.ExcludeComputeZoneIDs),
+		JobDisruption: cloneBool(opts.JobDisruption), JobDisruptionDueToPlatformIssue: cloneBool(opts.JobDisruptionDueToPlatformIssue),
+		XidNumbers: optionalSlice(opts.XIDNumbers), NameSearch: optionalTrimmedString(opts.NameSearch),
+		CategorySearch: optionalTrimmedString(opts.CategorySearch), SubcategorySearch: optionalTrimmedString(opts.SubcategorySearch),
+		TenantActionSearch: optionalTrimmedString(opts.TenantActionSearch), TenantInvestigationSearch: optionalTrimmedString(opts.TenantInvestigationSearch),
+		DcAdminActionSearch: optionalTrimmedString(opts.DCAdminActionSearch), DcAdminInvestigationSearch: optionalTrimmedString(opts.DCAdminInvestigationSearch),
+		Categories: optionalSlice(opts.Categories), Subcategories: optionalSlice(opts.Subcategories),
+		TenantActions: optionalSlice(opts.TenantActions), TenantInvestigations: optionalSlice(opts.TenantInvestigations),
+		DcAdminActions: optionalSlice(opts.DCAdminActions), DcAdminInvestigations: optionalSlice(opts.DCAdminInvestigations),
+	}
+	if params.NameSearch == nil {
+		params.NameSearch = optionalTrimmedString(opts.HostnameSearch)
+	}
+	resp, err := c.api.GetV1XIDBurstCountWithResponse(ctx, &params)
+	if err != nil {
+		return CountResult{}, err
+	}
+	return decodeCount(resp.StatusCode(), resp.Status(), resp.Body)
 }
 
 // DescribeXIDBurst retrieves the details of one finalized XID burst

@@ -17,6 +17,11 @@ func TestXIDBurstSources(t *testing.T) {
 		t.Run(string(source), func(t *testing.T) {
 			row := `{"burstId":"b1","nodeUuid":"n1","dataSource":"oob","hostname":"os-1","nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100","deviceIds":{"GPU-or-Redfish-label":[48]}}`
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v1/xid/bursts/count" {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"total":1}`))
+					return
+				}
 				q := r.URL.Query()
 				w.Header().Set("Content-Type", "application/json")
 				if r.URL.Path == "/v1/xid/bursts/b1" {
@@ -40,13 +45,13 @@ func TestXIDBurstSources(t *testing.T) {
 					fmt.Fprintf(w, `{"dataSource":%q,"gpuTypes":["H100","B200"]}`, echo)
 					return
 				}
-				if r.URL.Path != "/v1/xid/bursts" {
+				if r.URL.Path != "/v1/xid/bursts/page" {
 					t.Errorf("path=%s", r.URL.Path)
 				}
 				if !reflect.DeepEqual(q["gpuTypes"], []string{"H100", "B200"}) || q.Get("nameSearch") != "machine" || q.Has("hostnameSearch") {
 					t.Errorf("filters=%v", q)
 				}
-				fmt.Fprintf(w, `{"items":[%s],"page":0,"pageSize":20,"total":1}`, row)
+				fmt.Fprintf(w, `{"items":[%s],"page":0,"pageSize":20,"total":1,"hasMore":false}`, row)
 			}))
 			defer server.Close()
 			client, err := NewClient(server.URL, "test-key")

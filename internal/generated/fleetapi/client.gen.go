@@ -1068,6 +1068,141 @@ func (e GetV1EventsBucketsParamsDataSources) Valid() bool {
 	}
 }
 
+// Defines values for GetV1EventsCountParamsTimeMode.
+const (
+	GetV1EventsCountParamsTimeModeAbsolute GetV1EventsCountParamsTimeMode = "absolute"
+	GetV1EventsCountParamsTimeModeRelative GetV1EventsCountParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsCountParamsTimeMode enum.
+func (e GetV1EventsCountParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1EventsCountParamsTimeModeAbsolute:
+		return true
+	case GetV1EventsCountParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsCountParamsDataSources.
+const (
+	GetV1EventsCountParamsDataSourcesInband GetV1EventsCountParamsDataSources = "inband"
+	GetV1EventsCountParamsDataSourcesOob    GetV1EventsCountParamsDataSources = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsCountParamsDataSources enum.
+func (e GetV1EventsCountParamsDataSources) Valid() bool {
+	switch e {
+	case GetV1EventsCountParamsDataSourcesInband:
+		return true
+	case GetV1EventsCountParamsDataSourcesOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsPageParamsTimeMode.
+const (
+	GetV1EventsPageParamsTimeModeAbsolute GetV1EventsPageParamsTimeMode = "absolute"
+	GetV1EventsPageParamsTimeModeRelative GetV1EventsPageParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsPageParamsTimeMode enum.
+func (e GetV1EventsPageParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1EventsPageParamsTimeModeAbsolute:
+		return true
+	case GetV1EventsPageParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsPageParamsDataSources.
+const (
+	GetV1EventsPageParamsDataSourcesInband GetV1EventsPageParamsDataSources = "inband"
+	GetV1EventsPageParamsDataSourcesOob    GetV1EventsPageParamsDataSources = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsPageParamsDataSources enum.
+func (e GetV1EventsPageParamsDataSources) Valid() bool {
+	switch e {
+	case GetV1EventsPageParamsDataSourcesInband:
+		return true
+	case GetV1EventsPageParamsDataSourcesOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsPageParamsSortBy.
+const (
+	GetV1EventsPageParamsSortByBmcMac      GetV1EventsPageParamsSortBy = "bmcMac"
+	GetV1EventsPageParamsSortByComponent   GetV1EventsPageParamsSortBy = "component"
+	GetV1EventsPageParamsSortByComputeZone GetV1EventsPageParamsSortBy = "computeZone"
+	GetV1EventsPageParamsSortByEventName   GetV1EventsPageParamsSortBy = "eventName"
+	GetV1EventsPageParamsSortByGpuType     GetV1EventsPageParamsSortBy = "gpuType"
+	GetV1EventsPageParamsSortByHostname    GetV1EventsPageParamsSortBy = "hostname"
+	GetV1EventsPageParamsSortByNodeGroup   GetV1EventsPageParamsSortBy = "nodeGroup"
+	GetV1EventsPageParamsSortByNodeName    GetV1EventsPageParamsSortBy = "nodeName"
+	GetV1EventsPageParamsSortByNodeUUID    GetV1EventsPageParamsSortBy = "nodeUUID"
+	GetV1EventsPageParamsSortBySeverity    GetV1EventsPageParamsSortBy = "severity"
+	GetV1EventsPageParamsSortByTimestamp   GetV1EventsPageParamsSortBy = "timestamp"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsPageParamsSortBy enum.
+func (e GetV1EventsPageParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1EventsPageParamsSortByBmcMac:
+		return true
+	case GetV1EventsPageParamsSortByComponent:
+		return true
+	case GetV1EventsPageParamsSortByComputeZone:
+		return true
+	case GetV1EventsPageParamsSortByEventName:
+		return true
+	case GetV1EventsPageParamsSortByGpuType:
+		return true
+	case GetV1EventsPageParamsSortByHostname:
+		return true
+	case GetV1EventsPageParamsSortByNodeGroup:
+		return true
+	case GetV1EventsPageParamsSortByNodeName:
+		return true
+	case GetV1EventsPageParamsSortByNodeUUID:
+		return true
+	case GetV1EventsPageParamsSortBySeverity:
+		return true
+	case GetV1EventsPageParamsSortByTimestamp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1EventsPageParamsSortOrder.
+const (
+	GetV1EventsPageParamsSortOrderAsc  GetV1EventsPageParamsSortOrder = "asc"
+	GetV1EventsPageParamsSortOrderDesc GetV1EventsPageParamsSortOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1EventsPageParamsSortOrder enum.
+func (e GetV1EventsPageParamsSortOrder) Valid() bool {
+	switch e {
+	case GetV1EventsPageParamsSortOrderAsc:
+		return true
+	case GetV1EventsPageParamsSortOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1MetricsParamsDataSource.
 const (
 	GetV1MetricsParamsDataSourceAll    GetV1MetricsParamsDataSource = "all"
@@ -2148,6 +2283,135 @@ func (e GetV1XIDBurstsParamsSortOrder) Valid() bool {
 	}
 }
 
+// Defines values for GetV1XIDBurstCountParamsDataSource.
+const (
+	GetV1XIDBurstCountParamsDataSourceAll    GetV1XIDBurstCountParamsDataSource = "all"
+	GetV1XIDBurstCountParamsDataSourceInband GetV1XIDBurstCountParamsDataSource = "inband"
+	GetV1XIDBurstCountParamsDataSourceOob    GetV1XIDBurstCountParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstCountParamsDataSource enum.
+func (e GetV1XIDBurstCountParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1XIDBurstCountParamsDataSourceAll:
+		return true
+	case GetV1XIDBurstCountParamsDataSourceInband:
+		return true
+	case GetV1XIDBurstCountParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstCountParamsTimeMode.
+const (
+	GetV1XIDBurstCountParamsTimeModeAbsolute GetV1XIDBurstCountParamsTimeMode = "absolute"
+	GetV1XIDBurstCountParamsTimeModeRelative GetV1XIDBurstCountParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstCountParamsTimeMode enum.
+func (e GetV1XIDBurstCountParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1XIDBurstCountParamsTimeModeAbsolute:
+		return true
+	case GetV1XIDBurstCountParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstCountParamsSortBy.
+const (
+	GetV1XIDBurstCountParamsSortByBmcMac                          GetV1XIDBurstCountParamsSortBy = "bmcMac"
+	GetV1XIDBurstCountParamsSortByBurstDurationSeconds            GetV1XIDBurstCountParamsSortBy = "burstDurationSeconds"
+	GetV1XIDBurstCountParamsSortByCategory                        GetV1XIDBurstCountParamsSortBy = "category"
+	GetV1XIDBurstCountParamsSortByComputeZone                     GetV1XIDBurstCountParamsSortBy = "computeZone"
+	GetV1XIDBurstCountParamsSortByDataSource                      GetV1XIDBurstCountParamsSortBy = "dataSource"
+	GetV1XIDBurstCountParamsSortByDcAdminAction                   GetV1XIDBurstCountParamsSortBy = "dcAdminAction"
+	GetV1XIDBurstCountParamsSortByDcAdminInvestigation            GetV1XIDBurstCountParamsSortBy = "dcAdminInvestigation"
+	GetV1XIDBurstCountParamsSortByGpuType                         GetV1XIDBurstCountParamsSortBy = "gpuType"
+	GetV1XIDBurstCountParamsSortByHostname                        GetV1XIDBurstCountParamsSortBy = "hostname"
+	GetV1XIDBurstCountParamsSortByJobDisruption                   GetV1XIDBurstCountParamsSortBy = "jobDisruption"
+	GetV1XIDBurstCountParamsSortByJobDisruptionDueToPlatformIssue GetV1XIDBurstCountParamsSortBy = "jobDisruptionDueToPlatformIssue"
+	GetV1XIDBurstCountParamsSortByNodeGroup                       GetV1XIDBurstCountParamsSortBy = "nodeGroup"
+	GetV1XIDBurstCountParamsSortByNodeName                        GetV1XIDBurstCountParamsSortBy = "nodeName"
+	GetV1XIDBurstCountParamsSortByNodeUuid                        GetV1XIDBurstCountParamsSortBy = "nodeUuid"
+	GetV1XIDBurstCountParamsSortByStartTime                       GetV1XIDBurstCountParamsSortBy = "startTime"
+	GetV1XIDBurstCountParamsSortBySubcategory                     GetV1XIDBurstCountParamsSortBy = "subcategory"
+	GetV1XIDBurstCountParamsSortByTenantAction                    GetV1XIDBurstCountParamsSortBy = "tenantAction"
+	GetV1XIDBurstCountParamsSortByTenantInvestigation             GetV1XIDBurstCountParamsSortBy = "tenantInvestigation"
+	GetV1XIDBurstCountParamsSortByXidCount                        GetV1XIDBurstCountParamsSortBy = "xidCount"
+	GetV1XIDBurstCountParamsSortByXidNumbers                      GetV1XIDBurstCountParamsSortBy = "xidNumbers"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstCountParamsSortBy enum.
+func (e GetV1XIDBurstCountParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1XIDBurstCountParamsSortByBmcMac:
+		return true
+	case GetV1XIDBurstCountParamsSortByBurstDurationSeconds:
+		return true
+	case GetV1XIDBurstCountParamsSortByCategory:
+		return true
+	case GetV1XIDBurstCountParamsSortByComputeZone:
+		return true
+	case GetV1XIDBurstCountParamsSortByDataSource:
+		return true
+	case GetV1XIDBurstCountParamsSortByDcAdminAction:
+		return true
+	case GetV1XIDBurstCountParamsSortByDcAdminInvestigation:
+		return true
+	case GetV1XIDBurstCountParamsSortByGpuType:
+		return true
+	case GetV1XIDBurstCountParamsSortByHostname:
+		return true
+	case GetV1XIDBurstCountParamsSortByJobDisruption:
+		return true
+	case GetV1XIDBurstCountParamsSortByJobDisruptionDueToPlatformIssue:
+		return true
+	case GetV1XIDBurstCountParamsSortByNodeGroup:
+		return true
+	case GetV1XIDBurstCountParamsSortByNodeName:
+		return true
+	case GetV1XIDBurstCountParamsSortByNodeUuid:
+		return true
+	case GetV1XIDBurstCountParamsSortByStartTime:
+		return true
+	case GetV1XIDBurstCountParamsSortBySubcategory:
+		return true
+	case GetV1XIDBurstCountParamsSortByTenantAction:
+		return true
+	case GetV1XIDBurstCountParamsSortByTenantInvestigation:
+		return true
+	case GetV1XIDBurstCountParamsSortByXidCount:
+		return true
+	case GetV1XIDBurstCountParamsSortByXidNumbers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstCountParamsSortOrder.
+const (
+	GetV1XIDBurstCountParamsSortOrderAsc  GetV1XIDBurstCountParamsSortOrder = "asc"
+	GetV1XIDBurstCountParamsSortOrderDesc GetV1XIDBurstCountParamsSortOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstCountParamsSortOrder enum.
+func (e GetV1XIDBurstCountParamsSortOrder) Valid() bool {
+	switch e {
+	case GetV1XIDBurstCountParamsSortOrderAsc:
+		return true
+	case GetV1XIDBurstCountParamsSortOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetV1XIDBurstOptionsParamsTimeMode.
 const (
 	GetV1XIDBurstOptionsParamsTimeModeAbsolute GetV1XIDBurstOptionsParamsTimeMode = "absolute"
@@ -2181,6 +2445,135 @@ func (e GetV1XIDBurstOptionsParamsDataSource) Valid() bool {
 	case GetV1XIDBurstOptionsParamsDataSourceInband:
 		return true
 	case GetV1XIDBurstOptionsParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstPageParamsDataSource.
+const (
+	GetV1XIDBurstPageParamsDataSourceAll    GetV1XIDBurstPageParamsDataSource = "all"
+	GetV1XIDBurstPageParamsDataSourceInband GetV1XIDBurstPageParamsDataSource = "inband"
+	GetV1XIDBurstPageParamsDataSourceOob    GetV1XIDBurstPageParamsDataSource = "oob"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstPageParamsDataSource enum.
+func (e GetV1XIDBurstPageParamsDataSource) Valid() bool {
+	switch e {
+	case GetV1XIDBurstPageParamsDataSourceAll:
+		return true
+	case GetV1XIDBurstPageParamsDataSourceInband:
+		return true
+	case GetV1XIDBurstPageParamsDataSourceOob:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstPageParamsTimeMode.
+const (
+	GetV1XIDBurstPageParamsTimeModeAbsolute GetV1XIDBurstPageParamsTimeMode = "absolute"
+	GetV1XIDBurstPageParamsTimeModeRelative GetV1XIDBurstPageParamsTimeMode = "relative"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstPageParamsTimeMode enum.
+func (e GetV1XIDBurstPageParamsTimeMode) Valid() bool {
+	switch e {
+	case GetV1XIDBurstPageParamsTimeModeAbsolute:
+		return true
+	case GetV1XIDBurstPageParamsTimeModeRelative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstPageParamsSortBy.
+const (
+	GetV1XIDBurstPageParamsSortByBmcMac                          GetV1XIDBurstPageParamsSortBy = "bmcMac"
+	GetV1XIDBurstPageParamsSortByBurstDurationSeconds            GetV1XIDBurstPageParamsSortBy = "burstDurationSeconds"
+	GetV1XIDBurstPageParamsSortByCategory                        GetV1XIDBurstPageParamsSortBy = "category"
+	GetV1XIDBurstPageParamsSortByComputeZone                     GetV1XIDBurstPageParamsSortBy = "computeZone"
+	GetV1XIDBurstPageParamsSortByDataSource                      GetV1XIDBurstPageParamsSortBy = "dataSource"
+	GetV1XIDBurstPageParamsSortByDcAdminAction                   GetV1XIDBurstPageParamsSortBy = "dcAdminAction"
+	GetV1XIDBurstPageParamsSortByDcAdminInvestigation            GetV1XIDBurstPageParamsSortBy = "dcAdminInvestigation"
+	GetV1XIDBurstPageParamsSortByGpuType                         GetV1XIDBurstPageParamsSortBy = "gpuType"
+	GetV1XIDBurstPageParamsSortByHostname                        GetV1XIDBurstPageParamsSortBy = "hostname"
+	GetV1XIDBurstPageParamsSortByJobDisruption                   GetV1XIDBurstPageParamsSortBy = "jobDisruption"
+	GetV1XIDBurstPageParamsSortByJobDisruptionDueToPlatformIssue GetV1XIDBurstPageParamsSortBy = "jobDisruptionDueToPlatformIssue"
+	GetV1XIDBurstPageParamsSortByNodeGroup                       GetV1XIDBurstPageParamsSortBy = "nodeGroup"
+	GetV1XIDBurstPageParamsSortByNodeName                        GetV1XIDBurstPageParamsSortBy = "nodeName"
+	GetV1XIDBurstPageParamsSortByNodeUuid                        GetV1XIDBurstPageParamsSortBy = "nodeUuid"
+	GetV1XIDBurstPageParamsSortByStartTime                       GetV1XIDBurstPageParamsSortBy = "startTime"
+	GetV1XIDBurstPageParamsSortBySubcategory                     GetV1XIDBurstPageParamsSortBy = "subcategory"
+	GetV1XIDBurstPageParamsSortByTenantAction                    GetV1XIDBurstPageParamsSortBy = "tenantAction"
+	GetV1XIDBurstPageParamsSortByTenantInvestigation             GetV1XIDBurstPageParamsSortBy = "tenantInvestigation"
+	GetV1XIDBurstPageParamsSortByXidCount                        GetV1XIDBurstPageParamsSortBy = "xidCount"
+	GetV1XIDBurstPageParamsSortByXidNumbers                      GetV1XIDBurstPageParamsSortBy = "xidNumbers"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstPageParamsSortBy enum.
+func (e GetV1XIDBurstPageParamsSortBy) Valid() bool {
+	switch e {
+	case GetV1XIDBurstPageParamsSortByBmcMac:
+		return true
+	case GetV1XIDBurstPageParamsSortByBurstDurationSeconds:
+		return true
+	case GetV1XIDBurstPageParamsSortByCategory:
+		return true
+	case GetV1XIDBurstPageParamsSortByComputeZone:
+		return true
+	case GetV1XIDBurstPageParamsSortByDataSource:
+		return true
+	case GetV1XIDBurstPageParamsSortByDcAdminAction:
+		return true
+	case GetV1XIDBurstPageParamsSortByDcAdminInvestigation:
+		return true
+	case GetV1XIDBurstPageParamsSortByGpuType:
+		return true
+	case GetV1XIDBurstPageParamsSortByHostname:
+		return true
+	case GetV1XIDBurstPageParamsSortByJobDisruption:
+		return true
+	case GetV1XIDBurstPageParamsSortByJobDisruptionDueToPlatformIssue:
+		return true
+	case GetV1XIDBurstPageParamsSortByNodeGroup:
+		return true
+	case GetV1XIDBurstPageParamsSortByNodeName:
+		return true
+	case GetV1XIDBurstPageParamsSortByNodeUuid:
+		return true
+	case GetV1XIDBurstPageParamsSortByStartTime:
+		return true
+	case GetV1XIDBurstPageParamsSortBySubcategory:
+		return true
+	case GetV1XIDBurstPageParamsSortByTenantAction:
+		return true
+	case GetV1XIDBurstPageParamsSortByTenantInvestigation:
+		return true
+	case GetV1XIDBurstPageParamsSortByXidCount:
+		return true
+	case GetV1XIDBurstPageParamsSortByXidNumbers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetV1XIDBurstPageParamsSortOrder.
+const (
+	GetV1XIDBurstPageParamsSortOrderAsc  GetV1XIDBurstPageParamsSortOrder = "asc"
+	GetV1XIDBurstPageParamsSortOrderDesc GetV1XIDBurstPageParamsSortOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetV1XIDBurstPageParamsSortOrder enum.
+func (e GetV1XIDBurstPageParamsSortOrder) Valid() bool {
+	switch e {
+	case GetV1XIDBurstPageParamsSortOrderAsc:
+		return true
+	case GetV1XIDBurstPageParamsSortOrderDesc:
 		return true
 	default:
 		return false
@@ -2838,6 +3231,19 @@ type ModelsEventFilterOptionsResponse struct {
 	GpuTypes    *[]string                    `json:"gpuTypes,omitempty"`
 	Severities  *[]string                    `json:"severities,omitempty"`
 	SortFields  *[]string                    `json:"sortFields,omitempty"`
+}
+
+// ModelsEventsCountResponse defines model for models.EventsCountResponse.
+type ModelsEventsCountResponse struct {
+	Total *int `json:"total,omitempty"`
+}
+
+// ModelsEventsPageResponse defines model for models.EventsPageResponse.
+type ModelsEventsPageResponse struct {
+	Events   *[]ModelsEvent `json:"events,omitempty"`
+	HasMore  *bool          `json:"hasMore,omitempty"`
+	Page     *int           `json:"page,omitempty"`
+	PageSize *int           `json:"pageSize,omitempty"`
 }
 
 // ModelsEventsResponse defines model for models.EventsResponse.
@@ -4613,6 +5019,11 @@ type ModelsXIDBurstXID struct {
 	XidNumber   *int    `json:"xidNumber,omitempty"`
 }
 
+// ModelsXIDBurstsCountResponse defines model for models.XIDBurstsCountResponse.
+type ModelsXIDBurstsCountResponse struct {
+	Total *int `json:"total,omitempty"`
+}
+
 // ModelsXIDBurstsListResponse defines model for models.XIDBurstsListResponse.
 type ModelsXIDBurstsListResponse struct {
 	Items    *[]ModelsXIDBurstListItem `json:"items,omitempty"`
@@ -4621,6 +5032,14 @@ type ModelsXIDBurstsListResponse struct {
 
 	// Total Total is the number of finalized bursts matching all supplied filters before pagination.
 	Total *int `json:"total,omitempty"`
+}
+
+// ModelsXIDBurstsPageResponse defines model for models.XIDBurstsPageResponse.
+type ModelsXIDBurstsPageResponse struct {
+	HasMore  *bool                     `json:"hasMore,omitempty"`
+	Items    *[]ModelsXIDBurstListItem `json:"items,omitempty"`
+	Page     *int                      `json:"page,omitempty"`
+	PageSize *int                      `json:"pageSize,omitempty"`
 }
 
 // GetV1AlertTimelineFilterOptionsParams defines parameters for GetV1AlertTimelineFilterOptions.
@@ -4967,6 +5386,138 @@ type GetV1EventsBucketsParamsTimeMode string
 
 // GetV1EventsBucketsParamsDataSources defines parameters for GetV1EventsBuckets.
 type GetV1EventsBucketsParamsDataSources string
+
+// GetV1EventsCountParams defines parameters for GetV1EventsCount.
+type GetV1EventsCountParams struct {
+	// StartTime Absolute start time in RFC3339 format
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime Absolute end time in RFC3339 format
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode
+	TimeMode *GetV1EventsCountParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration window; use absolute times for matching page and count
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// NodeUUID Canonical node UUID
+	NodeUUID *string `form:"nodeUUID,omitempty" json:"nodeUUID,omitempty"`
+
+	// Component Legacy singular component; cannot combine with components
+	Component *string `form:"component,omitempty" json:"component,omitempty"`
+
+	// NodeGroupIds Node group IDs
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Compute zone IDs
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Excluded node group IDs
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Excluded compute zone IDs
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// NameSearch Case-insensitive node identity search
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// EventNames Event names
+	EventNames *[]string `form:"eventNames,omitempty" json:"eventNames,omitempty"`
+
+	// Severities Severities
+	Severities *[]string `form:"severities,omitempty" json:"severities,omitempty"`
+
+	// Components Components
+	Components *[]string `form:"components,omitempty" json:"components,omitempty"`
+
+	// DataSources Data sources
+	DataSources *[]GetV1EventsCountParamsDataSources `form:"dataSources,omitempty" json:"dataSources,omitempty"`
+
+	// GpuTypes Resolved node GPU types
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+}
+
+// GetV1EventsCountParamsTimeMode defines parameters for GetV1EventsCount.
+type GetV1EventsCountParamsTimeMode string
+
+// GetV1EventsCountParamsDataSources defines parameters for GetV1EventsCount.
+type GetV1EventsCountParamsDataSources string
+
+// GetV1EventsPageParams defines parameters for GetV1EventsPage.
+type GetV1EventsPageParams struct {
+	// StartTime Absolute start time in RFC3339 format
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime Absolute end time in RFC3339 format
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode
+	TimeMode *GetV1EventsPageParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration window; use absolute times for matching page and count
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// NodeUUID Canonical node UUID
+	NodeUUID *string `form:"nodeUUID,omitempty" json:"nodeUUID,omitempty"`
+
+	// Component Legacy singular component; cannot combine with components
+	Component *string `form:"component,omitempty" json:"component,omitempty"`
+
+	// NodeGroupIds Node group IDs
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Compute zone IDs
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Excluded node group IDs
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Excluded compute zone IDs
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// NameSearch Case-insensitive node identity search
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// EventNames Event names
+	EventNames *[]string `form:"eventNames,omitempty" json:"eventNames,omitempty"`
+
+	// Severities Severities
+	Severities *[]string `form:"severities,omitempty" json:"severities,omitempty"`
+
+	// Components Components
+	Components *[]string `form:"components,omitempty" json:"components,omitempty"`
+
+	// DataSources Data sources
+	DataSources *[]GetV1EventsPageParamsDataSources `form:"dataSources,omitempty" json:"dataSources,omitempty"`
+
+	// GpuTypes Resolved node GPU types
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// SortBy Sortable column
+	SortBy *GetV1EventsPageParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// SortOrder Sort direction
+	SortOrder *GetV1EventsPageParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+
+	// Page Zero-indexed page
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Page size
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// GetV1EventsPageParamsTimeMode defines parameters for GetV1EventsPage.
+type GetV1EventsPageParamsTimeMode string
+
+// GetV1EventsPageParamsDataSources defines parameters for GetV1EventsPage.
+type GetV1EventsPageParamsDataSources string
+
+// GetV1EventsPageParamsSortBy defines parameters for GetV1EventsPage.
+type GetV1EventsPageParamsSortBy string
+
+// GetV1EventsPageParamsSortOrder defines parameters for GetV1EventsPage.
+type GetV1EventsPageParamsSortOrder string
 
 // GetV1MetricsParams defines parameters for GetV1Metrics.
 type GetV1MetricsParams struct {
@@ -5814,6 +6365,118 @@ type GetV1XIDBurstsParamsSortBy string
 // GetV1XIDBurstsParamsSortOrder defines parameters for GetV1XIDBursts.
 type GetV1XIDBurstsParamsSortOrder string
 
+// GetV1XIDBurstCountParams defines parameters for GetV1XIDBurstCount.
+type GetV1XIDBurstCountParams struct {
+	// DataSource Observation source to list bursts from, or all for both
+	DataSource *GetV1XIDBurstCountParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// StartTime Start time in RFC3339 format (required for absolute mode, e.g. 2024-01-01T01:00:00Z).
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime End time in RFC3339 format (required for absolute mode). Must be after startTime.
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode for range selection. Defaults to absolute.
+	TimeMode *GetV1XIDBurstCountParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration window (required for relative mode). Uses Go duration units h, m, and s; use 168h for 7 days ('d' is not supported)
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// NodeUUID Filter by node UUID
+	NodeUUID *string `form:"nodeUUID,omitempty" json:"nodeUUID,omitempty"`
+
+	// NodeGroupIds Filter to nodes in matching node groups by node group ID (OR within dimension)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Filter to nodes in matching compute zones by compute zone ID (OR within dimension)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Exclude nodes in matching node groups by node group ID (OR within dimension; cannot be combined with nodeGroupIds)
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Exclude nodes in matching compute zones by compute zone ID (OR within dimension; cannot be combined with computeZoneIds)
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// JobDisruption Filter by the public fatal-XID job-disruption definition
+	JobDisruption *bool `form:"jobDisruption,omitempty" json:"jobDisruption,omitempty"`
+
+	// JobDisruptionDueToPlatformIssue Filter by analyzer platform-attributed disruption (cloud-provider/NCP only)
+	JobDisruptionDueToPlatformIssue *bool `form:"jobDisruptionDueToPlatformIssue,omitempty" json:"jobDisruptionDueToPlatformIssue,omitempty"`
+
+	// XidNumbers Exact XID numbers; burst matches if it contains any of them (OR semantics)
+	XidNumbers *[]int `form:"xidNumbers,omitempty" json:"xidNumbers,omitempty"`
+
+	// GpuTypes Resolved node GPU types; independent of dataSource
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// NameSearch Case-insensitive substring matched against any of the node's identities: hostname, nodeName, or bmcMac. Takes precedence when both nameSearch and deprecated hostnameSearch are supplied.
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// HostnameSearch Deprecated: use nameSearch. Identical behavior; it never matched hostname alone.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HostnameSearch *string `form:"hostnameSearch,omitempty" json:"hostnameSearch,omitempty"`
+
+	// CategorySearch Case-insensitive category substring (cloud-provider/NCP only)
+	CategorySearch *string `form:"categorySearch,omitempty" json:"categorySearch,omitempty"`
+
+	// SubcategorySearch Case-insensitive subcategory substring (cloud-provider/NCP only)
+	SubcategorySearch *string `form:"subcategorySearch,omitempty" json:"subcategorySearch,omitempty"`
+
+	// TenantActionSearch Case-insensitive tenant immediate-action code substring
+	TenantActionSearch *string `form:"tenantActionSearch,omitempty" json:"tenantActionSearch,omitempty"`
+
+	// TenantInvestigationSearch Case-insensitive tenant investigatory-action code substring
+	TenantInvestigationSearch *string `form:"tenantInvestigationSearch,omitempty" json:"tenantInvestigationSearch,omitempty"`
+
+	// DcAdminActionSearch Case-insensitive DC-admin immediate-action code substring (cloud-provider/NCP only)
+	DcAdminActionSearch *string `form:"dcAdminActionSearch,omitempty" json:"dcAdminActionSearch,omitempty"`
+
+	// DcAdminInvestigationSearch Case-insensitive DC-admin investigatory-action code substring (cloud-provider/NCP only)
+	DcAdminInvestigationSearch *string `form:"dcAdminInvestigationSearch,omitempty" json:"dcAdminInvestigationSearch,omitempty"`
+
+	// Categories Exact category values from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	Categories *[]string `form:"categories,omitempty" json:"categories,omitempty"`
+
+	// Subcategories Exact subcategory values from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	Subcategories *[]string `form:"subcategories,omitempty" json:"subcategories,omitempty"`
+
+	// TenantActions Exact tenant immediate-action codes from GET /v1/xid/bursts/options; OR-combined
+	TenantActions *[]string `form:"tenantActions,omitempty" json:"tenantActions,omitempty"`
+
+	// TenantInvestigations Exact tenant investigatory-action codes from GET /v1/xid/bursts/options; OR-combined
+	TenantInvestigations *[]string `form:"tenantInvestigations,omitempty" json:"tenantInvestigations,omitempty"`
+
+	// DcAdminActions Exact DC-admin immediate-action codes from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	DcAdminActions *[]string `form:"dcAdminActions,omitempty" json:"dcAdminActions,omitempty"`
+
+	// DcAdminInvestigations Exact DC-admin investigatory-action codes from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	DcAdminInvestigations *[]string `form:"dcAdminInvestigations,omitempty" json:"dcAdminInvestigations,omitempty"`
+
+	// SortBy Sortable table column (cloud-provider/NCP only for jobDisruptionDueToPlatformIssue, category, subcategory, dcAdminAction, dcAdminInvestigation)
+	SortBy *GetV1XIDBurstCountParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// SortOrder Sort direction
+	SortOrder *GetV1XIDBurstCountParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+
+	// Page Page number (0-indexed)
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Page size (1-100)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// GetV1XIDBurstCountParamsDataSource defines parameters for GetV1XIDBurstCount.
+type GetV1XIDBurstCountParamsDataSource string
+
+// GetV1XIDBurstCountParamsTimeMode defines parameters for GetV1XIDBurstCount.
+type GetV1XIDBurstCountParamsTimeMode string
+
+// GetV1XIDBurstCountParamsSortBy defines parameters for GetV1XIDBurstCount.
+type GetV1XIDBurstCountParamsSortBy string
+
+// GetV1XIDBurstCountParamsSortOrder defines parameters for GetV1XIDBurstCount.
+type GetV1XIDBurstCountParamsSortOrder string
+
 // GetV1XIDBurstOptionsParams defines parameters for GetV1XIDBurstOptions.
 type GetV1XIDBurstOptionsParams struct {
 	// StartTime Optional RFC3339 start time
@@ -5849,6 +6512,118 @@ type GetV1XIDBurstOptionsParamsTimeMode string
 
 // GetV1XIDBurstOptionsParamsDataSource defines parameters for GetV1XIDBurstOptions.
 type GetV1XIDBurstOptionsParamsDataSource string
+
+// GetV1XIDBurstPageParams defines parameters for GetV1XIDBurstPage.
+type GetV1XIDBurstPageParams struct {
+	// DataSource Observation source to list bursts from, or all for both
+	DataSource *GetV1XIDBurstPageParamsDataSource `form:"dataSource,omitempty" json:"dataSource,omitempty"`
+
+	// StartTime Start time in RFC3339 format (required for absolute mode, e.g. 2024-01-01T01:00:00Z).
+	StartTime *string `form:"startTime,omitempty" json:"startTime,omitempty"`
+
+	// EndTime End time in RFC3339 format (required for absolute mode). Must be after startTime.
+	EndTime *string `form:"endTime,omitempty" json:"endTime,omitempty"`
+
+	// TimeMode Time mode for range selection. Defaults to absolute.
+	TimeMode *GetV1XIDBurstPageParamsTimeMode `form:"timeMode,omitempty" json:"timeMode,omitempty"`
+
+	// Window Relative duration window (required for relative mode). Uses Go duration units h, m, and s; use 168h for 7 days ('d' is not supported)
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// NodeUUID Filter by node UUID
+	NodeUUID *string `form:"nodeUUID,omitempty" json:"nodeUUID,omitempty"`
+
+	// NodeGroupIds Filter to nodes in matching node groups by node group ID (OR within dimension)
+	NodeGroupIds *[]string `form:"nodeGroupIds,omitempty" json:"nodeGroupIds,omitempty"`
+
+	// ComputeZoneIds Filter to nodes in matching compute zones by compute zone ID (OR within dimension)
+	ComputeZoneIds *[]string `form:"computeZoneIds,omitempty" json:"computeZoneIds,omitempty"`
+
+	// ExcludeNodeGroupIds Exclude nodes in matching node groups by node group ID (OR within dimension; cannot be combined with nodeGroupIds)
+	ExcludeNodeGroupIds *[]string `form:"excludeNodeGroupIds,omitempty" json:"excludeNodeGroupIds,omitempty"`
+
+	// ExcludeComputeZoneIds Exclude nodes in matching compute zones by compute zone ID (OR within dimension; cannot be combined with computeZoneIds)
+	ExcludeComputeZoneIds *[]string `form:"excludeComputeZoneIds,omitempty" json:"excludeComputeZoneIds,omitempty"`
+
+	// JobDisruption Filter by the public fatal-XID job-disruption definition
+	JobDisruption *bool `form:"jobDisruption,omitempty" json:"jobDisruption,omitempty"`
+
+	// JobDisruptionDueToPlatformIssue Filter by analyzer platform-attributed disruption (cloud-provider/NCP only)
+	JobDisruptionDueToPlatformIssue *bool `form:"jobDisruptionDueToPlatformIssue,omitempty" json:"jobDisruptionDueToPlatformIssue,omitempty"`
+
+	// XidNumbers Exact XID numbers; burst matches if it contains any of them (OR semantics)
+	XidNumbers *[]int `form:"xidNumbers,omitempty" json:"xidNumbers,omitempty"`
+
+	// GpuTypes Resolved node GPU types; independent of dataSource
+	GpuTypes *[]string `form:"gpuTypes,omitempty" json:"gpuTypes,omitempty"`
+
+	// NameSearch Case-insensitive substring matched against any of the node's identities: hostname, nodeName, or bmcMac. Takes precedence when both nameSearch and deprecated hostnameSearch are supplied.
+	NameSearch *string `form:"nameSearch,omitempty" json:"nameSearch,omitempty"`
+
+	// HostnameSearch Deprecated: use nameSearch. Identical behavior; it never matched hostname alone.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	HostnameSearch *string `form:"hostnameSearch,omitempty" json:"hostnameSearch,omitempty"`
+
+	// CategorySearch Case-insensitive category substring (cloud-provider/NCP only)
+	CategorySearch *string `form:"categorySearch,omitempty" json:"categorySearch,omitempty"`
+
+	// SubcategorySearch Case-insensitive subcategory substring (cloud-provider/NCP only)
+	SubcategorySearch *string `form:"subcategorySearch,omitempty" json:"subcategorySearch,omitempty"`
+
+	// TenantActionSearch Case-insensitive tenant immediate-action code substring
+	TenantActionSearch *string `form:"tenantActionSearch,omitempty" json:"tenantActionSearch,omitempty"`
+
+	// TenantInvestigationSearch Case-insensitive tenant investigatory-action code substring
+	TenantInvestigationSearch *string `form:"tenantInvestigationSearch,omitempty" json:"tenantInvestigationSearch,omitempty"`
+
+	// DcAdminActionSearch Case-insensitive DC-admin immediate-action code substring (cloud-provider/NCP only)
+	DcAdminActionSearch *string `form:"dcAdminActionSearch,omitempty" json:"dcAdminActionSearch,omitempty"`
+
+	// DcAdminInvestigationSearch Case-insensitive DC-admin investigatory-action code substring (cloud-provider/NCP only)
+	DcAdminInvestigationSearch *string `form:"dcAdminInvestigationSearch,omitempty" json:"dcAdminInvestigationSearch,omitempty"`
+
+	// Categories Exact category values from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	Categories *[]string `form:"categories,omitempty" json:"categories,omitempty"`
+
+	// Subcategories Exact subcategory values from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	Subcategories *[]string `form:"subcategories,omitempty" json:"subcategories,omitempty"`
+
+	// TenantActions Exact tenant immediate-action codes from GET /v1/xid/bursts/options; OR-combined
+	TenantActions *[]string `form:"tenantActions,omitempty" json:"tenantActions,omitempty"`
+
+	// TenantInvestigations Exact tenant investigatory-action codes from GET /v1/xid/bursts/options; OR-combined
+	TenantInvestigations *[]string `form:"tenantInvestigations,omitempty" json:"tenantInvestigations,omitempty"`
+
+	// DcAdminActions Exact DC-admin immediate-action codes from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	DcAdminActions *[]string `form:"dcAdminActions,omitempty" json:"dcAdminActions,omitempty"`
+
+	// DcAdminInvestigations Exact DC-admin investigatory-action codes from GET /v1/xid/bursts/options; OR-combined (cloud-provider/NCP only)
+	DcAdminInvestigations *[]string `form:"dcAdminInvestigations,omitempty" json:"dcAdminInvestigations,omitempty"`
+
+	// SortBy Sortable table column (cloud-provider/NCP only for jobDisruptionDueToPlatformIssue, category, subcategory, dcAdminAction, dcAdminInvestigation)
+	SortBy *GetV1XIDBurstPageParamsSortBy `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+
+	// SortOrder Sort direction
+	SortOrder *GetV1XIDBurstPageParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+
+	// Page Page number (0-indexed)
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Page size (1-100)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// GetV1XIDBurstPageParamsDataSource defines parameters for GetV1XIDBurstPage.
+type GetV1XIDBurstPageParamsDataSource string
+
+// GetV1XIDBurstPageParamsTimeMode defines parameters for GetV1XIDBurstPage.
+type GetV1XIDBurstPageParamsTimeMode string
+
+// GetV1XIDBurstPageParamsSortBy defines parameters for GetV1XIDBurstPage.
+type GetV1XIDBurstPageParamsSortBy string
+
+// GetV1XIDBurstPageParamsSortOrder defines parameters for GetV1XIDBurstPage.
+type GetV1XIDBurstPageParamsSortOrder string
 
 // GetV2MetricsParams defines parameters for GetV2Metrics.
 type GetV2MetricsParams struct {
@@ -6661,6 +7436,13 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/events/buckets (the `GetV1EventsBuckets` operationId).
 	GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetV1EventsCount Count events exactly
+	//
+	// Counts events matching the same filters as GET /v1/events. Use identical absolute time bounds and filters when pairing with GET /v1/events/page; the requests are not an atomic snapshot. Pagination and sorting parameters are accepted but do not affect the total.
+	//
+	// Corresponds with GET /v1/events/count (the `GetV1EventsCount` operationId).
+	GetV1EventsCount(ctx context.Context, params *GetV1EventsCountParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetV1EventsOptions Get event filter options
 	//
 	// Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
@@ -6668,6 +7450,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
 	GetV1EventsOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1EventsPage Get an event page without an exact count
+	//
+	// Uses the same filters and sorting as GET /v1/events, but returns rows and hasMore without waiting for the exact count. Request GET /v1/events/count separately with the same absolute time bounds and filters when the UI needs the Results number. Separate requests are not an atomic snapshot.
+	//
+	// Corresponds with GET /v1/events/page (the `GetV1EventsPage` operationId).
+	GetV1EventsPage(ctx context.Context, params *GetV1EventsPageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1Info Get application info
 	//
@@ -7111,6 +7900,13 @@ type ClientInterface interface {
 	// Corresponds with GET /v1/xid/bursts (the `GetV1XIDBursts` operationId).
 	GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetV1XIDBurstCount Count finalized XID bursts
+	//
+	// Returns the exact total matching the list filters. Pagination and sorting are validated but do not affect the total. Pair with GET /v1/xid/bursts/page using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+	//
+	// Corresponds with GET /v1/xid/bursts/count (the `GetV1XIDBurstCount` operationId).
+	GetV1XIDBurstCount(ctx context.Context, params *GetV1XIDBurstCountParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetV1XIDBurstOptions Get XID burst filter options
 	//
 	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
@@ -7120,6 +7916,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 	GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetV1XIDBurstPage Get a page of finalized XID bursts
+	//
+	// Returns items and hasMore without an exact total. Pair with GET /v1/xid/bursts/count using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+	//
+	// Corresponds with GET /v1/xid/bursts/page (the `GetV1XIDBurstPage` operationId).
+	GetV1XIDBurstPage(ctx context.Context, params *GetV1XIDBurstPageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetV1XIDBurstDetail Get finalized XID burst details
 	//
@@ -7475,6 +8278,23 @@ func (c *Client) GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBuck
 	return c.Client.Do(req)
 }
 
+// GetV1EventsCount Count events exactly
+//
+// Counts events matching the same filters as GET /v1/events. Use identical absolute time bounds and filters when pairing with GET /v1/events/page; the requests are not an atomic snapshot. Pagination and sorting parameters are accepted but do not affect the total.
+//
+// Corresponds with GET /v1/events/count (the `GetV1EventsCount` operationId).
+func (c *Client) GetV1EventsCount(ctx context.Context, params *GetV1EventsCountParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1EventsCountRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetV1EventsOptions Get event filter options
 //
 // Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
@@ -7483,6 +8303,23 @@ func (c *Client) GetV1EventsBuckets(ctx context.Context, params *GetV1EventsBuck
 // Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
 func (c *Client) GetV1EventsOptions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1EventsOptionsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetV1EventsPage Get an event page without an exact count
+//
+// Uses the same filters and sorting as GET /v1/events, but returns rows and hasMore without waiting for the exact count. Request GET /v1/events/count separately with the same absolute time bounds and filters when the UI needs the Results number. Separate requests are not an atomic snapshot.
+//
+// Corresponds with GET /v1/events/page (the `GetV1EventsPage` operationId).
+func (c *Client) GetV1EventsPage(ctx context.Context, params *GetV1EventsPageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1EventsPageRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -8355,6 +9192,23 @@ func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParam
 	return c.Client.Do(req)
 }
 
+// GetV1XIDBurstCount Count finalized XID bursts
+//
+// Returns the exact total matching the list filters. Pagination and sorting are validated but do not affect the total. Pair with GET /v1/xid/bursts/page using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+//
+// Corresponds with GET /v1/xid/bursts/count (the `GetV1XIDBurstCount` operationId).
+func (c *Client) GetV1XIDBurstCount(ctx context.Context, params *GetV1XIDBurstCountParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1XIDBurstCountRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetV1XIDBurstOptions Get XID burst filter options
 //
 // Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
@@ -8365,6 +9219,23 @@ func (c *Client) GetV1XIDBursts(ctx context.Context, params *GetV1XIDBurstsParam
 // Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 func (c *Client) GetV1XIDBurstOptions(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetV1XIDBurstOptionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetV1XIDBurstPage Get a page of finalized XID bursts
+//
+// Returns items and hasMore without an exact total. Pair with GET /v1/xid/bursts/count using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+//
+// Corresponds with GET /v1/xid/bursts/page (the `GetV1XIDBurstPage` operationId).
+func (c *Client) GetV1XIDBurstPage(ctx context.Context, params *GetV1XIDBurstPageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1XIDBurstPageRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10067,6 +10938,240 @@ func NewGetV1EventsBucketsRequest(server string, params *GetV1EventsBucketsParam
 	return req, nil
 }
 
+// NewGetV1EventsCountRequest constructs an http.Request for the GetV1EventsCount method
+func NewGetV1EventsCountRequest(server string, params *GetV1EventsCountParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/events/count")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUID", *params.NodeUUID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Component != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "component", *params.Component, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EventNames != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "eventNames", *params.EventNames, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Severities != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "severities", *params.Severities, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Components != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "components", *params.Components, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSources != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSources", *params.DataSources, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV1EventsOptionsRequest constructs an http.Request for the GetV1EventsOptions method
 func NewGetV1EventsOptionsRequest(server string) (*http.Request, error) {
 	var err error
@@ -10084,6 +11189,288 @@ func NewGetV1EventsOptionsRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1EventsPageRequest constructs an http.Request for the GetV1EventsPage method
+func NewGetV1EventsPageRequest(server string, params *GetV1EventsPageParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/events/page")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUID", *params.NodeUUID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Component != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "component", *params.Component, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EventNames != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "eventNames", *params.EventNames, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Severities != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "severities", *params.Severities, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Components != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "components", *params.Components, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DataSources != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSources", *params.DataSources, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortOrder", *params.SortOrder, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -13809,6 +15196,432 @@ func NewGetV1XIDBurstsRequest(server string, params *GetV1XIDBurstsParams) (*htt
 	return req, nil
 }
 
+// NewGetV1XIDBurstCountRequest constructs an http.Request for the GetV1XIDBurstCount method
+func NewGetV1XIDBurstCountRequest(server string, params *GetV1XIDBurstCountParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/xid/bursts/count")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUID", *params.NodeUUID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.JobDisruption != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "jobDisruption", *params.JobDisruption, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.JobDisruptionDueToPlatformIssue != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "jobDisruptionDueToPlatformIssue", *params.JobDisruptionDueToPlatformIssue, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.XidNumbers != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "xidNumbers", *params.XidNumbers, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.HostnameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hostnameSearch", *params.HostnameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CategorySearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "categorySearch", *params.CategorySearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SubcategorySearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subcategorySearch", *params.SubcategorySearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantActionSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantActionSearch", *params.TenantActionSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantInvestigationSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantInvestigationSearch", *params.TenantInvestigationSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminActionSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminActionSearch", *params.DcAdminActionSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminInvestigationSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminInvestigationSearch", *params.DcAdminInvestigationSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Categories != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "categories", *params.Categories, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Subcategories != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subcategories", *params.Subcategories, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantActions != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantActions", *params.TenantActions, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantInvestigations != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantInvestigations", *params.TenantInvestigations, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminActions != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminActions", *params.DcAdminActions, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminInvestigations != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminInvestigations", *params.DcAdminInvestigations, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortOrder", *params.SortOrder, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetV1XIDBurstOptionsRequest constructs an http.Request for the GetV1XIDBurstOptions method
 func NewGetV1XIDBurstOptionsRequest(server string, params *GetV1XIDBurstOptionsParams) (*http.Request, error) {
 	var err error
@@ -13936,6 +15749,432 @@ func NewGetV1XIDBurstOptionsRequest(server string, params *GetV1XIDBurstOptionsP
 		if params.DataSource != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetV1XIDBurstPageRequest constructs an http.Request for the GetV1XIDBurstPage method
+func NewGetV1XIDBurstPageRequest(server string, params *GetV1XIDBurstPageParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/xid/bursts/page")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.DataSource != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dataSource", *params.DataSource, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.StartTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "startTime", *params.StartTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndTime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "endTime", *params.EndTime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TimeMode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "timeMode", *params.TimeMode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeUUID != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeUUID", *params.NodeUUID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nodeGroupIds", *params.NodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "computeZoneIds", *params.ComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeNodeGroupIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeNodeGroupIds", *params.ExcludeNodeGroupIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ExcludeComputeZoneIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "excludeComputeZoneIds", *params.ExcludeComputeZoneIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.JobDisruption != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "jobDisruption", *params.JobDisruption, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.JobDisruptionDueToPlatformIssue != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "jobDisruptionDueToPlatformIssue", *params.JobDisruptionDueToPlatformIssue, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.XidNumbers != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "xidNumbers", *params.XidNumbers, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GpuTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gpuTypes", *params.GpuTypes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.NameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "nameSearch", *params.NameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.HostnameSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hostnameSearch", *params.HostnameSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CategorySearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "categorySearch", *params.CategorySearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SubcategorySearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subcategorySearch", *params.SubcategorySearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantActionSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantActionSearch", *params.TenantActionSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantInvestigationSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantInvestigationSearch", *params.TenantInvestigationSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminActionSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminActionSearch", *params.DcAdminActionSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminInvestigationSearch != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminInvestigationSearch", *params.DcAdminInvestigationSearch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Categories != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "categories", *params.Categories, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Subcategories != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subcategories", *params.Subcategories, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantActions != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantActions", *params.TenantActions, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TenantInvestigations != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "tenantInvestigations", *params.TenantInvestigations, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminActions != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminActions", *params.DcAdminActions, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DcAdminInvestigations != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "dcAdminInvestigations", *params.DcAdminInvestigations, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortBy", *params.SortBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sortOrder", *params.SortOrder, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -14416,6 +16655,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/events/buckets (the `GetV1EventsBuckets` operationId).
 	GetV1EventsBucketsWithResponse(ctx context.Context, params *GetV1EventsBucketsParams, reqEditors ...RequestEditorFn) (*GetV1EventsBucketsResponse, error)
 
+	// GetV1EventsCountWithResponse Count events exactly
+	//
+	// Counts events matching the same filters as GET /v1/events. Use identical absolute time bounds and filters when pairing with GET /v1/events/page; the requests are not an atomic snapshot. Pagination and sorting parameters are accepted but do not affect the total.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/events/count (the `GetV1EventsCount` operationId).
+	GetV1EventsCountWithResponse(ctx context.Context, params *GetV1EventsCountParams, reqEditors ...RequestEditorFn) (*GetV1EventsCountResponse, error)
+
 	// GetV1EventsOptionsWithResponse Get event filter options
 	//
 	// Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
@@ -14425,6 +16673,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/events/options (the `GetV1EventsOptions` operationId).
 	GetV1EventsOptionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetV1EventsOptionsResponse, error)
+
+	// GetV1EventsPageWithResponse Get an event page without an exact count
+	//
+	// Uses the same filters and sorting as GET /v1/events, but returns rows and hasMore without waiting for the exact count. Request GET /v1/events/count separately with the same absolute time bounds and filters when the UI needs the Results number. Separate requests are not an atomic snapshot.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/events/page (the `GetV1EventsPage` operationId).
+	GetV1EventsPageWithResponse(ctx context.Context, params *GetV1EventsPageParams, reqEditors ...RequestEditorFn) (*GetV1EventsPageResponse, error)
 
 	// GetV1InfoWithResponse Get application info
 	//
@@ -14924,6 +17181,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /v1/xid/bursts (the `GetV1XIDBursts` operationId).
 	GetV1XIDBurstsWithResponse(ctx context.Context, params *GetV1XIDBurstsParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstsResponse, error)
 
+	// GetV1XIDBurstCountWithResponse Count finalized XID bursts
+	//
+	// Returns the exact total matching the list filters. Pagination and sorting are validated but do not affect the total. Pair with GET /v1/xid/bursts/page using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/xid/bursts/count (the `GetV1XIDBurstCount` operationId).
+	GetV1XIDBurstCountWithResponse(ctx context.Context, params *GetV1XIDBurstCountParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstCountResponse, error)
+
 	// GetV1XIDBurstOptionsWithResponse Get XID burst filter options
 	//
 	// Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
@@ -14935,6 +17201,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/xid/bursts/options (the `GetV1XIDBurstOptions` operationId).
 	GetV1XIDBurstOptionsWithResponse(ctx context.Context, params *GetV1XIDBurstOptionsParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstOptionsResponse, error)
+
+	// GetV1XIDBurstPageWithResponse Get a page of finalized XID bursts
+	//
+	// Returns items and hasMore without an exact total. Pair with GET /v1/xid/bursts/count using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/xid/bursts/page (the `GetV1XIDBurstPage` operationId).
+	GetV1XIDBurstPageWithResponse(ctx context.Context, params *GetV1XIDBurstPageParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstPageResponse, error)
 
 	// GetV1XIDBurstDetailWithResponse Get finalized XID burst details
 	//
@@ -16029,6 +18304,82 @@ func (r GetV1EventsBucketsResponse) ContentType() string {
 	return ""
 }
 
+type GetV1EventsCountResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ModelsEventsCountResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ModelsErrorResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ModelsErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ModelsErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ModelsErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ModelsErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetV1EventsCountResponse) GetJSON200() *ModelsEventsCountResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetV1EventsCountResponse) GetJSON400() *ModelsErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetV1EventsCountResponse) GetJSON401() *ModelsErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetV1EventsCountResponse) GetJSON403() *ModelsErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetV1EventsCountResponse) GetJSON500() *ModelsErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetV1EventsCountResponse) GetJSON503() *ModelsErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetV1EventsCountResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1EventsCountResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1EventsCountResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1EventsCountResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV1EventsOptionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -16092,6 +18443,82 @@ func (r GetV1EventsOptionsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetV1EventsOptionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1EventsPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ModelsEventsPageResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ModelsErrorResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ModelsErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ModelsErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ModelsErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ModelsErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetV1EventsPageResponse) GetJSON200() *ModelsEventsPageResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetV1EventsPageResponse) GetJSON400() *ModelsErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetV1EventsPageResponse) GetJSON401() *ModelsErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetV1EventsPageResponse) GetJSON403() *ModelsErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetV1EventsPageResponse) GetJSON500() *ModelsErrorResponse {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetV1EventsPageResponse) GetJSON503() *ModelsErrorResponse {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetV1EventsPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1EventsPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1EventsPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1EventsPageResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18914,6 +21341,82 @@ func (r GetV1XIDBurstsResponse) ContentType() string {
 	return ""
 }
 
+type GetV1XIDBurstCountResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ModelsXIDBurstsCountResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ModelsErrorResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ModelsErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ModelsErrorResponse
+	// JSON499 the response for an HTTP 499 `application/json` response
+	JSON499 *ModelsErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ModelsErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetV1XIDBurstCountResponse) GetJSON200() *ModelsXIDBurstsCountResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetV1XIDBurstCountResponse) GetJSON400() *ModelsErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetV1XIDBurstCountResponse) GetJSON401() *ModelsErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetV1XIDBurstCountResponse) GetJSON403() *ModelsErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON499 returns the response for an HTTP 499 `application/json` response
+func (r GetV1XIDBurstCountResponse) GetJSON499() *ModelsErrorResponse {
+	return r.JSON499
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetV1XIDBurstCountResponse) GetJSON500() *ModelsErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetV1XIDBurstCountResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1XIDBurstCountResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1XIDBurstCountResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1XIDBurstCountResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetV1XIDBurstOptionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -18984,6 +21487,82 @@ func (r GetV1XIDBurstOptionsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetV1XIDBurstOptionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetV1XIDBurstPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ModelsXIDBurstsPageResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ModelsErrorResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ModelsErrorResponse
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ModelsErrorResponse
+	// JSON499 the response for an HTTP 499 `application/json` response
+	JSON499 *ModelsErrorResponse
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ModelsErrorResponse
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetV1XIDBurstPageResponse) GetJSON200() *ModelsXIDBurstsPageResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetV1XIDBurstPageResponse) GetJSON400() *ModelsErrorResponse {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetV1XIDBurstPageResponse) GetJSON401() *ModelsErrorResponse {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetV1XIDBurstPageResponse) GetJSON403() *ModelsErrorResponse {
+	return r.JSON403
+}
+
+// GetJSON499 returns the response for an HTTP 499 `application/json` response
+func (r GetV1XIDBurstPageResponse) GetJSON499() *ModelsErrorResponse {
+	return r.JSON499
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetV1XIDBurstPageResponse) GetJSON500() *ModelsErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetV1XIDBurstPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1XIDBurstPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1XIDBurstPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetV1XIDBurstPageResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -19465,6 +22044,21 @@ func (c *ClientWithResponses) GetV1EventsBucketsWithResponse(ctx context.Context
 	return ParseGetV1EventsBucketsResponse(rsp)
 }
 
+// GetV1EventsCountWithResponse Count events exactly
+//
+// Counts events matching the same filters as GET /v1/events. Use identical absolute time bounds and filters when pairing with GET /v1/events/page; the requests are not an atomic snapshot. Pagination and sorting parameters are accepted but do not affect the total.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/events/count (the `GetV1EventsCount` operationId).
+func (c *ClientWithResponses) GetV1EventsCountWithResponse(ctx context.Context, params *GetV1EventsCountParams, reqEditors ...RequestEditorFn) (*GetV1EventsCountResponse, error) {
+	rsp, err := c.GetV1EventsCount(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1EventsCountResponse(rsp)
+}
+
 // GetV1EventsOptionsWithResponse Get event filter options
 //
 // Returns the Event Name, Severity, Component, Data Source, and resolved GPU Type filters supported by the events list, plus the sortable columns. This endpoint does not query event storage and ignores time and inventory filters. Event Name, Component, Data Source, and source-specific identity Sort Fields are limited to the agent types the customer has enrolled. Resolved GPU types come from active nodes and are independent of the event data source. eventNames always ends with the Others option, which matches every stored name the catalog does not list.
@@ -19479,6 +22073,21 @@ func (c *ClientWithResponses) GetV1EventsOptionsWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseGetV1EventsOptionsResponse(rsp)
+}
+
+// GetV1EventsPageWithResponse Get an event page without an exact count
+//
+// Uses the same filters and sorting as GET /v1/events, but returns rows and hasMore without waiting for the exact count. Request GET /v1/events/count separately with the same absolute time bounds and filters when the UI needs the Results number. Separate requests are not an atomic snapshot.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/events/page (the `GetV1EventsPage` operationId).
+func (c *ClientWithResponses) GetV1EventsPageWithResponse(ctx context.Context, params *GetV1EventsPageParams, reqEditors ...RequestEditorFn) (*GetV1EventsPageResponse, error) {
+	rsp, err := c.GetV1EventsPage(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1EventsPageResponse(rsp)
 }
 
 // GetV1InfoWithResponse Get application info
@@ -20231,6 +22840,21 @@ func (c *ClientWithResponses) GetV1XIDBurstsWithResponse(ctx context.Context, pa
 	return ParseGetV1XIDBurstsResponse(rsp)
 }
 
+// GetV1XIDBurstCountWithResponse Count finalized XID bursts
+//
+// Returns the exact total matching the list filters. Pagination and sorting are validated but do not affect the total. Pair with GET /v1/xid/bursts/page using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/xid/bursts/count (the `GetV1XIDBurstCount` operationId).
+func (c *ClientWithResponses) GetV1XIDBurstCountWithResponse(ctx context.Context, params *GetV1XIDBurstCountParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstCountResponse, error) {
+	rsp, err := c.GetV1XIDBurstCount(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1XIDBurstCountResponse(rsp)
+}
+
 // GetV1XIDBurstOptionsWithResponse Get XID burst filter options
 //
 // Returns filter options available to the authenticated customer and persona. Optional time and inventory scope filters narrow the values; table column filters are not applied. This v1 response contains no counts and has no cross-filter impact-count behavior.
@@ -20247,6 +22871,21 @@ func (c *ClientWithResponses) GetV1XIDBurstOptionsWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseGetV1XIDBurstOptionsResponse(rsp)
+}
+
+// GetV1XIDBurstPageWithResponse Get a page of finalized XID bursts
+//
+// Returns items and hasMore without an exact total. Pair with GET /v1/xid/bursts/count using identical absolute time bounds and filters; separate requests are not an atomic snapshot.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/xid/bursts/page (the `GetV1XIDBurstPage` operationId).
+func (c *ClientWithResponses) GetV1XIDBurstPageWithResponse(ctx context.Context, params *GetV1XIDBurstPageParams, reqEditors ...RequestEditorFn) (*GetV1XIDBurstPageResponse, error) {
+	rsp, err := c.GetV1XIDBurstPage(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1XIDBurstPageResponse(rsp)
 }
 
 // GetV1XIDBurstDetailWithResponse Get finalized XID burst details
@@ -21140,6 +23779,67 @@ func ParseGetV1EventsBucketsResponse(rsp *http.Response) (*GetV1EventsBucketsRes
 	return response, nil
 }
 
+// ParseGetV1EventsCountResponse parses an HTTP response from a GetV1EventsCountWithResponse call
+func ParseGetV1EventsCountResponse(rsp *http.Response) (*GetV1EventsCountResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1EventsCountResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsEventsCountResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetV1EventsOptionsResponse parses an HTTP response from a GetV1EventsOptionsWithResponse call
 func ParseGetV1EventsOptionsResponse(rsp *http.Response) (*GetV1EventsOptionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -21160,6 +23860,67 @@ func ParseGetV1EventsOptionsResponse(rsp *http.Response) (*GetV1EventsOptionsRes
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1EventsPageResponse parses an HTTP response from a GetV1EventsPageWithResponse call
+func ParseGetV1EventsPageResponse(rsp *http.Response) (*GetV1EventsPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1EventsPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsEventsPageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest ModelsErrorResponse
@@ -23533,6 +26294,67 @@ func ParseGetV1XIDBurstsResponse(rsp *http.Response) (*GetV1XIDBurstsResponse, e
 	return response, nil
 }
 
+// ParseGetV1XIDBurstCountResponse parses an HTTP response from a GetV1XIDBurstCountWithResponse call
+func ParseGetV1XIDBurstCountResponse(rsp *http.Response) (*GetV1XIDBurstCountResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1XIDBurstCountResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsXIDBurstsCountResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetV1XIDBurstOptionsResponse parses an HTTP response from a GetV1XIDBurstOptionsWithResponse call
 func ParseGetV1XIDBurstOptionsResponse(rsp *http.Response) (*GetV1XIDBurstOptionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -23549,6 +26371,67 @@ func ParseGetV1XIDBurstOptionsResponse(rsp *http.Response) (*GetV1XIDBurstOption
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest ModelsXIDBurstFilterOptionsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 499:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON499 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ModelsErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1XIDBurstPageResponse parses an HTTP response from a GetV1XIDBurstPageWithResponse call
+func ParseGetV1XIDBurstPageResponse(rsp *http.Response) (*GetV1XIDBurstPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1XIDBurstPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelsXIDBurstsPageResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

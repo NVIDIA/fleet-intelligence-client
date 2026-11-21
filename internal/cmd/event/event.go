@@ -36,8 +36,9 @@ type eventFilterFlags struct {
 
 type eventListFlags struct {
 	eventFilterFlags
-	sortBy string
-	order  string
+	countOnly bool
+	sortBy    string
+	order     string
 }
 
 type eventBucketsFlags struct {
@@ -81,7 +82,8 @@ func newEventListCmd() *cobra.Command {
 Use event options to discover filter values and sort fields.
 
 A time range is required: use --window for a relative range, or --start and
---end for an absolute range.`,
+--end for an absolute range. Use --count-only to return only the exact total
+without fetching rows; it cannot be combined with sorting or pagination flags.`,
 		Example: `  nvfleetint event list --window 24h
   nvfleetint event list --start 2026-05-01T00:00:00Z --end 2026-05-08T00:00:00Z --component GPU
   nvfleetint event list --window 168h --node 1e9c0d2a-0000-4a1b-9c3d-000000000001`,
@@ -94,6 +96,7 @@ A time range is required: use --window for a relative range, or --start and
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field; see event options (default: timestamp)")
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort direction: asc or desc (default: desc)")
 	cmdutil.RegisterListFlags(cmd, common)
+	cmd.Flags().BoolVar(&flags.countOnly, "count-only", false, "Return only the exact total; incompatible with sorting and pagination flags")
 
 	return cmd
 }
@@ -128,6 +131,9 @@ A time range is required: use --window for a relative range, or --start and
 
 // Validates flags, calls the SDK, and writes output
 func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resolved) error {
+	if err := cmdutil.ValidateCountOnlyFlags(cmd, flags.countOnly); err != nil {
+		return err
+	}
 	if err := cmdutil.ValidateListFlags(common); err != nil {
 		return err
 	}
@@ -148,9 +154,25 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resol
 	if err != nil {
 		return err
 	}
+	if flags.countOnly {
+		count, err := client.CountEvents(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		if common.Output == clioutput.FormatJSON {
+			return clioutput.WriteRawJSON(cmd.OutOrStdout(), count.RawJSON)
+		}
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Total Entries: %d\n", count.Total)
+		return err
+	}
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.All {
+		opts.StartTime, opts.EndTime, err = nvfleetint.AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+		if err != nil {
+			return err
+		}
+		opts.Window, opts.SkipTotal = "", true
 		var events []nvfleetint.Event
 		result, err := cmdutil.FetchAllPages("events",
 			func(pageNumber int) (nvfleetint.EventsPage, error) {
@@ -162,6 +184,11 @@ func runEventList(cmd *cobra.Command, flags eventListFlags, common cmdutil.Resol
 		if err != nil {
 			return err
 		}
+		count, err := client.CountEvents(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		result.Pagination.Total = count.Total
 		return writeEventListOutput(cmd.OutOrStdout(), common, eventListOutput{
 			Events:    events,
 			JSONValue: result,
@@ -405,7 +432,7 @@ resolved node inventory, independently of event source.`,
 }
 
 func writeEventOptionsTable(w io.Writer, options nvfleetint.EventFilterOptions) error {
-	if _, err := fmt.Fprintf(w, "Filters for 'event list' and 'event buckets' (sorting applies to list only)\n%s\n", cmdutil.OptionsPreamble); err != nil {
+	if _, err := fmt.Fprintf(w, "Filters for 'event list' (including --count-only) and 'event buckets' (sorting applies only when listing rows)\n%s\n", cmdutil.OptionsPreamble); err != nil {
 		return err
 	}
 	components := make([][]string, 0, len(options.Components))

@@ -25,6 +25,7 @@ const xidBurstSortByList = "startTime, burstDurationSeconds, hostname, nodeName,
 
 // Stores local flag values for xidburst list
 type xidBurstListFlags struct {
+	countOnly                  bool
 	dataSource                 string
 	gpuTypes                   string
 	window                     string
@@ -99,6 +100,8 @@ and a time range.
 
 A time range is required: use --window for a relative range, or --start and
 --end for an absolute range. The range applies to each burst's start time.
+Use --count-only to return only the exact total without fetching rows; it cannot
+be combined with sorting or pagination flags.
 
 Some filters and response fields are only available to cloud-provider/NCP
 callers; for tenant callers the backend rejects them.
@@ -146,6 +149,7 @@ callers; for tenant callers the backend rejects them.
 	cmd.Flags().StringVar(&flags.sortBy, "sort-by", "", "Sort field: "+xidBurstSortByList)
 	cmd.Flags().StringVar(&flags.order, "order", "", "Sort order: asc or desc")
 	cmdutil.RegisterListFlags(cmd, common)
+	cmd.Flags().BoolVar(&flags.countOnly, "count-only", false, "Return only the exact total; incompatible with sorting and pagination flags")
 
 	return cmd
 }
@@ -169,6 +173,9 @@ func newXIDBurstDescribeCmd() *cobra.Command {
 
 // Validates flags, calls the SDK, and writes output
 func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil.Resolved) error {
+	if err := cmdutil.ValidateCountOnlyFlags(cmd, flags.countOnly); err != nil {
+		return err
+	}
 	if err := cmdutil.ValidateListFlags(common); err != nil {
 		return err
 	}
@@ -253,9 +260,25 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 	if err != nil {
 		return err
 	}
+	if flags.countOnly {
+		count, err := client.CountXIDBursts(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		if common.Output == clioutput.FormatJSON {
+			return clioutput.WriteRawJSON(cmd.OutOrStdout(), count.RawJSON)
+		}
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Total Entries: %d\n", count.Total)
+		return err
+	}
 	cmdutil.ApplyPagination(common, func(page *int) { opts.Page = page }, func(pageSize *int) { opts.PageSize = pageSize })
 
 	if common.All {
+		opts.StartTime, opts.EndTime, err = nvfleetint.AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+		if err != nil {
+			return err
+		}
+		opts.Window, opts.SkipTotal = "", true
 		var bursts []nvfleetint.XIDBurst
 		result, err := cmdutil.FetchAllPages("items",
 			func(pageNumber int) (nvfleetint.XIDBurstsPage, error) {
@@ -267,6 +290,11 @@ func runXIDBurstList(cmd *cobra.Command, flags xidBurstListFlags, common cmdutil
 		if err != nil {
 			return err
 		}
+		count, err := client.CountXIDBursts(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		result.Pagination.Total = count.Total
 		return writeXIDBurstListOutput(cmd.OutOrStdout(), common, xidBurstListOutput{
 			Bursts:    bursts,
 			JSONValue: result,

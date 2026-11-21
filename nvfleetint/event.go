@@ -83,6 +83,8 @@ type EventListOptions struct {
 	EndTime   string
 	Page      *int
 	PageSize  *int
+	// SkipTotal returns the page's hasMore signal without querying an exact total.
+	SkipTotal bool
 }
 
 // EventBucketsOptions represents request options for time-bucketed event counts.
@@ -172,7 +174,9 @@ type EventBucket struct {
 	Count          *int   `json:"count,omitempty"`
 }
 
-// ListEvents retrieves events filtered by source, inventory, event fields, and time range.
+// ListEvents combines /events/page and /events/count to retain the SDK's total.
+// SkipTotal omits the count request; Total is then unqueried and RawJSON contains
+// only the page response. Paired requests share time bounds, not a DB snapshot.
 func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsPage, error) {
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
@@ -181,13 +185,15 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 		return EventsPage{}, err
 	}
 
-	timeRange, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+	start, end, err := AbsoluteTimeRange(opts.Window, opts.StartTime, opts.EndTime)
 	if err != nil {
 		return EventsPage{}, err
 	}
+	opts.Window, opts.StartTime, opts.EndTime = "", start, end
+	timeRange := eventTimeRange{timeMode: eventTimeModeAbsolute, startTime: start, endTime: end}
 
-	mode := fleetapi.GetV1EventsParamsTimeMode(timeRange.timeMode)
-	params := fleetapi.GetV1EventsParams{
+	mode := fleetapi.GetV1EventsPageParamsTimeMode(timeRange.timeMode)
+	params := fleetapi.GetV1EventsPageParams{
 		NodeGroupIds:          optionalSlice(opts.NodeGroupIDs),
 		ComputeZoneIds:        optionalSlice(opts.ComputeZoneIDs),
 		ExcludeNodeGroupIds:   optionalSlice(opts.ExcludeNodeGroupIDs),
@@ -196,10 +202,10 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 		EventNames:            optionalSlice(opts.EventNames),
 		Severities:            optionalSlice(opts.Severities),
 		Components:            optionalSlice(opts.Components),
-		DataSources:           optionalEnumSlice[fleetapi.GetV1EventsParamsDataSources](opts.DataSources),
+		DataSources:           optionalEnumSlice[fleetapi.GetV1EventsPageParamsDataSources](opts.DataSources),
 		GpuTypes:              optionalSlice(opts.GPUTypes),
-		SortBy:                optionalEnum[fleetapi.GetV1EventsParamsSortBy](opts.SortBy),
-		SortOrder:             optionalEnum[fleetapi.GetV1EventsParamsSortOrder](opts.SortOrder),
+		SortBy:                optionalEnum[fleetapi.GetV1EventsPageParamsSortBy](opts.SortBy),
+		SortOrder:             optionalEnum[fleetapi.GetV1EventsPageParamsSortOrder](opts.SortOrder),
 		TimeMode:              &mode,
 		Window:                optionalString(timeRange.window),
 		StartTime:             optionalString(timeRange.startTime),
@@ -210,7 +216,7 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 		PageSize:              cloneInt(opts.PageSize),
 	}
 
-	resp, err := c.api.GetV1EventsWithResponse(ctx, &params)
+	resp, err := c.api.GetV1EventsPageWithResponse(ctx, &params)
 	if err != nil {
 		return EventsPage{}, err
 	}
@@ -218,16 +224,18 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 		return EventsPage{}, newAPIError(resp.StatusCode(), resp.Status(), resp.Body)
 	}
 
-	var data fleetapi.ModelsEventsResponse
+	var data fleetapi.ModelsEventsPageResponse
 	if err := json.Unmarshal(resp.Body, &data); err != nil {
 		return EventsPage{}, err
+	}
+	if data.HasMore == nil {
+		return EventsPage{}, fmt.Errorf("event page response is missing hasMore")
 	}
 
 	page := EventsPage{
 		HasMore:  boolValue(data.HasMore),
 		Page:     intValue(data.Page),
 		PageSize: intValue(data.PageSize),
-		Total:    intValue(data.Total),
 		RawJSON:  append([]byte(nil), resp.Body...),
 	}
 	if data.Events != nil {
@@ -236,7 +244,46 @@ func (c *Client) ListEvents(ctx context.Context, opts EventListOptions) (EventsP
 			page.Events = append(page.Events, eventFromGenerated(event))
 		}
 	}
+	if !opts.SkipTotal {
+		count, err := c.CountEvents(ctx, opts)
+		if err != nil {
+			return EventsPage{}, err
+		}
+		page.Total = count.Total
+		page.RawJSON, err = withExactTotal(page.RawJSON, count.Total)
+		if err != nil {
+			return EventsPage{}, err
+		}
+	}
 	return page, nil
+}
+
+// CountEvents returns the exact total for the supplied event filters, without rows.
+func (c *Client) CountEvents(ctx context.Context, opts EventListOptions) (CountResult, error) {
+	ctx, cancel := c.requestContext(ctx)
+	defer cancel()
+	if err := opts.Validate(); err != nil {
+		return CountResult{}, err
+	}
+	rangeInfo, err := normalizeEventTimeRange(opts.Window, opts.StartTime, opts.EndTime)
+	if err != nil {
+		return CountResult{}, err
+	}
+	params := fleetapi.GetV1EventsCountParams{
+		TimeMode: optionalEnum[fleetapi.GetV1EventsCountParamsTimeMode](rangeInfo.timeMode),
+		Window:   optionalString(rangeInfo.window), StartTime: optionalString(rangeInfo.startTime), EndTime: optionalString(rangeInfo.endTime),
+		NodeUUID: optionalTrimmedString(opts.NodeUUID), Component: optionalTrimmedString(opts.Component),
+		NodeGroupIds: optionalSlice(opts.NodeGroupIDs), ComputeZoneIds: optionalSlice(opts.ComputeZoneIDs),
+		ExcludeNodeGroupIds: optionalSlice(opts.ExcludeNodeGroupIDs), ExcludeComputeZoneIds: optionalSlice(opts.ExcludeComputeZoneIDs),
+		NameSearch: optionalTrimmedString(opts.NameSearch), EventNames: optionalSlice(opts.EventNames),
+		Severities: optionalSlice(opts.Severities), Components: optionalSlice(opts.Components),
+		DataSources: optionalEnumSlice[fleetapi.GetV1EventsCountParamsDataSources](opts.DataSources), GpuTypes: optionalSlice(opts.GPUTypes),
+	}
+	resp, err := c.api.GetV1EventsCountWithResponse(ctx, &params)
+	if err != nil {
+		return CountResult{}, err
+	}
+	return decodeCount(resp.StatusCode(), resp.Status(), resp.Body)
 }
 
 // GetEventBuckets retrieves time-bucketed event counts for histogram display
