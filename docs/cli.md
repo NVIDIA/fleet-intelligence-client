@@ -240,9 +240,6 @@ nor can inclusion and exclusion filters for the same group/zone dimension.
 filters, so an option may have no matching events. The `Others` event name
 matches names outside the catalog; GPU types reflect current node inventory.
 
-Relative windows are fixed to absolute bounds for event and XID list operations.
-Separate requests, including pages fetched with `--all`, are not an atomic snapshot.
-
 Use `event list --count-only` or `xidburst list --count-only` for only a matching
 total, using one count request without fetching rows. This mode cannot be combined
 with `--all`, `--page`, `--page-size`, `--sort-by`, or `--order`.
