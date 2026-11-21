@@ -332,15 +332,22 @@ func (d *retryingDoer) Do(req *http.Request) (*http.Response, error) {
 			return response, err
 		}
 
+		delay := defaultRetryDelay(attempt, response)
+		if d.delay != nil {
+			delay = d.delay(attempt, response)
+		}
+		// A wait that outlasts the request deadline can never end in a retry.
+		// Return this failure now rather than sleeping until the deadline and
+		// reporting a timeout in place of the server's answer.
+		if deadline, ok := req.Context().Deadline(); ok && time.Until(deadline) <= delay {
+			return response, err
+		}
+
 		if response != nil && response.Body != nil {
 			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4<<10))
 			_ = response.Body.Close()
 		}
 
-		delay := defaultRetryDelay(attempt, response)
-		if d.delay != nil {
-			delay = d.delay(attempt, response)
-		}
 		wait := waitForRetry
 		if d.wait != nil {
 			wait = d.wait

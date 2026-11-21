@@ -266,6 +266,66 @@ func TestRetryingDoerDoesNotRetryPermanentStatus(t *testing.T) {
 	}
 }
 
+// Verifies a retry delay that would outlast the request deadline returns the
+// transient response at once, with its body intact, instead of waiting until
+// the deadline and reporting a timeout in place of the server's answer. A delay
+// that fits in the remaining time still retries.
+func TestRetryingDoerReturnsResponseWhenDelayExceedsDeadline(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		retryAfter string
+		wantCalls  int32
+		wantWaits  int32
+	}{
+		{name: "delay past deadline", retryAfter: "3600", wantCalls: 1, wantWaits: 0},
+		{name: "delay within deadline", retryAfter: "1", wantCalls: defaultRequestAttempts, wantWaits: defaultRequestAttempts - 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls, waits atomic.Int32
+			inner := &http.Client{Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+				calls.Add(1)
+				return &http.Response{
+					StatusCode: http.StatusServiceUnavailable,
+					Header:     http.Header{"Retry-After": []string{tt.retryAfter}},
+					Body:       io.NopCloser(bytes.NewBufferString("maintenance")),
+					Request:    req,
+				}, nil
+			})}
+			doer := &retryingDoer{
+				inner:       inner,
+				maxAttempts: defaultRequestAttempts,
+				wait: func(context.Context, time.Duration) error {
+					waits.Add(1)
+					return nil
+				},
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com/v1/nodes", nil)
+			if err != nil {
+				t.Fatalf("build request: %v", err)
+			}
+			response, err := doer.Do(req)
+			if err != nil {
+				t.Fatalf("request failed: %v", err)
+			}
+			defer response.Body.Close()
+			body, err := io.ReadAll(response.Body)
+			if err != nil {
+				t.Fatalf("read body: %v", err)
+			}
+			if response.StatusCode != http.StatusServiceUnavailable || string(body) != "maintenance" {
+				t.Fatalf("unexpected response: %d %q", response.StatusCode, body)
+			}
+			if calls.Load() != tt.wantCalls || waits.Load() != tt.wantWaits {
+				t.Fatalf("unexpected calls/waits: got %d/%d want %d/%d",
+					calls.Load(), waits.Load(), tt.wantCalls, tt.wantWaits)
+			}
+		})
+	}
+}
+
 // Verifies Retry-After supports both seconds and HTTP-date forms.
 func TestResponseRetryAfter(t *testing.T) {
 	now := time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
