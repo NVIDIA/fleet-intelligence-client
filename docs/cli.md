@@ -128,10 +128,10 @@ nvfleetint event options
 nvfleetint event list --window 24h
 nvfleetint event buckets --window 24h
 nvfleetint event count --window 24h
-nvfleetint xidburst count --window 24h
 
 # XID bursts
 nvfleetint xidburst list --window 24h
+nvfleetint xidburst count --window 24h
 nvfleetint xidburst list --window 168h --xid-numbers 48,94 --job-disruption
 nvfleetint xidburst list --window 24h --exclude-nodegroup-ids ng-1,ng-2
 nvfleetint xidburst describe <burst-id>
@@ -240,16 +240,12 @@ nor can inclusion and exclusion filters for the same group/zone dimension.
 filters, so an option may have no matching events. The `Others` event name
 matches names outside the catalog; GPU types reflect current node inventory.
 
-Event and XID list commands use separate page/count APIs and retain their total
-and pagination output. `--all` follows `hasMore` and counts once after fetching
-all pages. Relative windows are fixed to absolute bounds for the operation;
-the requests still do not represent an atomic snapshot.
+Relative windows are fixed to absolute bounds for event and XID list operations.
+Separate requests, including pages fetched with `--all`, are not an atomic snapshot.
 
 Use `event count` or `xidburst count` for only a matching total. These do not
-accept sorting or pagination flags; those belong to the list commands. Counts do not
-replace `event buckets`, which groups event counts into time intervals for a
-histogram. Buckets remains supported by this client pending its retirement
-decision and requires a backend/access policy that still permits that endpoint.
+accept sorting or pagination flags; those belong to the list commands.
+`event buckets` instead groups counts into time intervals for a histogram.
 
 `xidburst list` requires a time range (`--window`, or `--start` and `--end`),
 which applies to each burst's start time. Some of its filters and response
