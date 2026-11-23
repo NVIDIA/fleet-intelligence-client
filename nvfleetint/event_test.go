@@ -14,7 +14,12 @@ import (
 // Verifies event list request construction and decoding in absolute mode
 func TestListEventsAbsoluteSendsParamsAndDecodes(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/events" {
+		if r.URL.Path == "/v1/events/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":1}`))
+			return
+		}
+		if r.URL.Path != "/v1/events/page" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
@@ -79,14 +84,19 @@ func TestListEventsAbsoluteSendsParamsAndDecodes(t *testing.T) {
 // Verifies a relative window sets relative mode and omits start/end
 func TestListEventsRelativeWindow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/events/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":0}`))
+			return
+		}
 		query := r.URL.Query()
-		if got := query.Get("timeMode"); got != "relative" {
+		if got := query.Get("timeMode"); got != "absolute" {
 			t.Fatalf("unexpected timeMode: %q", got)
 		}
-		if got := query.Get("window"); got != "24h" {
+		if got := query.Get("window"); got != "" {
 			t.Fatalf("unexpected window: %q", got)
 		}
-		if query.Has("startTime") || query.Has("endTime") {
+		if !query.Has("startTime") || !query.Has("endTime") {
 			t.Fatalf("did not expect start/end in relative mode: %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")

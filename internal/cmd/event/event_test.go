@@ -46,7 +46,12 @@ func TestEventListTableAbsolute(t *testing.T) {
 	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/events" {
+		if r.URL.Path == "/v1/events/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":1}`))
+			return
+		}
+		if r.URL.Path != "/v1/events/page" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		query := r.URL.Query()
@@ -101,7 +106,12 @@ func TestEventListJSON(t *testing.T) {
 
 	want := `{"events":[{"eventId":"e1","nodeUUID":"node-1","component":"GPU","type":"error","name":"xid","message":"boom","timestamp":"2026-05-01T00:00:00.999999Z","createdAt":"2026-05-01T00:00:05Z","suggestedActions":[{"action":"reboot node","code":"R1"}]}],"hasMore":false,"page":1,"pageSize":50,"total":1}`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("window"); got != "24h" {
+		if r.URL.Path == "/v1/events/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":1}`))
+			return
+		}
+		if got := r.URL.Query().Get("window"); got != "" {
 			t.Fatalf("unexpected window: %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")

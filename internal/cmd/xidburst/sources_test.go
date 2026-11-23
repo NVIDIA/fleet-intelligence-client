@@ -31,7 +31,7 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 						if q.Get("dataSource") != source || q.Has("dataSource") != (source != "") {
 							t.Errorf("source query=%v", q)
 						}
-						if q.Get("window") != "24h" || q.Get("timeMode") != "relative" || !reflect.DeepEqual(q["nodeGroupIds"], []string{"ng1", "ng2"}) {
+						if !reflect.DeepEqual(q["nodeGroupIds"], []string{"ng1", "ng2"}) {
 							t.Errorf("scope=%v", q)
 						}
 						echo := source
@@ -42,7 +42,14 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 							fmt.Fprintf(w, `{"dataSource":%q,"gpuTypes":["H100","B200"],"xidNumbers":[48]}`, echo)
 							return
 						}
-						if r.URL.Path != "/v1/xid/bursts" || q.Get("sortBy") != "dataSource" || q.Get("sortOrder") != "asc" || q.Get("nameSearch") != "bmc" || q.Has("hostnameSearch") || !reflect.DeepEqual(q["gpuTypes"], []string{"H100", "B200"}) {
+						if q.Get("timeMode") != "absolute" || q.Get("startTime") == "" || q.Get("endTime") == "" {
+							t.Error("missing fixed time bounds")
+						}
+						if r.URL.Path == "/v1/xid/bursts/count" {
+							_, _ = w.Write([]byte(`{"total":2}`))
+							return
+						}
+						if r.URL.Path != "/v1/xid/bursts/page" || q.Get("sortBy") != "dataSource" || q.Get("sortOrder") != "asc" || q.Get("nameSearch") != "bmc" || q.Has("hostnameSearch") || !reflect.DeepEqual(q["gpuTypes"], []string{"H100", "B200"}) {
 							t.Errorf("list request=%s", r.URL)
 						}
 						if allPages && q.Get("page") != fmt.Sprint(calls) {
@@ -51,7 +58,7 @@ func TestXIDBurstSourceListAndOptions(t *testing.T) {
 						if echo == "all" {
 							echo = []string{"inband", "oob"}[calls]
 						}
-						fmt.Fprintf(w, `{"items":[{"burstId":"b%d","nodeUuid":"same-node","dataSource":%q,"nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100"}],"page":%d,"pageSize":1,"total":2}`, calls, echo, calls)
+						fmt.Fprintf(w, `{"items":[{"burstId":"b%d","nodeUuid":"same-node","dataSource":%q,"nodeName":"machine-1","bmcMac":"bmc-1","gpuType":"H100"}],"page":%d,"pageSize":1,"hasMore":%t}`, calls, echo, calls, calls == 0)
 						calls++
 					}))
 					defer server.Close()

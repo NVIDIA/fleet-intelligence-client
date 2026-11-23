@@ -127,6 +127,20 @@ func ValidateListFlags(flags Resolved) error {
 	return ValidateReadFlags(flags)
 }
 
+// ValidateCountOnlyFlags rejects explicitly supplied row-oriented flags before
+// credential resolution. An explicit --count-only=false keeps normal list mode.
+func ValidateCountOnlyFlags(cmd *cobra.Command, countOnly bool) error {
+	if !countOnly {
+		return nil
+	}
+	for _, flag := range []string{"all", "page", "page-size", "sort-by", "order"} {
+		if cmd.Flags().Changed(flag) {
+			return fmt.Errorf("--count-only cannot be used with --%s", flag)
+		}
+	}
+	return nil
+}
+
 // ValidateReadFlags checks common flags for non-paginated read commands.
 func ValidateReadFlags(flags Resolved) error {
 	if !clioutput.IsValidFormat(flags.Output) {

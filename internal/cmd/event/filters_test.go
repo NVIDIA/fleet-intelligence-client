@@ -38,7 +38,7 @@ func TestEventFilterCommands(t *testing.T) {
 								t.Errorf("%s=%v; want %v", key, q[key], want)
 							}
 						}
-						if q.Get("window") != "24h" {
+						if endpoint == "buckets" && q.Get("window") != "24h" {
 							t.Errorf("window=%v", q)
 						}
 						w.Header().Set("Content-Type", "application/json")
@@ -48,7 +48,14 @@ func TestEventFilterCommands(t *testing.T) {
 							}
 							_, _ = w.Write([]byte(`{"bucketInterval":"1h","buckets":[{"count":2}]}`))
 						} else {
-							if r.URL.Path != "/v1/events" || q.Get("sortBy") != "bmcMac" || q.Get("sortOrder") != "asc" {
+							if r.URL.Path == "/v1/events/count" {
+								_, _ = w.Write([]byte(`{"total":2}`))
+								return
+							}
+							if q.Get("timeMode") != "absolute" || q.Get("startTime") == "" || q.Get("endTime") == "" {
+								t.Error("missing fixed time bounds")
+							}
+							if r.URL.Path != "/v1/events/page" || q.Get("sortBy") != "bmcMac" || q.Get("sortOrder") != "asc" {
 								t.Errorf("unexpected URL %s", r.URL)
 							}
 							if all && q.Get("page") != fmt.Sprint(calls) {

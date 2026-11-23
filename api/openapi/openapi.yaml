@@ -9,6 +9,936 @@ externalDocs:
   url: /fleet-intelligence/public/openapi.json
 openapi: 3.1.0
 paths:
+  /v1/events/page:
+    get:
+      description: Uses the same filters and sorting as GET /v1/events, but returns
+        rows and hasMore without waiting for the exact count. Request GET /v1/events/count
+        separately with the same absolute time bounds and filters when the UI needs
+        the Results number. Separate requests are not an atomic snapshot.
+      operationId: getV1EventsPage
+      parameters:
+      - description: Absolute start time in RFC3339 format
+        in: query
+        name: startTime
+        schema:
+          type: string
+      - description: Absolute end time in RFC3339 format
+        in: query
+        name: endTime
+        schema:
+          type: string
+      - description: Time mode
+        in: query
+        name: timeMode
+        schema:
+          enum:
+          - absolute
+          - relative
+          type: string
+      - description: Relative duration window; use absolute times for matching page
+          and count
+        in: query
+        name: window
+        schema:
+          type: string
+      - description: Canonical node UUID
+        in: query
+        name: nodeUUID
+        schema:
+          type: string
+      - description: Legacy singular component; cannot combine with components
+        in: query
+        name: component
+        schema:
+          type: string
+      - description: Node group IDs
+        in: query
+        name: nodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Compute zone IDs
+        in: query
+        name: computeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Excluded node group IDs
+        in: query
+        name: excludeNodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Excluded compute zone IDs
+        in: query
+        name: excludeComputeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Case-insensitive node identity search
+        in: query
+        name: nameSearch
+        schema:
+          type: string
+      - description: Event names
+        in: query
+        name: eventNames
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Severities
+        in: query
+        name: severities
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Components
+        in: query
+        name: components
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Data sources
+        in: query
+        name: dataSources
+        schema:
+          items:
+            enum:
+            - inband
+            - oob
+            type: string
+          type: array
+      - description: Resolved node GPU types
+        in: query
+        name: gpuTypes
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Sortable column
+        in: query
+        name: sortBy
+        schema:
+          default: timestamp
+          enum:
+          - timestamp
+          - eventName
+          - severity
+          - component
+          - gpuType
+          - hostname
+          - nodeName
+          - bmcMac
+          - nodeUUID
+          - nodeGroup
+          - computeZone
+          type: string
+      - description: Sort direction
+        in: query
+        name: sortOrder
+        schema:
+          default: desc
+          enum:
+          - asc
+          - desc
+          type: string
+      - description: Zero-indexed page
+        in: query
+        name: page
+        schema:
+          default: 0
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          default: 50
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.EventsPageResponse'
+          description: Events without exact total
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Get an event page without an exact count
+      tags:
+      - events
+  /v1/events/count:
+    get:
+      description: Counts events matching the same filters as GET /v1/events. Use
+        identical absolute time bounds and filters when pairing with GET /v1/events/page;
+        the requests are not an atomic snapshot. Pagination and sorting parameters
+        are accepted but do not affect the total.
+      operationId: getV1EventsCount
+      parameters:
+      - description: Absolute start time in RFC3339 format
+        in: query
+        name: startTime
+        schema:
+          type: string
+      - description: Absolute end time in RFC3339 format
+        in: query
+        name: endTime
+        schema:
+          type: string
+      - description: Time mode
+        in: query
+        name: timeMode
+        schema:
+          enum:
+          - absolute
+          - relative
+          type: string
+      - description: Relative duration window; use absolute times for matching page
+          and count
+        in: query
+        name: window
+        schema:
+          type: string
+      - description: Canonical node UUID
+        in: query
+        name: nodeUUID
+        schema:
+          type: string
+      - description: Legacy singular component; cannot combine with components
+        in: query
+        name: component
+        schema:
+          type: string
+      - description: Node group IDs
+        in: query
+        name: nodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Compute zone IDs
+        in: query
+        name: computeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Excluded node group IDs
+        in: query
+        name: excludeNodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Excluded compute zone IDs
+        in: query
+        name: excludeComputeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Case-insensitive node identity search
+        in: query
+        name: nameSearch
+        schema:
+          type: string
+      - description: Event names
+        in: query
+        name: eventNames
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Severities
+        in: query
+        name: severities
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Components
+        in: query
+        name: components
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Data sources
+        in: query
+        name: dataSources
+        schema:
+          items:
+            enum:
+            - inband
+            - oob
+            type: string
+          type: array
+      - description: Resolved node GPU types
+        in: query
+        name: gpuTypes
+        schema:
+          items:
+            type: string
+          type: array
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.EventsCountResponse'
+          description: Exact count
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Service Unavailable
+      summary: Count events exactly
+      tags:
+      - events
+  /v1/xid/bursts/page:
+    get:
+      description: Returns items and hasMore without an exact total. Pair with GET
+        /v1/xid/bursts/count using identical absolute time bounds and filters; separate
+        requests are not an atomic snapshot.
+      operationId: getV1XIDBurstPage
+      parameters:
+      - description: Observation source to list bursts from, or all for both
+        in: query
+        name: dataSource
+        schema:
+          default: inband
+          enum:
+          - inband
+          - oob
+          - all
+          type: string
+      - description: Start time in RFC3339 format (required for absolute mode, e.g.
+          2024-01-01T01:00:00Z).
+        in: query
+        name: startTime
+        schema:
+          type: string
+      - description: End time in RFC3339 format (required for absolute mode). Must
+          be after startTime.
+        in: query
+        name: endTime
+        schema:
+          type: string
+      - description: Time mode for range selection. Defaults to absolute.
+        in: query
+        name: timeMode
+        schema:
+          enum:
+          - absolute
+          - relative
+          type: string
+      - description: Relative duration window (required for relative mode). Uses Go
+          duration units h, m, and s; use 168h for 7 days ('d' is not supported)
+        in: query
+        name: window
+        schema:
+          type: string
+      - description: Filter by node UUID
+        in: query
+        name: nodeUUID
+        schema:
+          type: string
+      - description: Filter to nodes in matching node groups by node group ID (OR
+          within dimension)
+        in: query
+        name: nodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Filter to nodes in matching compute zones by compute zone ID
+          (OR within dimension)
+        in: query
+        name: computeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exclude nodes in matching node groups by node group ID (OR within
+          dimension; cannot be combined with nodeGroupIds)
+        in: query
+        name: excludeNodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exclude nodes in matching compute zones by compute zone ID (OR
+          within dimension; cannot be combined with computeZoneIds)
+        in: query
+        name: excludeComputeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Filter by the public fatal-XID job-disruption definition
+        in: query
+        name: jobDisruption
+        schema:
+          type: boolean
+      - description: Filter by analyzer platform-attributed disruption (cloud-provider/NCP
+          only)
+        in: query
+        name: jobDisruptionDueToPlatformIssue
+        schema:
+          type: boolean
+      - description: Exact XID numbers; burst matches if it contains any of them (OR
+          semantics)
+        in: query
+        name: xidNumbers
+        schema:
+          items:
+            type: integer
+          type: array
+      - description: Resolved node GPU types; independent of dataSource
+        in: query
+        name: gpuTypes
+        schema:
+          items:
+            type: string
+          type: array
+      - description: 'Case-insensitive substring matched against any of the node''s
+          identities: hostname, nodeName, or bmcMac. Takes precedence when both nameSearch
+          and deprecated hostnameSearch are supplied.'
+        in: query
+        name: nameSearch
+        schema:
+          type: string
+      - description: 'Deprecated: use nameSearch. Identical behavior; it never matched
+          hostname alone.'
+        in: query
+        name: hostnameSearch
+        schema:
+          type: string
+        deprecated: true
+      - description: Case-insensitive category substring (cloud-provider/NCP only)
+        in: query
+        name: categorySearch
+        schema:
+          type: string
+      - description: Case-insensitive subcategory substring (cloud-provider/NCP only)
+        in: query
+        name: subcategorySearch
+        schema:
+          type: string
+      - description: Case-insensitive tenant immediate-action code substring
+        in: query
+        name: tenantActionSearch
+        schema:
+          type: string
+      - description: Case-insensitive tenant investigatory-action code substring
+        in: query
+        name: tenantInvestigationSearch
+        schema:
+          type: string
+      - description: Case-insensitive DC-admin immediate-action code substring (cloud-provider/NCP
+          only)
+        in: query
+        name: dcAdminActionSearch
+        schema:
+          type: string
+      - description: Case-insensitive DC-admin investigatory-action code substring
+          (cloud-provider/NCP only)
+        in: query
+        name: dcAdminInvestigationSearch
+        schema:
+          type: string
+      - description: Exact category values from GET /v1/xid/bursts/options; OR-combined
+          (cloud-provider/NCP only)
+        in: query
+        name: categories
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact subcategory values from GET /v1/xid/bursts/options; OR-combined
+          (cloud-provider/NCP only)
+        in: query
+        name: subcategories
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact tenant immediate-action codes from GET /v1/xid/bursts/options;
+          OR-combined
+        in: query
+        name: tenantActions
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact tenant investigatory-action codes from GET /v1/xid/bursts/options;
+          OR-combined
+        in: query
+        name: tenantInvestigations
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact DC-admin immediate-action codes from GET /v1/xid/bursts/options;
+          OR-combined (cloud-provider/NCP only)
+        in: query
+        name: dcAdminActions
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact DC-admin investigatory-action codes from GET /v1/xid/bursts/options;
+          OR-combined (cloud-provider/NCP only)
+        in: query
+        name: dcAdminInvestigations
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Sortable table column (cloud-provider/NCP only for jobDisruptionDueToPlatformIssue,
+          category, subcategory, dcAdminAction, dcAdminInvestigation)
+        in: query
+        name: sortBy
+        schema:
+          default: startTime
+          enum:
+          - jobDisruption
+          - jobDisruptionDueToPlatformIssue
+          - category
+          - subcategory
+          - xidNumbers
+          - xidCount
+          - burstDurationSeconds
+          - nodeUuid
+          - dataSource
+          - hostname
+          - nodeName
+          - bmcMac
+          - gpuType
+          - nodeGroup
+          - computeZone
+          - startTime
+          - dcAdminAction
+          - dcAdminInvestigation
+          - tenantAction
+          - tenantInvestigation
+          type: string
+      - description: Sort direction
+        in: query
+        name: sortOrder
+        schema:
+          default: desc
+          enum:
+          - asc
+          - desc
+          type: string
+      - description: Page number (0-indexed)
+        in: query
+        name: page
+        schema:
+          default: 0
+          type: integer
+      - description: Page size (1-100)
+        in: query
+        name: pageSize
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.XIDBurstsPageResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid filter, time range, sort, or pagination
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied or NCP-only filter requested
+            by tenant
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Get a page of finalized XID bursts
+      tags:
+      - xid
+  /v1/xid/bursts/count:
+    get:
+      description: Returns the exact total matching the list filters. Pagination and
+        sorting are validated but do not affect the total. Pair with GET /v1/xid/bursts/page
+        using identical absolute time bounds and filters; separate requests are not
+        an atomic snapshot.
+      operationId: getV1XIDBurstCount
+      parameters:
+      - description: Observation source to list bursts from, or all for both
+        in: query
+        name: dataSource
+        schema:
+          default: inband
+          enum:
+          - inband
+          - oob
+          - all
+          type: string
+      - description: Start time in RFC3339 format (required for absolute mode, e.g.
+          2024-01-01T01:00:00Z).
+        in: query
+        name: startTime
+        schema:
+          type: string
+      - description: End time in RFC3339 format (required for absolute mode). Must
+          be after startTime.
+        in: query
+        name: endTime
+        schema:
+          type: string
+      - description: Time mode for range selection. Defaults to absolute.
+        in: query
+        name: timeMode
+        schema:
+          enum:
+          - absolute
+          - relative
+          type: string
+      - description: Relative duration window (required for relative mode). Uses Go
+          duration units h, m, and s; use 168h for 7 days ('d' is not supported)
+        in: query
+        name: window
+        schema:
+          type: string
+      - description: Filter by node UUID
+        in: query
+        name: nodeUUID
+        schema:
+          type: string
+      - description: Filter to nodes in matching node groups by node group ID (OR
+          within dimension)
+        in: query
+        name: nodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Filter to nodes in matching compute zones by compute zone ID
+          (OR within dimension)
+        in: query
+        name: computeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exclude nodes in matching node groups by node group ID (OR within
+          dimension; cannot be combined with nodeGroupIds)
+        in: query
+        name: excludeNodeGroupIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exclude nodes in matching compute zones by compute zone ID (OR
+          within dimension; cannot be combined with computeZoneIds)
+        in: query
+        name: excludeComputeZoneIds
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Filter by the public fatal-XID job-disruption definition
+        in: query
+        name: jobDisruption
+        schema:
+          type: boolean
+      - description: Filter by analyzer platform-attributed disruption (cloud-provider/NCP
+          only)
+        in: query
+        name: jobDisruptionDueToPlatformIssue
+        schema:
+          type: boolean
+      - description: Exact XID numbers; burst matches if it contains any of them (OR
+          semantics)
+        in: query
+        name: xidNumbers
+        schema:
+          items:
+            type: integer
+          type: array
+      - description: Resolved node GPU types; independent of dataSource
+        in: query
+        name: gpuTypes
+        schema:
+          items:
+            type: string
+          type: array
+      - description: 'Case-insensitive substring matched against any of the node''s
+          identities: hostname, nodeName, or bmcMac. Takes precedence when both nameSearch
+          and deprecated hostnameSearch are supplied.'
+        in: query
+        name: nameSearch
+        schema:
+          type: string
+      - description: 'Deprecated: use nameSearch. Identical behavior; it never matched
+          hostname alone.'
+        in: query
+        name: hostnameSearch
+        schema:
+          type: string
+        deprecated: true
+      - description: Case-insensitive category substring (cloud-provider/NCP only)
+        in: query
+        name: categorySearch
+        schema:
+          type: string
+      - description: Case-insensitive subcategory substring (cloud-provider/NCP only)
+        in: query
+        name: subcategorySearch
+        schema:
+          type: string
+      - description: Case-insensitive tenant immediate-action code substring
+        in: query
+        name: tenantActionSearch
+        schema:
+          type: string
+      - description: Case-insensitive tenant investigatory-action code substring
+        in: query
+        name: tenantInvestigationSearch
+        schema:
+          type: string
+      - description: Case-insensitive DC-admin immediate-action code substring (cloud-provider/NCP
+          only)
+        in: query
+        name: dcAdminActionSearch
+        schema:
+          type: string
+      - description: Case-insensitive DC-admin investigatory-action code substring
+          (cloud-provider/NCP only)
+        in: query
+        name: dcAdminInvestigationSearch
+        schema:
+          type: string
+      - description: Exact category values from GET /v1/xid/bursts/options; OR-combined
+          (cloud-provider/NCP only)
+        in: query
+        name: categories
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact subcategory values from GET /v1/xid/bursts/options; OR-combined
+          (cloud-provider/NCP only)
+        in: query
+        name: subcategories
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact tenant immediate-action codes from GET /v1/xid/bursts/options;
+          OR-combined
+        in: query
+        name: tenantActions
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact tenant investigatory-action codes from GET /v1/xid/bursts/options;
+          OR-combined
+        in: query
+        name: tenantInvestigations
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact DC-admin immediate-action codes from GET /v1/xid/bursts/options;
+          OR-combined (cloud-provider/NCP only)
+        in: query
+        name: dcAdminActions
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Exact DC-admin investigatory-action codes from GET /v1/xid/bursts/options;
+          OR-combined (cloud-provider/NCP only)
+        in: query
+        name: dcAdminInvestigations
+        schema:
+          items:
+            type: string
+          type: array
+      - description: Sortable table column (cloud-provider/NCP only for jobDisruptionDueToPlatformIssue,
+          category, subcategory, dcAdminAction, dcAdminInvestigation)
+        in: query
+        name: sortBy
+        schema:
+          default: startTime
+          enum:
+          - jobDisruption
+          - jobDisruptionDueToPlatformIssue
+          - category
+          - subcategory
+          - xidNumbers
+          - xidCount
+          - burstDurationSeconds
+          - nodeUuid
+          - dataSource
+          - hostname
+          - nodeName
+          - bmcMac
+          - gpuType
+          - nodeGroup
+          - computeZone
+          - startTime
+          - dcAdminAction
+          - dcAdminInvestigation
+          - tenantAction
+          - tenantInvestigation
+          type: string
+      - description: Sort direction
+        in: query
+        name: sortOrder
+        schema:
+          default: desc
+          enum:
+          - asc
+          - desc
+          type: string
+      - description: Page number (0-indexed)
+        in: query
+        name: page
+        schema:
+          default: 0
+          type: integer
+      - description: Page size (1-100)
+        in: query
+        name: pageSize
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.XIDBurstsCountResponse'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Invalid filter, time range, sort, or pagination
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Forbidden - UAM authorization denied or NCP-only filter requested
+            by tenant
+        '499':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Client Closed Request - request was canceled by the client
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorResponse'
+          description: Internal Server Error
+      summary: Count finalized XID bursts
+      tags:
+      - xid
   /.well-known/signing-key.pub:
     get:
       description: Returns NVIDIA's currently-active public key for verifying signed
@@ -5676,6 +6606,52 @@ paths:
         - v2/metrics
 components:
   schemas:
+    models.EventsPageResponse:
+      properties:
+        events:
+          items:
+            $ref: '#/components/schemas/models.Event'
+          type: array
+          uniqueItems: false
+        hasMore:
+          example: true
+          type: boolean
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 50
+          type: integer
+      type: object
+    models.EventsCountResponse:
+      properties:
+        total:
+          example: 100
+          type: integer
+      type: object
+    models.XIDBurstsPageResponse:
+      properties:
+        hasMore:
+          example: true
+          type: boolean
+        items:
+          items:
+            $ref: '#/components/schemas/models.XIDBurstListItem'
+          type: array
+          uniqueItems: false
+        page:
+          example: 0
+          type: integer
+        pageSize:
+          example: 20
+          type: integer
+      type: object
+    models.XIDBurstsCountResponse:
+      properties:
+        total:
+          example: 200
+          type: integer
+      type: object
     models.ActionPersona:
       description: Target persona; omitted when an endpoint has already reduced actions
         to one persona

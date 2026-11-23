@@ -26,3 +26,6 @@ make generate
 
 Keep the generated client private to this repository. Public SDK types and
 methods should be exposed through `nvfleetint`.
+
+Event and XID list commands require the configured API to support their
+corresponding page and count endpoints.

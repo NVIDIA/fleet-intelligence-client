@@ -38,7 +38,7 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
-const xidBurstsBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostname":"gpu-01","nodeGroup":"ng","nodeGroupId":"ng-1","computeZone":"cz","computeZoneId":"cz-1","startTime":"2026-05-01T00:00:00Z","endTime":"2026-05-01T00:05:00Z","burstDurationSeconds":300,"xidCount":2,"xidNumbers":[{"xidNumber":48,"mnemonic":"DBE","description":"Double Bit ECC"},{"xidNumber":94,"mnemonic":"CE"}],"deviceIds":{"0000:0f:00.0":[48,94]},"jobDisruption":true,"category":"GPU","subcategory":"Memory","stickyXidsSuppressed":1,"suggestedActions":[{"action":"Drain the node","code":"DRAIN","persona":"tenant","type":"immediate"}]}],"page":0,"pageSize":20,"total":1}`
+const xidBurstsBody = `{"items":[{"burstId":"burst-1","nodeUuid":"node-1","hostname":"gpu-01","nodeGroup":"ng","nodeGroupId":"ng-1","computeZone":"cz","computeZoneId":"cz-1","startTime":"2026-05-01T00:00:00Z","endTime":"2026-05-01T00:05:00Z","burstDurationSeconds":300,"xidCount":2,"xidNumbers":[{"xidNumber":48,"mnemonic":"DBE","description":"Double Bit ECC"},{"xidNumber":94,"mnemonic":"CE"}],"deviceIds":{"0000:0f:00.0":[48,94]},"jobDisruption":true,"category":"GPU","subcategory":"Memory","stickyXidsSuppressed":1,"suggestedActions":[{"action":"Drain the node","code":"DRAIN","persona":"tenant","type":"immediate"}]}],"page":0,"pageSize":20,"total":1,"hasMore":false}`
 
 // Verifies xidburst list table output and filter translation
 func TestXIDBurstListTable(t *testing.T) {
@@ -46,14 +46,19 @@ func TestXIDBurstListTable(t *testing.T) {
 	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/xid/bursts" {
+		if r.URL.Path == "/v1/xid/bursts/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":1}`))
+			return
+		}
+		if r.URL.Path != "/v1/xid/bursts/page" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		query := r.URL.Query()
-		if got := query.Get("timeMode"); got != "relative" {
+		if got := query.Get("timeMode"); got != "absolute" {
 			t.Fatalf("unexpected timeMode: %q", got)
 		}
-		if got := query.Get("window"); got != "24h" {
+		if got := query.Get("window"); got != "" {
 			t.Fatalf("unexpected window: %q", got)
 		}
 		if got := query["xidNumbers"]; len(got) != 2 || got[0] != "48" || got[1] != "94" {
@@ -154,6 +159,11 @@ func TestXIDBurstListExclusionFlags(t *testing.T) {
 
 	var query url.Values
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/xid/bursts/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":1}`))
+			return
+		}
 		query = r.URL.Query()
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(xidBurstsBody))
@@ -331,14 +341,19 @@ func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
 
 	pages := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/xid/bursts/count" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"total":2}`))
+			return
+		}
 		page := r.URL.Query().Get("page")
 		pages++
 		w.Header().Set("Content-Type", "application/json")
 		switch page {
 		case "0":
-			_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-1"}],"page":0,"pageSize":1,"total":2}`))
+			_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-1"}],"page":0,"pageSize":1,"total":2,"hasMore":true}`))
 		case "1":
-			_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-2"}],"page":1,"pageSize":1,"total":2}`))
+			_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-2"}],"page":1,"pageSize":1,"total":2,"hasMore":false}`))
 		default:
 			t.Fatalf("unexpected page: %q", page)
 		}
