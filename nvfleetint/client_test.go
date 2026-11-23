@@ -732,7 +732,7 @@ func TestEventResponseBoundaries(t *testing.T) {
 		zero any
 		call func(context.Context, *Client) (any, error)
 	}{
-		{"list", "/v1/events", EventsPage{}, func(ctx context.Context, c *Client) (any, error) {
+		{"list", "/v1/events/page", EventsPage{}, func(ctx context.Context, c *Client) (any, error) {
 			return c.ListEvents(ctx, EventListOptions{Window: "24h"})
 		}},
 		{"buckets", "/v1/events/buckets", EventBuckets{}, func(ctx context.Context, c *Client) (any, error) {
@@ -2213,7 +2213,7 @@ type xidFailureEndpoint struct {
 
 func xidFailureEndpoints() []xidFailureEndpoint {
 	return []xidFailureEndpoint{
-		{name: "list", path: "/v1/xid/bursts", zero: XIDBurstsPage{}, call: func(c *Client) (any, error) {
+		{name: "list", path: "/v1/xid/bursts/page", zero: XIDBurstsPage{}, call: func(c *Client) (any, error) {
 			return c.ListXIDBursts(context.Background(), ListXIDBurstsOptions{Window: "24h"})
 		}},
 		{name: "detail", path: "/v1/xid/bursts/burst-1", zero: XIDBurstDetails{}, call: func(c *Client) (any, error) {

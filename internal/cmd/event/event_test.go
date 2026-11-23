@@ -301,8 +301,8 @@ func TestEventCommandErrors(t *testing.T) {
 		path string
 		all  bool
 	}{
-		{name: "list", args: []string{"event", "list", "--window", "24h"}, path: "/v1/events"},
-		{name: "list all", args: []string{"event", "list", "--window", "24h", "--all", "--page-size", "1", "--output", "json"}, path: "/v1/events", all: true},
+		{name: "list", args: []string{"event", "list", "--window", "24h"}, path: "/v1/events/page"},
+		{name: "list all", args: []string{"event", "list", "--window", "24h", "--all", "--page-size", "1", "--output", "json"}, path: "/v1/events/page", all: true},
 		{name: "buckets", args: []string{"event", "buckets", "--window", "24h"}, path: "/v1/events/buckets"},
 		{name: "options", args: []string{"event", "options"}, path: "/v1/events/options"},
 	}
@@ -451,7 +451,7 @@ func (w *eventFailingWriter) Write(p []byte) (int, error) {
 func TestEventTableWriteErrors(t *testing.T) {
 	sentinel := errors.New("injected write failure")
 	count := 3
-	preamble := "Filters for 'event list' and 'event buckets' (sorting applies to list only)\n" + cmdutil.OptionsPreamble + "\n"
+	preamble := "Filters for 'event list' (including --count-only) and 'event buckets' (sorting applies only when listing rows)\n" + cmdutil.OptionsPreamble + "\n"
 	tests := []struct {
 		name   string
 		failAt int
@@ -494,17 +494,25 @@ func TestRound2ExplicitPageContract(t *testing.T) {
 			apiPage := cliPage - 1
 			const pageSize = 7
 			body := []byte(fmt.Sprintf(`{"events":[{"eventId":"pagination-event","nodeUUID":"node-1","name":"xid","timestamp":"2026-05-01T00:00:00Z"}],"page":%d,"pageSize":7,"total":%d,"hasMore":false,"opaquePaginationContract":"preserved"}`, apiPage, apiPage*pageSize+1))
-			type request struct{ method, path, page, size string }
+			type request struct{ method, path, page, size, start, end string }
 			requests := make(chan request, 4)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				q := r.URL.Query()
 				select {
-				case requests <- request{r.Method, r.URL.Path, q.Get("page"), q.Get("pageSize")}:
+				case requests <- request{r.Method, r.URL.Path, q.Get("page"), q.Get("pageSize"), q.Get("startTime"), q.Get("endTime")}:
 				default:
 					t.Error("unexpected extra API requests")
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
+				switch r.URL.Path {
+				case "/v1/events/page":
+					_, _ = w.Write(body)
+				case "/v1/events/count":
+					_, _ = fmt.Fprintf(w, `{"total":%d}`, apiPage*pageSize+1)
+				default:
+					t.Errorf("unexpected endpoint: %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
 			}))
 			defer server.Close()
 			cmdtest.SaveConfig(t, server.URL, "test-key")
@@ -517,13 +525,21 @@ func TestRound2ExplicitPageContract(t *testing.T) {
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("command failed: %v", err)
 			}
-			if got := len(requests); got != 1 {
-				t.Fatalf("API request count = %d, want 1", got)
+			if got := len(requests); got != 2 {
+				t.Fatalf("API request count = %d, want one page plus one count request", got)
 			}
 			gotRequest := <-requests
-			wantRequest := request{http.MethodGet, "/v1/events", strconv.Itoa(apiPage), strconv.Itoa(pageSize)}
+			wantRequest := request{http.MethodGet, "/v1/events/page", strconv.Itoa(apiPage), strconv.Itoa(pageSize), gotRequest.start, gotRequest.end}
 			if gotRequest != wantRequest {
 				t.Fatalf("request = %+v, want %+v", gotRequest, wantRequest)
+			}
+			if gotRequest.start == "" || gotRequest.end == "" {
+				t.Fatal("page request did not freeze the relative time range")
+			}
+			gotCount := <-requests
+			wantCount := request{http.MethodGet, "/v1/events/count", "", "", gotRequest.start, gotRequest.end}
+			if gotCount != wantCount {
+				t.Fatalf("count request = %+v, want same scope without paging: %+v", gotCount, wantCount)
 			}
 			var got, want map[string]any
 			if err := json.Unmarshal(out.Bytes(), &got); err != nil {

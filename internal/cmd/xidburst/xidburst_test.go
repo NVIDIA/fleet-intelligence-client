@@ -613,15 +613,27 @@ func TestXIDBurstOptionsRendersEmptyFilters(t *testing.T) {
 func TestXIDBurstPlatformDisruptionFilterBoundaries(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-	queries := make(chan url.Values, 1)
+	type observedRequest struct {
+		path  string
+		query url.Values
+	}
+	queries := make(chan observedRequest, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
-		case queries <- r.URL.Query():
+		case queries <- observedRequest{r.URL.Path, r.URL.Query()}:
 		default:
 			t.Error("unexpected extra API request while recorder is full")
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(xidBurstsBody))
+		switch r.URL.Path {
+		case "/v1/xid/bursts/page":
+			_, _ = w.Write([]byte(xidBurstsBody))
+		case "/v1/xid/bursts/count":
+			_, _ = w.Write([]byte(`{"total":1}`))
+		default:
+			t.Errorf("unexpected endpoint: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}))
 	defer server.Close()
 	cmdtest.SaveConfig(t, server.URL, "test-key")
@@ -647,14 +659,19 @@ func TestXIDBurstPlatformDisruptionFilterBoundaries(t *testing.T) {
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("command failed: %v", err)
 			}
-			select {
-			case query := <-queries:
-				got, present := query["jobDisruptionDueToPlatformIssue"]
-				if present != (tt.want != nil) || !reflect.DeepEqual(got, tt.want) {
-					t.Fatalf("platform disruption query: got %v (present %t), want %v", got, present, tt.want)
+			for _, path := range []string{"/v1/xid/bursts/page", "/v1/xid/bursts/count"} {
+				select {
+				case observed := <-queries:
+					if observed.path != path {
+						t.Fatalf("path = %s, want %s", observed.path, path)
+					}
+					got, present := observed.query["jobDisruptionDueToPlatformIssue"]
+					if present != (tt.want != nil) || !reflect.DeepEqual(got, tt.want) {
+						t.Fatalf("%s platform disruption query: got %v (present %t), want %v", path, got, present, tt.want)
+					}
+				default:
+					t.Fatalf("expected request to %s", path)
 				}
-			default:
-				t.Fatal("expected a request to the server")
 			}
 			if !strings.Contains(out.String(), "burst-1") {
 				t.Fatalf("output missing burst-1: %s", out.String())
@@ -830,8 +847,8 @@ func TestXIDBurstCommandAPIErrorPropagation(t *testing.T) {
 		path string
 		all  bool
 	}{
-		{name: "list", args: []string{"xidburst", "list", "--window", "24h"}, path: "/v1/xid/bursts"},
-		{name: "list all", args: []string{"xidburst", "list", "--window", "24h", "--all", "--page-size", "1", "--output", "json"}, path: "/v1/xid/bursts", all: true},
+		{name: "list", args: []string{"xidburst", "list", "--window", "24h"}, path: "/v1/xid/bursts/page"},
+		{name: "list all", args: []string{"xidburst", "list", "--window", "24h", "--all", "--page-size", "1", "--output", "json"}, path: "/v1/xid/bursts/page", all: true},
 		{name: "describe", args: []string{"xidburst", "describe", "burst-1"}, path: "/v1/xid/bursts/burst-1"},
 		{name: "options", args: []string{"xidburst", "options"}, path: "/v1/xid/bursts/options"},
 	}
@@ -849,7 +866,7 @@ func TestXIDBurstCommandAPIErrorPropagation(t *testing.T) {
 				mu.Unlock()
 				w.Header().Set("Content-Type", "application/json")
 				if tc.all && r.URL.Query().Get("page") == "0" {
-					_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-1"}],"page":0,"pageSize":1,"total":2}`))
+					_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-1"}],"page":0,"pageSize":1,"hasMore":true}`))
 					return
 				}
 				w.WriteHeader(http.StatusForbidden)
@@ -935,17 +952,25 @@ func TestRound2ExplicitPageContract(t *testing.T) {
 			apiPage := cliPage - 1
 			const pageSize = 7
 			body := []byte(fmt.Sprintf(`{"items":[{"burstId":"pagination-burst","nodeUuid":"node-1","xidCount":2}],"page":%d,"pageSize":7,"total":%d,"hasMore":false,"opaquePaginationContract":"preserved"}`, apiPage, apiPage*pageSize+1))
-			type request struct{ method, path, page, size string }
+			type request struct{ method, path, page, size, start, end string }
 			requests := make(chan request, 4)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				q := r.URL.Query()
 				select {
-				case requests <- request{r.Method, r.URL.Path, q.Get("page"), q.Get("pageSize")}:
+				case requests <- request{r.Method, r.URL.Path, q.Get("page"), q.Get("pageSize"), q.Get("startTime"), q.Get("endTime")}:
 				default:
 					t.Error("unexpected extra API requests")
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
+				switch r.URL.Path {
+				case "/v1/xid/bursts/page":
+					_, _ = w.Write(body)
+				case "/v1/xid/bursts/count":
+					_, _ = fmt.Fprintf(w, `{"total":%d}`, apiPage*pageSize+1)
+				default:
+					t.Errorf("unexpected endpoint: %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
 			}))
 			defer server.Close()
 			cmdtest.SaveConfig(t, server.URL, "test-key")
@@ -958,13 +983,21 @@ func TestRound2ExplicitPageContract(t *testing.T) {
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("command failed: %v", err)
 			}
-			if got := len(requests); got != 1 {
-				t.Fatalf("API request count = %d, want 1", got)
+			if got := len(requests); got != 2 {
+				t.Fatalf("API request count = %d, want one page plus one count request", got)
 			}
 			gotRequest := <-requests
-			wantRequest := request{http.MethodGet, "/v1/xid/bursts", strconv.Itoa(apiPage), strconv.Itoa(pageSize)}
+			wantRequest := request{http.MethodGet, "/v1/xid/bursts/page", strconv.Itoa(apiPage), strconv.Itoa(pageSize), gotRequest.start, gotRequest.end}
 			if gotRequest != wantRequest {
 				t.Fatalf("request = %+v, want %+v", gotRequest, wantRequest)
+			}
+			if gotRequest.start == "" || gotRequest.end == "" {
+				t.Fatal("page request did not freeze the relative time range")
+			}
+			gotCount := <-requests
+			wantCount := request{http.MethodGet, "/v1/xid/bursts/count", "", "", gotRequest.start, gotRequest.end}
+			if gotCount != wantCount {
+				t.Fatalf("count request = %+v, want same scope without paging: %+v", gotCount, wantCount)
 			}
 			var got, want map[string]any
 			if err := json.Unmarshal(out.Bytes(), &got); err != nil {
