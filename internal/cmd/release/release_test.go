@@ -5,6 +5,7 @@ package release
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/NVIDIA/fleet-intelligence-client/internal/updatecheck"
 	"github.com/spf13/cobra"
 )
 
@@ -204,5 +206,21 @@ func TestRunUpgradeNilContextAlreadyInstalled(t *testing.T) {
 				t.Errorf("expected one release lookup and no installer requests, got %d requests", got)
 			}
 		})
+	}
+}
+
+func TestResolveNamedUpgradeRejectsInvalidCurrentVersion(t *testing.T) {
+	server, requests := releaseServer(t, "v1.2.0")
+	setUpdateChecker(t, server.URL)
+	got, installed, err := resolveUpgradeTarget(context.Background(), BuildInfo{Version: "invalid-version"},
+		upgradeFlags{version: "v1.2.0", versionSet: true})
+	if err == nil || !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("error = %v, want invalid version error", err)
+	}
+	if got != (updatecheck.Release{}) || installed {
+		t.Fatalf("result = %#v, installed=%v; want zero release and false", got, installed)
+	}
+	if requests.Load() != 1 {
+		t.Errorf("release requests = %d, want one lookup", requests.Load())
 	}
 }

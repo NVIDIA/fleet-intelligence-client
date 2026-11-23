@@ -6,17 +6,23 @@ package nodegroup
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
-	"github.com/spf13/cobra"
-
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdutil"
+	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
+	"github.com/spf13/cobra"
 )
 
 // newRootCmd builds a root command carrying only this package's commands, so
@@ -293,5 +299,202 @@ func TestNodeGroupOptionsOutput(t *testing.T) {
 	}
 	if strings.TrimSpace(jsonOut.String()) != body {
 		t.Fatalf("JSON output is not the raw payload:\n%s", jsonOut.String())
+	}
+}
+
+func TestNodeGroupCommandValidationAndMissingProfile(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{"all with page", []string{"list", "--all", "--page", "1"}, []string{"--page cannot be used with --all"}},
+		{"empty health value", []string{"list", "--health", "Healthy,,Degraded"}, []string{"invalid health", "empty values are not allowed"}},
+		{"zero timeout", []string{"options", "--timeout", "0s"}, []string{"--timeout must be greater than 0"}},
+		{"list missing profile", []string{"list", "--profile", "missing"}, []string{"profile not found", "missing"}},
+		{"options missing profile", []string{"options", "--profile", "missing"}, []string{"profile not found", "missing"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
+			var mu sync.Mutex
+			requests := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				mu.Lock()
+				requests++
+				mu.Unlock()
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer server.Close()
+			cmdtest.SaveConfig(t, server.URL, "test-key")
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetArgs(append([]string{"nodegroup"}, tc.args...))
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("expected command error")
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error %q does not contain %q", err, want)
+				}
+			}
+			if out.Len() != 0 {
+				t.Errorf("unexpected output: %q", out.String())
+			}
+			mu.Lock()
+			gotRequests := requests
+			mu.Unlock()
+			if gotRequests != 0 {
+				t.Errorf("requests = %d, want 0", gotRequests)
+			}
+		})
+	}
+}
+
+func TestNodeGroupCommandAPIFailures(t *testing.T) {
+	type request struct{ method, path, page, pageSize string }
+	cases := []struct {
+		name string
+		args []string
+		want []request
+	}{
+		{"list", []string{"list"}, []request{{method: "GET", path: "/v1/nodegroups"}}},
+		{"options", []string{"options"}, []request{{method: "GET", path: "/v1/nodegroups/options"}}},
+		{"later page", []string{"list", "--all", "--page-size", "1"}, []request{
+			{method: "GET", path: "/v1/nodegroups", page: "0", pageSize: "1"},
+			{method: "GET", path: "/v1/nodegroups", page: "1", pageSize: "1"},
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
+			var mu sync.Mutex
+			var requests []request
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				mu.Lock()
+				requests = append(requests, request{r.Method, r.URL.Path, r.URL.Query().Get("page"), r.URL.Query().Get("pageSize")})
+				mu.Unlock()
+				w.Header().Set("Content-Type", "application/json")
+				if tc.name == "later page" && r.URL.Query().Get("page") == "0" {
+					_, _ = w.Write([]byte(`{"nodeGroups":[{"id":"ng-1","name":"Training"}],"hasMore":true,"page":0,"pageSize":1,"total":2}`))
+					return
+				}
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = w.Write([]byte(`{"error":"forbidden","details":"no nodegroup access"}`))
+			}))
+			defer server.Close()
+			cmdtest.SaveConfig(t, server.URL, "test-key")
+			var out bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&out)
+			cmd.SetArgs(append([]string{"nodegroup"}, tc.args...))
+			err := cmd.Execute()
+			var apiErr *nvfleetint.APIError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("error = %v, want *nvfleetint.APIError", err)
+			}
+			if apiErr.StatusCode != http.StatusForbidden || apiErr.Message != "forbidden" || apiErr.Details != "no nodegroup access" {
+				t.Errorf("unexpected API error: %+v", apiErr)
+			}
+			if out.Len() != 0 {
+				t.Errorf("unexpected partial output: %q", out.String())
+			}
+			mu.Lock()
+			got := append([]request(nil), requests...)
+			mu.Unlock()
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("requests = %#v, want %#v", got, tc.want)
+			}
+		})
+	}
+}
+
+type nodeGroupFailingWriter struct{ err error }
+
+func (w nodeGroupFailingWriter) Write([]byte) (int, error) { return 0, w.err }
+
+func TestNodeGroupListOutputBoundaries(t *testing.T) {
+	common := cmdutil.Resolved{Output: clioutput.FormatTable}
+	result := nodeGroupListOutput{
+		View:       string(nvfleetint.NodeGroupViewBasic),
+		NodeGroups: []nvfleetint.NodeGroup{{ID: "ng-1", Name: "Training"}},
+	}
+	sentinel := errors.New("table write failed")
+	if err := writeNodeGroupListOutput(nodeGroupFailingWriter{sentinel}, common, result); !errors.Is(err, sentinel) {
+		t.Errorf("error = %v, want sentinel", err)
+	}
+	var out bytes.Buffer
+	if err := writeNodeGroupListOutput(&out, common, result); err != nil {
+		t.Fatalf("write output: %v", err)
+	}
+	for _, want := range []string{"ng-1", "Training"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("output missing %q: %q", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "Page:") || strings.Contains(out.String(), "Total Entries:") {
+		t.Errorf("unexpected pagination footer: %q", out.String())
+	}
+}
+
+// Explicit --page is one-based; verify the zero-based backend request and
+// one-based JSON pagination while preserving other response fields.
+func TestRound2ExplicitPageContract(t *testing.T) {
+	for _, cliPage := range []int{1, 3} {
+		t.Run(fmt.Sprintf("page_%d", cliPage), func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
+			apiPage := cliPage - 1
+			const pageSize = 7
+			body := []byte(fmt.Sprintf(`{"nodeGroups":[{"id":"pagination-group","name":"Pagination group"}],"page":%d,"pageSize":7,"total":%d,"hasMore":false,"opaquePaginationContract":"preserved"}`, apiPage, apiPage*pageSize+1))
+			type request struct{ method, path, page, size string }
+			requests := make(chan request, 4)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				q := r.URL.Query()
+				select {
+				case requests <- request{r.Method, r.URL.Path, q.Get("page"), q.Get("pageSize")}:
+				default:
+					t.Error("unexpected extra API requests")
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(body)
+			}))
+			defer server.Close()
+			cmdtest.SaveConfig(t, server.URL, "test-key")
+			cmd := newRootCmd()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			args := []string{"nodegroup", "list"}
+			args = append(args, "--page", strconv.Itoa(cliPage), "--page-size", strconv.Itoa(pageSize), "--output", "json")
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("command failed: %v", err)
+			}
+			if got := len(requests); got != 1 {
+				t.Fatalf("API request count = %d, want 1", got)
+			}
+			gotRequest := <-requests
+			wantRequest := request{http.MethodGet, "/v1/nodegroups", strconv.Itoa(apiPage), strconv.Itoa(pageSize)}
+			if gotRequest != wantRequest {
+				t.Fatalf("request = %+v, want %+v", gotRequest, wantRequest)
+			}
+			var got, want map[string]any
+			if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+				t.Fatalf("invalid command JSON %q: %v", out.String(), err)
+			}
+			if err := json.Unmarshal(body, &want); err != nil {
+				t.Fatal(err)
+			}
+			// The documented CLI contract normalizes API page 0 to CLI page 1.
+			// See output.OneBasedPage and the existing command JSON tests.
+			want["page"] = float64(cliPage)
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("JSON result = %#v, want normalized CLI result %#v", got, want)
+			}
+		})
 	}
 }
