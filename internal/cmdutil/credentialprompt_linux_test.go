@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func TestRound2TerminalPasswordSuccess(t *testing.T) {
+func TestTerminalPasswordAcceptsNewOrStoredKey(t *testing.T) {
 	tests := []struct {
 		name       string
 		input      string

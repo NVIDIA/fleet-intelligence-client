@@ -443,7 +443,7 @@ func TestNodeGroupListOutputBoundaries(t *testing.T) {
 
 // Explicit --page is one-based; verify the zero-based backend request and
 // one-based JSON pagination while preserving other response fields.
-func TestRound2ExplicitPageContract(t *testing.T) {
+func TestNodeGroupListExplicitPagePreservesPayload(t *testing.T) {
 	for _, cliPage := range []int{1, 3} {
 		t.Run(fmt.Sprintf("page_%d", cliPage), func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
