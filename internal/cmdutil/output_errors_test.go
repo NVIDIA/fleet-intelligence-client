@@ -8,7 +8,104 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+
+	clioutput "github.com/NVIDIA/fleet-intelligence-client/internal/output"
+	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
+
+func TestWriteRequestPreviewBodyBoundaries(t *testing.T) {
+	const method = "POST"
+	const url = "https://example.invalid/v1/tags"
+	const prefix = method + " " + url + "\n\n"
+	const suffix = "\n\nDry run: no request was sent.\n"
+	for _, tc := range []struct {
+		name       string
+		body       []byte
+		wantOutput string
+		invalid    bool
+	}{
+		{name: "nil body", wantOutput: prefix + suffix},
+		{name: "empty body", body: []byte{}, wantOutput: prefix + suffix},
+		{name: "malformed body", body: []byte(`{"tags":`), invalid: true},
+		{name: "nested body", body: []byte(`{"tags":[{"name":"gpu","metadata":{"count":2}}]}`), wantOutput: prefix + "{\n  \"tags\": [\n    {\n      \"name\": \"gpu\",\n      \"metadata\": {\n        \"count\": 2\n      }\n    }\n  ]\n}" + suffix},
+	} {
+		t.Run("table/"+tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			err := WriteRequestPreview(&out, Resolved{Output: clioutput.FormatTable}, nvfleetint.RequestPreview{Method: method, URL: url, Body: tc.body})
+			if tc.invalid {
+				var syntaxErr *json.SyntaxError
+				if !errors.As(err, &syntaxErr) {
+					t.Errorf("error = %v, want JSON syntax error", err)
+				}
+			} else if err != nil {
+				t.Errorf("WriteRequestPreview: %v", err)
+			}
+			if got := out.String(); got != tc.wantOutput {
+				t.Errorf("output = %q, want %q", got, tc.wantOutput)
+			}
+		})
+	}
+
+	t.Run("table/write failure", func(t *testing.T) {
+		sentinel := errors.New("controlled preview write failure")
+		writer := &errorFirstWriteFails{err: sentinel}
+		err := WriteRequestPreview(writer, Resolved{Output: clioutput.FormatTable}, nvfleetint.RequestPreview{Method: method, URL: url})
+		if !errors.Is(err, sentinel) || writer.attempts != 1 {
+			t.Errorf("error = %v, write attempts = %d; want sentinel and one attempt", err, writer.attempts)
+		}
+	})
+
+	for _, tc := range []struct {
+		name    string
+		body    []byte
+		invalid bool
+	}{
+		{name: "absent body"},
+		{name: "malformed body", body: []byte(`{"tags":`), invalid: true},
+	} {
+		t.Run("json/"+tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			err := WriteRequestPreview(&out, Resolved{Output: clioutput.FormatJSON}, nvfleetint.RequestPreview{Method: method, URL: url, Body: tc.body})
+			if tc.invalid {
+				if err == nil || out.Len() != 0 {
+					t.Errorf("error = %v, output = %q; want encoding error and no output", err, out.String())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("WriteRequestPreview: %v", err)
+			}
+			var document map[string]json.RawMessage
+			if err := json.Unmarshal(out.Bytes(), &document); err != nil {
+				t.Fatalf("decode preview %q: %v", out.String(), err)
+			}
+			var gotMethod, gotURL string
+			if err := json.Unmarshal(document["method"], &gotMethod); err != nil {
+				t.Fatalf("decode method: %v", err)
+			}
+			if err := json.Unmarshal(document["url"], &gotURL); err != nil {
+				t.Fatalf("decode URL: %v", err)
+			}
+			if _, exists := document["body"]; exists || gotMethod != method || gotURL != url {
+				t.Errorf("document = %s; want method %q, URL %q, and no body", out.String(), method, url)
+			}
+		})
+	}
+}
+
+type errorFirstWriteFails struct {
+	out      bytes.Buffer
+	attempts int
+	err      error
+}
+
+func (w *errorFirstWriteFails) Write(p []byte) (int, error) {
+	w.attempts++
+	if w.attempts == 1 {
+		return 0, w.err
+	}
+	return w.out.Write(p)
+}
 
 func TestWriteRawOutputFlags(t *testing.T) {
 	for _, tc := range []struct {

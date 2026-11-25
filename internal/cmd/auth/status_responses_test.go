@@ -11,7 +11,55 @@ import (
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
+	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 )
+
+func TestAuthStatusReportsInsecureURLJSON(t *testing.T) {
+	const name = "selected"
+	const secret = "status-insecure-url-secret"
+	const insecureURL = "http://example.com"
+	tests := []struct {
+		name, urlSource, keySource, hint string
+		environment                      bool
+	}{
+		{"stored profile", string(config.SourceProfile), string(config.SourceProfile), "nvfleetint auth add " + name, false},
+		{"environment override", string(config.SourceEnvironment), string(config.SourceEnvironment), "update " + config.EnvAPIURL, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
+			cmdtest.ClearCredentialEnv(t)
+			storedURL := insecureURL
+			if tt.environment {
+				storedURL = "https://stored.example.com"
+			}
+			if err := config.Save(config.Config{CurrentProfile: name, Profiles: map[string]config.Profile{
+				name: {APIURL: storedURL, APIKey: secret},
+			}}); err != nil {
+				t.Fatalf("save config: %v", err)
+			}
+			if tt.environment {
+				t.Setenv(config.EnvAPIURL, insecureURL)
+				t.Setenv(config.EnvAPIKey, secret)
+			}
+			out := mustRunAuth(t, "status", "--output", "json")
+			var got authStatusOutput
+			if err := json.Unmarshal([]byte(out), &got); err != nil {
+				t.Fatalf("decode status JSON: %v", err)
+			}
+			if got.Profile != name || got.APIURL != insecureURL || got.APIURLSource != tt.urlSource || !got.APIKeyConfigured || got.APIKeySource != tt.keySource {
+				t.Fatalf("unexpected resolved status: %#v", got)
+			}
+			if !strings.HasPrefix(got.Connection, "error:") || !strings.Contains(got.Connection, "insecure base URL: https is required") || !strings.Contains(got.Connection, tt.hint) {
+				t.Fatalf("unexpected connection diagnostic: %q", got.Connection)
+			}
+			if strings.Contains(out, secret) {
+				t.Fatalf("status exposed the key: %q", out)
+			}
+		})
+	}
+}
 
 func TestAuthStatusReportsUnsuccessfulConnectionsJSON(t *testing.T) {
 	tests := []struct {

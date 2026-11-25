@@ -14,6 +14,29 @@ import (
 	"testing"
 )
 
+func TestReportOptionValuesValid(t *testing.T) {
+	for _, tc := range []struct {
+		value ReportFormat
+		want  bool
+	}{{ReportFormatJSON, true}, {ReportFormatCSV, true}, {"xml", false}} {
+		t.Run("format/"+string(tc.value), func(t *testing.T) {
+			if got := tc.value.Valid(); got != tc.want {
+				t.Errorf("Valid() = %v; want %v", got, tc.want)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		value ErrorReportTimeMode
+		want  bool
+	}{{ErrorReportTimeModeAbsolute, true}, {ErrorReportTimeModeRelative, true}, {"weekly", false}} {
+		t.Run("time mode/"+string(tc.value), func(t *testing.T) {
+			if got := tc.value.Valid(); got != tc.want {
+				t.Errorf("Valid() = %v; want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestInventoryReportOptionValidationBoundaries(t *testing.T) {
 	var requests atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
