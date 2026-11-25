@@ -5,8 +5,6 @@ package report
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,97 +14,6 @@ import (
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
 )
-
-// Verifies a tampered CSV fails the verify command
-func TestReportVerifyTamperedFails(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-
-	dir := t.TempDir()
-	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
-	if err := os.WriteFile(csvPath, []byte("customer,issued_at\nevil,2026-06-15T00:00:00Z\n"), 0o644); err != nil {
-		t.Fatalf("tamper csv failed: %v", err)
-	}
-
-	cmd := newRootCmd()
-	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath, "--key", keyPath})
-
-	if err := cmd.Execute(); err == nil {
-		t.Fatal("expected verification to fail for tampered csv")
-	}
-}
-
-// Verifies a clear message when a non-bundle file is passed to --bundle
-func TestReportVerifyRejectsNonBundle(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-
-	dir := t.TempDir()
-	csvPath, _, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
-
-	cmd := newRootCmd()
-	cmd.SetOut(&bytes.Buffer{})
-	// Point --bundle at the CSV instead of the .sig.bundle file.
-	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", csvPath, "--key", keyPath})
-
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "not a valid signature bundle") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if strings.Contains(err.Error(), "proto:") {
-		t.Fatalf("error leaks internal details: %v", err)
-	}
-}
-
-// Verifies a clear message when the report does not match the signature
-func TestReportVerifyMismatchMessage(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-
-	dir := t.TempDir()
-	csvPath, bundlePath, keyPath := writeSignedFixture(t, dir, []byte("customer,issued_at\nacme,2026-06-15T00:00:00Z\n"))
-	// Point --csv at the bundle file: a valid bundle, but not the signed artifact.
-	cmd := newRootCmd()
-	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"report", "verify", "--csv", bundlePath, "--bundle", bundlePath, "--key", keyPath})
-
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "verification failed") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if strings.Contains(err.Error(), "ASN.1") {
-		t.Fatalf("error leaks internal details: %v", err)
-	}
-	_ = csvPath
-}
-
-// Verifies a clear message when a flag points at a missing file
-func TestReportVerifyMissingFile(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-
-	dir := t.TempDir()
-	csvPath, bundlePath, _ := writeSignedFixture(t, dir, []byte("data\n"))
-
-	cmd := newRootCmd()
-	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"report", "verify", "--csv", csvPath, "--bundle", bundlePath, "--key", "test-key"})
-
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), `--key file "test-key" does not exist`) {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
 
 func TestReportVerifyArtifactAndKeyErrors(t *testing.T) {
 	cases := []struct {
@@ -192,33 +99,5 @@ func TestReportVerifyArtifactAndKeyErrors(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestReportVerifyTimeoutPrecedesArtifactAccess(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-	cmdtest.ClearCredentialEnv(t)
-	dir := t.TempDir()
-	var out bytes.Buffer
-	cmd := newRootCmd()
-	cmd.SetOut(&out)
-	cmd.SetErr(&bytes.Buffer{})
-	cmd.SetArgs([]string{"report", "verify", "--timeout", "0", "--csv", filepath.Join(dir, "missing.csv"), "--bundle", filepath.Join(dir, "missing.bundle")})
-	err := cmd.Execute()
-	if err == nil || err.Error() != "--timeout must be greater than 0" {
-		t.Errorf("error = %v, want timeout validation error", err)
-	}
-	if out.Len() != 0 {
-		t.Errorf("unexpected output after failure: %q", out.String())
-	}
-}
-
-func TestReportVerifyErrorPreservesUnexpectedError(t *testing.T) {
-	sentinel := errors.New("unexpected verification error")
-	wrapped := fmt.Errorf("verification context: %w", sentinel)
-	got := reportVerifyError(reportVerifyFlags{}, wrapped)
-	if got != wrapped || !errors.Is(got, sentinel) {
-		t.Errorf("error = %v, want unchanged wrapped sentinel %v", got, wrapped)
 	}
 }

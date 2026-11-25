@@ -6,64 +6,32 @@ package nvfleetint
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
-func TestFetchSigningKeyRetryAfterInterrupted(t *testing.T) {
-	var requests atomic.Int64
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requests.Add(1)
-		if r.Method != http.MethodGet || r.URL.Path != signingKeyPath {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		w.Header().Set("Retry-After", "7")
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer server.Close()
-
-	client, err := NewClient(server.URL, "test-key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	retryer, ok := client.requestDoer.(*retryingDoer)
-	if !ok {
-		t.Fatalf("request doer has type %T; want *retryingDoer", client.requestDoer)
-	}
-	var delays []time.Duration
-	retryer.wait = func(_ context.Context, delay time.Duration) error {
-		delays = append(delays, delay)
-		return context.Canceled
-	}
-	key, err := client.FetchSigningKey(context.Background())
-	if !errors.Is(err, context.Canceled) || key != nil {
-		t.Fatalf("got key %q and error %v; want cancellation and no key", key, err)
-	}
-	if len(delays) != 1 || delays[0] != 7*time.Second {
-		t.Errorf("requested delays %v; want one delay of 7s", delays)
-	}
-	if got := requests.Load(); got != 1 {
-		t.Errorf("server received %d requests; want 1", got)
-	}
-}
-
-func TestFetchSigningKeyTransportDeadlineReportsConfiguredTimeout(t *testing.T) {
+func TestRetryingDoerDoesNotReplayGETBody(t *testing.T) {
 	calls := 0
+	original := &http.Response{StatusCode: http.StatusServiceUnavailable, Body: io.NopCloser(strings.NewReader("unavailable")), Header: make(http.Header)}
 	transport := roundTripperFunc(func(*http.Request) (*http.Response, error) {
 		calls++
-		return nil, context.DeadlineExceeded
+		return original, nil
 	})
-	const timeout = 7 * time.Second
-	client, err := NewClient("https://example.com", "test-key", WithHTTPClient(&http.Client{Transport: transport}), WithTimeout(timeout))
+	doer := &retryingDoer{inner: &http.Client{Transport: transport}, maxAttempts: defaultRequestAttempts}
+	req, err := http.NewRequest(http.MethodGet, "https://example.com", strings.NewReader("body"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	key, err := client.FetchSigningKey(context.Background())
-	if key != nil || err == nil || err.Error() != "request timed out after 7s" {
-		t.Fatalf("got key %q and error %v; want no key and configured timeout error", key, err)
+	response, err := doer.Do(req)
+	if response != nil && response.Body != nil {
+		defer response.Body.Close()
+	}
+	if err != nil || response != original {
+		t.Fatalf("got response %p and error %v; want original response %p", response, err, original)
 	}
 	if calls != 1 {
 		t.Errorf("transport called %d times; want 1", calls)

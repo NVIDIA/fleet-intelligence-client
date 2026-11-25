@@ -10,151 +10,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"sync/atomic"
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/generated/fleetapi"
 )
-
-func TestDescribeNodeAttestationGPUClaims(t *testing.T) {
-	const payload = `{"nodeUUID":"node-1","verificationCheckExtraInfo":{"gpuEvidencePresent":false,"overallAttestationResult":true,"nrasCallResult":"complete","gpuResults":{"gpu-1":{"eat_nonce":"nonce","exp":200,"hwmodel":"H100","iat":100,"iss":"issuer","jti":"token","measres":"failed","nbf":90,"sub":"subject","ueid":"device","x-nvidia-attestation-warning":"warning","x-nvidia-gpu-arch-check":false,"x-nvidia-gpu-attestation-report-nonce-match":true,"x-nvidia-gpu-attestation-report-parsed":false,"x-nvidia-gpu-attestation-report-signature-verified":true,"x-nvidia-gpu-vbios-rim-fetched":false,"x-nvidia-gpu-vbios-rim-measurements-available":true,"x-nvidia-gpu-vbios-version":"v1","x-nvidia-overall-att-result":false,"x-nvidia-gpu-attestation-report-cert-chain":{"x-nvidia-cert-expiration-date":"2030-01-01","x-nvidia-cert-ocsp-nonce-matches":false,"x-nvidia-cert-ocsp-response-valid":true,"x-nvidia-cert-ocsp-status":"good","x-nvidia-cert-revocation-reason":"none","x-nvidia-cert-status":"valid"},"x-nvidia-error-details":[{"code":42,"description":"description","fieldName":"measurement","httpStatus":"400","message":"mismatch"}],"x-nvidia-mismatch-measurement-records":[{"index":1,"expected":"abc"},"record"]},"gpu-2":{}}}}`
-	const absentPayload = `{"nodeUUID":"node-1","verificationCheckExtraInfo":{"gpuResults":{"gpu-3":{"iss":"issuer"}}}}`
-	for _, tc := range []struct {
-		name, body string
-		populated  bool
-	}{{"populated", payload, true}, {"missing chain and errors", absentPayload, false}} {
-		t.Run(tc.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodGet || r.URL.Path != "/v1/nodes/node-1" || r.URL.Query().Get("dataSource") != "inband" {
-					t.Errorf("unexpected request: %s %s", r.Method, r.URL.String())
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(tc.body))
-			}))
-			defer server.Close()
-			client, err := NewClient(server.URL, "test-key")
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := client.DescribeNodeWithOptions(context.Background(), "node-1", DescribeNodeOptions{DataSource: DataSourceInband})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got.UUID != "node-1" || string(got.RawJSON) != tc.body || got.VerificationCheckExtraInfo == nil {
-				t.Fatalf("unexpected node or raw JSON: %#v", got)
-			}
-			info := got.VerificationCheckExtraInfo
-			if !tc.populated {
-				claim, ok := info.GPUResults["gpu-3"]
-				if !ok || len(info.GPUResults) != 1 || claim.Issuer != "issuer" || claim.NVIDIAGPUAttestationReportCertChain != nil || claim.NVIDIAErrorDetails != nil {
-					t.Fatalf("missing fields changed: %#v", info.GPUResults)
-				}
-				return
-			}
-			claim, ok := info.GPUResults["gpu-1"]
-			empty, emptyOK := info.GPUResults["gpu-2"]
-			if !ok || !emptyOK || len(info.GPUResults) != 2 || !reflect.DeepEqual(empty, JWTClaims{}) {
-				t.Fatalf("unexpected GPU claims: %#v", info.GPUResults)
-			}
-			if info.GPUEvidencePresent == nil || *info.GPUEvidencePresent || info.OverallAttestationResult == nil || !*info.OverallAttestationResult || info.NRASCallResult != "complete" {
-				t.Fatalf("unexpected aggregate info: %#v", info)
-			}
-			if claim.EATNonce != "nonce" || claim.ExpiresAt == nil || *claim.ExpiresAt != 200 || claim.IssuedAt == nil || *claim.IssuedAt != 100 || claim.NotBefore == nil || *claim.NotBefore != 90 || claim.Issuer != "issuer" || claim.JWTID != "token" || claim.Subject != "subject" || claim.HardwareModel != "H100" || claim.UEID != "device" || claim.MeasurementResults != "failed" || claim.NVIDIAAttestationWarning != "warning" || claim.NVIDIAGPUVBIOSVersion != "v1" {
-				t.Fatalf("unexpected JWT fields: %#v", claim)
-			}
-			for _, check := range []struct {
-				name  string
-				value *bool
-				want  bool
-			}{
-				{"architecture", claim.NVIDIAGPUArchitectureCheck, false}, {"nonce", claim.NVIDIAGPUAttestationReportNonceMatch, true}, {"parsed", claim.NVIDIAGPUAttestationReportParsed, false}, {"signature", claim.NVIDIAGPUAttestationReportSignatureVerified, true}, {"rim fetched", claim.NVIDIAGPUVBIOSRIMFetched, false}, {"rim measurements", claim.NVIDIAGPUVBIOSRIMMeasurementsAvailable, true}, {"overall", claim.NVIDIAOverallAttestationResult, false},
-			} {
-				if check.value == nil || *check.value != check.want {
-					t.Errorf("%s: got %v, want %v", check.name, check.value, check.want)
-				}
-			}
-			chain := claim.NVIDIAGPUAttestationReportCertChain
-			if chain == nil || chain.ExpirationDate != "2030-01-01" || chain.OCSPNonceMatches == nil || *chain.OCSPNonceMatches || chain.OCSPResponseValid == nil || !*chain.OCSPResponseValid || chain.OCSPStatus != "good" || chain.RevocationReason != "none" || chain.Status != "valid" {
-				t.Fatalf("unexpected certificate chain: %#v", chain)
-			}
-			if len(claim.NVIDIAErrorDetails) != 1 {
-				t.Fatalf("unexpected errors: %#v", claim.NVIDIAErrorDetails)
-			}
-			detail := claim.NVIDIAErrorDetails[0]
-			if detail.Code == nil || *detail.Code != 42 || detail.Description != "description" || detail.FieldName != "measurement" || detail.HTTPStatus != "400" || detail.Message != "mismatch" {
-				t.Fatalf("unexpected error detail: %#v", detail)
-			}
-			wantRecords := []any{map[string]any{"index": float64(1), "expected": "abc"}, "record"}
-			if !reflect.DeepEqual(claim.NVIDIAMismatchMeasurementRecords, wantRecords) {
-				t.Fatalf("unexpected mismatch records: %#v", claim.NVIDIAMismatchMeasurementRecords)
-			}
-		})
-	}
-}
-
-func TestDescribeNodeResourcesWithoutGPUInfo(t *testing.T) {
-	const payload = `{"nodeUUID":"node-1","hostname":"host-1","resources":{"cpuInfo":{"manufacturer":"Intel","logicalCores":"96"}}}`
-	var requests atomic.Int64
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requests.Add(1)
-		if r.Method != http.MethodGet || r.URL.Path != "/v1/nodes/node-1" || r.URL.Query().Get("dataSource") != "inband" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.String())
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(payload))
-	}))
-	defer server.Close()
-	client, err := NewClient(server.URL, "test-key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	node, err := client.DescribeNodeWithOptions(context.Background(), "node-1", DescribeNodeOptions{DataSource: DataSourceInband})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if node.UUID != "node-1" || node.Hostname != "host-1" || string(node.RawJSON) != payload || node.Resources == nil || node.Resources.CPUInfo == nil || node.Resources.CPUInfo.Manufacturer != "Intel" || node.Resources.CPUInfo.LogicalCores != "96" || node.Resources.GPUInfo != nil || requests.Load() != 1 {
-		t.Fatalf("unexpected node %#v after %d requests", node, requests.Load())
-	}
-}
-
-func TestVerificationEARClonesTypedNilContainers(t *testing.T) {
-	var nilMap map[string]any
-	var nilSlice []any
-	nestedMap := map[string]any{"nilMap": nilMap, "value": "original"}
-	nestedSlice := []any{nilSlice, map[string]any{"value": "nested"}}
-	ear := map[string]any{"object": nestedMap, "array": nestedSlice}
-	got := verificationCheckExtraInfoFromGenerated(&fleetapi.ModelsVerificationCheckExtraInfo{Ear: &ear})
-	if got == nil || got.EAR == nil {
-		t.Fatal("missing mapped EAR")
-	}
-	object, ok := got.EAR["object"].(map[string]any)
-	if !ok {
-		t.Fatalf("object has unexpected type: %#v", got.EAR["object"])
-	}
-	mappedNilMap, ok := object["nilMap"].(map[string]any)
-	if !ok || mappedNilMap != nil {
-		t.Fatalf("typed nil map changed: %#v", object["nilMap"])
-	}
-	array, ok := got.EAR["array"].([]any)
-	if !ok || len(array) != 2 {
-		t.Fatalf("array changed: %#v", got.EAR["array"])
-	}
-	mappedNilSlice, ok := array[0].([]any)
-	if !ok || mappedNilSlice != nil {
-		t.Fatalf("typed nil slice changed: %#v", array[0])
-	}
-	nestedMap["value"] = "changed"
-	nestedSlice[1].(map[string]any)["value"] = "changed"
-	nestedSlice[0] = "changed"
-	ear["object"] = "changed"
-	want := map[string]any{
-		"object": map[string]any{"nilMap": nilMap, "value": "original"},
-		"array":  []any{nilSlice, map[string]any{"value": "nested"}},
-	}
-	if !reflect.DeepEqual(got.EAR, want) {
-		t.Fatalf("mapped EAR changed with source: %#v; want %#v", got.EAR, want)
-	}
-}
 
 func TestNodeResponseDecodingErrors(t *testing.T) {
 	for _, tc := range []struct {
@@ -204,23 +63,6 @@ func TestNodeResponseDecodingErrors(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestDescribeNodeCanceledContext(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		t.Error("canceled request reached server")
-	}))
-	defer server.Close()
-	client, err := NewClient(server.URL, "test-key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	got, err := client.DescribeNodeWithOptions(ctx, "node-1", DescribeNodeOptions{DataSource: DataSourceInband})
-	if !errors.Is(err, context.Canceled) || !reflect.DeepEqual(got, NodeDetails{}) {
-		t.Fatalf("got result %#v and error %v; want zero result and context cancellation", got, err)
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -23,7 +22,6 @@ func TestErrorReportNodeSources(t *testing.T) {
 			for _, all := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/%s/all=%v", source, output, all), func(t *testing.T) {
 					t.Setenv("HOME", t.TempDir())
-					t.Setenv("USERPROFILE", os.Getenv("HOME"))
 					requests := 0
 					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						requests++
@@ -118,7 +116,6 @@ func TestErrorReportSourceOtherViewsAndCSV(t *testing.T) {
 		} {
 			t.Run(source+"/"+tc.name, func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
-				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				requests := 0
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					requests++
@@ -162,7 +159,6 @@ func TestErrorReportSourceOtherViewsAndCSV(t *testing.T) {
 
 func TestErrorReportInvalidSourceBeforeAuth(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	for _, source := range []string{"all", "inband,oob", "invalid"} {
 		cmd := newRootCmd()
 		cmd.SetArgs([]string{"report", "error", "--window", "24h", "--data-source", source})

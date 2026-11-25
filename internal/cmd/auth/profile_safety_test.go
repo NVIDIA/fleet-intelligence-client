@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -110,51 +111,60 @@ func TestAuthProfileChangesDuringPrompt(t *testing.T) {
 	}
 }
 
-func TestAuthRemoveConfigBecomesMalformedDuringConfirmation(t *testing.T) {
-	const name = "target"
-	const secret = "removal-malformed-config-secret"
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-	cmdtest.ClearCredentialEnv(t)
-	if err := config.Save(config.Config{CurrentProfile: name, Profiles: map[string]config.Profile{
-		name: {APIURL: "https://stored.example.com", APIKey: secret},
-	}}); err != nil {
-		t.Fatalf("save config: %v", err)
+// authFirstRead invokes the change after the command's initial config read,
+// but before it receives any prompt answers.
+type authFirstRead struct {
+	reader *strings.Reader
+	once   func()
+}
+
+func (r *authFirstRead) Read(p []byte) (int, error) {
+	if r.once != nil {
+		callback := r.once
+		r.once = nil
+		callback()
 	}
-	path, err := config.Path()
-	if err != nil {
-		t.Fatalf("config path: %v", err)
-	}
-	malformed := []byte("profiles: [\n")
-	calls := 0
-	input := &authFirstRead{reader: strings.NewReader("yes\n"), once: func() {
-		calls++
-		if err := os.WriteFile(path, malformed, 0o600); err != nil {
-			t.Fatalf("replace config during confirmation: %v", err)
-		}
-	}}
-	var stdout, stderr bytes.Buffer
-	cmd := newRootCmd()
-	cmd.SetIn(input)
-	cmd.SetOut(&stdout)
-	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"auth", "remove", name})
-	err = cmd.Execute()
-	if calls != 1 {
-		t.Fatalf("confirmation callback ran %d times, want 1", calls)
-	}
-	if err == nil || !strings.Contains(err.Error(), "read config") || !strings.Contains(err.Error(), path) || errors.Is(err, config.ErrProfileNotFound) || strings.Contains(err.Error(), "nvfleetint auth list") {
-		t.Fatalf("expected config read error without profile-not-found hint, got %v", err)
-	}
-	output := stdout.String() + stderr.String() + err.Error()
-	if strings.Contains(output, " removed.") || strings.Contains(output, secret) {
-		t.Fatalf("unexpected success or secret in output: %q", output)
-	}
-	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read config: %v", err)
-	}
-	if !bytes.Equal(got, malformed) {
-		t.Fatalf("malformed config changed: got %q, want %q", got, malformed)
+	return r.reader.Read(p)
+}
+
+func TestAuthMutationsRejectMalformedConfigBeforePrompt(t *testing.T) {
+	for _, action := range []string{"add", "remove"} {
+		t.Run(action, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			t.Setenv("USERPROFILE", os.Getenv("HOME"))
+			cmdtest.ClearCredentialEnv(t)
+			path, err := config.Path()
+			if err != nil {
+				t.Fatalf("config path: %v", err)
+			}
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatalf("mkdir: %v", err)
+			}
+			malformed := []byte("profiles: [\n")
+			if err := os.WriteFile(path, malformed, 0o600); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+
+			var stdout, stderr bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetIn(strings.NewReader("yes\nhttps://example.com\n"))
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
+			cmd.SetArgs([]string{"auth", action, "prod"})
+			err = cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), "read config") || !strings.Contains(err.Error(), path) {
+				t.Fatalf("expected config read error identifying %q, got %v", path, err)
+			}
+			if stdout.Len() != 0 || stderr.Len() != 0 {
+				t.Fatalf("unexpected output or prompt: stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read config: %v", err)
+			}
+			if !bytes.Equal(got, malformed) {
+				t.Fatalf("malformed config changed: got %q, want %q", got, malformed)
+			}
+		})
 	}
 }

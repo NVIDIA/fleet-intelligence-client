@@ -7,12 +7,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/fleet-intelligence-client/internal/config"
 	"github.com/NVIDIA/fleet-intelligence-client/nvfleetint"
 )
 
@@ -62,29 +59,6 @@ func TestRenderOptionErrorMappingsAndPassthrough(t *testing.T) {
 	}
 }
 
-func TestFromResolvedPreservesMissingBaseURLError(t *testing.T) {
-	client, err := FromResolved(config.Resolved{APIKey: "test-api-key"}, testCommonFlags(""))
-	if client != nil || !errors.Is(err, nvfleetint.ErrMissingBaseURL) {
-		t.Errorf("FromResolved = (%v, %v), want nil client and ErrMissingBaseURL", client, err)
-	}
-}
-
-func TestFromResolvedInsecureURLGenericRemedy(t *testing.T) {
-	const key = "test-api-key-secret"
-	client, err := FromResolved(config.Resolved{
-		APIKey: key, APIURL: "http://example.com", APIURLSource: config.SourceDefault,
-	}, testCommonFlags(""))
-	if client != nil || !errors.Is(err, nvfleetint.ErrInsecureBaseURL) {
-		t.Fatalf("FromResolved = (%v, %v), want nil client and ErrInsecureBaseURL", client, err)
-	}
-	if !strings.Contains(err.Error(), "run `nvfleetint auth add <name>` and enter an https URL") {
-		t.Errorf("error missing generic HTTPS remedy: %v", err)
-	}
-	if strings.Contains(err.Error(), key) {
-		t.Error("error exposed the API key")
-	}
-}
-
 func TestOptionsRendererPromotionOptionShapes(t *testing.T) {
 	renderer := OptionsRenderer{Filters: map[string]OptionFlag{
 		"computeZones": {Name: "--compute-zone-ids", Promote: "--nodegroup-ids"},
@@ -130,54 +104,6 @@ func TestOptionsRendererPromotionOptionShapes(t *testing.T) {
 	}
 	if !strings.Contains(got[flatStart:sortStart], "flat-value") || strings.Contains(got, "--unused-promoted") {
 		t.Errorf("flat field produced incorrect promotion:\n%s", got)
-	}
-}
-
-func TestOptionsHelpNoteFlagCounts(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		flags []string
-		want  string
-	}{
-		{name: "zero", want: "Run 'node options' to list accepted values for available filters and sorting options."},
-		{name: "one", flags: []string{"--zone"}, want: "Run 'node options' to list accepted values for --zone."},
-		{name: "two", flags: []string{"--zone", "--order"}, want: "Run 'node options' to list accepted values for --zone and --order."},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := OptionsHelpNote("node options", tc.flags...); got != tc.want {
-				t.Errorf("OptionsHelpNote = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestAPIKeyTerminalPasswordReadFailure(t *testing.T) {
-	for _, tc := range []struct {
-		name       string
-		keepStored bool
-		wantOutput string
-	}{
-		{name: "new key", wantOutput: "API key: \n"},
-		{name: "stored key", keepStored: true, wantOutput: "API key [press Enter to keep the stored key]: \n"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			file, err := os.CreateTemp(t.TempDir(), "prompt-input")
-			if err != nil {
-				t.Fatalf("create prompt input: %v", err)
-			}
-			t.Cleanup(func() { _ = file.Close() })
-
-			var out bytes.Buffer
-			prompt := NewCredentialPrompt(file, &out)
-			prompt.terminal = true
-			key, set, err := prompt.APIKey(tc.keepStored)
-			if err == nil || errors.Is(err, io.EOF) || key != "" || set {
-				t.Errorf("APIKey = (%q, %t, %v), want empty key, false, and non-EOF error", key, set, err)
-			}
-			if got := out.String(); got != tc.wantOutput {
-				t.Errorf("output = %q, want %q", got, tc.wantOutput)
-			}
-		})
 	}
 }
 

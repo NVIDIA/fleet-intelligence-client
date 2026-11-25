@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -18,7 +17,6 @@ import (
 
 func TestNodeSourceFlags(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++
@@ -70,7 +68,6 @@ func TestNodeSourceFlags(t *testing.T) {
 
 func TestNodeBasicCombinedGPUQueries(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		if q.Get("view") != "basic" || q.Has("dataSource") || q.Has("agentType") {
@@ -103,7 +100,6 @@ func TestNodeBasicCombinedGPUQueries(t *testing.T) {
 
 func TestNodeDetailJSONRequiresSourceBeforeHTTP(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { requests++ }))
 	defer server.Close()
@@ -142,7 +138,6 @@ func TestNodeDetailJSONRequiresSourceBeforeHTTP(t *testing.T) {
 
 func TestNodeDetailJSONKeepsSingleSourceShape(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -26,7 +25,6 @@ func TestEventFilterCommands(t *testing.T) {
 				}
 				t.Run(fmt.Sprintf("%s/%s/all=%v", endpoint, format, all), func(t *testing.T) {
 					t.Setenv("HOME", t.TempDir())
-					t.Setenv("USERPROFILE", os.Getenv("HOME"))
 					calls := 0
 					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						q := r.URL.Query()
@@ -137,7 +135,6 @@ func TestEventRejectsInvalidFiltersBeforeAuthentication(t *testing.T) {
 		} {
 			t.Run(endpoint+strings.Join(args, " "), func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
-				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				cmd := newRootCmd()
 				cmd.SetOut(new(bytes.Buffer))
 				cmd.SetArgs(append([]string{"event", endpoint, "--window", "24h"}, args...))
@@ -154,7 +151,6 @@ func TestEventOptionsCommand(t *testing.T) {
 	for _, format := range []string{"table", "json"} {
 		t.Run(format, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
-			t.Setenv("USERPROFILE", os.Getenv("HOME"))
 			body := `{"components":[{"component":"oob-redfish-events","componentDisplayName":"Redfish Events"}],"dataSources":["oob"],"eventNames":["Others"],"gpuTypes":["H100"],"severities":["Info"],"sortFields":["timestamp","bmcMac"]}`
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/v1/events/options" || r.URL.RawQuery != "" {

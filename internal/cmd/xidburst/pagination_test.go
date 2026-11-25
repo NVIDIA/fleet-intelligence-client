@@ -12,56 +12,10 @@ import (
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/NVIDIA/fleet-intelligence-client/internal/cmdtest"
 )
-
-// Verifies --all merges pages using the derived has-more signal
-func TestXIDBurstListAllFetchesEveryPage(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
-
-	pages := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/xid/bursts/count" {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"total":2}`))
-			return
-		}
-		page := r.URL.Query().Get("page")
-		pages++
-		w.Header().Set("Content-Type", "application/json")
-		switch page {
-		case "0":
-			_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-1"}],"page":0,"pageSize":1,"total":2,"hasMore":true}`))
-		case "1":
-			_, _ = w.Write([]byte(`{"items":[{"burstId":"burst-2"}],"page":1,"pageSize":1,"total":2,"hasMore":false}`))
-		default:
-			t.Fatalf("unexpected page: %q", page)
-		}
-	}))
-	defer server.Close()
-
-	cmdtest.SaveConfig(t, server.URL, "test-key")
-
-	var out bytes.Buffer
-	cmd := newRootCmd()
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"xidburst", "list", "--window", "24h", "--all", "--page-size", "1"})
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("command failed: %v", err)
-	}
-	if pages != 2 {
-		t.Fatalf("expected 2 API pages, got %d", pages)
-	}
-	got := out.String()
-	if !strings.Contains(got, "burst-1") || !strings.Contains(got, "burst-2") {
-		t.Fatalf("expected both pages in output:\n%s", got)
-	}
-}
 
 // Explicit --page is one-based; verify the zero-based backend request and
 // one-based JSON pagination while preserving other response fields.

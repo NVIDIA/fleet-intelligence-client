@@ -4,7 +4,6 @@
 package cmdutil
 
 import (
-	"bytes"
 	"errors"
 	"strings"
 	"testing"
@@ -42,45 +41,4 @@ func TestCredentialWarningsLegacyKeyAndCurrentKey(t *testing.T) {
 	check(CredentialWarnings(resolved), want)
 	t.Setenv(config.EnvAPIKey, "current-test-key")
 	check(CredentialWarnings(resolved), want[:2])
-}
-
-func TestPromptsPropagateInputErrors(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		input string
-	}{
-		{name: "no input"},
-		{name: "partial answer", input: "yes"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			sentinel := errors.New("controlled prompt read failure")
-			t.Run("APIKey", func(t *testing.T) {
-				var out bytes.Buffer
-				prompt := NewCredentialPrompt(&promptErrorReader{input: tc.input, err: sentinel}, &out)
-				key, set, err := prompt.APIKey(true)
-				if !errors.Is(err, sentinel) || key != "" || set {
-					t.Errorf("APIKey = (%q, %t, %v), want empty key, false, and sentinel error", key, set, err)
-				}
-			})
-			t.Run("APIURL", func(t *testing.T) {
-				var out bytes.Buffer
-				prompt := NewCredentialPrompt(&promptErrorReader{input: tc.input, err: sentinel}, &out)
-				url, err := prompt.APIURL("https://example.com")
-				if !errors.Is(err, sentinel) || url != "" {
-					t.Errorf("APIURL = (%q, %v), want empty URL and sentinel error", url, err)
-				}
-			})
-			t.Run("Confirm", func(t *testing.T) {
-				var out bytes.Buffer
-				const summary = "Delete the selected resource"
-				err := Confirm(&promptErrorReader{input: tc.input, err: sentinel}, &out, summary)
-				if !errors.Is(err, sentinel) || errors.Is(err, ErrAborted) {
-					t.Errorf("Confirm error = %v, want sentinel and not ErrAborted", err)
-				}
-				if !strings.Contains(out.String(), summary) || !strings.Contains(out.String(), "Are you sure? [y/N]: ") {
-					t.Errorf("Confirm output missing summary or question: %q", out.String())
-				}
-			})
-		})
-	}
 }

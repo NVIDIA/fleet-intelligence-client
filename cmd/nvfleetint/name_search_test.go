@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -33,7 +32,6 @@ func TestNameSearchAliasesSendAPIParameter(t *testing.T) {
 		for _, flag := range []string{"--name-search", "--hostname"} {
 			t.Run(tc.name+"/"+flag, func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
-				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				calls := 0
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					calls++
@@ -76,7 +74,6 @@ func TestNameSearchAliasesAreMutuallyExclusive(t *testing.T) {
 		} {
 			t.Run(tc.name+strings.Join(flags, " "), func(t *testing.T) {
 				t.Setenv("HOME", t.TempDir())
-				t.Setenv("USERPROFILE", os.Getenv("HOME"))
 				cmd := newTestRootCmd()
 				cmd.SetOut(new(bytes.Buffer))
 				cmd.SetErr(new(bytes.Buffer))
