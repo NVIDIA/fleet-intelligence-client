@@ -285,12 +285,18 @@ func resolveWritePath(path string) (string, error) {
 }
 
 func withConfigLock(path string, fn func() error) error {
+	return withConfigLockTimeout(path, lockTimeout, fn)
+}
+
+// withConfigLockTimeout bounds lock acquisition without changing the default
+// used by config operations. Callers still own the lock until fn returns.
+func withConfigLockTimeout(path string, timeout time.Duration, fn func() error) error {
 	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
 		return err
 	}
 
 	lockPath := path + ".lock"
-	lockFile, err := acquireLock(lockPath)
+	lockFile, err := acquireLock(lockPath, timeout)
 	if err != nil {
 		return err
 	}
@@ -302,8 +308,8 @@ func withConfigLock(path string, fn func() error) error {
 	return fn()
 }
 
-func acquireLock(lockPath string) (*os.File, error) {
-	deadline := time.Now().Add(lockTimeout)
+func acquireLock(lockPath string, timeout time.Duration) (*os.File, error) {
+	deadline := time.Now().Add(timeout)
 	for {
 		file, err := os.OpenFile(lockPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, lockMode)
 		if err == nil {
